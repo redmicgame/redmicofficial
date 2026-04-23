@@ -6,7 +6,11 @@ import { GoogleGenAI } from '@google/genai';
 import { Release, GameDate, Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => {
+    const key = process.env.API_KEY;
+    if (!key) throw new Error("API key not configured");
+    return new GoogleGenAI({ apiKey: key });
+};
 
 const formatGameDate = (gameDate: GameDate) => {
     const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
@@ -126,7 +130,8 @@ ${controversies.length > 0 ? `Controversies during this era include:\n- ${contro
 
 Based on all this information, write a concise, neutral, and encyclopedic summary for the album's Wikipedia page lead section. Integrate all details naturally. The text should be a single paragraph.`;
 
-                const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                const aiClient = getAI();
+                const response = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
                 const newSummary = response.text;
                 setSummary(newSummary);
                 dispatch({ type: 'UPDATE_WIKIPEDIA_SUMMARY', payload: { releaseId: release.id, summary: newSummary }});

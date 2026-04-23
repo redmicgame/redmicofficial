@@ -9,7 +9,11 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import MenuIcon from './icons/MenuIcon';
 import SearchIcon from './icons/SearchIcon';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => {
+    const key = process.env.API_KEY;
+    if (!key) throw new Error("API key not configured");
+    return new GoogleGenAI({ apiKey: key });
+};
 
 const ReviewDisplay: React.FC<{ release: Release; onBack: () => void }> = ({ release, onBack }) => {
     const { activeArtist, activeArtistData } = useGame();
@@ -115,7 +119,8 @@ const PitchforkView: React.FC = () => {
             
             const prompt = `You are a music critic for Pitchfork. Write a short, one-paragraph review for a ${release.type.toLowerCase()} titled "${release.title}" by ${activeArtist.name}. The genre is ${genres}. The ${release.type.toLowerCase()} received a score of ${finalScore}/10. The review text must reflect this score. If the score is high (7.5+), be positive and praiseworthy. If it's mid (4-7.4), be mixed or lukewarm. If it's low (under 4), be critical or dismissive. Keep the review concise, opinionated, and in the high-brow, analytical style of a Pitchfork review. Do not mention the score in the text.`;
             
-            const response = await ai.models.generateContent({
+            const aiClient = getAI();
+            const response = await aiClient.models.generateContent({
               model: 'gemini-2.5-flash',
               contents: prompt
             });

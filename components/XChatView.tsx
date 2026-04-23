@@ -7,8 +7,11 @@ import PlusCircleIcon from './icons/PlusCircleIcon';
 import HeartIcon from './icons/HeartIcon';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+const getAI = () => {
+    const key = process.env.API_KEY;
+    if (!key) throw new Error("API key not configured");
+    return new GoogleGenAI({ apiKey: key });
+};
 
 const MessageBubble: React.FC<{ message: XMessage, author: XUser | undefined, isPlayer: boolean, isGroup: boolean }> = ({ message, author, isPlayer, isGroup }) => {
     if (!author) return null;
@@ -104,7 +107,8 @@ ${playerUser.name}: ${currentMessageText}
 ---
 Based on your persona and the chat history, write a short, realistic reply as ${replier.name}. Your reply should be a single text message. Do not include your name in the reply itself.`;
     
-            const response = await ai.models.generateContent({
+            const aiClient = getAI();
+            const response = await aiClient.models.generateContent({
               model: 'gemini-2.5-flash',
               contents: prompt,
               config: {
