@@ -543,6 +543,19 @@ export const generateWeeklyXContent = (
                 title: `${artistName.replace(/\s/g, '')} vs ${targetArtistName.replace(/\s/g, '')}`,
                 postCount: Math.floor(Math.random() * 40000) + 15000
             });
+
+            // PopBase about the fan war
+            if (Math.random() > 0.4) {
+                newPosts.push({
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: `${artistName} and ${targetArtistName} have been going back on forth on twitter`,
+                    likes: Math.floor(Math.random() * 85000) + 20000,
+                    retweets: Math.floor(Math.random() * 15000) + 5000,
+                    views: Math.floor(Math.random() * 2000000) + 500000,
+                    date
+                });
+            }
         }
     }
 
@@ -708,6 +721,10 @@ export const generateWeeklyXContent = (
                 `obsessed with ${artistName}'s new era. the visuals, the music... everything is perfect.`,
                 `Listening to ${topSong.title} on repeat! What a masterpiece.`,
                 `Anyone else think ${artistName} deserves a Grammy for this? Just me? okay.`,
+                `the vocal arrangement on "${topSong.title}" ??? ${artistName} put crack in this song omg`,
+                `pop emergency!! ${artistName} just saved the music industry with ${topSong.title}`,
+                `no because ${artistName} really ate that up... the production is insane.`,
+                `everyone saying ${artistName} fell off is quiet right now 🤫`
             ];
             let image: string | undefined = undefined;
             if (artistImages.length > 0 && Math.random() > 0.5) {
@@ -729,6 +746,10 @@ export const generateWeeklyXContent = (
                 `Another generic song from ${artistName}. Shocker.`,
                 `The hype around ${artistName} is manufactured. #industryplant`,
                 `they really think they're an artist huh`,
+                `paying for streams again I see... "${topSong.title}" is nowhere to be heard in public 💀`,
+                `who is streaming this?? it's unlistenable noise.`,
+                `${artistName} making the exact same song for the 5th time in a row 😭`,
+                `the absolute state of the music industry if this is what y'all are charting`
             ];
             newPosts.push({
                 id: crypto.randomUUID(), authorId: haterId, content: pickRandom(haterTemplates),
@@ -794,6 +815,24 @@ export const generateWeeklyXContent = (
         });
     }
 
+    // 2.5 Spotify Global #1 Post from Chart Data
+    const spotifyNumberOne = gameState.spotifyGlobal50[0];
+    if (spotifyNumberOne && spotifyNumberOne.isPlayerSong && spotifyNumberOne.songId) {
+        const matchingPlayerSong = playerSongs.find(s => s.id === spotifyNumberOne.songId);
+        if (matchingPlayerSong && matchingPlayerSong.lastWeekStreams > 0) {
+            newPosts.push({
+                id: crypto.randomUUID(), 
+                authorId: 'chartdata',
+                content: `${artistName}'s "${matchingPlayerSong.title}" is #1 on Global Spotify this week with ${formatNumber(matchingPlayerSong.lastWeekStreams)} streams.`,
+                image: matchingPlayerSong.coverArt,
+                likes: Math.floor(Math.random() * 45000) + 15000,
+                retweets: Math.floor(Math.random() * 12000) + 3000,
+                views: Math.floor(Math.random() * 700000) + 200000,
+                date
+            });
+        }
+    }
+
      // 3. PopBase post if song is doing well (and not a debut, to avoid duplicate posts)
     if (topSong && !debutRelease && topSong.lastWeekStreams > 5_000_000) {
         if (Math.random() > 0.5) { // 50% chance
@@ -815,19 +854,56 @@ export const generateWeeklyXContent = (
             postCount: Math.floor(Math.random() * 100000) + 45000,
         });
     }
-    if (topSong) {
-        potentialTrends.push({ category: 'Music · Trending', title: `#${topSong.title.replace(/\s/g, '')}`, postCount: Math.floor(Math.random() * 80000) + 20000 });
+    if (topSong && topSong.lastWeekStreams > 1_000_000) {
+        potentialTrends.push({ category: 'Music · Trending', title: `#${topSong.title.replace(/\W/g, '')}`, postCount: Math.floor(Math.random() * 80000) + 20000 });
+        if (Math.random() > 0.5) potentialTrends.push({ category: 'Music · Trending', title: `WE LOVE ${artistName.toUpperCase()}`, postCount: Math.floor(Math.random() * 40000) + 15000 });
+    }
+    if (artistData.tours.some(t => t.isActive)) {
+        potentialTrends.push({ category: 'Music · Trending', title: `${artistName} Tour`, postCount: Math.floor(Math.random() * 60000) + 20000 });
     }
     const latestRelease = artistData.releases.sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
     if(latestRelease && latestRelease.review && latestRelease.review.score < 5) {
-        potentialTrends.push({ category: 'Music · Trending', title: `${artistName}Flop`, postCount: Math.floor(Math.random() * 20000) + 5000 });
+        potentialTrends.push({ category: 'Music · Trending', title: `${artistName.replace(/\W/g, '')}IsOverParty`, postCount: Math.floor(Math.random() * 30000) + 10000 });
     }
-    // Simple placeholder trends
-    const placeholders = [
-        { category: 'Entertainment · Trending', title: 'New Movie Trailer', postCount: 250000 },
-        { category: 'Gaming · Trending', title: 'Game Awards', postCount: 1200000 },
-        { category: 'Politics · Trending', title: 'World Leader Summit', postCount: 340000 },
+    
+    // Realistic placeholder trends
+    const realOtherArtists = ['Taylor Swift', 'Beyoncé', 'Drake', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Dua Lipa', 'Kendrick Lamar', 'Bad Bunny', 'Olivia Rodrigo', 'Rihanna', 'Justin Bieber', 'Post Malone', 'Lady Gaga', 'Doja Cat'];
+    const otherArtist1 = pickRandom(realOtherArtists);
+    let otherArtist2 = pickRandom(realOtherArtists);
+    while (otherArtist2 === otherArtist1) otherArtist2 = pickRandom(realOtherArtists);
+
+    const realisticPlaceholders = [
+        { category: 'Music · Trending', title: otherArtist1, postCount: Math.floor(Math.random() * 300000) + 50000 },
+        { category: 'Music · Trending', title: `#${otherArtist2.replace(/\s/g, '')}`, postCount: Math.floor(Math.random() * 150000) + 50000 },
+        { category: 'Entertainment · Trending', title: 'Pop Crave', postCount: Math.floor(Math.random() * 80000) + 15000 },
+        { category: 'Entertainment · Trending', title: 'Pop Base', postCount: Math.floor(Math.random() * 60000) + 10000 },
+        { category: 'Music · Trending', title: 'Spotify', postCount: Math.floor(Math.random() * 200000) + 50000 },
+        { category: 'Music · Trending', title: 'Billboard', postCount: Math.floor(Math.random() * 50000) + 10000 }
     ];
+
+    if (date.week >= 48) {
+        realisticPlaceholders.push({ category: 'Music · Trending', title: '#SpotifyWrapped', postCount: Math.floor(Math.random() * 1500000) + 500000 });
+    }
+    if (date.week === 6) { // near Grammys
+        realisticPlaceholders.push({ category: 'Music · Trending', title: '#GRAMMYs', postCount: Math.floor(Math.random() * 1000000) + 200000 });
+    }
+    if (date.week === 15) { // near Coachella
+        realisticPlaceholders.push({ category: 'Music · Trending', title: 'Coachella', postCount: Math.floor(Math.random() * 800000) + 100000 });
+    }
+    if (date.week === 35) { // near VMAs
+        realisticPlaceholders.push({ category: 'Music · Trending', title: '#VMAs', postCount: Math.floor(Math.random() * 600000) + 100000 });
+    }
+    if (date.week === 18) { // near Met Gala
+        realisticPlaceholders.push({ category: 'Entertainment · Trending', title: 'Met Gala', postCount: Math.floor(Math.random() * 900000) + 200000 });
+    }
+
+    const generalPlaceholders = [
+        { category: 'Entertainment · Trending', title: 'Netflix', postCount: Math.floor(Math.random() * 300000) + 50000 },
+        { category: 'Trending in United States', title: 'BREAKING', postCount: Math.floor(Math.random() * 500000) + 100000 },
+        { category: 'Gaming · Trending', title: 'GTA VI', postCount: Math.floor(Math.random() * 500000) + 100000 }
+    ];
+
+    const placeholders = [...realisticPlaceholders, ...generalPlaceholders];
     
     // Shuffle and pick
     const shuffledTrends = [...potentialTrends, ...placeholders].sort(() => 0.5 - Math.random());

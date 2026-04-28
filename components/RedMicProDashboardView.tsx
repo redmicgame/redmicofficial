@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Song, Label, XUser } from '../types';
-import { LABELS } from '../constants';
+import { LABELS, NPC_COVER_ART } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
@@ -73,7 +73,7 @@ const NpcUserEditor: React.FC<{ user: XUser }> = ({ user }) => {
 
 
 const RedMicProDashboardView: React.FC = () => {
-    const { dispatch, activeArtistData } = useGame();
+    const { dispatch, activeArtistData, gameState } = useGame();
     if (!activeArtistData) return null;
     
     const { money, songs, isGoldTheme, salesBoost, contract, hype, redMicPro, popularity } = activeArtistData;
@@ -87,6 +87,11 @@ const RedMicProDashboardView: React.FC = () => {
     const hypeMode = redMicPro.hypeMode || 'locked';
 
     const unreleasedSongs = songs.filter(s => !s.isReleased);
+    
+    const uniqueNpcArtists = Array.from(new Set([
+        ...gameState.npcs.map((n: any) => n.artist),
+        ...gameState.npcAlbums.map((a: any) => a.artist)
+    ])).sort();
     
     const editableFanAccounts = activeArtistData.xUsers.filter(user => 
         !user.isPlayer && 
@@ -196,6 +201,45 @@ const RedMicProDashboardView: React.FC = () => {
                     </div>
                 </div>
 
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <h2 className="text-lg font-bold">Edit NPC Album/Song Covers</h2>
+                    <p className="text-sm text-zinc-400">Change the cover art for NPC artists. This will apply to their new releases and some charts.</p>
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        {uniqueNpcArtists.map(artistName => (
+                            <div key={artistName} className="flex items-center gap-4">
+                                <label htmlFor={`npc-cover-upload-${artistName}`} className="cursor-pointer group relative">
+                                    <img src={gameState.npcImages?.[artistName] || NPC_COVER_ART} alt={artistName} className="w-12 h-12 rounded object-cover"/>
+                                    <div className="absolute inset-0 bg-black/60 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                </label>
+                                <input
+                                    id={`npc-cover-upload-${artistName}`}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            const file = e.target.files[0];
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                dispatch({ type: 'UPDATE_NPC_COVER', payload: { artistName, newCover: reader.result as string } });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                                <div className="flex-grow">
+                                    <p className="font-semibold">{artistName}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
                     <h2 className="text-lg font-bold">Edit NPC Avatars</h2>
                     <p className="text-sm text-zinc-400">Change the profile pictures for fan accounts, media, and haters.</p>

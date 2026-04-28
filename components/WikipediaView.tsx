@@ -119,7 +119,11 @@ const WikipediaView: React.FC = () => {
                     controversies.push(`The release was accompanied by controversy when over ${Math.round(fraudulentStreams / 1e6)} million streams were identified as artificial and removed from platforms.`);
                 }
 
-                const prompt = `You are a music historian writing a Wikipedia article. Write a lead section for the album "${release.title}" by artist "${artist.name}".
+                let newSummary = '';
+                if (gameState.offlineMode) {
+                    newSummary = `"${release.title}" is the ${projectNumberString} by ${artist.name}. Released on ${formatGameDate(release.releaseDate)} ${labelInfo}, the ${release.type.toLowerCase()} contains ${releaseSongs.length} tracks. ${features.size > 0 ? `It features guest appearances by ${Array.from(features).join(', ')}.` : ''} ${singles.length > 0 ? `The release was supported by the singles ${singles.map(s => `"${s.title}"`).join(', ')}.` : ''}`;
+                } else {
+                    const prompt = `You are a music historian writing a Wikipedia article. Write a lead section for the album "${release.title}" by artist "${artist.name}".
 It is their ${projectNumberString}. It was released on ${formatGameDate(release.releaseDate)} ${labelInfo}.
 
 The tracklist includes: ${songList}.
@@ -130,9 +134,10 @@ ${controversies.length > 0 ? `Controversies during this era include:\n- ${contro
 
 Based on all this information, write a concise, neutral, and encyclopedic summary for the album's Wikipedia page lead section. Integrate all details naturally. The text should be a single paragraph.`;
 
-                const aiClient = getAI();
-                const response = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-                const newSummary = response.text;
+                    const aiClient = getAI();
+                    const response = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                    newSummary = response.text;
+                }
                 setSummary(newSummary);
                 dispatch({ type: 'UPDATE_WIKIPEDIA_SUMMARY', payload: { releaseId: release.id, summary: newSummary }});
 

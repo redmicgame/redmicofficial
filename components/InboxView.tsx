@@ -207,6 +207,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             case 'featureOffer':
                 dispatch({ type: 'ACCEPT_FEATURE_OFFER', payload: email.offer });
                 break;
+            case 'coachellaOffer':
+                dispatch({ type: 'SUBMIT_COACHELLA', payload: { emailId: email.id } });
+                break;
         }
     };
     
@@ -327,6 +330,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 buttonClass = "bg-green-500 hover:bg-green-600 text-white shadow-green-500/20";
                 acceptedText = "Feature Accepted";
                 isAccepted = email.offer.isAccepted;
+                break;
+            case 'coachellaOffer':
+                buttonText = "Submit for Coachella";
+                buttonClass = "bg-[#ff8a65] hover:bg-[#ff7043] text-black shadow-orange-500/20";
+                acceptedText = "Submission Sent";
+                isAccepted = email.offer.isSubmitted;
                 break;
         }
 

@@ -97,7 +97,22 @@ const XChatView: React.FC = () => {
                 ? `You are a die-hard fan of the music artist ${activeArtist?.name}. Your username is ${replier.name}. You are in an exclusive group chat with the artist and other fans. Be enthusiastic, supportive, and use casual, lowercase internet slang.`
                 : `You are a die-hard fan of the music artist ${activeArtist?.name}. Your username is ${replier.name}. You are direct messaging them. Be respectful but very excited. Use casual, lowercase internet slang.`;
     
-            const prompt = `This is a chat conversation with the music artist ${activeArtist?.name}.
+            let aiReplyText = '';
+            if (gameState.offlineMode) {
+                const genericReplies = [
+                    "Interesting...", 
+                    "Wow!", 
+                    "Gotcha.", 
+                    "That makes sense.", 
+                    "I see.",
+                    "If you say so!",
+                    "Noted.",
+                    "Cool cool.",
+                    "Hmm..."
+                ];
+                aiReplyText = genericReplies[Math.floor(Math.random() * genericReplies.length)];
+            } else {
+                const prompt = `This is a chat conversation with the music artist ${activeArtist?.name}.
 ---
 PERSONA: ${persona}
 ---
@@ -106,19 +121,20 @@ ${chatHistory}
 ${playerUser.name}: ${currentMessageText}
 ---
 Based on your persona and the chat history, write a short, realistic reply as ${replier.name}. Your reply should be a single text message. Do not include your name in the reply itself.`;
-    
-            const aiClient = getAI();
-            const response = await aiClient.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: prompt,
-              config: {
-                  stopSequences: ['\n'],
-                  maxOutputTokens: 50,
-                  temperature: 0.9,
-              }
-            });
-    
-            const aiReplyText = response.text.trim();
+        
+                const aiClient = getAI();
+                const response = await aiClient.models.generateContent({
+                  model: 'gemini-2.5-flash',
+                  contents: prompt,
+                  config: {
+                      stopSequences: ['\n'],
+                      maxOutputTokens: 50,
+                      temperature: 0.9,
+                  }
+                });
+        
+                aiReplyText = response.text.trim();
+            }
     
             if (aiReplyText) {
                 const aiMessage: XMessage = {

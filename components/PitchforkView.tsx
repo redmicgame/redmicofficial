@@ -91,7 +91,7 @@ const ReviewDisplay: React.FC<{ release: Release; onBack: () => void }> = ({ rel
 
 
 const PitchforkView: React.FC = () => {
-    const { dispatch, activeArtist, activeArtistData } = useGame();
+    const { dispatch, activeArtist, activeArtistData, gameState } = useGame();
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
     const [loadingReview, setLoadingReview] = useState<string | null>(null);
     const [error, setError] = useState('');
@@ -112,19 +112,30 @@ const PitchforkView: React.FC = () => {
             const avgQuality = releaseSongs.reduce((sum, s) => sum + s.quality, 0) / releaseSongs.length;
             const genres = [...new Set(releaseSongs.map(s => s.genre))].join('/');
             
-            const baseScore = avgQuality / 10;
+            const baseScore = isNaN(avgQuality) ? 5 : avgQuality / 10;
             const randomFactor = (Math.random() * 3) - 1.5;
             let finalScore = Math.max(1, Math.min(10, baseScore + randomFactor));
             finalScore = Math.round(finalScore * 10) / 10;
             
-            const prompt = `You are a music critic for Pitchfork. Write a short, one-paragraph review for a ${release.type.toLowerCase()} titled "${release.title}" by ${activeArtist.name}. The genre is ${genres}. The ${release.type.toLowerCase()} received a score of ${finalScore}/10. The review text must reflect this score. If the score is high (7.5+), be positive and praiseworthy. If it's mid (4-7.4), be mixed or lukewarm. If it's low (under 4), be critical or dismissive. Keep the review concise, opinionated, and in the high-brow, analytical style of a Pitchfork review. Do not mention the score in the text.`;
-            
-            const aiClient = getAI();
-            const response = await aiClient.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: prompt
-            });
-            const reviewText = response.text;
+            let reviewText = '';
+            if (gameState.offlineMode) {
+                if (finalScore >= 8) {
+                    reviewText = `A stunning and bold effort from ${activeArtist.name}. The production is crisp and the artistic vision is fully realized, cementing this release as one of the standout moments of the year.`;
+                } else if (finalScore >= 5) {
+                    reviewText = `${activeArtist.name} delivers a competent but somewhat uneven project. While there are undeniable highlights, it occasionally struggles to maintain momentum from front to back.`;
+                } else {
+                    reviewText = `Unfortunately, this release feels entirely derivative. ${activeArtist.name} appears stuck in a creative rut, offering little more than uninspired rehashes of better ideas.`;
+                }
+            } else {
+                const prompt = `You are a music critic for Pitchfork. Write a short, one-paragraph review for a ${release.type.toLowerCase()} titled "${release.title}" by ${activeArtist.name}. The genre is ${genres}. The ${release.type.toLowerCase()} received a score of ${finalScore}/10. The review text must reflect this score. If the score is high (7.5+), be positive and praiseworthy. If it's mid (4-7.4), be mixed or lukewarm. If it's low (under 4), be critical or dismissive. Keep the review concise, opinionated, and in the high-brow, analytical style of a Pitchfork review. Do not mention the score in the text.`;
+                
+                const aiClient = getAI();
+                const response = await aiClient.models.generateContent({
+                  model: 'gemini-2.5-flash',
+                  contents: prompt
+                });
+                reviewText = response.text;
+            }
             
             const newReview: Review = {
                 publication: 'Pitchfork',
@@ -135,9 +146,9 @@ const PitchforkView: React.FC = () => {
             
             dispatch({ type: 'ADD_REVIEW', payload: { releaseId: release.id, review: newReview, cost: REVIEW_COST, artistId: activeArtist.id } });
 
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setError('Failed to generate review. Please try again.');
+            setError(err?.message ? `Failed: ${err.message}` : 'Failed to generate review. Please try again.');
         } finally {
             setLoadingReview(null);
         }

@@ -312,6 +312,22 @@ const MiscTab: React.FC = () => {
 
 
                 <div className="bg-zinc-800 p-4 rounded-lg">
+                    <h3 className="font-bold text-lg mb-2">Options</h3>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-bold">Offline Mode (Disable AI)</p>
+                            <p className="text-xs text-zinc-400">Play without requiring API calls. Replaces AI features with generic text.</p>
+                        </div>
+                        <button 
+                            onClick={() => dispatch({ type: 'TOGGLE_OFFLINE_MODE' })}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${gameState.offlineMode ? 'bg-red-500' : 'bg-zinc-600'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${gameState.offlineMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-800 p-4 rounded-lg">
                     <h3 className="font-bold text-lg mb-2">Cloud Saves & Game Data</h3>
                     {user ? (
                         <>

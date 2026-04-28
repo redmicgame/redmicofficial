@@ -56,7 +56,7 @@ const formatCertification = (cert: { level: string; multiplier: number } | null)
     return cert.level;
 };
 
-const generateNpcs = (count: number, existingNpcs: NpcSong[] = []): NpcSong[] => {
+const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: Record<string, string>): NpcSong[] => {
     const npcs: NpcSong[] = [];
     const usedNames = new Set<string>(existingNpcs.map(npc => `${npc.title}-${npc.artist}`));
 
@@ -106,12 +106,13 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = []): NpcSong[] =>
             artist,
             genre: GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
+            coverArt: npcImages?.[artist],
         });
     }
     return npcs;
 };
 
-const generateNewHits = (count: number, existingNpcs: NpcSong[]): NpcSong[] => {
+const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Record<string, string>): NpcSong[] => {
     const hits: NpcSong[] = [];
     const usedNames = new Set<string>(existingNpcs.map(npc => `${npc.title}-${npc.artist}`));
 
@@ -157,6 +158,7 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[]): NpcSong[] => {
             artist,
             genre: GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
+            coverArt: npcImages?.[artist],
         });
     }
     return hits;
@@ -165,7 +167,7 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[]): NpcSong[] => {
 const NPC_ALBUM_ADJECTIVES = ['Eternal', 'Chromatic', 'Digital', 'Fever', 'Concrete', 'Neon', 'Stardust', 'Afterparty', 'American', 'Broken', 'Suburban', 'Melodrama'];
 const NPC_ALBUM_NOUNS = ['Summer', 'Dream', 'Jungle', 'Heart', 'Angel', 'Sunset', 'Romance', 'Fantasy', 'Youth', 'Rebellion', 'Mirage', 'Odyssey'];
 
-const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[]): NpcAlbum[] => {
+const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[], npcImages?: Record<string, string>): NpcAlbum[] => {
     const albums: NpcAlbum[] = [];
     const labels: Array<NpcAlbum['label']> = ['UMG', 'Republic', 'RCA', 'Island'];
     let songIndex = 0;
@@ -208,7 +210,7 @@ const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[]): NpcAlbum[] =>
             title,
             artist: mainArtist,
             label: labels[Math.floor(Math.random() * labels.length)],
-            coverArt: NPC_COVER_ART,
+            coverArt: npcImages?.[mainArtist] || NPC_COVER_ART,
             songIds: albumSongs.map(s => s.uniqueId),
             salesPotential,
         });
@@ -279,6 +281,7 @@ const initialArtistData: ArtistData = {
 
 
 const initialState: GameState = {
+    offlineMode: false,
     careerMode: null,
     soloArtist: null,
     group: null,
@@ -388,6 +391,15 @@ const calculateGenreChart = (
     return { newChart, newHistory };
 };
 
+
+const getHypeCap = (artistData: ArtistData): number => {
+    if (artistData.redMicPro && artistData.redMicPro.unlocked) {
+        if (artistData.redMicPro.hypeMode === 'locked' || artistData.redMicPro.hypeMode === 'manual') {
+            return 1000;
+        }
+    }
+    return 100;
+};
 
 const gameReducer = (state: GameState, action: GameAction): GameState => {
     const allPlayerArtistsAndGroups: (Artist | Group)[] = state.careerMode === 'solo' && state.soloArtist ? [state.soloArtist] : (state.group ? [state.group, ...state.group.members] : []);
@@ -701,7 +713,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             }
            
             // Generate 100 new NPCs, avoiding name collisions
-            const newlyGeneratedNpcs = generateNewHits(CHURN_COUNT, newNpcsList);
+            const newlyGeneratedNpcs = generateNewHits(CHURN_COUNT, newNpcsList, state.npcImages);
 
             // Add them back to the list
             newNpcsList.push(...newlyGeneratedNpcs);
@@ -714,7 +726,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             }
             // Generate new albums using the newest songs
             const newestSongsForAlbums = newlyGeneratedNpcs.slice(0, ALBUM_CHURN_COUNT * 12); // Assuming max 12 songs per album
-            const newlyGeneratedAlbums = generateNpcAlbums(ALBUM_CHURN_COUNT, newestSongsForAlbums);
+            const newlyGeneratedAlbums = generateNpcAlbums(ALBUM_CHURN_COUNT, newestSongsForAlbums, state.npcImages);
             newNpcAlbums.unshift(...newlyGeneratedAlbums); // Add new albums to the top
 
 
@@ -853,7 +865,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         }
                         if (gigsBookedThisWeek > 0) {
                             artistData.money += weeklyGigIncome;
-                            artistData.hype = Math.min(1000, artistData.hype + weeklyGigHype);
+                            artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + weeklyGigHype);
                              if(artistProfileForEmail) {
                                 newEmails.push({
                                     id: crypto.randomUUID(),
@@ -976,7 +988,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                             
                             // Add hype for successful shows
                             if (updatedVenue.soldOut) {
-                                artistData.hype = Math.min(1000, artistData.hype + 5);
+                                artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + 5);
                             }
 
                             // Notifications/Posts about the tour
@@ -1370,7 +1382,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
                         const generatedGross = weeklyStreams * STREAM_INCOME_MULTIPLIER;
                         
-                        let myGross = generatedGross;
+                        let myGross = song.isFeatureToNpc ? 0 : generatedGross;
                         if (song.rightsSoldPercent && song.rightsSoldPercent > 0) {
                             myGross -= generatedGross * (song.rightsSoldPercent / 100);
                         }
@@ -1753,7 +1765,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                                     };
                                     artistData.releases.push(singleRelease);
                                     artistData.songs = artistData.songs.map(s => s.id === single.songId ? { ...s, isReleased: true, releaseId: singleRelease.id, isPreReleaseSingle: true, coverArt: sub.release.coverArt } : s);
-                                    artistData.hype = Math.min(100, artistData.hype + 15);
+                                    artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + 15);
 
                                     // Genius offer for single
                                     if (artistProfile) {
@@ -1799,7 +1811,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                                 case 'EP': hypeIncrease = 25; break;
                                 case 'Album': hypeIncrease = 40; break;
                             }
-                            artistData.hype = Math.min(100, artistData.hype + hypeIncrease);
+                            artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + hypeIncrease);
 
                             if (artistData.contract && (release.type === 'Album' || release.type === 'EP')) {
                                 artistData.contract.albumsReleased += 1;
@@ -2138,32 +2150,50 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
             // --- FEATURE SONG RELEASE LOGIC ---
             const newNpcsWithReleases = [...newNpcsList];
-            newNpcsWithReleases.forEach(npc => {
-                if (npc.isPlayerFeature && !npc.isReleased && npc.releaseDate && npc.releaseDate.week === newDate.week && npc.releaseDate.year === newDate.year) {
-                    npc.isReleased = true;
-
-                    // Find which player artist was featured to send them the email
-                    const featuredArtist = allPlayerArtistsAndGroups.find(a => a.name === npc.featuring);
-                    if (featuredArtist && updatedArtistsData[featuredArtist.id]) {
+            for (const artistId in updatedArtistsData) {
+                const artistData = updatedArtistsData[artistId];
+                const activeArtist = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                
+                artistData.songs = artistData.songs.map(song => {
+                    if (song.isFeatureToNpc && !song.isReleased && song.releaseDate && song.releaseDate.week === newDate.week && song.releaseDate.year === newDate.year) {
+                        const newReleaseId = crypto.randomUUID();
                         
-                        const releaseEmail: Email = {
-                            id: crypto.randomUUID(),
-                            sender: 'Spotify',
-                            senderIcon: 'spotify',
-                            subject: `New Release: "${npc.title}"`,
-                            body: `Hi ${featuredArtist.name},\n\nYour collaboration with ${npc.artist}, "${npc.title}", has been released today!\n\nIt is now available on your Spotify profile under the "Featured On" section.\n\n- The Spotify Team`,
-                            date: newDate,
-                            isRead: false,
-                            offer: {
-                                type: 'featureRelease',
-                                songTitle: npc.title,
-                                npcArtistName: npc.artist,
-                            }
-                        };
-                        updatedArtistsData[featuredArtist.id].inbox.push(releaseEmail);
+                        artistData.releases.push({
+                            id: newReleaseId,
+                            title: song.title, // "Song Title (feat. Player)"
+                            type: 'Single',
+                            releaseDate: newDate,
+                            songIds: [song.id],
+                            quality: song.quality,
+                            coverArt: song.coverArt,
+                            description: '',
+                            marketingBudget: 0,
+                            isTakingDown: false,
+                            isTakenDown: false
+                        });
+
+                        if (activeArtist) {
+                            const releaseEmail: Email = {
+                                id: crypto.randomUUID(),
+                                sender: 'Spotify',
+                                senderIcon: 'spotify',
+                                subject: `New Release: "${song.title}"`,
+                                body: `Hi ${activeArtist.name},\n\nYour collaboration with ${song.npcArtistName}, "${song.title}", has been released today!\n\nIt is now available on your Spotify profile.\n\n- The Spotify Team`,
+                                date: newDate,
+                                isRead: false,
+                                offer: {
+                                    type: 'featureRelease',
+                                    songTitle: song.title,
+                                    npcArtistName: song.npcArtistName || 'Another Artist',
+                                }
+                            };
+                            artistData.inbox.push(releaseEmail);
+                        }
+                        return { ...song, isReleased: true, releaseId: newReleaseId };
                     }
-                }
-            });
+                    return song;
+                });
+            }
 
             // --- CHART CALCULATION ---
             const allPlayerSongsFlat = Object.values(updatedArtistsData).flatMap(d => d.songs);
@@ -2507,6 +2537,111 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 }
                 finalState.oscarSubmissions = [];
                 finalState.oscarCurrentYearNominations = null;
+            }
+
+            // --- COACHELLA LOGIC ---
+
+            // Week 10: Coachella Invitations
+            if (newDate.week === 10) {
+                for (const artistId in updatedArtistsData) {
+                    const artistData = updatedArtistsData[artistId];
+                    const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                    
+                    if (artistProfile && (artistData.contract || artistData.monthlyListeners >= 10000000)) {
+                        artistData.coachella = { year: newDate.year, status: 'invited' };
+                        const emailId = crypto.randomUUID();
+                        artistData.inbox.push({
+                            id: emailId,
+                            sender: 'Coachella Booking',
+                            senderIcon: 'coachella',
+                            subject: `Coachella ${newDate.year} Lineup Submissions`,
+                            body: `Hi ${artistProfile.name},\n\nWe are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Based on your recent numbers, we would like to invite you to submit for a spot on the lineup.\n\nPlease note: This is not a guarantee of placement, but a request for consideration.\n\n- Coachella Team`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'coachellaOffer', emailId, isSubmitted: false }
+                        });
+                    }
+                }
+            }
+
+            // Week 12: Coachella Selection
+            if (newDate.week === 12) {
+                for (const artistId in updatedArtistsData) {
+                    const artistData = updatedArtistsData[artistId];
+                    const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                    
+                    if (artistData.coachella && artistData.coachella.status === 'submitted') {
+                        let status: 'headliner' | 'mid' | 'small' | 'opener' = 'opener';
+                        let payoutSize = 0;
+                        let openingFor: string | undefined;
+
+                        if (artistData.popularity >= 70) {
+                            status = 'headliner';
+                            payoutSize = Math.floor(Math.random() * (20000000 - 5500000)) + 5500000;
+                        } else if (artistData.popularity >= 50) {
+                            status = 'mid';
+                            payoutSize = Math.floor(Math.random() * (2000000 - 300000)) + 300000;
+                        } else if (artistData.popularity >= 25) {
+                            status = 'small';
+                            payoutSize = Math.floor(Math.random() * (100000 - 25000)) + 25000;
+                        } else {
+                            const realOtherArtists = ['Taylor Swift', 'Beyoncé', 'The Weeknd', 'Kendrick Lamar', 'Bad Bunny', 'Rihanna'];
+                            status = 'opener';
+                            openingFor = realOtherArtists[Math.floor(Math.random() * realOtherArtists.length)];
+                            payoutSize = Math.floor(Math.random() * (25000 - 5000)) + 5000;
+                        }
+
+                        artistData.coachella.status = status;
+                        artistData.coachella.payoutSize = payoutSize;
+                        artistData.coachella.openingFor = openingFor;
+
+                        let body = `Hi ${artistProfile?.name},\n\nWe are thrilled to let you know that you have been selected to perform at Coachella ${newDate.year}!\n\n`;
+                        if (status === 'headliner') body += `You have been selected as a HEADLINER! You will be paid $${formatNumber(payoutSize)} for your headlining set.`;
+                        else if (status === 'opener') body += `You have been selected as an OPENER for ${openingFor}! You will be paid $${formatNumber(payoutSize)} for your performance.`;
+                        else body += `You got a ${status === 'mid' ? 'MID-TIER' : 'SMALL'} slot! You will be paid $${formatNumber(payoutSize)} for your performance.`;
+
+                        artistData.inbox.push({
+                            id: crypto.randomUUID(),
+                            sender: status === 'opener' ? (openingFor || 'The Headliner') : 'Coachella',
+                            senderIcon: 'coachella',
+                            subject: `Coachella ${newDate.year} Status`,
+                            body,
+                            date: newDate,
+                            isRead: false
+                        });
+                    }
+                }
+            }
+
+            // Week 15: Coachella Performance & Tweets
+            if (newDate.week === 15) {
+                for (const artistId in updatedArtistsData) {
+                    const artistData = updatedArtistsData[artistId];
+                    const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                    
+                    if (artistData.coachella && artistData.coachella.year === newDate.year && ['headliner', 'mid', 'small', 'opener'].includes(artistData.coachella.status)) {
+                        // Pay the artist
+                        if (artistData.coachella.payoutSize) {
+                            artistData.money += artistData.coachella.payoutSize;
+                        }
+                        
+                        let titleStr = '';
+                        if (artistData.coachella.status === 'headliner') titleStr = 'is HEADLINING';
+                        else if (artistData.coachella.status === 'opener') titleStr = `is OPENING for ${artistData.coachella.openingFor} at`;
+                        else titleStr = `is performing at`;
+
+                        artistData.xPosts.unshift({
+                             id: crypto.randomUUID(),
+                             authorId: 'popbase',
+                             content: `${artistProfile?.name} ${titleStr} Coachella ${newDate.year}!`,
+                             image: artistData.artistImages.length > 0 ? artistData.artistImages[Math.floor(Math.random() * artistData.artistImages.length)] : undefined,
+                             likes: Math.floor(Math.random() * 150000) + 40000,
+                             retweets: Math.floor(Math.random() * 25000) + 5000,
+                             views: Math.floor(Math.random() * 2000000) + 500000,
+                             date: newDate
+                        });
+                    }
+                }
             }
 
             // --- GRAMMYS LOGIC ---
@@ -3011,7 +3146,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         ...activeData,
                         releases: [...activeData.releases, releaseWithLabel],
                         songs: newSongs,
-                        hype: Math.min(100, activeData.hype + hypeIncrease),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + hypeIncrease),
                         inbox: [...activeData.inbox, ...newEmails],
                     }
                 }
@@ -3051,7 +3186,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         money: artistData.money - cost,
                         songs: songsWithBoost,
                         releases: artistData.releases.map(r => r.id === releaseId ? { ...r, review } : r),
-                        hype: Math.min(100, artistData.hype + hypeIncrease),
+                        hype: Math.min(getHypeCap(artistData), artistData.hype + hypeIncrease),
                         popularity: Math.min(100, artistData.popularity + popularityIncrease),
                     }
                 }
@@ -3076,7 +3211,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         ...activeData,
                         money: activeData.money - cost,
                         videos: [...activeData.videos, video],
-                        hype: Math.min(100, activeData.hype + hypeIncrease),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + hypeIncrease),
                     }
                 }
             };
@@ -3230,7 +3365,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     [state.activeArtistId]: {
                         ...activeData,
                         money: activeData.money + gigCash,
-                        hype: Math.min(100, activeData.hype + action.payload.hype),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + action.payload.hype),
                         performedGigThisWeek: true,
                     }
                 }
@@ -3475,7 +3610,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         ...activeData,
                         videos: [...activeData.videos, video],
                         songs: updatedSongs,
-                        hype: Math.min(100, activeData.hype + 15),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 15),
                     }
                 },
                 activeGeniusOffer: null,
@@ -3506,7 +3641,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     ...state.artistsData,
                     [state.activeArtistId]: {
                         ...activeData,
-                        hype: Math.min(1000, activeData.hype + 10),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 10),
                         inbox: updatedInbox,
                     }
                 },
@@ -3534,7 +3669,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         ...activeData,
                         videos: [...activeData.videos, video],
                         songs: updatedSongs,
-                        hype: Math.min(1000, activeData.hype + 20),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 20),
                     }
                 },
                 activeOnTheRadarOffer: null,
@@ -3565,7 +3700,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     ...state.artistsData,
                     [state.activeArtistId]: {
                         ...activeData,
-                        hype: Math.min(1000, activeData.hype + 10),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 10),
                         inbox: updatedInbox,
                     }
                 },
@@ -3593,7 +3728,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         ...activeData,
                         videos: [...activeData.videos, video],
                         songs: updatedSongs,
-                        hype: Math.min(1000, activeData.hype + 20),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 20),
                     }
                 },
                 activeTrshdOffer: null,
@@ -3645,7 +3780,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             const updatedData: ArtistData = {
                 ...activeData,
                 videos: [...activeData.videos, video],
-                hype: Math.min(100, activeData.hype + 25),
+                hype: Math.min(getHypeCap(activeData), activeData.hype + 25),
             };
 
             let postContent = '';
@@ -3785,7 +3920,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         ...activeData,
                         inbox: updatedInbox,
                         xPosts: [newPost, ...activeData.xPosts],
-                        hype: Math.min(100, activeData.hype + hypeBoost),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
                     }
                 },
                 currentView: 'inbox',
@@ -4377,7 +4512,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     [state.activeArtistId]: {
                         ...activeData,
                         videos: [...activeData.videos, video],
-                        hype: Math.min(100, activeData.hype + 30),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 30),
                         inbox: updatedInbox,
                     }
                 },
@@ -4503,6 +4638,12 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 },
                 oscarSubmissions: [...state.oscarSubmissions, ...submissions],
                 currentView: 'game'
+            };
+        }
+        case 'TOGGLE_OFFLINE_MODE': {
+            return {
+                ...state,
+                offlineMode: !state.offlineMode
             };
         }
         case 'SELL_RIGHTS': {
@@ -4639,7 +4780,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     [state.activeArtistId]: {
                         ...activeData,
                         videos: [...activeData.videos, video],
-                        hype: Math.min(100, activeData.hype + 40),
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + 40),
                         inbox: updatedInbox,
                     }
                 },
@@ -4894,7 +5035,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             
             const updatedData: ArtistData = {
                 ...activeData,
-                hype: Math.max(0, action.payload),
+                hype: Math.max(0, Math.min(1000, action.payload)),
             };
             return {
                 ...state,
@@ -5066,6 +5207,29 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 currentView: 'inbox',
             };
         }
+        case 'SUBMIT_COACHELLA': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId && email.offer?.type === 'coachellaOffer') {
+                    return { ...email, offer: { ...email.offer, isSubmitted: true } };
+                }
+                return email;
+            });
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        inbox: updatedInbox,
+                        coachella: activeData.coachella ? { ...activeData.coachella, status: 'submitted' } : undefined
+                    }
+                }
+            };
+        }
         case 'ACCEPT_FEATURE_OFFER': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -5108,24 +5272,29 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             const { songTitle, coverArt, releaseDate } = action.payload;
             const { npcArtistName, payout, songQuality, promotion } = state.activeFeatureOffer;
 
-            const newNpcSong: NpcSong = {
-                uniqueId: `playerfeat_${crypto.randomUUID()}`,
+            const newFeatureSong: Song = {
+                id: crypto.randomUUID(),
                 title: `${songTitle} (feat. ${activeArtist.name})`,
-                artist: npcArtistName,
                 genre: GENRES[Math.floor(Math.random() * GENRES.length)],
-                basePopularity: songQuality * 100000,
-                featuring: activeArtist.name,
-                isPlayerFeature: true,
+                quality: songQuality, // songQuality is up to 100
                 coverArt: coverArt,
                 isReleased: false,
                 releaseDate: releaseDate,
-                promotion: promotion ? { name: promotion.name, boost: 2.0 } : undefined,
-                promoWeeksLeft: promotion ? promotion.durationWeeks : undefined,
+                streams: 0,
+                lastWeekStreams: 0,
+                prevWeekStreams: 0,
+                duration: 180,
+                explicit: false,
+                artistId: state.activeArtistId,
+                isFeatureToNpc: true,
+                npcArtistName: npcArtistName,
+                playlistBoostWeeks: promotion?.durationWeeks || 0
             };
 
             const updatedData = {
                 ...activeData,
                 money: activeData.money + payout,
+                songs: [...activeData.songs, newFeatureSong]
             };
 
             return {
@@ -5134,7 +5303,6 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     ...state.artistsData,
                     [state.activeArtistId]: updatedData
                 },
-                npcs: [...state.npcs, newNpcSong],
                 activeFeatureOffer: null,
                 currentView: 'game'
             };
@@ -5304,6 +5472,32 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 currentView: 'youtube'
             };
         }
+        case 'UPDATE_NPC_COVER': {
+            const { artistName, newCover } = action.payload;
+            const npcImages = { ...(state.npcImages || {}), [artistName]: newCover };
+            
+            const mapChartEntries = (entries: ChartEntry[]) => entries.map(entry => 
+                entry.artist === artistName && !entry.isPlayerSong ? { ...entry, coverArt: newCover } : entry
+            );
+            
+            const mapAlbumChartEntries = (entries: AlbumChartEntry[]) => entries.map(entry => 
+                entry.artist === artistName && !entry.isPlayerAlbum ? { ...entry, coverArt: newCover } : entry
+            );
+
+            return {
+                ...state,
+                npcImages,
+                npcs: state.npcs.map(npc => npc.artist === artistName ? { ...npc, coverArt: newCover } : npc),
+                npcAlbums: state.npcAlbums.map(album => album.artist === artistName ? { ...album, coverArt: newCover } : album),
+                billboardHot100: mapChartEntries(state.billboardHot100),
+                spotifyGlobal50: mapChartEntries(state.spotifyGlobal50),
+                hotPopSongs: mapChartEntries(state.hotPopSongs || []),
+                hotRapRnb: mapChartEntries(state.hotRapRnb || []),
+                electronicChart: mapChartEntries(state.electronicChart || []),
+                countryChart: mapChartEntries(state.countryChart || []),
+                billboardTopAlbums: mapAlbumChartEntries(state.billboardTopAlbums || []),
+            };
+        }
         case 'UPDATE_NPC_AVATAR': {
             const { userId, newAvatar } = action.payload;
             const updatedArtistsData = { ...state.artistsData };
@@ -5418,7 +5612,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 ...activeData,
                 voguePhotoshoots: [...(activeData.voguePhotoshoots || []), photoshoot],
                 xPosts: [...newPosts, ...activeData.xPosts],
-                hype: Math.min(1000, activeData.hype + 50),
+                hype: Math.min(getHypeCap(activeData), activeData.hype + 50),
                 popularity: Math.min(100, activeData.popularity + 5),
             };
             

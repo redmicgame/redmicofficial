@@ -52,6 +52,9 @@ export interface Song {
     };
     lastCertification?: string;
     isTakenDown?: boolean;
+    isFeatureToNpc?: boolean;
+    npcArtistName?: string;
+    releaseDate?: GameDate;
     reRecordingOf?: string; // ID of the original song
     revenue?: number;
     netRevenue?: number;
@@ -253,16 +256,22 @@ export interface FeatureReleaseNotification {
     npcArtistName: string;
 }
 
+export interface CoachellaOffer {
+    type: 'coachellaOffer';
+    emailId: string;
+    isSubmitted: boolean;
+}
+
 
 export interface Email {
     id: string;
     sender: string;
-    senderIcon?: 'spotify' | 'youtube' | 'default' | 'label' | 'genius' | 'fallon' | 'popbase' | 'grammys' | 'x' | 'onlyfans' | 'soundtrack' | 'touringdata' | 'business' | 'vogue' | 'feature' | 'ontheradar' | 'trshd' | 'oscars';
+    senderIcon?: 'spotify' | 'youtube' | 'default' | 'label' | 'genius' | 'fallon' | 'popbase' | 'grammys' | 'x' | 'onlyfans' | 'soundtrack' | 'touringdata' | 'business' | 'vogue' | 'feature' | 'ontheradar' | 'trshd' | 'oscars' | 'coachella';
     subject: string;
     body: string;
     date: GameDate;
     isRead: boolean;
-    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer;
+    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | CoachellaOffer;
 }
 
 export interface GameDate {
@@ -648,6 +657,12 @@ export interface ArtistData {
     labelSubmissions: LabelSubmission[];
     customLabels: CustomLabel[];
     artistImages: string[];
+    coachella?: {
+        year: number;
+        status: 'none' | 'invited' | 'submitted' | 'headliner' | 'mid' | 'small' | 'opener';
+        openingFor?: string;
+        payoutSize?: number;
+    };
     artistVideoThumbnails: string[];
     paparazziPhotos: PaparazziPhoto[];
     tourPhotos: string[];
@@ -691,6 +706,7 @@ export interface ArtistData {
 
 export interface GameState {
     cloudSaveId?: string;
+    offlineMode?: boolean;
     careerMode: 'solo' | 'group' | null;
     soloArtist: Artist | null;
     group: Group | null;
@@ -707,6 +723,7 @@ export interface GameState {
     
     npcs: NpcSong[];
     npcAlbums: NpcAlbum[];
+    npcImages?: Record<string, string>;
     soundtrackAlbums: SoundtrackAlbum[];
     billboardHot100: ChartEntry[];
     billboardTopAlbums: AlbumChartEntry[];
@@ -762,6 +779,7 @@ export type GameAction =
     | { type: 'START_SOLO_GAME'; payload: { artist: Artist; startYear: number } }
     | { type: 'START_GROUP_GAME'; payload: { group: Group; startYear: number } }
     | { type: 'CHANGE_VIEW'; payload: GameView }
+    | { type: 'SUBMIT_COACHELLA'; payload: { emailId: string } }
     | { type: 'CHANGE_TAB'; payload: Tab }
     | { type: 'SWITCH_YOUTUBE_CHANNEL'; payload: 'artist' | 'label' }
     | { type: 'CHANGE_ACTIVE_ARTIST'; payload: string }
@@ -827,6 +845,7 @@ export type GameAction =
     | { type: 'TOGGLE_GOLD_THEME'; payload: { enabled: boolean; } }
     | { type: 'SET_SALES_BOOST'; payload: { newBoost: number; } }
     | { type: 'UPDATE_WIKIPEDIA_SUMMARY'; payload: { releaseId: string; summary: string; } }
+    | { type: 'TOGGLE_OFFLINE_MODE' }
     | { type: 'PRO_SIGN_LABEL'; payload: { labelId: Label['id']; } }
     | { type: 'GO_TO_GRAMMY_SUBMISSIONS'; payload: { emailId: string } }
     | { type: 'SUBMIT_FOR_GRAMMYS'; payload: { submissions: GameState['grammySubmissions'], emailId: string } }
@@ -869,6 +888,7 @@ export type GameAction =
     | { type: 'UPDATE_NPC_X_USER'; payload: { userId: string; newName: string; newUsername: string } }
     | { type: 'VIEW_PAST_LABEL_CHANNEL'; payload: string }
     | { type: 'UPDATE_NPC_AVATAR'; payload: { userId: string; newAvatar: string } }
+    | { type: 'UPDATE_NPC_COVER'; payload: { artistName: string; newCover: string } }
     | { type: 'ACCEPT_VOGUE_OFFER'; payload: { magazine: 'Vogue' | 'Vogue Korea' | 'Vogue Italy'; emailId: string; } }
     | { type: 'CANCEL_VOGUE_OFFER' }
     | { type: 'SET_CLOUD_SAVE_ID'; payload: string }

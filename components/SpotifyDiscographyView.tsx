@@ -68,14 +68,17 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
 
     const filteredReleases = useMemo(() => {
         if (filter === 'Albums') {
-            return sortedReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)');
+            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)') && !r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
         }
         if (filter === 'Singles and EPs') {
-            return sortedReleases.filter(r => r.type === 'Single' || r.type === 'EP');
+            return sortedReleases.filter(r => (r.type === 'Single' || r.type === 'EP') && !r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
+        }
+        if (filter === 'Featured') {
+            return sortedReleases.filter(r => r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
         }
         // Placeholder for other filters
         return [];
-    }, [sortedReleases, filter]);
+    }, [sortedReleases, filter, activeArtistData?.songs]);
     
     const mainList = useMemo(() => {
         const list = filteredReleases;
