@@ -1,5 +1,5 @@
 
-import { ArtistData, GameState, XPost, XUser, XTrend, Song, Video } from '../types';
+import { ArtistData, GameState, XPost, XUser, XTrend, Song, Video, XChat, XMessage } from '../types';
 import { formatNumber } from '../context/GameContext';
 import { LABELS } from '../constants';
 
@@ -45,12 +45,14 @@ export const generateWeeklyXContent = (
     artistName: string,
     playerSongs: PlayerSongWithChart[],
     leakedSong: Song | null
-): { newPosts: XPost[], newUsers: XUser[], newTrends: XTrend[] } => {
+): { newPosts: XPost[], newUsers: XUser[], newTrends: XTrend[], newChats: XChat[], newMessages: {chatId: string, message: XMessage}[] } => {
     const newPosts: XPost[] = [];
     const newUsers: XUser[] = [];
     const newTrends: XTrend[] = [];
+    const newChats: XChat[] = [];
+    const newMessages: {chatId: string, message: XMessage}[] = [];
     const { date } = gameState;
-    const { artistImages, artistVideoThumbnails, releases, streamsRemovedThisWeek, paparazziPhotos, tours, voguePhotoshoots, songs, tourPhotos } = artistData;
+    const { artistImages, artistVideoThumbnails, releases, streamsRemovedThisWeek, paparazziPhotos, tours, voguePhotoshoots, songs, tourPhotos, popularity, xChats } = artistData;
 
     // --- GRAMMY PREDICTION POST (WEEK 50) ---
     if (date.week === 50) {
@@ -997,5 +999,119 @@ export const generateWeeklyXContent = (
         }
     }
 
-    return { newPosts, newUsers, newTrends };
+    // --- X CHAT LOGIC ---
+    const popularityFactor = Math.min(100, popularity) / 100; // 0 to 1
+    
+    // Group Chats Logic
+    const existingGroupChats = xChats.filter(c => c.isGroup);
+    
+    // Chance to create a new group chat scales with popularity (max ~15% per week)
+    if (existingGroupChats.length < 15 && Math.random() < (0.05 + popularityFactor * 0.1)) {
+        const gcNames = [`${artistName} Updates`, `${artistName.toUpperCase()} HQ`, `${artistName} daily`, `${artistName} stan group`];
+        const newGcName = pickRandom(gcNames);
+        const gcAvatar = artistImages.length > 0 ? pickRandom(artistImages) : undefined;
+        
+        // Randomly pick 2-5 fans
+        const allFans = artistData.xUsers.filter(u => u.id.startsWith('fan'));
+        const participants = ['player'];
+        for (let i = 0; i < Math.floor(Math.random() * 4) + 2; i++) {
+            if (allFans[i]) participants.push(allFans[i].id);
+        }
+        
+        newChats.push({
+            id: crypto.randomUUID(),
+            name: newGcName,
+            avatar: gcAvatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==',
+            isGroup: true,
+            participants,
+            messages: [{
+                id: crypto.randomUUID(), senderId: participants[1] || 'fan1',
+                text: `Just made this GC! Omg let's hope ${artistName} sees this!`, date
+            }],
+            isRead: false
+        });
+    }
+
+    // Add messages to existing group chats (scales with popularity)
+    existingGroupChats.forEach(gc => {
+        if (Math.random() < (0.2 + popularityFactor * 0.6)) {
+            const senderId = pickRandom(gc.participants.filter(p => p !== 'player')) || 'fan1';
+            const gcMessages = [
+                `did you guys see ${artistName}'s latest post??`,
+                `we need tour dates like RIGHT NOW`,
+                `obsessed with the new aesthetic`,
+                `what do we think the next single is gonna be?`,
+                `crying throwing up over ${artistName}`,
+                `${artistName} is literally mother/father`,
+                `stream the new era 🗣️🗣️`,
+                `i can't stop listening to ${artistName} omg`,
+                `${artistName} if you see this we love you!!`,
+                `so glad to be part of the fandom rn`,
+                `everyone is talking about ${artistName} today!`,
+            ];
+            // Offline mode / random message loop handles "more messages"
+            const numMessages = Math.floor(Math.random() * 3) + 1; // 1 to 3 messages
+            for (let m = 0; m < numMessages; m++) {
+                newMessages.push({
+                    chatId: gc.id,
+                    message: {
+                        id: crypto.randomUUID(),
+                        senderId,
+                        text: pickRandom(gcMessages),
+                        date
+                    }
+                });
+            }
+        }
+    });
+
+    // Individual DMs Logic
+    // Chance to get a random fan DM scales with popularity (max ~40% per week)
+    if (Math.random() < (0.1 + popularityFactor * 0.3)) {
+        const allFans = artistData.xUsers.filter(u => u.id.startsWith('fan'));
+        const dmFan = pickRandom(allFans);
+        if (dmFan) {
+            // Check if DM chat already exists
+            let dmChat = xChats.find(c => !c.isGroup && c.participants.includes(dmFan.id));
+            if (!dmChat) {
+                // check newChats
+                dmChat = newChats.find(c => !c.isGroup && c.participants.includes(dmFan.id));
+            }
+            
+            const messages = [
+                `omg i love you so much!! ${artistName} please reply 😭`,
+                `you literally saved my life with your music`,
+                `are we getting a tour soon? love from brazil 🇧🇷`,
+                `please unblock me from your spam account`,
+                `bestie drop the skincare routine immediately`,
+                `your last song was incredible. keeping it on repeat!`,
+                `hi queen/king just wanted to say i'm your biggest fan!!`,
+                `is there a deluxe album coming??`,
+                `so proud of you ${artistName}!!`,
+                `hope you receive this... thank you for everything!`
+            ];
+            
+            const numMessages = Math.floor(Math.random() * 2) + 1; // 1 to 2 messages
+            for (let m = 0; m < numMessages; m++) {
+                const msgObj: XMessage = { id: crypto.randomUUID(), senderId: dmFan.id, text: pickRandom(messages), date };
+                
+                if (dmChat) {
+                    newMessages.push({ chatId: dmChat.id, message: msgObj });
+                } else {
+                    dmChat = {
+                        id: crypto.randomUUID(),
+                        name: dmFan.name,
+                        avatar: dmFan.avatar,
+                        isGroup: false,
+                        participants: ['player', dmFan.id],
+                        messages: [msgObj],
+                        isRead: false
+                    };
+                    newChats.push(dmChat);
+                }
+            }
+        }
+    }
+
+    return { newPosts, newUsers, newTrends, newChats, newMessages };
 };

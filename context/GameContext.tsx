@@ -2043,7 +2043,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         return { ...s, chartRank: chartInfo?.rank };
                     });
 
-                    const { newPosts, newUsers, newTrends } = generateWeeklyXContent(artistData, { ...state, date: newDate }, artistProfile.name, playerChartSongs, leakedSongThisWeek);
+                    const { newPosts, newUsers, newTrends, newChats, newMessages } = generateWeeklyXContent(artistData, { ...state, date: newDate }, artistProfile.name, playerChartSongs, leakedSongThisWeek);
 
                     const existingUsernames = new Set(artistData.xUsers.map(u => u.username));
                     const uniqueNewUsers = newUsers.filter(u => !existingUsernames.has(u.username));
@@ -2051,6 +2051,20 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     artistData.xUsers.push(...uniqueNewUsers);
                     artistData.xPosts.unshift(...newPosts);
                     artistData.xTrends = newTrends;
+
+                    // Handle new chats and messages
+                    if (newChats.length > 0) {
+                        artistData.xChats.push(...newChats);
+                    }
+                    if (newMessages.length > 0) {
+                        newMessages.forEach(({ chatId, message }) => {
+                            const chat = artistData.xChats.find(c => c.id === chatId);
+                            if (chat) {
+                                chat.messages.push(message);
+                                chat.isRead = false;
+                            }
+                        });
+                    }
 
                     // Cap the number of posts to prevent performance degradation over time
                     if (artistData.xPosts.length > 250) {
