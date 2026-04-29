@@ -2427,6 +2427,52 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     weeklySales: album.weeklySales,
                 });
             });
+
+            // --- NPC Pop Base #1 Debut Posts ---
+            const npcPopBasePosts: XPost[] = [];
+            const hot100One = newBillboardHot100[0];
+            const topAlbumsOne = newBillboardTopAlbums[0];
+
+            if (hot100One && hot100One.lastWeek === null && !hot100One.isPlayerSong) {
+                npcPopBasePosts.push({
+                    id: crypto.randomUUID(), authorId: 'popbase',
+                    content: `"${hot100One.title}" by ${hot100One.artist} debuts at #1 on the Billboard Hot 100.`,
+                    image: hot100One.coverArt,
+                    likes: Math.floor(Math.random() * 80000) + 30000,
+                    retweets: Math.floor(Math.random() * 20000) + 5000,
+                    views: Math.floor(Math.random() * 1500000) + 500000,
+                    date: newDate
+                });
+            }
+
+            if (topAlbumsOne && topAlbumsOne.lastWeek === null && !topAlbumsOne.isPlayerAlbum) {
+                const units = formatNumber(Math.floor(topAlbumsOne.weeklyActivity));
+                // If it's a huge number like 1.2M, formatNumber returns "1.2M". If it's 300000, it might return "300000".
+                // Wait, formatNumber has T and B and M and K.
+                let unitStr = units;
+                if (topAlbumsOne.weeklyActivity >= 1000 && topAlbumsOne.weeklyActivity < 1000000) {
+                   unitStr = (topAlbumsOne.weeklyActivity / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+                }
+                
+                npcPopBasePosts.push({
+                    id: crypto.randomUUID(), authorId: 'popbase',
+                    content: `${topAlbumsOne.title} debuts #1 on the Billboard 200 with ${unitStr} units.`,
+                    image: topAlbumsOne.coverArt,
+                    likes: Math.floor(Math.random() * 80000) + 30000,
+                    retweets: Math.floor(Math.random() * 20000) + 5000,
+                    views: Math.floor(Math.random() * 1500000) + 500000,
+                    date: newDate
+                });
+            }
+
+            if (npcPopBasePosts.length > 0) {
+                Object.values(updatedArtistsData).forEach(d => {
+                    d.xPosts.unshift(...npcPopBasePosts);
+                    if (d.xPosts.length > 250) {
+                        d.xPosts = d.xPosts.slice(0, 250);
+                    }
+                });
+            }
             
             // --- AWARDS LOGIC ---
             let finalState: GameState = { ...state };
