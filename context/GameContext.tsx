@@ -1323,6 +1323,20 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         const baseStreams = (song.quality ** 2) * 50;
                         let weeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * (Math.random() * 0.4 + 0.8)); 
 
+                        // Decay logic
+                        let releaseDate = song.releaseDate;
+                        if (!releaseDate && song.releaseId) {
+                            const release = artistData.releases.find(r => r.id === song.releaseId);
+                            if (release) releaseDate = release.releaseDate;
+                        }
+                        
+                        if (releaseDate) {
+                            const ageInWeeks = Math.max(0, (newDate.year - releaseDate.year) * 52 + (newDate.week - releaseDate.week));
+                            const maxAge = Math.min(ageInWeeks, 156); // 3 years max decay
+                            const decayFactor = 1 / (1 + 0.15 * maxAge);
+                            weeklyStreams = Math.floor(weeklyStreams * decayFactor);
+                        }
+
                         // Christmas Genre Seasonal Logic
                         if (song.genre === 'Christmas') {
                             const week = newDate.week;
@@ -2049,6 +2063,27 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     const uniqueNewUsers = newUsers.filter(u => !existingUsernames.has(u.username));
 
                     artistData.xUsers.push(...uniqueNewUsers);
+                    
+                    // Grow followers for X users
+                    const weeklyXPop = artistData.popularity / 100; // 0 to 1
+                    artistData.xUsers.forEach(u => {
+                        let gain = Math.floor(Math.random() * 20) + 5;
+                        if (u.isPlayer) {
+                            gain = Math.floor(totalWeeklyStreams / 20000) + Math.floor(weeklyXPop * 5000); 
+                        } else if (u.id.includes('fan')) {
+                            gain = Math.floor(gain * (1 + weeklyXPop * 50)) + Math.floor(totalWeeklyStreams / 500000);
+                        } else if (u.isVerified) {
+                            gain = Math.floor(Math.random() * 5000) + 2000;
+                        }
+                        
+                        u.followersCount = (u.followersCount || 0) + gain;
+                        
+                        // Slowly grow following count for some users
+                        if (!u.isVerified && !u.isPlayer && Math.random() > 0.5) {
+                            u.followingCount = (u.followingCount || 0) + Math.floor(Math.random() * 3);
+                        }
+                    });
+
                     artistData.xPosts.unshift(...newPosts);
                     artistData.xTrends = newTrends;
 
