@@ -1618,16 +1618,23 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                             const song = newSongs[songIndex];
 
                             if (song.isReleased && song.streams > 1000) {
-                                const getRemovalPercentage = (boost: number): number => {
-                                    if (boost >= 30) return 0.80; // 80%
-                                    if (boost >= 10) return 0.25 + Math.random() * 0.15; // 25-40%
-                                    if (boost >= 4) return 0.10 + Math.random() * 0.10; // 10-20%
-                                    if (boost >= 2.5) return 0.05 + Math.random() * 0.05; // 5-10%
-                                    if (boost >= 1.5) return 0.01 + Math.random() * 0.04; // 1-5%
-                                    return 0.001 + Math.random() * 0.01; // fallback
+                                const getRemovalPercentage = (boost: number, quality?: string): number => {
+                                    let basePercentage = 0;
+                                    if (boost >= 30) basePercentage = 0.80; // 80%
+                                    else if (boost >= 10) basePercentage = 0.25 + Math.random() * 0.15; // 25-40%
+                                    else if (boost >= 4) basePercentage = 0.10 + Math.random() * 0.10; // 10-20%
+                                    else if (boost >= 2.5) basePercentage = 0.05 + Math.random() * 0.05; // 5-10%
+                                    else if (boost >= 1.5) basePercentage = 0.01 + Math.random() * 0.04; // 1-5%
+                                    else basePercentage = 0.001 + Math.random() * 0.01; // fallback
+
+                                    let multiplier = 1;
+                                    if (quality === 'high') multiplier = 0.1; // 10% of base removal
+                                    else if (quality === 'medium') multiplier = 0.4; // 40% of base removal
+
+                                    return basePercentage * multiplier;
                                 };
                                 
-                                const removalPercentage = getRemovalPercentage(promo.boostMultiplier);
+                                const removalPercentage = getRemovalPercentage(promo.boostMultiplier, promo.promoQuality);
                                 const streamsToRemove = Math.floor(song.streams * removalPercentage);
 
                                 if (streamsToRemove > 0) {

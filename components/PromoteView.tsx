@@ -15,23 +15,48 @@ const PromotionModal: React.FC<{
     title: string;
     packages: Array<PromotionPackage>;
     onClose: () => void;
-    onSelectPackage: (pkg: PromotionPackage) => void;
+    onSelectPackage: (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => void;
     money: number;
     selectedCount?: number;
 }> = ({ title, packages, onClose, onSelectPackage, money, selectedCount = 1 }) => {
+    const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('low');
+
+    const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="w-full max-w-lg bg-zinc-800 rounded-2xl shadow-lg border border-red-500/30 p-6 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                <h2 className="text-2xl font-bold text-center mb-6">{title}</h2>
+                <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
+                
+                <div className="mb-6 bg-zinc-900 rounded-lg p-1 flex">
+                    <button 
+                        onClick={() => setQuality('low')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${quality === 'low' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                        Low Quality
+                    </button>
+                    <button 
+                        onClick={() => setQuality('medium')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${quality === 'medium' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                        Medium Quality
+                    </button>
+                    <button 
+                        onClick={() => setQuality('high')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${quality === 'high' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                        High Quality
+                    </button>
+                </div>
+
                 <div className="overflow-y-auto space-y-4 pr-2">
                     {packages.map(pkg => {
-                        const totalCost = pkg.weeklyCost * selectedCount;
+                        const totalCost = pkg.weeklyCost * selectedCount * qualityMultiplier;
                         const canAfford = money >= totalCost;
                         return (
                             <button
                                 key={pkg.name}
-                                onClick={() => onSelectPackage(pkg)}
+                                onClick={() => onSelectPackage(pkg, quality)}
                                 disabled={!canAfford}
                                 className="w-full p-4 rounded-lg text-left transition-colors border-2 border-zinc-700 bg-zinc-800 hover:border-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-700"
                             >
@@ -145,8 +170,9 @@ const PromoteView: React.FC = () => {
         setSelectedSongIds(new Set());
     };
 
-    const handleSelectPackageForSongs = (pkg: PromotionPackage) => {
-        const totalCost = pkg.weeklyCost * selectedSongIds.size;
+    const handleSelectPackageForSongs = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
+        const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
+        const totalCost = pkg.weeklyCost * selectedSongIds.size * qualityMultiplier;
         if (money < totalCost) return;
 
         for (const songId of selectedSongIds) {
@@ -157,7 +183,8 @@ const PromoteView: React.FC = () => {
                     itemId: song.id,
                     itemType: 'song',
                     promoType: pkg.name,
-                    weeklyCost: pkg.weeklyCost,
+                    promoQuality: quality,
+                    weeklyCost: pkg.weeklyCost * qualityMultiplier,
                     boostMultiplier: 'boost' in pkg ? pkg.boost : 1,
                     artistId: song.artistId,
                 };
@@ -168,15 +195,17 @@ const PromoteView: React.FC = () => {
         setSelectedSongIds(new Set());
     };
     
-    const handleSelectPackageForSingleItem = (pkg: PromotionPackage) => {
-        if (!selectedSingleItem || money < pkg.weeklyCost) return;
+    const handleSelectPackageForSingleItem = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
+        const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
+        if (!selectedSingleItem || money < pkg.weeklyCost * qualityMultiplier) return;
 
         const newPromotion: Promotion = {
             id: crypto.randomUUID(),
             itemId: selectedSingleItem.item.id,
             itemType: selectedSingleItem.type,
             promoType: pkg.name,
-            weeklyCost: pkg.weeklyCost,
+            promoQuality: quality,
+            weeklyCost: pkg.weeklyCost * qualityMultiplier,
             boostMultiplier: 'boost' in pkg ? pkg.boost : 1,
             artistId: selectedSingleItem.item.artistId,
         };
@@ -310,7 +339,7 @@ const PromoteView: React.FC = () => {
                                         <div key={promo.id} className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
                                             <img src={promo.itemType === 'song' ? (item as Song).coverArt : (item as Video).thumbnail} alt={item.title} className="w-12 h-12 rounded-md object-cover"/>
                                             <div className="flex-grow">
-                                                <p className="font-semibold">{promo.promoType}</p>
+                                                <p className="font-semibold">{promo.promoType} <span className="text-xs font-normal bg-zinc-700 px-2 py-0.5 rounded ml-2 capitalize">{promo.promoQuality} Quality</span></p>
                                                 <p className="text-sm text-zinc-400">for "{item.title}"</p>
                                                 <p className="text-xs text-green-400 font-mono">${formatNumber(promo.weeklyCost)} / week</p>
                                             </div>

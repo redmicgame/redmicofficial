@@ -284,6 +284,7 @@ export interface Promotion {
     itemId: string; // songId, releaseId, or videoId
     itemType: 'song' | 'release' | 'video';
     promoType: string; // e.g., 'Playlist Push', 'Nostalgia Campaign'
+    promoQuality: 'high' | 'medium' | 'low';
     weeklyCost: number;
     boostMultiplier: number;
     artistId: string;

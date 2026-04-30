@@ -166,9 +166,6 @@ const StartScreen: React.FC = () => {
                 saves.sort((a, b) => b.updatedAt?.seconds - a.updatedAt?.seconds);
                 setCloudSaves(saves);
                 setIsLoadingSaves(false);
-                if (saves.length > 0) {
-                    setShowSavesList(true);
-                }
             };
             fetchSaves();
         } else {
@@ -213,6 +210,8 @@ const StartScreen: React.FC = () => {
                     
                     {isLoadingSaves ? (
                         <p className="text-center animate-pulse text-zinc-400">Loading your saves...</p>
+                    ) : cloudSaves.length === 0 ? (
+                        <p className="text-center text-zinc-400 mb-6 font-medium">No saves found.</p>
                     ) : (
                         <div className="space-y-4 max-h-[50vh] overflow-y-auto mb-6 pr-2">
                             {cloudSaves.map((save) => (
@@ -272,18 +271,17 @@ const StartScreen: React.FC = () => {
                             </button>
                         </div>
                     ) : (
-                        cloudSaves.length > 0 && (
-                            <div className="mb-6 flex justify-center">
-                                <button onClick={() => setShowSavesList(true)} className="flex items-center gap-2 bg-zinc-700 text-white font-bold px-4 py-2 rounded-lg hover:bg-zinc-600 transition-colors">
-                                    Load a Cloud Save
-                                </button>
-                            </div>
-                        )
+                        <div className="mb-6 text-center text-zinc-400 text-sm">
+                            Signed in as {user.email}
+                        </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 mb-6">
+                    <div className={`grid gap-2 mb-6 ${user ? 'grid-cols-3' : 'grid-cols-2'}`}>
                         <button onClick={() => setMode('solo')} className={`py-3 rounded-lg font-bold transition-colors ${mode === 'solo' ? 'bg-red-600' : 'bg-zinc-700 hover:bg-zinc-600'}`}>Solo</button>
                         <button onClick={() => setMode('group')} className={`py-3 rounded-lg font-bold transition-colors ${mode === 'group' ? 'bg-red-600' : 'bg-zinc-700 hover:bg-zinc-600'}`}>Group</button>
+                        {user && (
+                             <button type="button" onClick={() => setShowSavesList(true)} className="py-3 rounded-lg font-bold transition-colors bg-zinc-700 hover:bg-zinc-600">Saves</button>
+                        )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
