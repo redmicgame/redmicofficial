@@ -272,6 +272,9 @@ const AccountsView: React.FC = () => {
     const [newAvatar, setNewAvatar] = useState('https://ui-avatars.com/api/?background=random&name=New');
     const [newBio, setNewBio] = useState('');
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [changingAvatarForAccountId, setChangingAvatarForAccountId] = useState<string | null>(null);
+
     const playerAccounts = xUsers.filter(u => u.isPlayer);
     const activePlayerUser = playerAccounts.find(u => u.id === selectedPlayerXUserId) || playerAccounts[0];
 
@@ -282,23 +285,61 @@ const AccountsView: React.FC = () => {
         setNewName(''); setNewUsername(''); setNewBio('');
     };
 
+    const handleAvatarClick = (e: React.MouseEvent, accountId: string) => {
+        e.stopPropagation();
+        setChangingAvatarForAccountId(accountId);
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && changingAvatarForAccountId) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                dispatch({ 
+                    type: 'UPDATE_NPC_AVATAR', 
+                    payload: { userId: changingAvatarForAccountId, newAvatar: reader.result as string } 
+                });
+                setChangingAvatarForAccountId(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="text-white p-4">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleFileChange} 
+            />
             <h1 className="text-xl font-bold mb-4">Your X Accounts</h1>
             <div className="space-y-4">
                 {playerAccounts.map(account => (
                     <div key={account.id} className={`flex items-center justify-between p-4 rounded-xl border ${activePlayerUser?.id === account.id ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 bg-zinc-800'}`}>
-                        <div className="flex items-center gap-3" onClick={() => dispatch({ type: 'SELECT_X_ACCOUNT', payload: { accountId: account.id } })} style={{cursor: 'pointer'}}>
-                            <img src={account.avatar} alt={account.name} className="w-12 h-12 rounded-full object-cover" />
-                            <div>
-                                <h3 className="font-bold flex items-center gap-1">{account.name} {account.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400" />}</h3>
-                                <p className="text-zinc-500 text-sm">@{account.username}</p>
+                        <div className="flex items-center gap-3 w-full" onClick={() => dispatch({ type: 'SELECT_X_ACCOUNT', payload: { accountId: account.id } })} style={{cursor: 'pointer'}}>
+                            <div className="relative group flex-shrink-0" onClick={(e) => handleAvatarClick(e, account.id)}>
+                                <img src={account.avatar} alt={account.name} className="w-12 h-12 rounded-full object-cover group-hover:opacity-75 transition-opacity" />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="flex-grow min-w-0">
+                                <h3 className="font-bold flex items-center gap-1 truncate">{account.name} {account.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />}</h3>
+                                <p className="text-zinc-500 text-sm truncate">@{account.username}</p>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 ml-4 flex-shrink-0">
                             {playerAccounts.length > 1 && (
                                 <button 
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                        e.stopPropagation();
                                         if (confirm("Are you sure you want to delete this account?")) {
                                             dispatch({ type: 'DELETE_X_ACCOUNT', payload: { accountId: account.id } });
                                         }
@@ -309,7 +350,7 @@ const AccountsView: React.FC = () => {
                                 </button>
                             )}
                             {activePlayerUser?.id !== account.id && (
-                                <button onClick={() => dispatch({ type: 'SELECT_X_ACCOUNT', payload: { accountId: account.id } })} className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded text-sm font-semibold">
+                                <button onClick={(e) => { e.stopPropagation(); dispatch({ type: 'SELECT_X_ACCOUNT', payload: { accountId: account.id } }); }} className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded text-sm font-semibold">
                                     Switch
                                 </button>
                             )}
