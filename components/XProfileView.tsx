@@ -14,7 +14,7 @@ const Post: React.FC<{ post: XPost; author: XUser; onQuote?: (post: XPost) => vo
     const { activeArtistData } = useGame();
     const timeAgo = (postDate: { week: number, year: number }) => `${postDate.week}w`;
 
-    const isSuspended = activeArtistData!.xSuspensionStatus?.isSuspended;
+    const isSuspended = activeArtistData!.xSuspensionStatus?.isSuspended && activeArtistData!.xSuspensionStatus.accountId === (activeArtistData!.selectedPlayerXUserId || activeArtistData!.xUsers.find(u => u.isPlayer)?.id);
 
     return (
         <div className="flex gap-3 p-3 border-b border-zinc-700/70">
@@ -73,10 +73,10 @@ const XProfileView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
     const [quotePostTarget, setQuotePostTarget] = React.useState<XPost | null>(null);
     const { selectedXUserId } = gameState;
-    const { xUsers, xPosts, xFollowingIds, xSuspensionStatus } = activeArtistData!;
+    const { xUsers, xPosts, xFollowingIds, xSuspensionStatus, selectedPlayerXUserId } = activeArtistData!;
 
     const user = xUsers.find(u => u.id === selectedXUserId);
-    const playerUser = xUsers.find(u => u.isPlayer);
+    const playerUser = selectedPlayerXUserId ? xUsers.find(u => u.id === selectedPlayerXUserId) : xUsers.find(u => u.isPlayer);
     const userPosts = xPosts
         .filter(p => p.authorId === selectedXUserId)
         .sort((a, b) => {
@@ -123,7 +123,7 @@ const XProfileView: React.FC = () => {
                 </div>
             </header>
             
-            {user.isPlayer && xSuspensionStatus?.isSuspended && (
+            {user.isPlayer && xSuspensionStatus?.isSuspended && xSuspensionStatus.accountId === user.id && (
                 <div className="bg-zinc-800 p-3 text-center text-sm text-zinc-300">
                     <strong>Account suspended</strong>
                     <p className="text-xs">X suspends accounts which violate the X Rules.</p>

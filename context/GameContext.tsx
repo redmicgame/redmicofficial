@@ -1231,7 +1231,14 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     }
                 
                     if (Math.random() < suspensionChance) {
-                        artistData.xSuspensionStatus = { isSuspended: true, reason: suspensionReason };
+                        const playerAccounts = artistData.xUsers.filter(u => u.isPlayer);
+                        const suspendedAccountId = artistData.selectedPlayerXUserId || playerAccounts[0]?.id;
+                        artistData.xSuspensionStatus = { 
+                            isSuspended: true, 
+                            reason: suspensionReason,
+                            suspendedDate: newDate,
+                            accountId: suspendedAccountId
+                        };
                         artistData.hype = Math.max(0, artistData.hype - 50);
                         artistData.popularity = Math.max(0, artistData.popularity - 10);
                 
@@ -1293,7 +1300,21 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         }
                     }
                 }
-
+                
+                if (artistData.xSuspensionStatus?.isSuspended && artistData.xSuspensionStatus.suspendedDate) {
+                    const weeksSinceSuspension = (newDate.year * 52 + newDate.week) - (artistData.xSuspensionStatus.suspendedDate.year * 52 + artistData.xSuspensionStatus.suspendedDate.week);
+                    if (weeksSinceSuspension >= 4) {
+                        const targetAccountId = artistData.xSuspensionStatus.accountId;
+                        artistData.xUsers = artistData.xUsers.filter(u => u.id !== targetAccountId);
+                        // @ts-ignore
+                        artistData.xSuspensionStatus = null;
+                        
+                        // Pick a new account if we deleted the current one
+                        if (artistData.selectedPlayerXUserId === targetAccountId) {
+                            artistData.selectedPlayerXUserId = artistData.xUsers.find(u => u.isPlayer)?.id;
+                        }
+                    }
+                }
 
                 let labelMultiplier = 1;
                 let playerCut = 1.0;
@@ -3525,7 +3546,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
             let newPosts: XPost[] = [];
             if (label && artist) {
-                const playerUser = activeData.xUsers.find(u => u.isPlayer);
+                const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
                 if (playerUser) {
                     newPosts.push({
                         id: crypto.randomUUID(),
@@ -4014,7 +4035,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             if (!state.activeArtistId) return state;
             const { emailId, answer } = action.payload;
             const activeData = state.artistsData[state.activeArtistId];
-            const playerUser = activeData.xUsers.find(u => u.isPlayer);
+            const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
 
             if (!playerUser) return state;
 
@@ -4060,7 +4081,9 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
             
-            const playerUser = activeData.xUsers.find(u => u.isPlayer);
+            const playerUser = activeData.selectedPlayerXUserId 
+                ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId)
+                : activeData.xUsers.find(u => u.isPlayer);
             if (!playerUser) return state;
 
             const baseFollowers = playerUser.followersCount || 1000;
@@ -4106,6 +4129,73 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             return {
                 ...state,
                 artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData },
+            };
+        }
+        case 'SELECT_X_ACCOUNT': {
+            if (!state.activeArtistId) return state;
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...state.artistsData[state.activeArtistId],
+                        selectedPlayerXUserId: action.payload.accountId,
+                    }
+                }
+            };
+        }
+        case 'CREATE_X_ACCOUNT': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const playerAccounts = activeData.xUsers.filter(u => u.isPlayer);
+            if (playerAccounts.length >= 5) return state; // Limit to 5 accounts
+
+            const newAccount: XUser = {
+                id: crypto.randomUUID(),
+                name: action.payload.name,
+                username: action.payload.username,
+                avatar: action.payload.avatar,
+                bio: action.payload.bio,
+                isPlayer: true,
+                isVerified: false,
+                followersCount: 0,
+                followingCount: 0,
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xUsers: [...activeData.xUsers, newAccount],
+                        selectedPlayerXUserId: newAccount.id,
+                    }
+                }
+            };
+        }
+        case 'DELETE_X_ACCOUNT': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const playerAccounts = activeData.xUsers.filter(u => u.isPlayer);
+            if (playerAccounts.length <= 1) return state; // Must have at least one account
+
+            const updatedUsers = activeData.xUsers.filter(u => u.id !== action.payload.accountId);
+            let newSelected = activeData.selectedPlayerXUserId;
+            if (newSelected === action.payload.accountId) {
+                newSelected = updatedUsers.find(u => u.isPlayer)?.id;
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xUsers: updatedUsers,
+                        selectedPlayerXUserId: newSelected,
+                    }
+                }
             };
         }
         case 'VIEW_X_PROFILE':
@@ -4249,7 +4339,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             let newPosts: XPost[] = [];
 
             if(artist) {
-                const playerUser = activeData.xUsers.find(u => u.isPlayer);
+                const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
                 if (playerUser) {
                     let content = `${artist.name} is starting their own record label, "${label.name}". Boss moves.`;
                     if (label.dealWithMajorId) {
@@ -4519,7 +4609,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 else if (label.tier === 'Mid-high' || label.tier === 'Mid-Low' || label.tier === 'Top') advance = 750000;
                 else if (label.tier === 'Low') advance = 300000;
 
-                const playerUser = activeData.xUsers.find(u => u.isPlayer);
+                const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
                 if(playerUser) {
                     newPosts.push({
                         id: crypto.randomUUID(),

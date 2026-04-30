@@ -559,6 +559,8 @@ export interface XSuspensionStatus {
     isSuspended: boolean;
     reason: 'fan_war_reports' | 'random';
     appealSentDate?: GameDate;
+    suspendedDate?: GameDate;
+    accountId?: string; // tie suspension to a specific account
 }
 
 export interface SoundtrackTrack {
@@ -674,6 +676,7 @@ export interface ArtistData {
     manager: { id: string; contractEndDate: GameDate } | null;
     securityTeamId: string | null;
     xUsers: XUser[];
+    selectedPlayerXUserId?: string;
     xPosts: XPost[];
     xChats: XChat[];
     xTrends: XTrend[];
@@ -829,6 +832,9 @@ export type GameAction =
     | { type: 'ANSWER_POPBASE_QUESTION'; payload: { emailId: string; answer: string } }
     | { type: 'POST_ON_X'; payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push'; targetId?: string; songId?: string; quoteOf?: XPost } }
     | { type: 'VIEW_X_PROFILE'; payload: string }
+    | { type: 'CREATE_X_ACCOUNT'; payload: { username: string; name: string; avatar: string; bio?: string } }
+    | { type: 'DELETE_X_ACCOUNT'; payload: { accountId: string } }
+    | { type: 'SELECT_X_ACCOUNT'; payload: { accountId: string } }
     | { type: 'VIEW_X_CHAT'; payload: string }
     | { type: 'FOLLOW_X_USER'; payload: string }
     | { type: 'UNFOLLOW_X_USER'; payload: string }

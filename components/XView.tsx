@@ -107,7 +107,7 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
     const { dispatch, activeArtistData } = useGame();
     if (!author) return null;
 
-    const isSuspended = activeArtistData!.xSuspensionStatus?.isSuspended;
+    const isSuspended = activeArtistData!.xSuspensionStatus?.isSuspended && activeArtistData!.xSuspensionStatus.accountId === (activeArtistData!.selectedPlayerXUserId || activeArtistData!.xUsers.find(u => u.isPlayer)?.id);
 
     const timeAgo = (postDate: { week: number, year: number }) => {
         // Simplified time ago logic for demonstration
@@ -261,6 +261,90 @@ const MessagesView: React.FC = () => {
     );
 };
 
+const AccountsView: React.FC = () => {
+    const { dispatch, activeArtistData } = useGame();
+    if (!activeArtistData) return null;
+    const { xUsers, selectedPlayerXUserId } = activeArtistData;
+    
+    const [isCreating, setIsCreating] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newUsername, setNewUsername] = useState('');
+    const [newAvatar, setNewAvatar] = useState('https://ui-avatars.com/api/?background=random&name=New');
+    const [newBio, setNewBio] = useState('');
+
+    const playerAccounts = xUsers.filter(u => u.isPlayer);
+    const activePlayerUser = playerAccounts.find(u => u.id === selectedPlayerXUserId) || playerAccounts[0];
+
+    const handleCreateAccount = () => {
+        if (!newName || !newUsername) return;
+        dispatch({ type: 'CREATE_X_ACCOUNT', payload: { name: newName, username: newUsername, avatar: newAvatar, bio: newBio } });
+        setIsCreating(false);
+        setNewName(''); setNewUsername(''); setNewBio('');
+    };
+
+    return (
+        <div className="text-white p-4">
+            <h1 className="text-xl font-bold mb-4">Your X Accounts</h1>
+            <div className="space-y-4">
+                {playerAccounts.map(account => (
+                    <div key={account.id} className={`flex items-center justify-between p-4 rounded-xl border ${activePlayerUser?.id === account.id ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 bg-zinc-800'}`}>
+                        <div className="flex items-center gap-3" onClick={() => dispatch({ type: 'SELECT_X_ACCOUNT', payload: { accountId: account.id } })} style={{cursor: 'pointer'}}>
+                            <img src={account.avatar} alt={account.name} className="w-12 h-12 rounded-full object-cover" />
+                            <div>
+                                <h3 className="font-bold flex items-center gap-1">{account.name} {account.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400" />}</h3>
+                                <p className="text-zinc-500 text-sm">@{account.username}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {playerAccounts.length > 1 && (
+                                <button 
+                                    onClick={() => {
+                                        if (confirm("Are you sure you want to delete this account?")) {
+                                            dispatch({ type: 'DELETE_X_ACCOUNT', payload: { accountId: account.id } });
+                                        }
+                                    }}
+                                    className="text-red-400 hover:bg-red-500/20 px-3 py-1 rounded text-sm"
+                                >
+                                    Delete
+                                </button>
+                            )}
+                            {activePlayerUser?.id !== account.id && (
+                                <button onClick={() => dispatch({ type: 'SELECT_X_ACCOUNT', payload: { accountId: account.id } })} className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded text-sm font-semibold">
+                                    Switch
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {playerAccounts.length < 5 && !isCreating && (
+                <button onClick={() => setIsCreating(true)} className="mt-4 w-full border-2 border-dashed border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 py-4 rounded-xl font-bold transition-colors">
+                    + Add New Account ({playerAccounts.length}/5)
+                </button>
+            )}
+
+            {isCreating && (
+                <div className="mt-6 bg-zinc-900 border border-zinc-700 p-4 rounded-xl">
+                    <h3 className="font-bold text-lg mb-4">Create New Account</h3>
+                    <div className="space-y-3">
+                        <input className="w-full bg-zinc-800 border-none rounded p-2 text-white placeholder-zinc-500" placeholder="Display Name" value={newName} onChange={e => { setNewName(e.target.value); setNewAvatar('https://ui-avatars.com/api/?background=random&name=' + encodeURIComponent(e.target.value || 'N')); }} />
+                        <div className="flex bg-zinc-800 rounded overflow-hidden">
+                            <span className="p-2 text-zinc-500 pl-3">@</span>
+                            <input className="w-full bg-transparent border-none rounded-r p-2 text-white placeholder-zinc-500" placeholder="username" value={newUsername} onChange={e => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} />
+                        </div>
+                        <textarea className="w-full bg-zinc-800 border-none rounded p-2 text-white placeholder-zinc-500" placeholder="Bio" value={newBio} onChange={e => setNewBio(e.target.value)} rows={2} />
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setIsCreating(false)} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded font-semibold text-sm">Cancel</button>
+                            <button onClick={handleCreateAccount} disabled={!newName || !newUsername} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded font-semibold text-sm text-white">Create Account</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export const ComposeXPostModal: React.FC<{
     user: XUser;
     onClose: () => void;
@@ -409,7 +493,7 @@ export const ComposeXPostModal: React.FC<{
 };
 
 
-type XViewTab = 'For you' | 'Trending' | 'Messages';
+type XViewTab = 'For you' | 'Trending' | 'Messages' | 'Accounts';
 
 const XView: React.FC = () => {
     const { dispatch, activeArtistData } = useGame();
@@ -419,8 +503,11 @@ const XView: React.FC = () => {
     const [showAppealConfirm, setShowAppealConfirm] = useState(false);
     
     if (!activeArtistData) return null;
-    const { xUsers, xSuspensionStatus } = activeArtistData;
-    const playerUser = xUsers.find(u => u.isPlayer);
+    const { xUsers, xSuspensionStatus, selectedPlayerXUserId } = activeArtistData;
+    const playerUser = selectedPlayerXUserId ? xUsers.find(u => u.id === selectedPlayerXUserId) : xUsers.find(u => u.isPlayer);
+    
+    // Only suspend the view if the currently selected user is the one suspended
+    const isActiveUserSuspended = xSuspensionStatus?.isSuspended && xSuspensionStatus.accountId === playerUser?.id;
 
     const handleAppealClick = () => {
         if (!xSuspensionStatus || xSuspensionStatus.appealSentDate) return;
@@ -445,6 +532,8 @@ const XView: React.FC = () => {
                 return <TrendsView />;
             case 'Messages':
                 return <MessagesView />;
+            case 'Accounts':
+                return <AccountsView />;
             default:
                 return <FeedView onQuote={handleQuote} />;
         }
@@ -491,7 +580,7 @@ const XView: React.FC = () => {
             </header>
 
             <main className="flex-grow overflow-y-auto pb-20">
-                 {xSuspensionStatus?.isSuspended && (
+                 {isActiveUserSuspended && xSuspensionStatus && (
                     <div className="bg-black p-4 border-b border-zinc-700">
                         <h2 className="text-2xl font-bold text-white">Your account is suspended</h2>
                         <p className="text-zinc-400 mt-2">
@@ -507,7 +596,7 @@ const XView: React.FC = () => {
             </main>
 
             <div className="fixed bottom-20 right-4 z-30">
-                <button onClick={() => setIsComposeModalOpen(true)} disabled={xSuspensionStatus?.isSuspended} className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors disabled:bg-zinc-600 disabled:cursor-not-allowed">
+                <button onClick={() => setIsComposeModalOpen(true)} disabled={isActiveUserSuspended || !playerUser} className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors disabled:bg-zinc-600 disabled:cursor-not-allowed">
                     <PlusIcon className="w-7 h-7"/>
                 </button>
             </div>
@@ -515,7 +604,7 @@ const XView: React.FC = () => {
             <footer className="fixed bottom-0 left-0 right-0 h-20 bg-black border-t border-zinc-700/70 flex justify-around items-center z-30">
                 <button onClick={() => setActiveTab('For you')} className={`${activeTab === 'For you' ? 'text-white' : 'text-zinc-500'}`}><HomeIcon className="w-7 h-7" /></button>
                 <button onClick={() => setActiveTab('Trending')} className={`${activeTab === 'Trending' ? 'text-white' : 'text-zinc-500'}`}><SearchIcon className="w-7 h-7" /></button>
-                <button className="text-zinc-500 cursor-not-allowed"><BellIcon className="w-7 h-7" /></button>
+                <button onClick={() => setActiveTab('Accounts')} className={`${activeTab === 'Accounts' ? 'text-white' : 'text-zinc-500'}`}><UserGroupIcon className="w-7 h-7" /></button>
                 <button onClick={() => setActiveTab('Messages')} className={`${activeTab === 'Messages' ? 'text-white' : 'text-zinc-500'}`}><EnvelopeIcon className="w-7 h-7" /></button>
             </footer>
         </div>
