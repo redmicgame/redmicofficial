@@ -3360,6 +3360,34 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 }
             };
         }
+        case 'UPDATE_GRAMMY_BANNER': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        grammyBanner: action.payload,
+                    }
+                }
+            };
+        }
+        case 'UPDATE_OSCAR_BANNER': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        oscarBanner: action.payload,
+                    }
+                }
+            };
+        }
         case 'MARK_INBOX_READ': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];

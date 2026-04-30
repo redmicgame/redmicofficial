@@ -647,6 +647,8 @@ export interface ArtistData {
     youtubeStoreUnlocked: boolean;
     merch: MerchProduct[];
     merchStoreBanner: string | null;
+    grammyBanner?: string;
+    oscarBanner?: string;
     inbox: Email[];
     streamsThisMonth: number;
     viewsThisQuarter: number;
@@ -792,6 +794,8 @@ export type GameAction =
     | { type: 'ADD_MERCH'; payload: { item: MerchProduct } }
     | { type: 'REMOVE_MERCH'; payload: { id: string } }
     | { type: 'UPDATE_MERCH_BANNER'; payload: string }
+    | { type: 'UPDATE_GRAMMY_BANNER'; payload: string }
+    | { type: 'UPDATE_OSCAR_BANNER'; payload: string }
     | { type: 'MARK_INBOX_READ' }
     | { type: 'TAKE_DOWN_SONG'; payload: { songId: string } }
     | { type: 'TAKE_DOWN_RELEASE'; payload: { releaseId: string } }
