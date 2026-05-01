@@ -96,6 +96,7 @@ export interface Release {
     rightsSoldOriginalValue?: number;
     rightsSoldPercent?: number;
     rightsOwnerLabelId?: string;
+    isAnnounced?: boolean;
 }
 
 export interface Video {
@@ -402,8 +403,9 @@ export interface LabelSubmission {
     status: 'pending' | 'awaiting_player_input' | 'rejected' | 'scheduled';
     decisionDate?: GameDate;
     projectReleaseDate?: GameDate;
+    isProjectAnnounced?: boolean;
     feedback?: string;
-    singlesToRelease?: { songId: string; releaseDate: GameDate }[];
+    singlesToRelease?: { songId: string; releaseDate: GameDate; isAnnounced?: boolean }[];
     promoBudget?: number;
     promoBudgetSpent?: number;
     hasCountdownPage?: boolean;
@@ -832,7 +834,7 @@ export type GameAction =
     | { type: 'ADD_ARTIST_VIDEO'; payload: string }
     | { type: 'ADD_PAPARAZZI_PHOTO'; payload: { photo: PaparazziPhoto } }
     | { type: 'ANSWER_POPBASE_QUESTION'; payload: { emailId: string; answer: string } }
-    | { type: 'POST_ON_X'; payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push'; targetId?: string; songId?: string; quoteOf?: XPost } }
+    | { type: 'POST_ON_X'; payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push' | 'announce'; targetId?: string; songId?: string; quoteOf?: XPost; announceItem?: { type: 'project' | 'single', submissionId: string, songId?: string } } }
     | { type: 'VIEW_X_PROFILE'; payload: string }
     | { type: 'CREATE_X_ACCOUNT'; payload: { username: string; name: string; avatar: string; bio?: string } }
     | { type: 'DELETE_X_ACCOUNT'; payload: { accountId: string } }

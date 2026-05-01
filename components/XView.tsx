@@ -410,9 +410,28 @@ export const ComposeXPostModal: React.FC<{
         return activeArtistData!.songs.filter(s => s.isReleased);
     }, [activeArtistData]);
 
+    const scheduledItems = useMemo(() => {
+        const items: { type: 'project' | 'single', id: string, name: string, submissionId: string, songId?: string }[] = [];
+        activeArtistData?.labelSubmissions?.filter(s => s.status === 'scheduled').forEach(sub => {
+            if (sub.projectReleaseDate && !sub.isProjectAnnounced) {
+                items.push({ type: 'project', id: `proj-${sub.id}`, name: sub.release.title, submissionId: sub.id });
+            }
+            if (sub.singlesToRelease) {
+                sub.singlesToRelease.filter(s => !s.isAnnounced).forEach(single => {
+                    const song = activeArtistData.songs.find(s => s.id === single.songId);
+                    if (song) items.push({ type: 'single', id: `single-${single.songId}`, name: song.title, submissionId: sub.id, songId: song.id });
+                });
+            }
+        });
+        return items;
+    }, [activeArtistData]);
+
+    const [announceItemId, setAnnounceItemId] = useState<string>('');
+
     useEffect(() => {
         setTargetId('');
         setSongId('');
+        setAnnounceItemId('');
         
         if (postType === 'fanWar' && npcArtists.length > 0) {
             setTargetId(npcArtists[0]);
@@ -420,21 +439,32 @@ export const ComposeXPostModal: React.FC<{
         } else if (postType === 'push' && playerSongs.length > 0) {
             setSongId(playerSongs[0].id);
             setContent(`push ${playerSongs[0].title} to top 10 on iTunes`);
+        } else if (postType === 'announce' && scheduledItems.length > 0) {
+            setAnnounceItemId(scheduledItems[0].id);
+            setContent(`I am so excited to announce my new release ${scheduledItems[0].name} coming soon!`);
         } else {
             setContent('');
         }
-    }, [postType, npcArtists, playerSongs]);
+    }, [postType, npcArtists, playerSongs, scheduledItems]);
 
 
     const handlePost = () => {
-        if (content.trim() || image || postType === 'push' || quotePost) {
+        if (content.trim() || image || postType === 'push' || postType === 'announce' || quotePost) {
+            let announceItemData = undefined;
+            if (postType === 'announce') {
+                const item = scheduledItems.find(i => i.id === announceItemId);
+                if (item) {
+                    announceItemData = { type: item.type, submissionId: item.submissionId, songId: item.songId };
+                }
+            }
             onPost({ 
                 content: content.trim(), 
                 image: image || undefined, 
                 postType, 
                 targetId: postType === 'fanWar' ? targetId : undefined,
                 songId: postType === 'push' ? songId : undefined,
-                quoteOf: quotePost
+                quoteOf: quotePost,
+                announceItem: announceItemData
             });
         }
     };
@@ -491,10 +521,11 @@ export const ComposeXPostModal: React.FC<{
                         </div>
                     </div>
                     <div>
-                        <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div className="grid grid-cols-4 gap-2 mb-2">
                             <button onClick={() => setPostType('normal')} className={`py-2 text-sm font-semibold rounded-md ${postType === 'normal' ? 'bg-blue-500 text-white' : 'bg-zinc-800'}`}>Normal</button>
                             <button onClick={() => setPostType('fanWar')} className={`py-2 text-sm font-semibold rounded-md ${postType === 'fanWar' ? 'bg-red-500 text-white' : 'bg-zinc-800'}`}>Start Fan War</button>
-                            <button onClick={() => setPostType('push')} disabled={isPushDisabled} className={`py-2 text-sm font-semibold rounded-md ${postType === 'push' ? 'bg-green-500 text-white' : 'bg-zinc-800'} disabled:opacity-50 disabled:cursor-not-allowed`}>Push on iTunes</button>
+                            <button onClick={() => setPostType('push')} disabled={isPushDisabled} className={`py-2 text-sm font-semibold rounded-md ${postType === 'push' ? 'bg-green-500 text-white' : 'bg-zinc-800'} disabled:opacity-50 disabled:cursor-not-allowed`}>Push iTunes</button>
+                            <button onClick={() => setPostType('announce')} disabled={scheduledItems.length === 0} className={`py-2 text-xs font-semibold rounded-md ${postType === 'announce' ? 'bg-purple-500 text-white' : 'bg-zinc-800'} disabled:opacity-50 disabled:cursor-not-allowed`}>Announce</button>
                         </div>
                         {isPushDisabled && postType === 'push' && <p className="text-xs text-zinc-500 text-center">Only available during a fan war.</p>}
 
@@ -506,6 +537,11 @@ export const ComposeXPostModal: React.FC<{
                          {postType === 'push' && !isPushDisabled && (
                              <select value={songId} onChange={e => setSongId(e.target.value)} className="w-full bg-zinc-800 p-2 rounded-md mt-2">
                                 {playerSongs.map(song => <option key={song.id} value={song.id}>Song: {song.title}</option>)}
+                            </select>
+                        )}
+                        {postType === 'announce' && scheduledItems.length > 0 && (
+                            <select value={announceItemId} onChange={e => setAnnounceItemId(e.target.value)} className="w-full bg-zinc-800 p-2 rounded-md mt-2">
+                                {scheduledItems.map(item => <option key={item.id} value={item.id}>{item.type === 'project' ? 'Project' : 'Single'}: {item.name}</option>)}
                             </select>
                         )}
                     </div>

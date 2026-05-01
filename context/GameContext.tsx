@@ -1809,6 +1809,32 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                                     artistData.songs = artistData.songs.map(s => s.id === single.songId ? { ...s, isReleased: true, releaseId: singleRelease.id, isPreReleaseSingle: true, coverArt: sub.release.coverArt } : s);
                                     artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + 15);
 
+                                    if (!single.isAnnounced) {
+                                        const popBasePost: XPost = {
+                                            id: crypto.randomUUID(),
+                                            authorId: 'popbase',
+                                            content: `${artistProfile.name} has surprise released their new Single "${songToRelease.title}".`,
+                                            image: singleRelease.coverArt,
+                                            likes: Math.floor(Math.random() * 80000) + 30000,
+                                            retweets: Math.floor(Math.random() * 20000) + 5000,
+                                            views: Math.floor(Math.random() * 1500000) + 500000,
+                                            date: newDate
+                                        };
+                                        artistData.xPosts.unshift(popBasePost);
+
+                                        const tmzPost: XPost = {
+                                            id: crypto.randomUUID(),
+                                            authorId: 'tmz',
+                                            content: `${artistProfile.name} just secret-dropped a new track. Desperation for streams or a genuine surprise? You be the judge. 📉🤭`,
+                                            image: artistData.paparazziPhotos.length > 0 ? artistData.paparazziPhotos[Math.floor(Math.random() * artistData.paparazziPhotos.length)].url : undefined,
+                                            likes: Math.floor(Math.random() * 40000) + 10000,
+                                            retweets: Math.floor(Math.random() * 8000) + 2000,
+                                            views: Math.floor(Math.random() * 900000) + 300000,
+                                            date: newDate
+                                        };
+                                        artistData.xPosts.unshift(tmzPost);
+                                    }
+
                                     // Genius offer for single
                                     if (artistProfile) {
                                         const emailId = crypto.randomUUID();
@@ -1857,6 +1883,32 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
                             if (artistData.contract && (release.type === 'Album' || release.type === 'EP')) {
                                 artistData.contract.albumsReleased += 1;
+                            }
+
+                            if (!sub.isProjectAnnounced) {
+                                const popBasePost: XPost = {
+                                    id: crypto.randomUUID(),
+                                    authorId: 'popbase',
+                                    content: `${artistProfile.name} has surprise released their new ${release.type} "${release.title}".`,
+                                    image: release.coverArt,
+                                    likes: Math.floor(Math.random() * 80000) + 30000,
+                                    retweets: Math.floor(Math.random() * 20000) + 5000,
+                                    views: Math.floor(Math.random() * 1500000) + 500000,
+                                    date: newDate
+                                };
+                                artistData.xPosts.unshift(popBasePost);
+
+                                const tmzPost: XPost = {
+                                    id: crypto.randomUUID(),
+                                    authorId: 'tmz',
+                                    content: `${artistProfile.name} just secret-dropped another project. Desperation for streams or a genuine surprise? You be the judge. 📉🤭`,
+                                    image: artistData.paparazziPhotos.length > 0 ? artistData.paparazziPhotos[Math.floor(Math.random() * artistData.paparazziPhotos.length)].url : undefined,
+                                    likes: Math.floor(Math.random() * 40000) + 10000,
+                                    retweets: Math.floor(Math.random() * 8000) + 2000,
+                                    views: Math.floor(Math.random() * 900000) + 300000,
+                                    date: newDate
+                                };
+                                artistData.xPosts.unshift(tmzPost);
                             }
 
                              // Fallon offer for EP/Album
@@ -3189,6 +3241,28 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             let newEmails: Email[] = [];
             const artistName = state.soloArtist?.name || state.group?.name || 'Artist';
 
+            const popBasePost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'popbase',
+                content: `${artistName} has surprise released their new ${releaseWithLabel.type} "${releaseWithLabel.title}".`,
+                image: releaseWithLabel.coverArt,
+                likes: Math.floor(Math.random() * 80000) + 30000,
+                retweets: Math.floor(Math.random() * 20000) + 5000,
+                views: Math.floor(Math.random() * 1500000) + 500000,
+                date: state.date
+            };
+
+            const tmzPost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'tmz',
+                content: `${artistName} just secret-dropped ${releaseWithLabel.type === 'Single' ? 'a new track' : 'another project'}. Desperation for streams or a genuine surprise? You be the judge. 📉🤭`,
+                image: activeData.paparazziPhotos.length > 0 ? activeData.paparazziPhotos[Math.floor(Math.random() * activeData.paparazziPhotos.length)].url : undefined,
+                likes: Math.floor(Math.random() * 40000) + 10000,
+                retweets: Math.floor(Math.random() * 8000) + 2000,
+                views: Math.floor(Math.random() * 900000) + 300000,
+                date: state.date
+            };
+
             if (releaseWithLabel.type === 'Single') {
                 const song = activeData.songs.find(s => s.id === releaseWithLabel.songIds[0]);
                 if (song) {
@@ -3305,6 +3379,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         songs: newSongs,
                         hype: Math.min(getHypeCap(activeData), activeData.hype + hypeIncrease),
                         inbox: [...activeData.inbox, ...newEmails],
+                        xPosts: [popBasePost, tmzPost, ...activeData.xPosts]
                     }
                 }
             };
@@ -4148,9 +4223,69 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 quoteOf: quoteOf,
             };
 
+            const updatedPosts = [newPost, ...activeData.xPosts];
+            
+            if (postType === 'announce' && action.payload.announceItem) {
+                const { type, submissionId, songId } = action.payload.announceItem;
+                const submission = activeData.labelSubmissions.find(s => s.id === submissionId);
+                const artistName = state.soloArtist?.name || state.group?.name || 'Artist';
+
+                if (submission) {
+                    let projectTypeStr = submission.release.type;
+                    let projectTitle = submission.release.title;
+                    let releaseDateStr = 'soon';
+                    
+                    if (type === 'project') {
+                        submission.isProjectAnnounced = true;
+                        if (submission.projectReleaseDate) {
+                            releaseDateStr = `Week ${submission.projectReleaseDate.week}, ${submission.projectReleaseDate.year}`;
+                        }
+                    } else if (type === 'single' && songId) {
+                        const single = submission.singlesToRelease?.find(s => s.songId === songId);
+                        if (single) {
+                            single.isAnnounced = true;
+                            if (single.releaseDate) {
+                                releaseDateStr = `Week ${single.releaseDate.week}, ${single.releaseDate.year}`;
+                            }
+                        }
+                        const song = activeData.songs.find(s => s.id === songId);
+                        if (song) {
+                            projectTitle = song.title;
+                            projectTypeStr = 'Single';
+                        }
+                    }
+
+                    // Pop Base Tweet
+                    const popBasePost: XPost = {
+                        id: crypto.randomUUID(),
+                        authorId: 'popbase',
+                        content: `${artistName} announces a new ${projectTypeStr} "${projectTitle}" out ${releaseDateStr}.`,
+                        image: submission.release.coverArt,
+                        likes: Math.floor(Math.random() * 80000) + 30000,
+                        retweets: Math.floor(Math.random() * 20000) + 5000,
+                        views: Math.floor(Math.random() * 1500000) + 500000,
+                        date: state.date
+                    };
+                    updatedPosts.unshift(popBasePost);
+
+                    // TMZ Tweet
+                    const tmzPost: XPost = {
+                        id: crypto.randomUUID(),
+                        authorId: 'tmz',
+                        content: `${artistName} is dropping ${projectTypeStr === 'Single' ? 'a new track' : 'another project'} soon... let's hope they actually put effort into this one, unlike their tragic outfit choices lately. 😬👀`,
+                        image: activeData.paparazziPhotos.length > 0 ? activeData.paparazziPhotos[Math.floor(Math.random() * activeData.paparazziPhotos.length)].url : undefined,
+                        likes: Math.floor(Math.random() * 40000) + 10000,
+                        retweets: Math.floor(Math.random() * 8000) + 2000,
+                        views: Math.floor(Math.random() * 900000) + 300000,
+                        date: state.date
+                    };
+                    updatedPosts.unshift(tmzPost);
+                }
+            }
+
             const updatedData: ArtistData = {
                 ...activeData,
-                xPosts: [newPost, ...activeData.xPosts],
+                xPosts: updatedPosts,
             };
 
             if (postType === 'fanWar' && targetId) {
