@@ -93,23 +93,31 @@ const ReleaseView: React.FC = () => {
             setError('Project title is required.'); return;
         }
         
+        let finalReleaseType = releaseType;
         if (releaseType === 'Album (Deluxe)') {
             if (!baseAlbumForDeluxe) { setError('Please select a standard album to create a deluxe version of.'); return; }
             if (!coverArt) { setError('A cover art is required for a deluxe album.'); return; }
             if (selectedSongIds.size < 1) { setError('A deluxe album must have at least one new deluxe track.'); return; }
         } else {
+            const selectedSongsArr = Array.from(selectedSongIds).map(id => activeArtistData.songs.find(s => s.id === id)).filter((s): s is Song => !!s);
+            const allRemixes = selectedSongsArr.length > 0 && selectedSongsArr.every(s => s.remixOfSongId);
+            
             const count = selectedSongIds.size;
-            if (releaseType === 'Single' && count !== 1) {
-                setError('A single must have exactly 1 song.'); return;
+            if (releaseType === 'Single' && count !== 1 && !allRemixes) {
+                setError('A single must have exactly 1 song (unless all songs are remixes).'); return;
             }
-            if (releaseType === 'EP' && (count < 3 || count > 7)) {
+            if (releaseType === 'EP' && (count < 3 || count > 7) && !allRemixes) {
                 setError('An EP must have between 3 and 7 songs.'); return;
             }
-            if (releaseType === 'Album' && count < 8) {
+            if (releaseType === 'Album' && count < 8 && !allRemixes) {
                 setError('An album must have at least 8 songs.'); return;
             }
             if (!coverArt) {
                 setError('Could not determine cover art. Select at least one song.'); return;
+            }
+
+            if (allRemixes && (releaseType === 'EP' || releaseType === 'Album' || releaseType === 'Single')) {
+                finalReleaseType = 'Single';
             }
         }
         
@@ -117,7 +125,7 @@ const ReleaseView: React.FC = () => {
         const newRelease: Release = {
             id: crypto.randomUUID(),
             title: title.trim(),
-            type: releaseType,
+            type: finalReleaseType,
             coverArt: coverArt!,
             songIds: releaseType === 'Album (Deluxe)'
                 ? [...(releases.find(r => r.id === baseAlbumForDeluxe)?.songIds || []), ...Array.from(selectedSongIds)]

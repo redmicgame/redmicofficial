@@ -39,6 +39,7 @@ export interface Song {
     removedStreams?: number;
     playlistBoostWeeks?: number;
     tourBoostWeeks?: number;
+    remixOfSongId?: string;
     leakInfo?: {
         illegalStreams: number;
         illegalDownloads: number;

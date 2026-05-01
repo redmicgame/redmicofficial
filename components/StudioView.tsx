@@ -16,16 +16,31 @@ const StudioView: React.FC = () => {
     const [isDeluxeTrack, setIsDeluxeTrack] = useState(false);
     const [coverArt, setCoverArt] = useState<string | null>(null);
     const [collaboration, setCollaboration] = useState<{ artistName: string; cost: number } | null>(null);
+    const [isRemix, setIsRemix] = useState(false);
+    const [remixOfSongId, setRemixOfSongId] = useState<string>('');
     const [error, setError] = useState('');
 
     if (!activeArtistData || !activeArtist) return null;
-    const { money, releases } = activeArtistData;
+    const { money, releases, songs } = activeArtistData;
     const { careerMode } = gameState;
     const selectedStudio = STUDIOS[studioIndex];
 
     const hasReleasedAlbum = useMemo(() => {
         return releases.some(r => r.type === 'Album' || r.type === 'Album (Deluxe)');
     }, [releases]);
+
+    const potentialRemixTargets = useMemo(() => {
+        return songs.filter(s => !s.remixOfSongId);
+    }, [songs]);
+
+    const handleRemixToggle = (checked: boolean) => {
+        setIsRemix(checked);
+        if (checked && potentialRemixTargets.length > 0) {
+            setRemixOfSongId(potentialRemixTargets[0].id);
+        } else {
+            setRemixOfSongId('');
+        }
+    };
 
     const potentialCollaborators = useMemo(() => {
         const npcs = NPC_ARTIST_NAMES;
@@ -65,6 +80,17 @@ const StudioView: React.FC = () => {
             setError('Song title and cover art are required.');
             return;
         }
+        if (isRemix) {
+            if (!remixOfSongId) {
+                setError('You must select a song to remix.');
+                return;
+            }
+            const existingRemixes = songs.filter(s => s.remixOfSongId === remixOfSongId).length;
+            if (existingRemixes >= 8) {
+                setError('You can only make up to 8 remixes of a single song.');
+                return;
+            }
+        }
         const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0);
         if (money < totalCost) {
             setError("You don't have enough money for this session.");
@@ -94,6 +120,7 @@ const StudioView: React.FC = () => {
             isDeluxeTrack,
             removedStreams: 0,
             collaboration: collaboration ? { ...collaboration, qualityBoost } : undefined,
+            remixOfSongId: isRemix ? remixOfSongId : undefined,
             dailyStreams: [],
         };
 
@@ -174,6 +201,37 @@ const StudioView: React.FC = () => {
                         Deluxe Track <span className="text-xs text-zinc-400">(for deluxe albums)</span>
                     </label>
                 </div>
+
+                <div className="flex items-center">
+                    <input
+                        id="remix-checkbox"
+                        type="checkbox"
+                        checked={isRemix}
+                        onChange={(e) => handleRemixToggle(e.target.checked)}
+                        disabled={potentialRemixTargets.length === 0}
+                        className="h-4 w-4 rounded border-zinc-500 bg-zinc-700 text-red-600 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <label htmlFor="remix-checkbox" className="ml-2 block text-sm text-zinc-300">
+                        Song Remix
+                    </label>
+                </div>
+
+                {isRemix && (
+                    <div>
+                        <label htmlFor="remix-target" className="block text-sm font-medium text-zinc-300">Select Song to Remix</label>
+                        <select id="remix-target" value={remixOfSongId} onChange={e => setRemixOfSongId(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                            <option value="">Select a song</option>
+                            {potentialRemixTargets.map(song => (
+                                <option key={song.id} value={song.id}>{song.title}</option>
+                            ))}
+                        </select>
+                        {remixOfSongId && (
+                           <p className="text-xs text-zinc-400 mt-1">
+                               Remixes: {songs.filter(s => s.remixOfSongId === remixOfSongId).length} / 8
+                           </p>
+                        )}
+                    </div>
+                )}
 
                 <div>
                     <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
