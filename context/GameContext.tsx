@@ -3154,6 +3154,23 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData },
             };
         }
+        case 'CREATE_REMIX_PACK': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const newSongs: Song[] = action.payload.songs.map(song => ({
+                ...song,
+                dailyStreams: [],
+            }));
+            const updatedData = {
+                ...activeData,
+                money: activeData.money - action.payload.cost,
+                songs: [...activeData.songs, ...newSongs],
+            };
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData },
+            };
+        }
         case 'RELEASE_PROJECT': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];

@@ -792,6 +792,7 @@ export type GameAction =
     | { type: 'CHANGE_ACTIVE_ARTIST'; payload: string }
     | { type: 'PROGRESS_WEEK' }
     | { type: 'RECORD_SONG'; payload: { song: Song; cost: number } }
+    | { type: 'CREATE_REMIX_PACK'; payload: { songs: Song[]; cost: number } }
     | { type: 'RELEASE_PROJECT'; payload: { release: Release } }
     | { type: 'ADD_REVIEW'; payload: { releaseId: string; review: Review; cost: number; artistId: string; } }
     | { type: 'CREATE_VIDEO'; payload: { video: Video; cost: number } }
