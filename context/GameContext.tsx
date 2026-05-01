@@ -2276,16 +2276,23 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             const allPlayerSongsFlat = Object.values(updatedArtistsData).flatMap(d => d.songs);
             const allPlayerReleases = Object.values(updatedArtistsData).flatMap(d => d.releases);
 
-            const playerChartContenders = allPlayerSongsFlat
-                .filter(song => song.isReleased)
-                .map(song => {
-                    const artist = allPlayerArtistsAndGroups.find(a => a.id === song.artistId);
-                    return {
-                        uniqueId: song.id, title: song.title, artist: artist?.name || 'Unknown',
-                        weeklyStreams: song.lastWeekStreams, isPlayerSong: true, coverArt: song.coverArt, songId: song.id,
-                        genre: song.genre
-                    }
+            const basePlayerSongs = allPlayerSongsFlat.filter(song => song.isReleased && !song.remixOfSongId);
+
+            const playerChartContenders = basePlayerSongs.map(baseSong => {
+                const artist = allPlayerArtistsAndGroups.find(a => a.id === baseSong.artistId);
+                
+                let totalWeeklyStreams = baseSong.lastWeekStreams;
+                const remixes = allPlayerSongsFlat.filter(s => s.isReleased && s.remixOfSongId === baseSong.id);
+                remixes.forEach(remix => {
+                    totalWeeklyStreams += remix.lastWeekStreams;
                 });
+
+                return {
+                    uniqueId: baseSong.id, title: baseSong.title, artist: artist?.name || 'Unknown',
+                    weeklyStreams: totalWeeklyStreams, isPlayerSong: true, coverArt: baseSong.coverArt, songId: baseSong.id,
+                    genre: baseSong.genre
+                }
+            });
             
             const npcChartContenders = newNpcsWithReleases.map(npc => ({
                 uniqueId: npc.uniqueId, title: npc.title, artist: npc.artist,
@@ -2395,7 +2402,17 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
                     const totalWeeklyStreams = release.songIds.reduce((sum, songId) => {
                         const song = artistData.songs.find(s => s.id === songId);
-                        return sum + (song?.lastWeekStreams || 0);
+                        let songStreams = song?.lastWeekStreams || 0;
+                        
+                        // Add streams from remixes of this song
+                        if (song) {
+                            const remixes = artistData.songs.filter(s => s.isReleased && s.remixOfSongId === song.id);
+                            remixes.forEach(remix => {
+                                songStreams += remix.lastWeekStreams;
+                            });
+                        }
+
+                        return sum + songStreams;
                     }, 0);
 
                     const albumMerch = artistData.merch.filter(m => m.releaseId === release.id);
