@@ -217,7 +217,11 @@ const SpotifyView: React.FC = () => {
             <div className="p-4 space-y-8 pb-20">
                 {/* Listeners and Actions */}
                 <div>
-                    <p className="text-zinc-400 text-sm">{monthlyListeners.toLocaleString()} monthly listeners</p>
+                    <p className="text-zinc-400 text-sm">
+                        {monthlyListeners >= 1000000 
+                            ? `${(monthlyListeners / 1000000).toFixed(1).replace(/\.0$/, '')}M` 
+                            : monthlyListeners.toLocaleString()} monthly listeners
+                    </p>
                     <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button className="px-4 py-1 border border-zinc-400 rounded-full text-sm font-semibold hover:border-white">
