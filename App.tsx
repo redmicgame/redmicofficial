@@ -40,6 +40,10 @@ import GrammysView from './components/GrammysView';
 import SubmitForGrammysView from './components/SubmitForGrammysView';
 import CreateGrammyPerformanceView from './components/CreateGrammyPerformanceView';
 import GrammyRedCarpetView from './components/GrammyRedCarpetView';
+import AmasView from './components/AmasView';
+import SubmitForAmasView from './components/SubmitForAmasView';
+import CreateAmaPerformanceView from './components/CreateAmaPerformanceView';
+import AmaRedCarpetView from './components/AmaRedCarpetView';
 import ContractRenewalView from './components/ContractRenewalView';
 import ITunesView from './components/ITunesView';
 import OnlyFansSetupView from './components/OnlyFansSetupView';
@@ -190,6 +194,14 @@ const AppContent: React.FC = () => {
                 return <CreateGrammyPerformanceView />;
             case 'grammyRedCarpet':
                 return <GrammyRedCarpetView />;
+            case 'amas':
+                return <AmasView />;
+            case 'submitForAmas':
+                return <SubmitForAmasView />;
+            case 'createAmaPerformance':
+                return <CreateAmaPerformanceView />;
+            case 'amaRedCarpet':
+                return <AmaRedCarpetView />;
             case 'oscars':
                 return <OscarsView />;
             case 'submitForOscars':

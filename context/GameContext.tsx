@@ -2055,6 +2055,28 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     });
                 }
                 
+                const hasAmaEmailThisYear = artistData.inbox.some(e => 
+                    e.offer?.type === 'amaSubmission' && e.date.year === newDate.year
+                );
+
+                if (newDate.week === 20 && artistProfileForEmail && !hasAmaEmailThisYear) {
+                    const emailId = crypto.randomUUID();
+                    newEmails.push({
+                        id: emailId,
+                        sender: 'American Music Awards',
+                        senderIcon: 'amas',
+                        subject: `Submit Your Music for the ${newDate.year} American Music Awards`,
+                        body: `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year} American Music Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in week 23.\n\n- AMAs`,
+                        date: newDate,
+                        isRead: false,
+                        offer: {
+                            type: 'amaSubmission',
+                            emailId: emailId,
+                            isSubmitted: false
+                        }
+                    });
+                }
+                
                 if (artistData.fanWarStatus) {
                     artistData.fanWarStatus.weeksRemaining -= 1;
                     if (artistData.fanWarStatus.weeksRemaining <= 0) {
@@ -2836,6 +2858,172 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 }
             }
 
+            // --- AMAs LOGIC ---
+            let newAmaNominations: GameState['amaCurrentYearNominations'] = state.amaCurrentYearNominations;
+            
+            // Week 23: Determine AMA Nominations
+            if (newDate.week === 23 && state.amaSubmissions && state.amaSubmissions.length > 0) {
+                const newNominations: AmaCategory[] = [];
+                const amaCategories: AmaCategoryName[] = [
+                    'Artist of the Year', 'New Artist of the Year', 'Album of the Year', 'Song of the Year', 'Music Video of the Year',
+                    'Favorite Pop Artist', 'Favorite Pop Album', 'Favorite Pop Song',
+                    'Favorite Hip-Hop Artist', 'Favorite Hip-Hop Album', 'Favorite Hip-Hop Song',
+                    'Favorite R&B Artist', 'Favorite R&B Album', 'Favorite R&B Song',
+                    'Favorite Latin Artist', 'Favorite Latin Album', 'Favorite Latin Song',
+                    'Favorite Country Artist', 'Favorite Country Album', 'Favorite Country Song',
+                    'Favorite Rock Artist', 'Favorite Rock Album', 'Favorite Rock Song',
+                    'Favorite Dance/Electronic Artist'
+                ];
+
+                for (const categoryName of amaCategories) {
+                    const contenders: AmaContender[] = [];
+                    let genreFilter: string | null = null;
+                    let isAlbumCategory = false;
+                    let isSongCategory = false;
+                    let isArtistCategory = false;
+
+                    if (categoryName.includes('Album of the Year') || categoryName.includes('Favorite') && categoryName.includes('Album')) isAlbumCategory = true;
+                    if (categoryName.includes('Song of the Year') || categoryName.includes('Favorite') && categoryName.includes('Song') || categoryName.includes('Music Video')) isSongCategory = true;
+                    if (categoryName.includes('Artist of the Year') || categoryName.includes('Favorite') && categoryName.includes('Artist')) isArtistCategory = true;
+
+                    if (categoryName.includes('Pop')) genreFilter = 'Pop';
+                    if (categoryName.includes('Hip-Hop')) genreFilter = 'Hip Hop';
+                    if (categoryName.includes('R&B')) genreFilter = 'R&B';
+                    if (categoryName.includes('Latin')) genreFilter = 'Latin';
+                    if (categoryName.includes('Country')) genreFilter = 'Country';
+                    if (categoryName.includes('Rock')) genreFilter = 'Rock';
+                    if (categoryName.includes('Dance/Electronic')) genreFilter = 'Dance/Electronic';
+
+                    const playerSubmissions = state.amaSubmissions.filter(s => s.category === categoryName);
+                    for (const sub of playerSubmissions) {
+                        const artistData = updatedArtistsData[sub.artistId];
+                        const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === sub.artistId);
+                        if (!artistData || !artistProfile) continue;
+
+                        let score = 0;
+                        let isValid = false;
+
+                        if (isAlbumCategory) {
+                            const release = artistData.releases.find(r => r.id === sub.itemId);
+                            if (release) {
+                                score = (release.firstWeekStreams || 0) / 50000;
+                                isValid = true;
+                            }
+                        } else if (isArtistCategory) {
+                             score = artistData.popularity + artistData.hype;
+                             isValid = true;
+                        } else {
+                            const song = artistData.songs.find(s => s.id === sub.itemId);
+                            if (song) {
+                               score = song.streams / 100000;
+                               isValid = true;
+                            }
+                        }
+                        
+                        if (isValid) {
+                            contenders.push({ artistId: sub.artistId, artistName: artistProfile.name, itemId: sub.itemId, itemName: sub.itemName, score });
+                        }
+                    }
+                    
+                    const numNpcContenders = 15;
+                    if (isAlbumCategory) {
+                        newNpcAlbums.slice(0, numNpcContenders * 5)
+                            .slice(0, numNpcContenders)
+                            .forEach(album => contenders.push({ artistId: `npc_${album.artist}`, artistName: album.artist, itemId: album.uniqueId, itemName: album.title, score: Math.random() * 50 }));
+                    } else if (isSongCategory) {
+                        newNpcsWithReleases.slice(0, numNpcContenders * 5)
+                            .slice(0, numNpcContenders)
+                            .forEach(song => contenders.push({ artistId: `npc_${song.artist}`, artistName: song.artist, itemId: song.uniqueId, itemName: song.title, score: Math.random() * 50 }));
+                    } else {
+                        [...new Set(newNpcAlbums.slice(0, numNpcContenders).map(a => a.artist))].slice(0, 5).forEach(artistName => {
+                            contenders.push({ artistId: `npc_${artistName}`, artistName, itemId: `npc_${artistName}`, itemName: artistName, score: Math.random() * 100 + 50 });
+                        });
+                    }
+
+                    contenders.sort((a, b) => b.score - a.score);
+                    const nominees = contenders.slice(0, 5);
+                    if (nominees.length > 0) {
+                        newNominations.push({ name: categoryName, nominees, winner: nominees[0] });
+                    }
+                }
+                
+                newAmaNominations = newNominations;
+
+                for (const artistId in updatedArtistsData) {
+                    const artistData = updatedArtistsData[artistId];
+                    const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                    const artistNominations = newNominations.flatMap(cat => cat.nominees).filter(nom => nom.artistName === artistProfile?.name);
+                        
+                    if (artistNominations.length > 0 && artistProfile) {
+                        artistData.popularity = Math.min(100, artistData.popularity + (artistNominations.length * 3));
+                        const hasPerformanceOffer = Math.random() < 0.5;
+                        let body = `Dear ${artistProfile.name},\n\nCongratulations! We are pleased to announce your nomination(s) for the ${newDate.year} American Music Awards:\n\n`;
+                        artistNominations.forEach(nom => {
+                            const category = newNominations.find(c => c.nominees.includes(nom));
+                            body += `• ${category?.name} - "${nom.itemName}"\n`;
+                        });
+                        if(hasPerformanceOffer) body += `\nAdditionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.\n\n`;
+                        body += `\nSincerely,\nAMAs`;
+                        const emailId = crypto.randomUUID();
+                        artistData.inbox.push({
+                            id: emailId, sender: 'American Music Awards', senderIcon: 'amas', subject: 'Congratulations! You\'re an AMA Nominee!',
+                            body, date: newDate, isRead: false, offer: { type: 'amaNominations', emailId, hasPerformanceOffer }
+                        });
+
+                        const redCarpetEmailId = crypto.randomUUID();
+                        artistData.inbox.push({
+                            id: redCarpetEmailId,
+                            sender: 'American Music Awards',
+                            senderIcon: 'amas',
+                            subject: 'Invitation: AMAs Red Carpet',
+                            body: `Hi ${artistProfile.name},\n\nWe're excited to invite you to walk the red carpet at this year's AMAs. Pop Base and other outlets will be covering the event.\n\nPlease let us know if you'll be attending by sharing your look.\n\n- AMAs`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'amaRedCarpet', emailId: redCarpetEmailId }
+                        });
+                    }
+                }
+            }
+
+            // Week 25: AMA Awards Ceremony
+            if (newDate.week === 25 && state.amaCurrentYearNominations) {
+                for (const category of state.amaCurrentYearNominations) {
+                    if (category.winner) {
+                         const winner = category.winner;
+                         const content = `American Music Awards 🏆\n\nCongrats ${category.name} winner - '${winner.itemName}' @${winner.artistName.replace(/\s/g, '')} #AMAs`;
+                         Object.values(updatedArtistsData).forEach(d => d.xPosts.unshift({
+                             id: crypto.randomUUID(), authorId: 'popbase', content,
+                             likes: Math.floor(Math.random() * 40000) + 15000, retweets: Math.floor(Math.random() * 10000) + 5000,
+                             views: Math.floor(Math.random() * 2000000) + 1000000, date: newDate,
+                         }));
+                    }
+                }
+
+                for(const artistId in updatedArtistsData) {
+                    const artistData = updatedArtistsData[artistId];
+                    const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                    
+                    for (const category of state.amaCurrentYearNominations) {
+                        const nomination = category.nominees.find(n => n.artistName === artistProfile?.name);
+                        if (nomination) {
+                            const isWinner = category.winner?.artistName === nomination.artistName;
+                            if (isWinner) {
+                                artistData.popularity = Math.min(100, artistData.popularity + 5);
+                            }
+                            artistData.amaHistory = artistData.amaHistory || [];
+                            artistData.amaHistory.push({
+                                year: newDate.year, category: category.name, itemId: nomination.itemId,
+                                itemName: nomination.itemName, artistName: artistProfile?.name || 'Unknown',
+                                isWinner
+                            });
+                        }
+                    }
+                }
+                
+                finalState.amaSubmissions = [];
+                finalState.amaCurrentYearNominations = null;
+            }
+
             // --- GRAMMYS LOGIC ---
             let newGrammyNominations: GameState['grammyCurrentYearNominations'] = state.grammyCurrentYearNominations;
             
@@ -3158,6 +3346,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     spotifyNewEntries: newEntriesCount,
                     npcs: newNpcsWithReleases,
                     npcAlbums: newNpcAlbums,
+                    amaCurrentYearNominations: newAmaNominations,
                     grammyCurrentYearNominations: newGrammyNominations,
                     oscarCurrentYearNominations: newOscarNominations,
                     contractRenewalOffer: contractRenewalForActivePlayer,
@@ -3185,6 +3374,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 spotifyNewEntries: newEntriesCount,
                 npcs: newNpcsWithReleases,
                 npcAlbums: newNpcAlbums,
+                amaCurrentYearNominations: newAmaNominations,
                 grammyCurrentYearNominations: newGrammyNominations,
                 oscarCurrentYearNominations: newOscarNominations,
             };
@@ -4991,6 +5181,183 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
                 currentView: 'inbox',
                 activeGrammyRedCarpetOffer: null
+            };
+        }
+        case 'GO_TO_AMA_SUBMISSIONS': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId) {
+                    return { ...email, isRead: true };
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
+                currentView: 'submitForAmas'
+            };
+        }
+        case 'SUBMIT_FOR_AMAS': {
+            if (!state.activeArtistId) return state;
+            const { submissions, emailId } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === emailId && email.offer?.type === 'amaSubmission') {
+                    return { ...email, offer: { ...email.offer, isSubmitted: true }};
+                }
+                return email;
+            });
+
+            const newArtistSubmission = submissions.find(s => s.category === 'New Artist of the Year');
+            const hasSubmittedNewArtist = newArtistSubmission ? true : activeData.hasSubmittedForAmaNewArtist;
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        inbox: updatedInbox,
+                        hasSubmittedForAmaNewArtist: hasSubmittedNewArtist
+                    }
+                },
+                amaSubmissions: [...(state.amaSubmissions || []), ...submissions],
+                currentView: 'game'
+            };
+        }
+        case 'ACCEPT_AMA_PERFORMANCE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId && email.offer?.type === 'amaNominations') {
+                    return { ...email, offer: { ...email.offer, isPerformanceAccepted: true }};
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
+                activeAmaPerformanceOffer: { emailId: action.payload.emailId },
+                currentView: 'createAmaPerformance'
+            };
+        }
+        case 'CREATE_AMA_PERFORMANCE': {
+            if (!state.activeArtistId || !state.activeAmaPerformanceOffer) return state;
+            
+            const artistName = state.soloArtist?.name || state.group?.name;
+            const performancePost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'popbase',
+                content: `${artistName} performs "${action.payload.video.title}" at the #AMAs`,
+                image: action.payload.video.thumbnail,
+                likes: Math.floor(Math.random() * 800000) + 100000,
+                retweets: Math.floor(Math.random() * 150000) + 20000,
+                views: Math.floor(Math.random() * 10000000) + 2000000,
+                date: state.date,
+            };
+
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        hype: Math.min(100, activeData.hype + 5),
+                        popularity: Math.min(100, activeData.popularity + 3),
+                        xPosts: [performancePost, ...activeData.xPosts]
+                    }
+                },
+                activeAmaPerformanceOffer: null,
+                currentView: 'game'
+            };
+        }
+        case 'DECLINE_AMA_PERFORMANCE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId && email.offer?.type === 'amaNominations') {
+                    return { ...email, offer: { ...email.offer, isPerformanceAccepted: false }};
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
+                currentView: 'inbox',
+                activeAmaPerformanceOffer: null
+            };
+        }
+        case 'ACCEPT_AMA_RED_CARPET': {
+            if (!state.activeArtistId) return state;
+            const { emailId, lookUrl } = action.payload;
+
+            if (lookUrl) { 
+                const artistName = state.soloArtist?.name || state.group?.name;
+                const popBasePost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: `${artistName} arrives at the #AMAs red carpet.`,
+                    image: lookUrl,
+                    likes: Math.floor(Math.random() * 99000) + 16000,
+                    retweets: Math.floor(Math.random() * 16000) + 7000,
+                    views: Math.floor(Math.random() * 3100000) + 1200000,
+                    date: state.date,
+                };
+                const activeData = state.artistsData[state.activeArtistId];
+                const updatedInbox = activeData.inbox.map(email => {
+                    if (email.id === emailId && email.offer?.type === 'amaRedCarpet') {
+                        return { ...email, offer: { ...email.offer, isAttending: true }};
+                    }
+                    return email;
+                });
+
+                const newLook = {
+                    id: crypto.randomUUID(),
+                    awardShow: 'AMAs',
+                    year: state.date.year,
+                    imageUrl: lookUrl,
+                };
+
+                return {
+                    ...state,
+                    artistsData: {
+                        ...state.artistsData,
+                        [state.activeArtistId]: {
+                            ...activeData,
+                            inbox: updatedInbox,
+                            xPosts: [popBasePost, ...activeData.xPosts],
+                            pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])]
+                        }
+                    },
+                    activeAmaRedCarpetOffer: null,
+                    currentView: 'game',
+                };
+            } else { 
+                 return {
+                    ...state,
+                    activeAmaRedCarpetOffer: { emailId },
+                    currentView: 'amaRedCarpet',
+                };
+            }
+        }
+        case 'DECLINE_AMA_RED_CARPET': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId && email.offer?.type === 'amaRedCarpet') {
+                    return { ...email, offer: { ...email.offer, isAttending: false }};
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
+                currentView: 'inbox',
+                activeAmaRedCarpetOffer: null
             };
         }
         case 'ACCEPT_VMA_RED_CARPET': {

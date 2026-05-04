@@ -202,6 +202,22 @@ const MiscTab: React.FC = () => {
                     <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
                 </button>
 
+                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'grammys' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-lg">GRAMMY History</h3>
+                        <p className="text-sm text-zinc-400">View your lifetime GRAMMY performance.</p>
+                    </div>
+                    <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
+                </button>
+                
+                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'amas' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-lg text-red-500">AMA History</h3>
+                        <p className="text-sm text-zinc-400">View your lifetime American Music Awards performance.</p>
+                    </div>
+                    <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
+                </button>
+
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'redCarpetHistory' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
                     <div>
                         <h3 className="font-bold text-lg">Red Carpet History</h3>

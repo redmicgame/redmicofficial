@@ -16,6 +16,7 @@ const RedCarpetHistoryView: React.FC = () => {
                     let awardShow = 'Unknown';
                     if (post.content.includes('#GRAMMYs')) awardShow = 'GRAMMYs';
                     else if (post.content.includes('#VMAs')) awardShow = 'VMAs';
+                    else if (post.content.includes('#AMAs')) awardShow = 'AMAs';
                     
                     // Check if we already have this look (by image URL or a combination of year and award show)
                     const alreadyExists = allLooks.some(look => look.imageUrl === post.image || (look.year === post.date.year && look.awardShow === awardShow));
