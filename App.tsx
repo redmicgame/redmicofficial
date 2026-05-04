@@ -73,6 +73,7 @@ import OscarsView from './components/OscarsView';
 import SubmitForOscarsView from './components/SubmitForOscarsView';
 import CreateOscarPerformanceView from './components/CreateOscarPerformanceView';
 import SwitchSaveView from './components/SwitchSaveView';
+import RedCarpetHistoryView from './components/RedCarpetHistoryView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -197,6 +198,8 @@ const AppContent: React.FC = () => {
                 return <CreateOscarPerformanceView />;
             case 'switchSave':
                 return <SwitchSaveView />;
+            case 'redCarpetHistory':
+                return <RedCarpetHistoryView />;
             case 'contractRenewal':
                 return <ContractRenewalView />;
             case 'itunes':

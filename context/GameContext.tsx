@@ -4948,6 +4948,13 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                     return email;
                 });
 
+                const newLook = {
+                    id: crypto.randomUUID(),
+                    awardShow: 'GRAMMYs',
+                    year: state.date.year,
+                    imageUrl: lookUrl,
+                };
+
                 return {
                     ...state,
                     artistsData: {
@@ -4955,7 +4962,8 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         [state.activeArtistId]: {
                             ...activeData,
                             inbox: updatedInbox,
-                            xPosts: [popBasePost, ...activeData.xPosts]
+                            xPosts: [popBasePost, ...activeData.xPosts],
+                            pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])]
                         }
                     },
                     activeGrammyRedCarpetOffer: null,
@@ -4983,6 +4991,75 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
                 currentView: 'inbox',
                 activeGrammyRedCarpetOffer: null
+            };
+        }
+        case 'ACCEPT_VMA_RED_CARPET': {
+            if (!state.activeArtistId) return state;
+            const { emailId, lookUrl } = action.payload;
+
+            if (lookUrl) { 
+                const artistName = state.soloArtist?.name || state.group?.name;
+                const popBasePost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: `${artistName} arrives at the #VMAs red carpet.`,
+                    image: lookUrl,
+                    likes: Math.floor(Math.random() * 99000) + 16000,
+                    retweets: Math.floor(Math.random() * 16000) + 7000,
+                    views: Math.floor(Math.random() * 3100000) + 1200000,
+                    date: state.date,
+                };
+                const activeData = state.artistsData[state.activeArtistId];
+                const updatedInbox = activeData.inbox.map(email => {
+                    if (email.id === emailId && email.offer?.type === 'vmaRedCarpet') {
+                        return { ...email, offer: { ...email.offer, isAttending: true }};
+                    }
+                    return email;
+                });
+
+                const newLook = {
+                    id: crypto.randomUUID(),
+                    awardShow: 'VMAs',
+                    year: state.date.year,
+                    imageUrl: lookUrl,
+                };
+
+                return {
+                    ...state,
+                    artistsData: {
+                        ...state.artistsData,
+                        [state.activeArtistId]: {
+                            ...activeData,
+                            inbox: updatedInbox,
+                            xPosts: [popBasePost, ...activeData.xPosts],
+                            pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])]
+                        }
+                    },
+                    activeVmaRedCarpetOffer: null,
+                    currentView: 'game',
+                };
+            } else { 
+                 return {
+                    ...state,
+                    activeVmaRedCarpetOffer: { emailId },
+                    currentView: 'vmaRedCarpet',
+                };
+            }
+        }
+        case 'DECLINE_VMA_RED_CARPET': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId && email.offer?.type === 'vmaRedCarpet') {
+                    return { ...email, offer: { ...email.offer, isAttending: false }};
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
+                currentView: 'inbox',
+                activeVmaRedCarpetOffer: null
             };
         }
         case 'GO_TO_OSCAR_SUBMISSIONS': {

@@ -184,6 +184,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                     dispatch({ type: 'ACCEPT_GRAMMY_PERFORMANCE', payload: { emailId: email.id } });
                 }
                 break;
+            case 'vmaRedCarpet':
+                dispatch({ type: 'ACCEPT_VMA_RED_CARPET', payload: { emailId: email.id, lookUrl: '' } });
+                break;
             case 'grammyRedCarpet':
                 dispatch({ type: 'ACCEPT_GRAMMY_RED_CARPET', payload: { emailId: email.id, lookUrl: '' } }); // Will be handled by the view
                 break;
@@ -284,6 +287,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 } else {
                     isActionable = false;
                 }
+                break;
+            case 'vmaRedCarpet':
+                buttonText = "Attend Red Carpet";
+                buttonClass = "bg-zinc-800 hover:bg-zinc-700 text-white shadow-zinc-800/20";
+                acceptedText = "You are attending the VMAs";
+                isAccepted = !!email.offer.isAttending;
                 break;
             case 'grammyRedCarpet':
                 buttonText = "Attend Red Carpet";

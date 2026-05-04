@@ -521,7 +521,7 @@ export interface OscarCategory {
     winner?: OscarContender;
 }
 
-export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'switchSave';
+export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'switchSave' | 'redCarpetHistory';
 
 export type Tab = 'Home' | 'Apps' | 'Charts' | 'Misc' | 'Business';
 
@@ -675,6 +675,7 @@ export interface ArtistData {
     paparazziPhotos: PaparazziPhoto[];
     tourPhotos: string[];
     tours: Tour[];
+    pastRedCarpetLooks: RedCarpetLook[];
     streamsRemovedThisWeek?: number;
     manager: { id: string; contractEndDate: GameDate } | null;
     securityTeamId: string | null;
@@ -711,6 +712,13 @@ export interface ArtistData {
     lastVogueOfferYear?: number;
     voguePhotoshoots?: VoguePhotoshoot[];
     weeksUntilNextFeatureOffer?: number;
+}
+
+export interface RedCarpetLook {
+    id: string;
+    awardShow: string;
+    year: number;
+    imageUrl: string;
 }
 
 export interface GameState {
@@ -773,6 +781,11 @@ export interface GameState {
         magazine: 'Vogue' | 'Vogue Korea' | 'Vogue Italy';
         emailId: string;
     } | null;
+    // VMAs
+    vmaSubmissions?: { artistId: string, category: string, itemId: string, itemName: string }[];
+    vmaCurrentYearNominations?: any[] | null;
+    activeVmaRedCarpetOffer?: { emailId: string } | null;
+    activeVmaPerformanceOffer?: { emailId: string } | null;
     // GRAMMYs
     grammySubmissions: { artistId: string, category: GrammyAward['category'], itemId: string, itemName: string }[];
     grammyCurrentYearNominations: GrammyCategory[] | null;
@@ -869,6 +882,8 @@ export type GameAction =
     | { type: 'DECLINE_GRAMMY_PERFORMANCE'; payload: { emailId: string } }
     | { type: 'ACCEPT_GRAMMY_RED_CARPET'; payload: { emailId: string, lookUrl: string } }
     | { type: 'DECLINE_GRAMMY_RED_CARPET'; payload: { emailId: string } }
+    | { type: 'ACCEPT_VMA_RED_CARPET'; payload: { emailId: string, lookUrl: string } }
+    | { type: 'DECLINE_VMA_RED_CARPET'; payload: { emailId: string } }
     | { type: 'GO_TO_OSCAR_SUBMISSIONS'; payload: { emailId: string } }
     | { type: 'SUBMIT_FOR_OSCARS'; payload: { submissions: GameState['oscarSubmissions'], emailId: string } }
     | { type: 'ACCEPT_OSCAR_PERFORMANCE'; payload: { emailId: string } }
