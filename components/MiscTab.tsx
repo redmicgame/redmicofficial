@@ -3,7 +3,7 @@ import { useGame, formatNumber } from '../context/GameContext';
 import { useFirebase } from '../context/FirebaseContext';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import { PaparazziPhoto, PaparazziPhotoCategory } from '../types';
-import { db } from '../db/db';
+import { db, getActiveSaveId } from '../db/db';
 import BookOpenIcon from './icons/BookOpenIcon';
 
 const MiscTab: React.FC = () => {
@@ -28,7 +28,7 @@ const MiscTab: React.FC = () => {
     };
 
     const handleEndCareer = async () => {
-        await db.saves.clear();
+        await db.saves.delete(getActiveSaveId());
         dispatch({ type: 'RESET_GAME' });
         setShowEndCareerConfirm(false);
     };
@@ -313,6 +313,18 @@ const MiscTab: React.FC = () => {
 
                 <div className="bg-zinc-800 p-4 rounded-lg">
                     <h3 className="font-bold text-lg mb-2">Options</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="font-bold">Switch Save</p>
+                            <p className="text-xs text-zinc-400">Manage up to 6 completely separate game saves.</p>
+                        </div>
+                        <button 
+                            onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'switchSave' })}
+                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm font-bold transition-colors"
+                        >
+                            Manage
+                        </button>
+                    </div>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-bold">Offline Mode (Disable AI)</p>

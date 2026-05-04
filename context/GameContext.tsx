@@ -1,6 +1,6 @@
 
 import React, { createContext, useReducer, useContext, ReactNode, useEffect, useState } from 'react';
-import { db } from '../db/db';
+import { db, getActiveSaveId } from '../db/db';
 import { useFirebase } from './FirebaseContext';
 import { loadGameFromCloud, saveGameToCloud } from '../firebase';
 import type { GameState, GameAction, Email, NpcSong, ChartEntry, ChartHistory, ArtistData, Artist, Group, Song, LabelSubmission, Contract, Release, XUser, XPost, XTrend, XChat, CustomLabel, PopBaseOffer, NpcAlbum, AlbumChartEntry, RedMicProState, GrammyCategory, GrammyAward, GrammyContender, OscarCategory, OscarAward, OscarContender, OnlyFansProfile, OnlyFansPost, XSuspensionStatus, SoundtrackAlbum, SoundtrackTrack, Manager, SecurityTeam, Label, VoguePhotoshoot, FeatureOffer } from '../types';
@@ -6040,7 +6040,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 let stateToLoad = null;
 
                 // Load local DB first (always local-first for fast startup)
-                const localSave = await db.saves.get(1);
+                const localSave = await db.saves.get(getActiveSaveId());
                 if (localSave && localSave.state.careerMode && localSave.state.artistsData) {
                     stateToLoad = localSave.state;
                 }
@@ -6063,7 +6063,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!isLoading && !isAuthLoading && gameState.careerMode) {
             const saveGameToDB = async () => {
                 try {
-                    await db.saves.put({ id: 1, state: gameState });
+                    await db.saves.put({ id: getActiveSaveId(), state: gameState });
                 } catch (err) {
                     console.error("Could not save game state to local DB", err);
                 }

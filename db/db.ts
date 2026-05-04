@@ -18,3 +18,12 @@ class RedMicDexie extends Dexie {
 }
 
 export const db = new RedMicDexie();
+
+export const getActiveSaveId = (): number => {
+    const stored = localStorage.getItem('redmic_active_save_id');
+    return stored ? parseInt(stored, 10) : 1;
+};
+
+export const setActiveSaveId = (id: number): void => {
+    localStorage.setItem('redmic_active_save_id', id.toString());
+};
