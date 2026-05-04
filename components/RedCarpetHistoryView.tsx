@@ -8,7 +8,30 @@ const RedCarpetHistoryView: React.FC = () => {
 
     if (!activeArtistData) return null;
 
-    const looks = activeArtistData.pastRedCarpetLooks || [];
+    const looks = useMemo(() => {
+        let allLooks = activeArtistData.pastRedCarpetLooks ? [...activeArtistData.pastRedCarpetLooks] : [];
+        if (activeArtistData.xPosts) {
+            activeArtistData.xPosts.forEach(post => {
+                if (post.image && post.content.includes('red carpet.')) {
+                    let awardShow = 'Unknown';
+                    if (post.content.includes('#GRAMMYs')) awardShow = 'GRAMMYs';
+                    else if (post.content.includes('#VMAs')) awardShow = 'VMAs';
+                    
+                    // Check if we already have this look (by image URL or a combination of year and award show)
+                    const alreadyExists = allLooks.some(look => look.imageUrl === post.image || (look.year === post.date.year && look.awardShow === awardShow));
+                    if (!alreadyExists && awardShow !== 'Unknown') {
+                        allLooks.push({
+                            id: post.id,
+                            awardShow,
+                            year: post.date.year,
+                            imageUrl: post.image,
+                        });
+                    }
+                }
+            });
+        }
+        return allLooks;
+    }, [activeArtistData.pastRedCarpetLooks, activeArtistData.xPosts]);
 
     const awardShows = useMemo(() => {
         const shows = new Set<string>();
