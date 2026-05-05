@@ -479,14 +479,26 @@ const S4AAudience: React.FC = () => {
 
 // --- PROFILE TAB ---
 const S4AProfile: React.FC = () => {
-    const { dispatch, activeArtistData, gameState } = useGame();
+    const { dispatch, activeArtistData, gameState, activeArtist } = useGame();
     const [showArtistPickModal, setShowArtistPickModal] = useState(false);
     const [showPitchModal, setShowPitchModal] = useState<Song | null>(null);
+    const [showNameChangeModal, setShowNameChangeModal] = useState(false);
+    const [newNameInput, setNewNameInput] = useState('');
 
-    if (!activeArtistData) return null;
-    const { songs, releases, artistPick, money, promotions } = activeArtistData;
+    if (!activeArtistData || !activeArtist) return null;
+    const { songs, releases, artistPick, money, promotions, contract } = activeArtistData;
     const { date } = gameState;
 
+    const independentNameChanges = activeArtistData.independentNameChanges || 0;
+    const canChangeName = !contract && independentNameChanges < 2;
+
+    const handleNameChangeSubmit = () => {
+        if (newNameInput.trim() && canChangeName) {
+            dispatch({ type: 'CHANGE_STAGE_NAME', payload: { newName: newNameInput.trim() } });
+            setShowNameChangeModal(false);
+            setNewNameInput('');
+        }
+    };
 
     const handleSetArtistPick = (itemId: string, itemType: 'song' | 'release') => {
         dispatch({ type: 'SET_ARTIST_PICK', payload: { itemId, itemType, message: "Check this out!" } });
@@ -524,6 +536,19 @@ const S4AProfile: React.FC = () => {
             </div>
             
             <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
+                <h2 className="font-bold">Stage Name</h2>
+                <p className="text-sm font-semibold">{activeArtist.name}</p>
+                {!contract ? (
+                    <>
+                        <p className="text-xs text-zinc-500">You can change your stage name {2 - independentNameChanges} more time(s) as an independent artist.</p>
+                        <button onClick={() => setShowNameChangeModal(true)} disabled={!canChangeName} className="bg-black text-white text-sm font-semibold px-4 py-2 rounded-full disabled:bg-zinc-400">Change Name</button>
+                    </>
+                ) : (
+                    <p className="text-xs text-zinc-500">You cannot change your stage name while signed to a label unless requested by them.</p>
+                )}
+            </div>
+            
+            <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
                 <h2 className="font-bold">Pitch a song to playlists</h2>
                 <p className="text-sm text-zinc-600">Pitch a song from an upcoming or recent release to our playlist editors.</p>
                 {pitchableSongs.length > 0 ? (
@@ -541,6 +566,25 @@ const S4AProfile: React.FC = () => {
             </div>
 
             {/* Modals */}
+            {showNameChangeModal && canChangeName && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNameChangeModal(false)}>
+                    <div className="bg-white rounded-lg w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold mb-4">Change Stage Name</h2>
+                        <input 
+                            type="text" 
+                            className="w-full p-3 border border-zinc-300 rounded-lg text-black mb-4" 
+                            placeholder="New Stage Name"
+                            value={newNameInput}
+                            onChange={(e) => setNewNameInput(e.target.value)}
+                            maxLength={30}
+                        />
+                        <div className="flex gap-4">
+                            <button onClick={() => setShowNameChangeModal(false)} className="w-full bg-zinc-200 py-2 rounded-full font-semibold">Cancel</button>
+                            <button onClick={handleNameChangeSubmit} disabled={!newNameInput.trim()} className="w-full bg-black text-white py-2 rounded-full font-semibold disabled:bg-zinc-400">Confirm Change</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {showArtistPickModal && (
                  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowArtistPickModal(false)}>
                     <div className="bg-white rounded-lg w-full max-w-md p-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>

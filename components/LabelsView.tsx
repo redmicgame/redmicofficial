@@ -231,12 +231,43 @@ const UnsignedView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const [offerModalLabel, setOfferModalLabel] = useState<Label | null>(null);
     const [confirmPettyJoin, setConfirmPettyJoin] = useState<Label | null>(null);
+    const [nameChangeReq, setNameChangeReq] = useState<{
+        label: Label;
+        type: 'petty' | 'small';
+        options?: string[];
+        fee?: number;
+    } | null>(null);
+    const [nameChangeInput, setNameChangeInput] = useState('');
 
     if (!activeArtistData || !activeArtist) return null;
     const careerStreams = activeArtistData.songs.reduce((sum, song) => sum + song.streams, 0);
 
     const standardLabels = LABELS.filter(l => l.contractType !== 'petty');
     const pettyLabels = LABELS.filter(l => l.contractType === 'petty');
+
+    const handleSignWithCheck = (label: Label, isPetty: boolean = false) => {
+        // 50% chance for small/petty labels to require a name change
+        if ((label.contractType === 'petty' || label.tier === 'Low') && Math.random() < 0.5) {
+            if (label.contractType === 'petty') {
+                const randomNames = [
+                    `${activeArtist.name} The Creator`,
+                    `Lil ${activeArtist.name.split(' ')[0]}`,
+                    `${activeArtist.name} Da Don`
+                ];
+                setNameChangeReq({ label, type: 'petty', options: randomNames });
+                setNameChangeInput(randomNames[0]);
+            } else {
+                setNameChangeReq({ label, type: 'small', fee: Math.floor(Math.random() * (30000 - 20000 + 1)) + 20000 });
+                setNameChangeInput(activeArtist.name); // Default to current name if they decide to change it anyway
+            }
+            if (isPetty) setConfirmPettyJoin(null);
+            else setOfferModalLabel(null);
+            return;
+        }
+
+        if (isPetty) handleSignPetty(label);
+        else handleSign(label.id);
+    };
 
     const handleSign = (labelId: Label['id']) => {
         const newContract: Contract = {
@@ -261,6 +292,27 @@ const UnsignedView: React.FC = () => {
         dispatch({ type: 'SIGN_CONTRACT', payload: { contract: newContract } });
         setConfirmPettyJoin(null);
     };
+
+    const confirmNameChangeAndSign = (payFee: boolean = false) => {
+        if (!nameChangeReq) return;
+        
+        const isPetty = nameChangeReq.label.contractType === 'petty';
+        
+        if (payFee && nameChangeReq.fee) {
+            if (activeArtistData.money < nameChangeReq.fee) return;
+            // Pay fee and keep name
+            dispatch({ type: 'CHANGE_STAGE_NAME', payload: { newName: activeArtist.name, cost: nameChangeReq.fee, contractId: 'TEMP' } });
+        } else {
+            // Change name
+            if (!nameChangeInput.trim()) return;
+            dispatch({ type: 'CHANGE_STAGE_NAME', payload: { newName: nameChangeInput.trim(), contractId: 'TEMP' } });
+        }
+
+        if (isPetty) handleSignPetty(nameChangeReq.label);
+        else handleSign(nameChangeReq.label.id);
+        
+        setNameChangeReq(null);
+    };
     
     return (
         <>
@@ -268,7 +320,7 @@ const UnsignedView: React.FC = () => {
                 <ConfirmationModal
                     isOpen={!!offerModalLabel}
                     onClose={() => setOfferModalLabel(null)}
-                    onConfirm={() => handleSign(offerModalLabel.id)}
+                    onConfirm={() => handleSignWithCheck(offerModalLabel)}
                     title="Contract Offer"
                     message={`Sign a 2-year, 2-album deal with ${offerModalLabel.name}?`}
                     confirmText="Sign Contract"
@@ -278,11 +330,74 @@ const UnsignedView: React.FC = () => {
                  <ConfirmationModal
                     isOpen={!!confirmPettyJoin}
                     onClose={() => setConfirmPettyJoin(null)}
-                    onConfirm={() => handleSignPetty(confirmPettyJoin)}
+                    onConfirm={() => handleSignWithCheck(confirmPettyJoin, true)}
                     title={`Join ${confirmPettyJoin.name}?`}
                     message={`By joining ${confirmPettyJoin.name}, you agree to their terms: a minimum release quality of 70. You can leave at any time, but they may fine you up to $1M and remove all music released under their name from streaming services.`}
                     confirmText="Agree & Join"
                 />
+            )}
+            {nameChangeReq && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setNameChangeReq(null)}>
+                    <div className="bg-white rounded-lg w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold mb-4 text-black">Stage Name Change Requested</h2>
+                        
+                        {nameChangeReq.type === 'petty' ? (
+                            <>
+                                <p className="text-zinc-600 mb-4">The label expects you to adopt a new stage name. Please select one of the following options:</p>
+                                <div className="space-y-2 mb-4">
+                                    {nameChangeReq.options?.map(opt => (
+                                        <button 
+                                            key={opt}
+                                            onClick={() => setNameChangeInput(opt)}
+                                            className={`w-full p-3 rounded-lg text-left ${nameChangeInput === opt ? 'bg-red-100 text-red-900 border-2 border-red-500' : 'bg-zinc-100 text-black border-2 border-transparent'}`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-4">
+                                    <button onClick={() => setNameChangeReq(null)} className="w-full bg-zinc-200 text-black py-2 rounded-full font-semibold">Cancel</button>
+                                    <button onClick={() => confirmNameChangeAndSign()} className="w-full bg-black text-white py-2 rounded-full font-semibold">Accept & Sign</button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-zinc-600 mb-4">The label would prefer you change your stage name. You can either change it now, or pay a <strong>Name Change Settlement Fee</strong> to keep your current name.</p>
+                                
+                                <label className="block mb-4">
+                                    <span className="text-black font-semibold">New Stage Name</span>
+                                    <input 
+                                        type="text" 
+                                        className="w-full p-2 border border-zinc-300 rounded-lg text-black mt-1" 
+                                        value={nameChangeInput}
+                                        onChange={(e) => setNameChangeInput(e.target.value)}
+                                        maxLength={30}
+                                    />
+                                </label>
+
+                                <div className="flex flex-col gap-3">
+                                    <button 
+                                        onClick={() => confirmNameChangeAndSign()} 
+                                        disabled={!nameChangeInput.trim()} 
+                                        className="w-full bg-black text-white py-2 rounded-full font-semibold disabled:bg-zinc-400"
+                                    >
+                                        Change Name & Sign
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={() => confirmNameChangeAndSign(true)} 
+                                        disabled={activeArtistData.money < (nameChangeReq.fee || 0)} 
+                                        className="w-full bg-red-600 text-white py-2 rounded-full font-semibold disabled:bg-zinc-400 flex flex-col items-center"
+                                    >
+                                        <span>Keep Current Name (-${(nameChangeReq.fee || 0).toLocaleString()})</span>
+                                    </button>
+
+                                    <button onClick={() => setNameChangeReq(null)} className="w-full bg-zinc-200 text-black py-2 rounded-full font-semibold mt-2">Cancel Contract</button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
             )}
             <div className="space-y-8">
                 <div className="text-center">

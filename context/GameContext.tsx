@@ -706,6 +706,42 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 ...state,
                 activeYoutubeChannel: action.payload,
             };
+        case 'CHANGE_STAGE_NAME': {
+            if (!state.activeArtistId) return state;
+            
+            const { newName, cost, contractId } = action.payload;
+            const activeArtistData = state.artistsData[state.activeArtistId];
+            
+            let draftArtistData = { ...activeArtistData };
+            
+            if (cost) {
+                draftArtistData.money -= cost;
+            }
+            
+            // If it's an independent change (no cost, no contractId)
+            if (!cost && !contractId) {
+                draftArtistData.independentNameChanges = (draftArtistData.independentNameChanges || 0) + 1;
+            }
+            
+            let updatedSoloArtist = state.soloArtist;
+            let updatedGroup = state.group;
+            
+            if (state.soloArtist && state.soloArtist.id === state.activeArtistId) {
+                updatedSoloArtist = { ...state.soloArtist, name: newName };
+            } else if (state.group && state.group.id === state.activeArtistId) {
+                updatedGroup = { ...state.group, name: newName };
+            }
+            
+            return {
+                ...state,
+                soloArtist: updatedSoloArtist,
+                group: updatedGroup,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: draftArtistData
+                }
+            };
+        }
         case 'CHANGE_ACTIVE_ARTIST':
             return {
                 ...state,

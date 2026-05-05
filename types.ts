@@ -696,6 +696,7 @@ export interface ArtistData {
     youtubeStoreUnlocked: boolean;
     merch: MerchProduct[];
     merchStoreBanner: string | null;
+    independentNameChanges?: number;
     grammyBanner?: string;
     oscarBanner?: string;
     inbox: Email[];
@@ -899,6 +900,7 @@ export type GameAction =
     | { type: 'ADD_ARTIST_VIDEO'; payload: string }
     | { type: 'ADD_PAPARAZZI_PHOTO'; payload: { photo: PaparazziPhoto } }
     | { type: 'ANSWER_POPBASE_QUESTION'; payload: { emailId: string; answer: string } }
+    | { type: 'CHANGE_STAGE_NAME'; payload: { newName: string; cost?: number; contractId?: Contract['id'] } }
     | { type: 'POST_ON_X'; payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push' | 'announce'; targetId?: string; songId?: string; quoteOf?: XPost; announceItem?: { type: 'project' | 'single', submissionId: string, songId?: string } } }
     | { type: 'VIEW_X_PROFILE'; payload: string }
     | { type: 'CREATE_X_ACCOUNT'; payload: { username: string; name: string; avatar: string; bio?: string } }
