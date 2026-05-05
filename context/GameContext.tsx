@@ -352,7 +352,15 @@ const calculateGenreChart = (
     
     genreContenders.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
 
-    const top50 = genreContenders.slice(0, 50);
+    const eligibleGenreContenders = genreContenders.filter((song, index) => {
+        const potentialRank = index + 1;
+        const history = chartHistory[song.uniqueId];
+        if (history && history.weeksOnChart >= 52 && potentialRank > 25) return false;
+        if (history && history.weeksOnChart >= 20 && potentialRank > 50) return false;
+        return true;
+    });
+
+    const top50 = eligibleGenreContenders.slice(0, 50);
     const newHistory: ChartHistory = { ...chartHistory };
     const newChart: ChartEntry[] = [];
     const prevChartMap = new Map(previousChart.map(entry => [entry.uniqueId, entry]));
@@ -2383,6 +2391,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             const eligibleBillboardContenders = allContenders.filter((song, index) => {
                 const potentialRank = index + 1;
                 const history = state.chartHistory[song.uniqueId];
+                if (history && history.weeksOnChart >= 52 && potentialRank > 25) return false;
                 if (history && history.weeksOnChart >= 20 && potentialRank > 50) return false;
                 return true;
             });
