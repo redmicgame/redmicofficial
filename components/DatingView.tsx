@@ -1,0 +1,257 @@
+import React, { useState } from 'react';
+import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { useGame } from '../context/GameContext';
+import { Relationship, NpcArtist } from '../types';
+
+const DatingView: React.FC = () => {
+    const { gameState, dispatch, activeArtistData } = useGame();
+    const [showNewRelationshipModal, setShowNewRelationshipModal] = useState(false);
+    const [partnerType, setPartnerType] = useState<'npc' | 'custom'>('npc');
+    const [selectedNpcId, setSelectedNpcId] = useState<string>('');
+    const [customName, setCustomName] = useState('');
+
+    const [relationshipToReveal, setRelationshipToReveal] = useState<string | null>(null);
+
+    if (!activeArtistData) return null;
+
+    const relationships = activeArtistData.relationships || [];
+    const activeRelationship = relationships.find(r => r.endYear === null);
+    const pastRelationships = relationships.filter(r => r.endYear !== null).sort((a, b) => b.endYear! - a.endYear!);
+
+    const sortedNpcs = [...gameState.npcs].sort((a, b) => a.artist.localeCompare(b.artist));
+
+    const handleStartDating = () => {
+        if (partnerType === 'npc') {
+            const npc = sortedNpcs.find(n => n.id === selectedNpcId);
+            if (npc) {
+                dispatch({ type: 'START_DATING', payload: { partnerName: npc.artist, partnerType: 'npc' } });
+            }
+        } else {
+            if (customName.trim()) {
+                dispatch({ type: 'START_DATING', payload: { partnerName: customName.trim(), partnerType: 'custom' } });
+            }
+        }
+        setShowNewRelationshipModal(false);
+        setSelectedNpcId('');
+        setCustomName('');
+    };
+
+    const handleReveal = (outlet: 'popbase' | 'tmz') => {
+        if (relationshipToReveal) {
+            dispatch({ type: 'REVEAL_RELATIONSHIP', payload: { relationshipId: relationshipToReveal, outlet } });
+            setRelationshipToReveal(null);
+        }
+    };
+
+    const StatusBadge = ({ status, isPublic }: { status: Relationship['status'], isPublic: boolean }) => {
+        let color = 'bg-blue-500/20 text-blue-400';
+        if (status === 'engaged') color = 'bg-purple-500/20 text-purple-400';
+        if (status === 'married') color = 'bg-yellow-500/20 text-yellow-400';
+
+        return (
+            <div className="flex gap-2">
+                <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${color}`}>
+                    {status}
+                </span>
+                {!isPublic && (
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold uppercase bg-zinc-700 text-zinc-300">
+                        Secret
+                    </span>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="h-screen w-full bg-zinc-900 flex flex-col text-white">
+            <header className="p-4 flex items-center gap-4 flex-shrink-0 border-b border-zinc-800">
+                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'misc' })} className="p-2 rounded-full hover:bg-zinc-800">
+                    <ArrowLeftIcon className="w-6 h-6" />
+                </button>
+                <h1 className="text-2xl font-bold">Dating History</h1>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-8">
+                {/* Active Relationship */}
+                <section>
+                    <h2 className="text-xl font-bold mb-4">Current Relationship</h2>
+                    {activeRelationship ? (
+                        <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 space-y-4 shadow-xl">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-2xl font-black text-red-500">{activeRelationship.partnerName}</h3>
+                                    <p className="text-zinc-400">Since {activeRelationship.startYear}</p>
+                                </div>
+                                <StatusBadge status={activeRelationship.status} isPublic={activeRelationship.isPublic} />
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-700">
+                                {!activeRelationship.isPublic && (
+                                    <button 
+                                        onClick={() => setRelationshipToReveal(activeRelationship.id)}
+                                        className="bg-white text-black px-4 py-2 rounded-full font-bold text-sm"
+                                    >
+                                        Reveal Relationship
+                                    </button>
+                                )}
+                                
+                                {activeRelationship.isPublic && activeRelationship.status === 'dating' && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'ADVANCE_RELATIONSHIP', payload: { relationshipId: activeRelationship.id, newStatus: 'engaged' } })}
+                                        className="bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm"
+                                    >
+                                        Get Engaged
+                                    </button>
+                                )}
+                                
+                                {activeRelationship.isPublic && activeRelationship.status === 'engaged' && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'ADVANCE_RELATIONSHIP', payload: { relationshipId: activeRelationship.id, newStatus: 'married' } })}
+                                        className="bg-yellow-500 text-black px-4 py-2 rounded-full font-bold text-sm"
+                                    >
+                                        Get Married
+                                    </button>
+                                )}
+
+                                <button 
+                                    onClick={() => dispatch({ type: 'BREAK_UP', payload: { relationshipId: activeRelationship.id } })}
+                                    className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-full font-bold text-sm"
+                                >
+                                    Break Up
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-zinc-800 border border-zinc-700 border-dashed p-8 rounded-xl text-center">
+                            <p className="text-zinc-400 mb-4">You are currently single.</p>
+                            <button 
+                                onClick={() => setShowNewRelationshipModal(true)}
+                                className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-full font-bold shadow-lg"
+                            >
+                                Start Dating
+                            </button>
+                        </div>
+                    )}
+                </section>
+
+                {/* Past Relationships */}
+                {pastRelationships.length > 0 && (
+                    <section>
+                        <h2 className="text-xl font-bold mb-4 text-zinc-300">Past Relationships</h2>
+                        <div className="space-y-4">
+                            {pastRelationships.map(rel => (
+                                <div key={rel.id} className="bg-zinc-800/50 p-4 rounded-lg flex items-center justify-between border border-zinc-700/50">
+                                    <div>
+                                        <h4 className="font-bold text-lg">{rel.partnerName}</h4>
+                                        <p className="text-zinc-400 text-sm">Dated from {rel.startYear} - {rel.endYear}</p>
+                                    </div>
+                                    <StatusBadge status={rel.status} isPublic={rel.isPublic} />
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+            </div>
+
+            {/* Modals */}
+            {showNewRelationshipModal && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowNewRelationshipModal(false)}>
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-2xl font-black mb-6">Start Dating</h2>
+                        
+                        <div className="flex gap-2 mb-6">
+                            <button 
+                                className={`flex-1 py-2 rounded-lg font-bold ${partnerType === 'npc' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                                onClick={() => setPartnerType('npc')}
+                            >
+                                Fellow Artist
+                            </button>
+                            <button 
+                                className={`flex-1 py-2 rounded-lg font-bold ${partnerType === 'custom' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                                onClick={() => setPartnerType('custom')}
+                            >
+                                Someone Else
+                            </button>
+                        </div>
+
+                        {partnerType === 'npc' ? (
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-zinc-400 mb-2">Select Artist</label>
+                                <select 
+                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-white outline-none focus:border-red-500"
+                                    value={selectedNpcId}
+                                    onChange={e => setSelectedNpcId(e.target.value)}
+                                >
+                                    <option value="">-- Choose an artist --</option>
+                                    {sortedNpcs.map(n => (
+                                        <option key={n.id} value={n.id}>{n.artist}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-zinc-400 mb-2">Partner's Name</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-white outline-none focus:border-red-500"
+                                    placeholder="Enter name..."
+                                    value={customName}
+                                    onChange={e => setCustomName(e.target.value)}
+                                    maxLength={40}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setShowNewRelationshipModal(false)}
+                                className="flex-1 bg-zinc-800 text-white py-3 rounded-xl font-bold hover:bg-zinc-700"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                disabled={partnerType === 'npc' ? !selectedNpcId : !customName.trim()}
+                                onClick={handleStartDating}
+                                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {relationshipToReveal && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setRelationshipToReveal(null)}>
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-2xl font-black mb-2">Go Public</h2>
+                        <p className="text-zinc-400 mb-6 font-medium">Which outlet do you want to break the news to?</p>
+                        
+                        <div className="space-y-3">
+                            <button 
+                                onClick={() => handleReveal('popbase')}
+                                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold text-lg transition-colors"
+                            >
+                                Pop Base
+                            </button>
+                            <button 
+                                onClick={() => handleReveal('tmz')}
+                                className="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold text-lg transition-colors"
+                            >
+                                TMZ
+                            </button>
+                            <button 
+                                onClick={() => setRelationshipToReveal(null)}
+                                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-xl font-bold transition-colors mt-2"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default DatingView;

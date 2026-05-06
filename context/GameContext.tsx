@@ -6510,6 +6510,160 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 cloudSaveId: action.payload
             };
         }
+        case 'START_DATING': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const newRelationship: Relationship = {
+                id: crypto.randomUUID(),
+                partnerName: action.payload.partnerName,
+                partnerType: action.payload.partnerType,
+                startYear: state.date.year,
+                endYear: null,
+                status: 'dating',
+                isPublic: false
+            };
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: [...(activeData.relationships || []), newRelationship]
+                    }
+                }
+            };
+        }
+        case 'REVEAL_RELATIONSHIP': {
+            if (!state.activeArtistId) return state;
+            
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist) return state;
+
+            const updatedRelationships = (activeData.relationships || []).map(r => 
+                r.id === action.payload.relationshipId ? { ...r, isPublic: true } : r
+            );
+
+            const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
+
+            const postContext = action.payload.outlet === 'popbase' 
+                ? `Pop Base has exclusively learned that ${activeArtist.name} is dating ${rel?.partnerName}.`
+                : `Sources tell TMZ that ${activeArtist.name} and ${rel?.partnerName} are officially an item.`;
+
+            const newPost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: action.payload.outlet,
+                content: postContext,
+                image: activeArtist.image,
+                likes: Math.floor(Math.random() * 300000) + 100000,
+                retweets: Math.floor(Math.random() * 80000) + 20000,
+                views: Math.floor(Math.random() * 5000000) + 2000000,
+                date: state.date,
+            };
+
+            const updatedPosts = activeData.xPosts ? [newPost, ...activeData.xPosts] : [newPost];
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: updatedRelationships,
+                        hype: Math.min(1000, activeData.hype + 50),
+                        xPosts: updatedPosts
+                    }
+                }
+            };
+        }
+        case 'ADVANCE_RELATIONSHIP': {
+            if (!state.activeArtistId) return state;
+            
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist) return state;
+
+            const updatedRelationships = (activeData.relationships || []).map(r => 
+                r.id === action.payload.relationshipId ? { ...r, status: action.payload.newStatus } : r
+            );
+
+            const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
+            
+            let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+            
+            if (rel?.isPublic) {
+                const postContext = action.payload.newStatus === 'engaged'
+                    ? `💍 ${activeArtist.name} and ${rel?.partnerName} are officially engaged!`
+                    : `💒 ${activeArtist.name} and ${rel?.partnerName} are officially married!`;
+                
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'tmz',
+                    content: postContext,
+                    image: activeArtist.image,
+                    likes: Math.floor(Math.random() * 500000) + 200000,
+                    retweets: Math.floor(Math.random() * 100000) + 40000,
+                    views: Math.floor(Math.random() * 8000000) + 3000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: updatedRelationships,
+                        hype: rel?.isPublic ? Math.min(1000, activeData.hype + 80) : activeData.hype,
+                        xPosts: newPosts
+                    }
+                }
+            };
+        }
+        case 'BREAK_UP': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist) return state;
+
+            const updatedRelationships = (activeData.relationships || []).map(r => 
+                r.id === action.payload.relationshipId ? { ...r, endYear: state.date.year } : r
+            );
+
+            const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
+
+            let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+
+            if (rel?.isPublic) {
+                const postContext = `💔 Following rumors, it is confirmed that ${activeArtist.name} and ${rel?.partnerName} have split.`;
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'tmz',
+                    content: postContext,
+                    image: activeArtist.image,
+                    likes: Math.floor(Math.random() * 200000) + 50000,
+                    retweets: Math.floor(Math.random() * 50000) + 10000,
+                    views: Math.floor(Math.random() * 4000000) + 1000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: updatedRelationships,
+                        hype: rel?.isPublic ? Math.min(1000, activeData.hype + 60) : activeData.hype,
+                        xPosts: newPosts
+                    }
+                }
+            };
+        }
         default:
             return state;
     }

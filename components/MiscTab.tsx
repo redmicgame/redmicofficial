@@ -226,6 +226,14 @@ const MiscTab: React.FC = () => {
                     <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
                 </button>
 
+                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'dating' })} className="w-full bg-red-900/20 p-4 rounded-lg text-left hover:bg-red-900/30 transition-colors flex justify-between items-center border border-red-900/50">
+                    <div>
+                        <h3 className="font-bold text-lg text-red-500">Dating History</h3>
+                        <p className="text-sm text-red-300/70">Manage your relationships and public image.</p>
+                    </div>
+                    <ChevronRightIcon className="w-6 h-6 text-red-500/50" />
+                </button>
+
                  <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'chartHistory' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
                     <div>
                         <h3 className="font-bold text-lg">Chart History</h3>

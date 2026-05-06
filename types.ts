@@ -565,7 +565,7 @@ export interface OscarCategory {
     winner?: OscarContender;
 }
 
-export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet';
+export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating';
 
 export type Tab = 'Home' | 'Apps' | 'Charts' | 'Misc' | 'Business';
 
@@ -682,6 +682,16 @@ export interface VoguePhotoshoot {
     date: GameDate;
 }
 
+export interface Relationship {
+    id: string;
+    partnerName: string;
+    partnerType: 'npc' | 'custom';
+    startYear: number;
+    endYear: number | null;
+    status: 'dating' | 'engaged' | 'married';
+    isPublic: boolean;
+}
+
 export interface ArtistData {
     money: number;
     hype: number;
@@ -697,6 +707,7 @@ export interface ArtistData {
     merch: MerchProduct[];
     merchStoreBanner: string | null;
     independentNameChanges?: number;
+    relationships?: Relationship[];
     grammyBanner?: string;
     oscarBanner?: string;
     inbox: Email[];
@@ -983,4 +994,8 @@ export type GameAction =
     | { type: 'ACCEPT_VOGUE_OFFER'; payload: { magazine: 'Vogue' | 'Vogue Korea' | 'Vogue Italy'; emailId: string; } }
     | { type: 'CANCEL_VOGUE_OFFER' }
     | { type: 'SET_CLOUD_SAVE_ID'; payload: string }
-    | { type: 'CREATE_VOGUE_FEATURE'; payload: { photoshoot: VoguePhotoshoot } };
+    | { type: 'CREATE_VOGUE_FEATURE'; payload: { photoshoot: VoguePhotoshoot } }
+    | { type: 'START_DATING'; payload: { partnerName: string; partnerType: 'npc' | 'custom' } }
+    | { type: 'REVEAL_RELATIONSHIP'; payload: { relationshipId: string; outlet: 'popbase' | 'tmz' } }
+    | { type: 'ADVANCE_RELATIONSHIP'; payload: { relationshipId: string; newStatus: 'engaged' | 'married' } }
+    | { type: 'BREAK_UP'; payload: { relationshipId: string } };
