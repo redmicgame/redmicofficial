@@ -2766,6 +2766,31 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         views: Math.floor(Math.random() * 2000000) + 800000, date: newDate,
                     }));
                 }
+                
+                // Send Red Carpet invites
+                allPlayerArtistsAndGroups.forEach(artistProfile => {
+                    const artistData = updatedArtistsData[artistProfile.id];
+                    if (artistData) {
+                        const isNominated = newOscarNominations?.some(cat => cat.nominees.some(n => n.isPlayer && n.artistName === artistProfile.name));
+                        if (isNominated || artistData.popularity >= 80) {
+                            const redCarpetEmailId = crypto.randomUUID();
+                            const reasonText = isNominated
+                                ? `Because of your nomination`
+                                : `Due to your undeniable impact on pop culture this year`;
+
+                            artistData.inbox.push({
+                                id: redCarpetEmailId,
+                                sender: 'The Academy',
+                                senderIcon: 'oscars',
+                                subject: 'Invitation: Oscars Red Carpet',
+                                body: `Dear ${artistProfile.name},\n\n${reasonText}, we would be honored to have you attend the ${newDate.year} Oscars and walk the red carpet.\n\nPlease accept this invitation by sharing your look for the evening.\n\nSincerely,\nThe Academy`,
+                                date: newDate,
+                                isRead: false,
+                                offer: { type: 'oscarRedCarpet', emailId: redCarpetEmailId }
+                            });
+                        }
+                    }
+                });
             }
 
             // Week 10: Oscar Ceremony
@@ -5680,6 +5705,75 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
                 activeOscarPerformanceOffer: null,
                 currentView: 'inbox',
+            };
+        }
+        case 'ACCEPT_OSCAR_RED_CARPET': {
+            if (!state.activeArtistId) return state;
+            const { emailId, lookUrl } = action.payload;
+
+            if (lookUrl) { 
+                const artistName = state.soloArtist?.name || state.group?.name;
+                const popBasePost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: `${artistName} arrives at the #Oscars red carpet.`,
+                    image: lookUrl,
+                    likes: Math.floor(Math.random() * 99000) + 16000,
+                    retweets: Math.floor(Math.random() * 16000) + 7000,
+                    views: Math.floor(Math.random() * 3100000) + 1200000,
+                    date: state.date,
+                };
+                const activeData = state.artistsData[state.activeArtistId];
+                const updatedInbox = activeData.inbox.map(email => {
+                    if (email.id === emailId && email.offer?.type === 'oscarRedCarpet') {
+                        return { ...email, offer: { ...email.offer, isAttending: true }};
+                    }
+                    return email;
+                });
+
+                const newLook = {
+                    id: crypto.randomUUID(),
+                    awardShow: 'Oscars',
+                    year: state.date.year,
+                    imageUrl: lookUrl,
+                };
+
+                return {
+                    ...state,
+                    artistsData: {
+                        ...state.artistsData,
+                        [state.activeArtistId]: {
+                            ...activeData,
+                            inbox: updatedInbox,
+                            xPosts: [popBasePost, ...activeData.xPosts],
+                            pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])]
+                        }
+                    },
+                    activeOscarRedCarpetOffer: null,
+                    currentView: 'game',
+                };
+            } else { 
+                 return {
+                    ...state,
+                    activeOscarRedCarpetOffer: { emailId },
+                    currentView: 'oscarRedCarpet',
+                };
+            }
+        }
+        case 'DECLINE_OSCAR_RED_CARPET': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === action.payload.emailId && email.offer?.type === 'oscarRedCarpet') {
+                    return { ...email, offer: { ...email.offer, isAttending: false }};
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox }},
+                currentView: 'inbox',
+                activeOscarRedCarpetOffer: null
             };
         }
         case 'RENEW_CONTRACT': {
