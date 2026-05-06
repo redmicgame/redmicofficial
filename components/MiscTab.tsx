@@ -359,14 +359,23 @@ const MiscTab: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-bold">Offline Mode (Disable AI)</p>
-                            <p className="text-xs text-zinc-400">Play without requiring API calls. Replaces AI features with generic text.</p>
+                            <p className="font-bold flex items-center gap-2">
+                                AI Features
+                                {(!activeArtistData?.redMicPro?.unlocked) && <span className="text-[10px] bg-red-900 border border-red-700 text-red-100 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">PRO</span>}
+                            </p>
+                            <p className="text-xs text-zinc-400">Generate creative text using AI depending on your status.</p>
                         </div>
                         <button 
-                            onClick={() => dispatch({ type: 'TOGGLE_OFFLINE_MODE' })}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${gameState.offlineMode ? 'bg-red-500' : 'bg-zinc-600'}`}
+                            onClick={() => {
+                                if (!activeArtistData?.redMicPro?.unlocked) {
+                                    dispatch({ type: 'CHANGE_VIEW', payload: 'redMicProUnlock' });
+                                } else {
+                                    dispatch({ type: 'TOGGLE_OFFLINE_MODE' });
+                                }
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${!gameState.offlineMode ? 'bg-red-500' : 'bg-zinc-600'} ${!activeArtistData?.redMicPro?.unlocked ? 'opacity-50' : ''}`}
                         >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${gameState.offlineMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${!gameState.offlineMode ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
                 </div>

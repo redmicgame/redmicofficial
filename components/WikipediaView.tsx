@@ -120,7 +120,7 @@ const WikipediaView: React.FC = () => {
                 }
 
                 let newSummary = '';
-                if (gameState.offlineMode) {
+                if (gameState.offlineMode || !activeArtistData?.redMicPro?.unlocked) {
                     newSummary = `"${release.title}" is the ${projectNumberString} by ${artist.name}. Released on ${formatGameDate(release.releaseDate)} ${labelInfo}, the ${release.type.toLowerCase()} contains ${releaseSongs.length} tracks. ${features.size > 0 ? `It features guest appearances by ${Array.from(features).join(', ')}.` : ''} ${singles.length > 0 ? `The release was supported by the singles ${singles.map(s => `"${s.title}"`).join(', ')}.` : ''}`;
                 } else {
                     const prompt = `You are a music historian writing a Wikipedia article. Write a lead section for the album "${release.title}" by artist "${artist.name}".

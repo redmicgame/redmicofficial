@@ -693,9 +693,12 @@ export interface Relationship {
     partnerName: string;
     partnerType: 'npc' | 'custom';
     startYear: number;
+    startWeek?: number;
     endYear: number | null;
+    endWeek?: number;
     status: 'dating' | 'engaged' | 'married';
     isPublic: boolean;
+    image?: string;
 }
 
 export interface ArtistData {
@@ -1007,4 +1010,5 @@ export type GameAction =
     | { type: 'START_DATING'; payload: { partnerName: string; partnerType: 'npc' | 'custom' } }
     | { type: 'REVEAL_RELATIONSHIP'; payload: { relationshipId: string; outlet: 'popbase' | 'tmz' } }
     | { type: 'ADVANCE_RELATIONSHIP'; payload: { relationshipId: string; newStatus: 'engaged' | 'married' } }
-    | { type: 'BREAK_UP'; payload: { relationshipId: string } };
+    | { type: 'BREAK_UP'; payload: { relationshipId: string } }
+    | { type: 'UPDATE_RELATIONSHIP_IMAGE'; payload: { relationshipId: string, image: string } };

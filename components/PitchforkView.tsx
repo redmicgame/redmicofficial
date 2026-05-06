@@ -118,7 +118,7 @@ const PitchforkView: React.FC = () => {
             finalScore = Math.round(finalScore * 10) / 10;
             
             let reviewText = '';
-            if (gameState.offlineMode) {
+            if (gameState.offlineMode || !activeArtistData?.redMicPro?.unlocked) {
                 if (finalScore >= 8) {
                     reviewText = `A stunning and bold effort from ${activeArtist.name}. The production is crisp and the artistic vision is fully realized, cementing this release as one of the standout moments of the year.`;
                 } else if (finalScore >= 5) {

@@ -43,6 +43,26 @@ const DatingView: React.FC = () => {
         }
     };
 
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, relationshipId: string) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newImage = reader.result as string;
+                dispatch({ type: 'UPDATE_RELATIONSHIP_IMAGE', payload: { relationshipId, image: newImage } });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const formatRelationshipDate = (year: number, week?: number) => {
+        if (week !== undefined) {
+            const month = new Date(year, 0, (week - 1) * 7 + 1).toLocaleString('default', { month: 'long' });
+            return `${month} ${year}`;
+        }
+        return `${year}`;
+    };
+
     const StatusBadge = ({ status, isPublic }: { status: Relationship['status'], isPublic: boolean }) => {
         let color = 'bg-blue-500/20 text-blue-400';
         if (status === 'engaged') color = 'bg-purple-500/20 text-purple-400';
@@ -78,9 +98,30 @@ const DatingView: React.FC = () => {
                     {activeRelationship ? (
                         <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 space-y-4 shadow-xl">
                             <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-2xl font-black text-red-500">{activeRelationship.partnerName}</h3>
-                                    <p className="text-zinc-400">Since {activeRelationship.startYear}</p>
+                                <div className="flex gap-4 items-center">
+                                    <label htmlFor={`image-upload-${activeRelationship.id}`} className="cursor-pointer group relative flex-shrink-0">
+                                        <div className="w-16 h-16 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden">
+                                            {activeRelationship.image ? (
+                                                <img src={activeRelationship.image} alt={activeRelationship.partnerName} className="w-full h-full object-cover"/>
+                                            ) : (
+                                                <span className="text-zinc-500 font-bold text-2xl">{activeRelationship.partnerName.charAt(0)}</span>
+                                            )}
+                                        </div>
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                                            <span className="text-white text-[10px] font-bold">Edit</span>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            id={`image-upload-${activeRelationship.id}`}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageUpload(e, activeRelationship.id)}
+                                        />
+                                    </label>
+                                    <div>
+                                        <h3 className="text-2xl font-black text-red-500">{activeRelationship.partnerName}</h3>
+                                        <p className="text-zinc-400">Since {formatRelationshipDate(activeRelationship.startYear, activeRelationship.startWeek)}</p>
+                                    </div>
                                 </div>
                                 <StatusBadge status={activeRelationship.status} isPublic={activeRelationship.isPublic} />
                             </div>
@@ -141,9 +182,30 @@ const DatingView: React.FC = () => {
                         <div className="space-y-4">
                             {pastRelationships.map(rel => (
                                 <div key={rel.id} className="bg-zinc-800/50 p-4 rounded-lg flex items-center justify-between border border-zinc-700/50">
-                                    <div>
-                                        <h4 className="font-bold text-lg">{rel.partnerName}</h4>
-                                        <p className="text-zinc-400 text-sm">Dated from {rel.startYear} - {rel.endYear}</p>
+                                    <div className="flex gap-4 items-center">
+                                        <label htmlFor={`image-upload-${rel.id}`} className="cursor-pointer group relative flex-shrink-0">
+                                            <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden">
+                                                {rel.image ? (
+                                                    <img src={rel.image} alt={rel.partnerName} className="w-full h-full object-cover"/>
+                                                ) : (
+                                                    <span className="text-zinc-500 font-bold text-xl">{rel.partnerName.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                                                <span className="text-white text-[10px] font-bold">Edit</span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                id={`image-upload-${rel.id}`}
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={(e) => handleImageUpload(e, rel.id)}
+                                            />
+                                        </label>
+                                        <div>
+                                            <h4 className="font-bold text-lg">{rel.partnerName}</h4>
+                                            <p className="text-zinc-400 text-sm">Dated from {formatRelationshipDate(rel.startYear, rel.startWeek)} - {rel.endYear ? formatRelationshipDate(rel.endYear, rel.endWeek) : 'Present'}</p>
+                                        </div>
                                     </div>
                                     <StatusBadge status={rel.status} isPublic={rel.isPublic} />
                                 </div>

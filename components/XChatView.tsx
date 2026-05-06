@@ -98,7 +98,7 @@ const XChatView: React.FC = () => {
                 : `You are a die-hard fan of the music artist ${activeArtist?.name}. Your username is ${replier.name}. You are direct messaging them. Be respectful but very excited. Use casual, lowercase internet slang.`;
     
             let aiReplyText = '';
-            if (gameState.offlineMode) {
+            if (gameState.offlineMode || !activeArtistData?.redMicPro?.unlocked) {
                 const genericReplies = [
                     "Interesting...", 
                     "Wow!", 

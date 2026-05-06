@@ -281,7 +281,7 @@ const initialArtistData: ArtistData = {
 
 
 const initialState: GameState = {
-    offlineMode: false,
+    offlineMode: true,
     careerMode: null,
     soloArtist: null,
     group: null,
@@ -6612,7 +6612,9 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 partnerName: action.payload.partnerName,
                 partnerType: action.payload.partnerType,
                 startYear: state.date.year,
+                startWeek: state.date.week,
                 endYear: null,
+                endWeek: undefined,
                 status: 'dating',
                 isPublic: false
             };
@@ -6723,7 +6725,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             if (!activeArtist) return state;
 
             const updatedRelationships = (activeData.relationships || []).map(r => 
-                r.id === action.payload.relationshipId ? { ...r, endYear: state.date.year } : r
+                r.id === action.payload.relationshipId ? { ...r, endYear: state.date.year, endWeek: state.date.week } : r
             );
 
             const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
@@ -6754,6 +6756,22 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                         relationships: updatedRelationships,
                         hype: rel?.isPublic ? Math.min(1000, activeData.hype + 60) : activeData.hype,
                         xPosts: newPosts
+                    }
+                }
+            };
+        }
+        case 'UPDATE_RELATIONSHIP_IMAGE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: (activeData.relationships || []).map(r => 
+                            r.id === action.payload.relationshipId ? { ...r, image: action.payload.image } : r
+                        )
                     }
                 }
             };
