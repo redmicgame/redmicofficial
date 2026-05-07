@@ -91,6 +91,8 @@ export interface Release {
     firstWeekStreams?: number;
     wikipediaSummary?: string;
     soundtrackInfo?: { albumTitle: string };
+    isFeatureToNpc?: boolean;
+    npcArtistName?: string;
     lastCertification?: string;
     isTakenDown?: boolean;
     rightsSoldOriginalValue?: number;

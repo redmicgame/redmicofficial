@@ -12,6 +12,7 @@ const getIndependentLabelName = (id: string) => {
 };
 
 const ReleaseItem: React.FC<{ release: Release, large?: boolean, onClick: () => void }> = ({ release, large = false, onClick }) => {
+    const { activeArtistData } = useGame();
     const size = large ? 'w-24 h-24' : 'w-16 h-16';
     const titleSize = large ? 'text-xl' : 'text-lg';
 
@@ -23,12 +24,20 @@ const ReleaseItem: React.FC<{ release: Release, large?: boolean, onClick: () => 
         labelName = release.releasingLabel.name;
     }
 
+    const featureSong = activeArtistData?.songs.find(s => release.songIds.includes(s.id) && s.isFeatureToNpc);
+    const isFeature = release.isFeatureToNpc || !!featureSong;
+    const featureArtistName = release.npcArtistName || featureSong?.npcArtistName;
+
+    const subText = isFeature 
+        ? `${release.type} • ${featureArtistName}`
+        : `${release.releaseDate.year} • ${labelName}`;
+
     return (
         <button onClick={onClick} className="w-full text-left flex items-center gap-4 group cursor-pointer">
             <img src={release.coverArt} alt={release.title} className={`${size} rounded-md object-cover`} />
             <div>
                 <p className={`font-bold text-white ${titleSize}`}>{release.title}</p>
-                <p className="text-sm text-zinc-400">{release.releaseDate.year} • {labelName}</p>
+                <p className="text-sm text-zinc-400">{subText}</p>
             </div>
         </button>
     );
@@ -67,14 +76,16 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
     const latestRelease = sortedReleases.length > 0 ? sortedReleases[0] : null;
 
     const filteredReleases = useMemo(() => {
+        const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc);
+        
         if (filter === 'Albums') {
-            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)') && !r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
+            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)') && !isFeature(r));
         }
         if (filter === 'Singles and EPs') {
-            return sortedReleases.filter(r => (r.type === 'Single' || r.type === 'EP') && !r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
+            return sortedReleases.filter(r => (r.type === 'Single' || r.type === 'EP') && !isFeature(r));
         }
         if (filter === 'Featured') {
-            return sortedReleases.filter(r => r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
+            return sortedReleases.filter(r => isFeature(r));
         }
         // Placeholder for other filters
         return [];

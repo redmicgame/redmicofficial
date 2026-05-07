@@ -2359,12 +2359,10 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                             type: 'Single',
                             releaseDate: newDate,
                             songIds: [song.id],
-                            quality: song.quality,
                             coverArt: song.coverArt,
-                            description: '',
-                            marketingBudget: 0,
-                            isTakingDown: false,
-                            isTakenDown: false
+                            artistId,
+                            isFeatureToNpc: true,
+                            npcArtistName: song.npcArtistName,
                         });
 
                         if (activeArtist) {
