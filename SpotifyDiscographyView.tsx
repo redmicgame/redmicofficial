@@ -56,9 +56,13 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
     if (!activeArtistData) return null;
     const { releases } = activeArtistData;
 
-    const sortedReleases = useMemo(() => {
-        return [...releases].sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+    const baseReleases = useMemo(() => {
+        return releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !r.isFeatureToNpc);
     }, [releases]);
+
+    const sortedReleases = useMemo(() => {
+        return [...baseReleases].sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+    }, [baseReleases]);
 
     const latestRelease = sortedReleases.length > 0 ? sortedReleases[0] : null;
 
@@ -83,10 +87,16 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
     }, [filteredReleases, latestRelease]);
 
     const featuredOn = useMemo(() => {
-        if (!activeArtist) return [];
-        return npcs.filter(npc => npc.isPlayerFeature && npc.featuring === activeArtist.name && npc.isReleased)
+        if (!activeArtist || !activeArtistData) return { npcSongs: [], playerFeatures: [] };
+        
+        const npcSongs = npcs.filter(npc => npc.isPlayerFeature && npc.featuring === activeArtist.name && npc.isReleased)
             .sort((a,b) => (b.releaseDate!.year*52 + b.releaseDate!.week) - (a.releaseDate!.year*52 + a.releaseDate!.week));
-    }, [npcs, activeArtist]);
+
+        const playerFeatures = activeArtistData.releases.filter(r => r.isFeatureToNpc)
+            .sort((a,b) => (b.releaseDate.year*52 + b.releaseDate.week) - (a.releaseDate.year*52 + a.releaseDate.week));
+
+        return { npcSongs, playerFeatures };
+    }, [npcs, activeArtist, activeArtistData]);
     
     const filterButtons: Array<'Albums' | 'Singles and EPs' | 'Compilations' | 'Featured'> = ['Albums', 'Singles and EPs', 'Compilations', 'Featured'];
 
@@ -164,9 +174,12 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
                 {filter === 'Featured' && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold">Featured On</h2>
-                        {featuredOn.length > 0 ? (
+                        {(featuredOn.npcSongs.length > 0 || featuredOn.playerFeatures.length > 0) ? (
                             <div className="space-y-5">
-                                {featuredOn.map(song => (
+                                {featuredOn.playerFeatures.map(release => (
+                                    <ReleaseItem key={release.id} release={release} onClick={() => onSelectRelease(release.id)} />
+                                ))}
+                                {featuredOn.npcSongs.map(song => (
                                     <FeaturedSongItem key={song.uniqueId} song={song} onClick={() => { /* Placeholder for future song detail view */ }} />
                                 ))}
                             </div>

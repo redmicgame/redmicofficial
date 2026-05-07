@@ -116,7 +116,7 @@ const YouTubeHome: React.FC = () => {
 
         const artistToFilter = allPlayerArtists.find(a => a.name === activeFilter);
         if (artistToFilter) {
-            return sortedByDate.filter(v => v.artistId === artistToFilter.id);
+            return sortedByDate.filter(v => v.artistId === artistToFilter.id && !v.isFeatureVideo);
         }
         
         return [...allVideos].sort(() => Math.random() - 0.5);
@@ -237,7 +237,7 @@ const YouTubeChannelView: React.FC = () => {
     
     const channelIdToShow = isViewingPastLabel ? viewingPastLabelId : (isLabelView && contract ? contract.labelId : activeArtistId!);
     const displayedVideos = useMemo(() => {
-         const filtered = videos.filter(v => v.channelId === channelIdToShow);
+         const filtered = videos.filter(v => v.channelId === channelIdToShow && !v.isFeatureVideo);
          switch (filter) {
             case 'Popular':
                 return filtered.sort((a, b) => b.views - a.views);

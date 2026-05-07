@@ -2383,6 +2383,31 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                             artistData.inbox.push(releaseEmail);
                         }
                         return { ...song, isReleased: true, releaseId: newReleaseId };
+                    } else if (song.isFeatureToNpc && song.isReleased && song.releaseDate) {
+                        const weeksSinceRelease = (newDate.year * 52 + newDate.week) - (song.releaseDate.year * 52 + song.releaseDate.week);
+                        
+                        if (weeksSinceRelease === 1) {
+                            // 75% chance to be offered a music video
+                            if (Math.random() < 0.75) {
+                                if (activeArtist) {
+                                    const offerEmail: Email = {
+                                        id: crypto.randomUUID(),
+                                        sender: song.npcArtistName || 'Management',
+                                        senderIcon: 'default',
+                                        subject: `Music Video: ${song.title}`,
+                                        body: `Hey ${activeArtist.name},\n\n"${song.title}" is doing well! We are planning to shoot an official music video for it. Do you want to be part of the shoot and handle the thumbnail upload?\n\n- ${song.npcArtistName}`,
+                                        date: newDate,
+                                        isRead: false,
+                                        offer: {
+                                            type: 'featureVideoOffer',
+                                            songId: song.id,
+                                            npcArtistName: song.npcArtistName || 'Another Artist',
+                                        }
+                                    };
+                                    artistData.inbox.push(offerEmail);
+                                }
+                            }
+                        }
                     }
                     return song;
                 });
@@ -6223,6 +6248,81 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 },
                 activeFeatureOffer: { ...offerDetails, emailId },
                 currentView: 'createFeature',
+            };
+        }
+        case 'ACCEPT_FEATURE_VIDEO_OFFER': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const { emailId, ...offerDetails } = action.payload;
+
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === emailId && email.offer?.type === 'featureVideoOffer') {
+                    return { ...email, offer: { ...email.offer, isAccepted: true } };
+                }
+                return email;
+            });
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        inbox: updatedInbox
+                    }
+                },
+                activeFeatureVideoOffer: { ...offerDetails, emailId },
+                currentView: 'createFeatureVideo',
+            };
+        }
+        case 'CANCEL_FEATURE_VIDEO_OFFER': {
+            return {
+                ...state,
+                activeFeatureVideoOffer: null,
+                currentView: 'inbox',
+            };
+        }
+        case 'CREATE_FEATURE_VIDEO': {
+            if (!state.activeArtistId || !state.activeFeatureVideoOffer) return state;
+            
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = allPlayerArtistsAndGroups.find(a => a.id === state.activeArtistId);
+            if (!activeArtist) return state;
+
+            const { thumbnail } = action.payload;
+            const { songId, npcArtistName } = state.activeFeatureVideoOffer;
+            const song = activeData.songs.find(s => s.id === songId);
+            if (!song) return state;
+
+            const newVideo: Video = {
+                id: crypto.randomUUID(),
+                title: `${npcArtistName}, ${activeArtist.name} - ${song.title.replace(` (feat. ${activeArtist.name})`, '')} (Official Video)`,
+                type: 'Music Video',
+                views: 0,
+                thumbnail: thumbnail,
+                releaseDate: state.date,
+                artistId: state.activeArtistId,
+                songId: songId,
+                channelId: 'artist', // It won't show in the artist channel but we'll use a flag
+                isFeatureVideo: true,
+            };
+
+            const updatedData = {
+                ...activeData,
+                youtube: {
+                    ...activeData.youtube,
+                    videos: [...activeData.youtube.videos, newVideo]
+                }
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: updatedData
+                },
+                activeFeatureVideoOffer: null,
+                currentView: 'game'
             };
         }
         case 'CANCEL_FEATURE_OFFER': {

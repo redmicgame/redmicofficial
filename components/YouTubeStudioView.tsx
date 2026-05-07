@@ -25,6 +25,7 @@ const YouTubeStudioView: React.FC = () => {
     
     const latestVideos = useMemo(() => {
         return [...videos]
+            .filter(v => !v.isFeatureVideo)
             .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))
             .slice(0, 5);
     }, [videos]);

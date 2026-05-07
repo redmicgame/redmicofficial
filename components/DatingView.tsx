@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { useGame } from '../context/GameContext';
-import { Relationship, NpcArtist } from '../types';
+import { Relationship, Artist } from '../types';
 
 const DatingView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
@@ -22,7 +22,7 @@ const DatingView: React.FC = () => {
 
     const handleStartDating = () => {
         if (partnerType === 'npc') {
-            const npc = sortedNpcs.find(n => n.id === selectedNpcId);
+            const npc = sortedNpcs.find(n => n.uniqueId === selectedNpcId);
             if (npc) {
                 dispatch({ type: 'START_DATING', payload: { partnerName: npc.artist, partnerType: 'npc' } });
             }
@@ -246,7 +246,7 @@ const DatingView: React.FC = () => {
                                 >
                                     <option value="">-- Choose an artist --</option>
                                     {sortedNpcs.map(n => (
-                                        <option key={n.id} value={n.id}>{n.artist}</option>
+                                        <option key={n.uniqueId} value={n.uniqueId}>{n.artist}</option>
                                     ))}
                                 </select>
                             </div>

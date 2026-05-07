@@ -70,6 +70,7 @@ import HotRapRnbView from './components/HotRapRnbView';
 import ElectronicChartView from './components/ElectronicChartView';
 import CountryChartView from './components/CountryChartView';
 import CreateFeatureView from './components/CreateFeatureView';
+import { CreateFeatureVideoView } from './components/CreateFeatureVideoView';
 import CreateOnTheRadarPerformanceView from './components/CreateOnTheRadarPerformanceView';
 import CreateTrshdPerformanceView from './components/CreateTrshdPerformanceView';
 import AppleMusicView from './components/AppleMusicView';
@@ -176,6 +177,8 @@ const AppContent: React.FC = () => {
                 return <CreateFallonInterviewView />;
             case 'createFeature':
                 return <CreateFeatureView />;
+            case 'createFeatureVideo':
+                return <CreateFeatureVideoView />;
             case 'x':
                 return <XView />;
             case 'xProfile':
