@@ -409,7 +409,7 @@ const getHypeCap = (artistData: ArtistData): number => {
     return 100;
 };
 
-const gameReducer = (state: GameState, action: GameAction): GameState => {
+const gameReducerInternal = (state: GameState, action: GameAction): GameState => {
     const allPlayerArtistsAndGroups: (Artist | Group)[] = state.careerMode === 'solo' && state.soloArtist ? [state.soloArtist] : (state.group ? [state.group, ...state.group.members] : []);
     const tmzUser: XUser = {
         id: 'tmz', name: 'TMZ', username: 'TMZ',
@@ -3558,11 +3558,21 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 date: state.date,
             };
 
+            const popBasePost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'popbase',
+                content: `${artistProfile?.name} has combined all remixes of "${originalSong.title}" into the original track.`,
+                likes: Math.floor(Math.random() * 80000) + 30000,
+                retweets: Math.floor(Math.random() * 20000) + 5000,
+                views: Math.floor(Math.random() * 1500000) + 500000,
+                date: state.date
+            };
+
             const updatedData = {
                 ...activeData,
                 songs: updatedSongs,
                 releases: updatedReleases,
-                xPosts: [newXPost, ...activeData.xPosts],
+                xPosts: [popBasePost, newXPost, ...activeData.xPosts],
             };
 
             return {
@@ -6388,9 +6398,21 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 isFeatureVideo: true,
             };
 
+            const popBasePost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'popbase',
+                content: `${npcArtistName} has released the music video for "${song.title.replace(` (feat. ${activeArtist.name})`, '')}" featuring ${activeArtist.name}.`,
+                image: thumbnail,
+                likes: Math.floor(Math.random() * 80000) + 30000,
+                retweets: Math.floor(Math.random() * 20000) + 5000,
+                views: Math.floor(Math.random() * 1500000) + 500000,
+                date: state.date
+            };
+
             const updatedData = {
                 ...activeData,
-                videos: [...activeData.videos, newVideo]
+                videos: [...activeData.videos, newVideo],
+                xPosts: [popBasePost, ...activeData.xPosts]
             };
 
             return {
@@ -6955,6 +6977,47 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         default:
             return state;
     }
+};
+
+const gameReducer = (state: GameState, action: GameAction): GameState => {
+    const nextState = gameReducerInternal(state, action);
+    
+    // Interception to duplicate popbase posts for popcrave
+    if (nextState.artistsData !== state.artistsData) {
+        let modified = false;
+        const newArtistsData = { ...nextState.artistsData };
+        for (const artistId in newArtistsData) {
+            const data = newArtistsData[artistId];
+            if (!data.xUsers.some(u => u.id === 'popcrave')) continue;
+            
+            const oldData = state.artistsData[artistId];
+            if (!oldData) continue;
+            
+            const newPosts = data.xPosts.filter(p => !oldData.xPosts.some(op => op.id === p.id));
+            const newPopBasePosts = newPosts.filter(p => p.authorId === 'popbase');
+            if (newPopBasePosts.length > 0) {
+                const popCravePosts = newPopBasePosts.map(p => ({
+                    ...p,
+                    id: crypto.randomUUID(),
+                    authorId: 'popcrave',
+                    views: Math.floor(p.views * (Math.random() * 0.4 + 0.8)),
+                    likes: Math.floor(p.likes * (Math.random() * 0.4 + 0.8)),
+                    retweets: Math.floor(p.retweets * (Math.random() * 0.4 + 0.8)),
+                }));
+                // Insert popcrave posts right after the popbase posts (or just unshift them so they are at the top)
+                newArtistsData[artistId] = {
+                    ...data,
+                    xPosts: [...popCravePosts, ...data.xPosts]
+                };
+                modified = true;
+            }
+        }
+        if (modified) {
+            return { ...nextState, artistsData: newArtistsData };
+        }
+    }
+    
+    return nextState;
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
