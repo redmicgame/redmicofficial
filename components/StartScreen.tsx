@@ -24,6 +24,7 @@ const StartScreen: React.FC = () => {
     const [soloFandomName, setSoloFandomName] = useState('');
     const [soloPronouns, setSoloPronouns] = useState<'he/him' | 'she/her' | 'they/them'>('they/them');
     const [startYear, setStartYear] = useState(new Date().getFullYear());
+    const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'extreme'>('normal');
     
     // Group state
     const [groupName, setGroupName] = useState('');
@@ -82,7 +83,7 @@ const StartScreen: React.FC = () => {
                 pronouns: soloPronouns,
                 fandomName: soloFandomName.trim()
             };
-            dispatch({ type: 'START_SOLO_GAME', payload: { artist: newArtist, startYear } });
+            dispatch({ type: 'START_SOLO_GAME', payload: { artist: newArtist, startYear, difficultyMode: difficulty } });
         } else {
             if (!groupName.trim() || !groupImage || !groupFandomName.trim()) {
                 setError('Group name, image, and fandom name are required.'); return;
@@ -106,7 +107,7 @@ const StartScreen: React.FC = () => {
                     fandomName: groupFandomName.trim()
                 }))
             };
-            dispatch({ type: 'START_GROUP_GAME', payload: { group: newGroup, startYear } });
+            dispatch({ type: 'START_GROUP_GAME', payload: { group: newGroup, startYear, difficultyMode: difficulty } });
         }
     };
 
@@ -382,6 +383,16 @@ const StartScreen: React.FC = () => {
                                 </div>
                             </>
                         )}
+
+                        <div>
+                             <label htmlFor="difficulty" className="block text-sm font-medium text-zinc-300">Difficulty</label>
+                             <select id="difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value as any)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                  <option value="easy">Easy (Easier streams & charts, no stream decay)</option>
+                                  <option value="normal">Normal (Classic experience)</option>
+                                  <option value="hard">Hard (Harder charting & streams)</option>
+                                  <option value="extreme">Extreme (Super hard)</option>
+                             </select>
+                        </div>
 
                         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 

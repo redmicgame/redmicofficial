@@ -802,6 +802,7 @@ export interface RedCarpetLook {
 export interface GameState {
     cloudSaveId?: string;
     offlineMode?: boolean;
+    difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme';
     careerMode: 'solo' | 'group' | null;
     soloArtist: Artist | null;
     group: Group | null;
@@ -887,8 +888,8 @@ export interface GameState {
 }
 
 export type GameAction =
-    | { type: 'START_SOLO_GAME'; payload: { artist: Artist; startYear: number } }
-    | { type: 'START_GROUP_GAME'; payload: { group: Group; startYear: number } }
+    | { type: 'START_SOLO_GAME'; payload: { artist: Artist; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme' } }
+    | { type: 'START_GROUP_GAME'; payload: { group: Group; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme' } }
     | { type: 'CHANGE_VIEW'; payload: GameView }
     | { type: 'SUBMIT_COACHELLA'; payload: { emailId: string } }
     | { type: 'CHANGE_TAB'; payload: Tab }

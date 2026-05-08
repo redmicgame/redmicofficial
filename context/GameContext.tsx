@@ -282,6 +282,7 @@ const initialArtistData: ArtistData = {
 
 const initialState: GameState = {
     offlineMode: true,
+    difficultyMode: 'normal',
     careerMode: null,
     soloArtist: null,
     group: null,
@@ -559,6 +560,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             return {
                 ...initialState,
+                difficultyMode: action.payload.difficultyMode || 'normal',
                 careerMode: 'solo',
                 soloArtist: artist,
                 activeArtistId: artist.id,
@@ -682,6 +684,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
              return {
                 ...initialState,
+                difficultyMode: action.payload.difficultyMode || 'normal',
                 careerMode: 'group',
                 group: group,
                 activeArtistId: group.id,
@@ -1194,22 +1197,34 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                 let newHype: number;
                 const hypeMode = artistData.redMicPro.hypeMode || 'locked';
+                const difficulty = state.difficultyMode || 'normal';
+
+                let hypeDecay = 2;
+                if (difficulty === 'easy') hypeDecay = 0;
+                else if (difficulty === 'hard') hypeDecay = 3;
+                else if (difficulty === 'extreme') hypeDecay = 5;
 
                 if (artistData.redMicPro.unlocked && hypeMode === 'locked') {
                     newHype = 1000;
                 } else {
-                    newHype = Math.max(0, artistData.hype - 2);
+                    newHype = Math.max(0, artistData.hype - hypeDecay);
                 }
 
                 let newPopularity = artistData.popularity;
                 const lastRelease = [...artistData.releases].sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
+                
+                let popDecay = 0.25;
+                if (difficulty === 'easy') popDecay = 0;
+                else if (difficulty === 'hard') popDecay = 0.5;
+                else if (difficulty === 'extreme') popDecay = 1.0;
+
                 if (lastRelease) {
                     const weeksSinceLastRelease = (newDate.year * 52 + newDate.week) - (lastRelease.releaseDate.year * 52 + lastRelease.week);
                     if (weeksSinceLastRelease > 12) { // 3 months
-                        newPopularity = Math.max(0, newPopularity - 0.25);
+                        newPopularity = Math.max(0, newPopularity - popDecay);
                     }
                 } else if ( (newDate.year * 52 + newDate.week) > 12 ) { // If no releases at all after 12 weeks
-                    newPopularity = Math.max(0, newPopularity - 0.25);
+                    newPopularity = Math.max(0, newPopularity - popDecay);
                 }
 
                 const popularityMultiplier = 1 + (newPopularity / 100);
@@ -1386,7 +1401,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const updatedSongs = artistData.songs.map(song => {
                     if (song.isReleased && !song.isTakenDown) {
                         const baseStreams = (song.quality ** 2) * 50;
-                        let weeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * (Math.random() * 0.4 + 0.8)); 
+                        const difficulty = state.difficultyMode || 'normal';
+                        let diffMultiplier = 1;
+                        if (difficulty === 'easy') diffMultiplier = 2.0;
+                        else if (difficulty === 'hard') diffMultiplier = 0.6;
+                        else if (difficulty === 'extreme') diffMultiplier = 0.3;
+
+                        let weeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * diffMultiplier * (Math.random() * 0.4 + 0.8)); 
 
                         // Decay logic
                         let releaseDate = song.releaseDate;
@@ -1396,10 +1417,17 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                         
                         if (releaseDate) {
-                            const ageInWeeks = Math.max(0, (newDate.year - releaseDate.year) * 52 + (newDate.week - releaseDate.week));
-                            const maxAge = Math.min(ageInWeeks, 156); // 3 years max decay
-                            const decayFactor = 1 / (1 + 0.15 * maxAge);
-                            weeklyStreams = Math.floor(weeklyStreams * decayFactor);
+                            let decayIntensity = 0.15;
+                            if (difficulty === 'easy') decayIntensity = 0; // No stream decay
+                            else if (difficulty === 'hard') decayIntensity = 0.25;
+                            else if (difficulty === 'extreme') decayIntensity = 0.4;
+
+                            if (decayIntensity > 0) {
+                                const ageInWeeks = Math.max(0, (newDate.year - releaseDate.year) * 52 + (newDate.week - releaseDate.week));
+                                const maxAge = Math.min(ageInWeeks, 156); // 3 years max decay
+                                const decayFactor = 1 / (1 + decayIntensity * maxAge);
+                                weeklyStreams = Math.floor(weeklyStreams * decayFactor);
+                            }
                         }
 
                         // Christmas Genre Seasonal Logic
@@ -1541,7 +1569,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             case 'Live Performance': videoTypeMultiplier = 2.5; break;
                             case 'Interview': videoTypeMultiplier = 1.5; break;
                         }
-                        weeklyViews = Math.floor((song.quality ** 2) * 10 * videoTypeMultiplier * hypeMultiplier * popularityMultiplier * (Math.random() * 0.4 + 0.8)); 
+                        const difficulty = state.difficultyMode || 'normal';
+                        let diffMultiplier = 1;
+                        if (difficulty === 'easy') diffMultiplier = 2.0;
+                        else if (difficulty === 'hard') diffMultiplier = 0.6;
+                        else if (difficulty === 'extreme') diffMultiplier = 0.3;
+
+                        weeklyViews = Math.floor((song.quality ** 2) * 10 * videoTypeMultiplier * hypeMultiplier * popularityMultiplier * diffMultiplier * (Math.random() * 0.4 + 0.8)); 
                     }
 
                     if (song.pitchforkBoost) {
@@ -5055,7 +5089,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         case 'RESET_GAME':
             return initialState;
         case 'LOAD_GAME':
-            return action.payload;
+            return {
+                ...action.payload,
+                difficultyMode: action.payload.difficultyMode || 'normal',
+            };
         case 'UNLOCK_RED_MIC_PRO': {
             if (!state.activeArtistId) return state;
             const { type, cost } = action.payload;
