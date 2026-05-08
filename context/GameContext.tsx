@@ -3489,6 +3489,87 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData },
             };
         }
+        case 'COMBINE_REMIXES': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const originalSongId = action.payload.originalSongId;
+
+            let updatedSongs = [...activeData.songs];
+            let originalSong = updatedSongs.find(s => s.id === originalSongId);
+            if (!originalSong) return state;
+
+            const remixes = updatedSongs.filter(s => s.remixOfSongId === originalSongId && s.isReleased);
+            
+            let combinedStreams = 0;
+            let combinedLastWeekStreams = 0;
+            let combinedPrevWeekStreams = 0;
+            let combinedRevenue = 0;
+            let combinedNetRevenue = 0;
+
+            const remixReleaseIds = new Set<string>();
+
+            remixes.forEach(remix => {
+                combinedStreams += (remix.streams || 0);
+                combinedLastWeekStreams += (remix.lastWeekStreams || 0);
+                combinedPrevWeekStreams += (remix.prevWeekStreams || 0);
+                combinedRevenue += (remix.revenue || 0);
+                combinedNetRevenue += (remix.netRevenue || 0);
+                if (remix.releaseId) {
+                    remixReleaseIds.add(remix.releaseId);
+                }
+            });
+
+            // Delete the remix songs
+            updatedSongs = updatedSongs.filter(s => !(s.remixOfSongId === originalSongId && s.isReleased));
+
+            // Add streams to the original song
+            updatedSongs = updatedSongs.map(s => {
+                if (s.id === originalSongId) {
+                    return {
+                        ...s,
+                        streams: (s.streams || 0) + combinedStreams,
+                        lastWeekStreams: (s.lastWeekStreams || 0) + combinedLastWeekStreams,
+                        prevWeekStreams: (s.prevWeekStreams || 0) + combinedPrevWeekStreams,
+                        revenue: (s.revenue || 0) + combinedRevenue,
+                        netRevenue: (s.netRevenue || 0) + combinedNetRevenue,
+                    };
+                }
+                return s;
+            });
+
+            const updatedReleases = activeData.releases.filter(r => {
+                if (remixReleaseIds.has(r.id)) {
+                    // Check if it's purely a remix release
+                    const hasNonRemix = r.songIds.some(id => id !== originalSongId && !remixes.find(remix => remix.id === id));
+                    if (!hasNonRemix) return false; // Delete it
+                }
+                return true;
+            });
+
+            const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === state.activeArtistId);
+            const username = artistProfile?.name.replace(/\s/g, '').toLowerCase() || 'artist';
+            const newXPost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'user_hater',
+                content: `not @${username} combining the remix EP with the original because it flopped 😂 desperate for streams much??`,
+                likes: Math.floor(Math.random() * 50000) + 10000,
+                retweets: Math.floor(Math.random() * 5000) + 1000,
+                views: Math.floor(Math.random() * 1000000) + 200000,
+                date: state.date,
+            };
+
+            const updatedData = {
+                ...activeData,
+                songs: updatedSongs,
+                releases: updatedReleases,
+                xPosts: [newXPost, ...activeData.xPosts],
+            };
+
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData },
+            };
+        }
         case 'CREATE_REMIX_PACK': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -6309,10 +6390,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
             const updatedData = {
                 ...activeData,
-                youtube: {
-                    ...activeData.youtube,
-                    videos: [...activeData.youtube.videos, newVideo]
-                }
+                videos: [...activeData.videos, newVideo]
             };
 
             return {

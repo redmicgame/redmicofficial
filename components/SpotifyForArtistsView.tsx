@@ -72,7 +72,7 @@ const S4AUpcomingReleaseDetailView: React.FC<{ submissionId: string; onBack: () 
 
 // --- SONG DETAIL VIEW ---
 const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song, onBack }) => {
-    const { activeArtistData } = useGame();
+    const { activeArtistData, gameState, dispatch } = useGame();
     if (!activeArtistData) return null;
     const { releases } = activeArtistData;
     const release = releases.find(r => r.id === song.releaseId);
@@ -82,6 +82,21 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song,
     const gross = song.revenue || 0;
     const net = song.netRevenue || 0;
     const labelCut = gross - net;
+
+    const hasCombineableRemixes = useMemo(() => {
+        const remixes = activeArtistData.songs.filter(s => s.remixOfSongId === song.id && s.isReleased);
+        return remixes.some(r => {
+            const remixRelease = releases.find(rel => rel.id === r.releaseId);
+            if (!remixRelease) return false;
+            const weeksSinceRelease = (gameState.date.year * 52 + gameState.date.week) - (remixRelease.releaseDate.year * 52 + remixRelease.releaseDate.week);
+            return weeksSinceRelease >= 4;
+        });
+    }, [activeArtistData.songs, song.id, releases, gameState.date]);
+
+    const handleCombineRemixes = () => {
+        dispatch({ type: 'COMBINE_REMIXES', payload: { originalSongId: song.id } });
+        onBack();
+    };
 
     return (
         <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white min-h-full p-4 flex flex-col">
@@ -124,6 +139,15 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song,
                             <span className="font-bold text-green-400 text-lg">${formatNumber(Math.floor(net))}</span>
                         </div>
                     </div>
+
+                    {hasCombineableRemixes && (
+                        <button
+                            onClick={handleCombineRemixes}
+                            className="mt-6 w-full bg-blue-500 text-white font-bold p-4 rounded-lg flex justify-center"
+                        >
+                            Combine Remixes to Original
+                        </button>
+                    )}
                 </div>
             </main>
         </div>
