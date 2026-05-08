@@ -2702,8 +2702,21 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             // --- OSCARS LOGIC ---
             let newOscarNominations: GameState['oscarCurrentYearNominations'] = state.oscarCurrentYearNominations;
             
-            // Week 1: Oscar Submission Email
+            // Week 1: Oscar Submission Email & Pop Crave Logic
             if (newDate.week === 1) {
+                // 50% chance to create Pop Crave account each year if it doesn't exist
+                for (const artistId in updatedArtistsData) {
+                    const artistData = updatedArtistsData[artistId];
+                    if (!artistData.xUsers.some(u => u.id === 'popcrave') && Math.random() < 0.5) {
+                        artistData.xUsers.push({
+                            id: 'popcrave', name: 'Pop Crave', username: 'PopCrave',
+                            avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjMkIzRUREIi8+PHBhdGggZD0iTTI0IDIwaDE2djI0SDI0VjIweiIgZmlsbD0iI0ZGRiIvPjwvc3ZnPg==',
+                            isVerified: true, bio: 'Trending news and celebrity gossip.',
+                            followersCount: 1550000, followingCount: 0,
+                        });
+                    }
+                }
+
                 for (const artistId in updatedArtistsData) {
                     const artistData = updatedArtistsData[artistId];
                     const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);

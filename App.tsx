@@ -81,6 +81,7 @@ import OscarRedCarpetView from './components/OscarRedCarpetView';
 import SwitchSaveView from './components/SwitchSaveView';
 import RedCarpetHistoryView from './components/RedCarpetHistoryView';
 import DatingView from './components/DatingView';
+import GoogleView from './components/GoogleView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -93,6 +94,8 @@ const AppContent: React.FC = () => {
 
     const renderView = () => {
         switch (currentView) {
+            case 'google':
+                return <GoogleView />;
             case 'spotify':
                 return <SpotifyView />;
             case 'spotifyAlbumCountdown':
