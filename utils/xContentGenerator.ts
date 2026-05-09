@@ -693,11 +693,21 @@ export const generateWeeklyXContent = (
 
     // 1. Generate Posts
     const postCount = Math.floor(Math.random() * 4) + 2; // 2-5 new posts per week
+    const publicImageVal = artistData.publicImage ?? 80;
+    
+    let haterChance = 0.4;
+    let engagementModifier = 1.0;
+    if (publicImageVal <= 20) { haterChance = 0.9; engagementModifier = 0.05; } // Cancelled (Bad 1)
+    else if (publicImageVal <= 40) { haterChance = 0.7; engagementModifier = 0.15; } // Problematic (Bad 2)
+    else if (publicImageVal <= 60) { haterChance = 0.4; engagementModifier = 0.8; } // Controversial
+    else if (publicImageVal <= 80) { haterChance = 0.2; engagementModifier = 1.2; } // Respected
+    else { haterChance = 0.05; engagementModifier = 1.5; } // Beloved
+
     for (let i = 0; i < postCount; i++) {
         const postType = Math.random();
 
-        // 60% chance for a fan post, 40% for a hater
-        if (postType < 0.6 && topSong) { // Fan Post
+        // chance for a fan post, chance for a hater
+        if (postType > haterChance && topSong) { // Fan Post
             const fanUsername = generateFanUsername(artistName);
             const fanId = `fan_${fanUsername}`;
             
@@ -749,10 +759,12 @@ export const generateWeeklyXContent = (
             }
             newPosts.push({
                 id: crypto.randomUUID(), authorId: fanId, content: pickRandom(fanTemplates), image,
-                likes: Math.floor(Math.random() * 2000), retweets: Math.floor(Math.random() * 500), views: Math.floor(Math.random() * 15000), date
+                likes: Math.floor(Math.floor(Math.random() * 2000) * engagementModifier), 
+                retweets: Math.floor(Math.floor(Math.random() * 500) * engagementModifier), 
+                views: Math.floor(Math.random() * 15000), date
             });
 
-        } else if (postType >= 0.6 && topSong) { // Hater Post
+        } else if (postType <= haterChance && topSong) { // Hater Post
             const haterUsername = generateHaterUsername();
             const haterId = `hater_${haterUsername}`;
             newUsers.push({ id: haterId, name: haterUsername, username: haterUsername, avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==', isVerified: false, followersCount: 0, followingCount: 0, bio: '' });

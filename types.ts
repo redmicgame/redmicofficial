@@ -745,6 +745,7 @@ export interface RedditPost {
 export interface ArtistData {
     money: number;
     hype: number;
+    publicImage: number;
     popularity: number;
     songs: Song[];
     releases: Release[];
@@ -822,6 +823,8 @@ export interface ArtistData {
     lastVogueOfferYear?: number;
     voguePhotoshoots?: VoguePhotoshoot[];
     weeksUntilNextFeatureOffer?: number;
+    signedBrandDeals?: string[];
+    signedVideoGames?: string[];
 }
 
 export interface RedCarpetLook {
@@ -1034,6 +1037,9 @@ export type GameAction =
     | { type: 'CREATE_FEATURE_VIDEO'; payload: { thumbnail: string } }
     | { type: 'SET_PRO_HYPE_MODE'; payload: 'locked' | 'manual' }
     | { type: 'SET_HYPE'; payload: number }
+    | { type: 'SET_PUBLIC_IMAGE'; payload: number }
+    | { type: 'SIGN_BRAND_DEAL'; payload: { id: string; cash: number } }
+    | { type: 'SIGN_VIDEO_GAME_DEAL'; payload: { id: string; cash: number } }
     | { type: 'SET_POPULARITY'; payload: number }
     | { type: 'UPDATE_RELEASE_COVER_ART'; payload: { releaseId: string; newCoverArt: string } }
     | { type: 'ACCEPT_SOUNDTRACK_OFFER'; payload: { albumTitle: 'F1 The Album' | 'Wicked' | 'Breaking Bad'; emailId: string } }

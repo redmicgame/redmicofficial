@@ -157,6 +157,22 @@ const RedMicProDashboardView: React.FC = () => {
                 </div>
                 
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <h2 className="text-lg font-bold">Public Image Management</h2>
+                    <p className="text-sm text-zinc-400">Change your public image level instantly. Lower values cause controversy and backlash.</p>
+                    <div className="flex gap-2">
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={activeArtistData.publicImage ?? 80}
+                            onChange={(e) => dispatch({ type: 'SET_PUBLIC_IMAGE', payload: parseInt(e.target.value) })}
+                            className="w-full"
+                        />
+                        <span className="w-12 text-right font-bold">{activeArtistData.publicImage ?? 80}</span>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
                     <h2 className="text-lg font-bold">Theme</h2>
                     <div className="flex items-center justify-between">
                         <label htmlFor="gold-theme-toggle" className="font-semibold">Enable Gold Theme</label>

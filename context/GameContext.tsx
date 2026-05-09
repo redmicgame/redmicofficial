@@ -222,6 +222,7 @@ const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[], npcImages?: Re
 const initialArtistData: ArtistData = {
     money: INITIAL_MONEY,
     hype: 0,
+    publicImage: 80, // Start as Respected/Beloved
     popularity: 10,
     songs: [],
     releases: [],
@@ -6325,6 +6326,53 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'SET_PUBLIC_IMAGE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (!activeData.redMicPro.unlocked) return state;
+            
+            const updatedData: ArtistData = {
+                ...activeData,
+                publicImage: Math.max(0, Math.min(100, action.payload)),
+            };
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: updatedData
+                }
+            };
+        }
+        case 'SIGN_BRAND_DEAL': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money + action.payload.cash,
+                        signedBrandDeals: [...(activeData.signedBrandDeals || []), action.payload.id]
+                    }
+                }
+            };
+        }
+        case 'SIGN_VIDEO_GAME_DEAL': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money + action.payload.cash,
+                        signedVideoGames: [...(activeData.signedVideoGames || []), action.payload.id]
+                    }
+                }
+            };
+        }
         case 'SET_POPULARITY': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -7176,32 +7224,61 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 const gameReducer = (state: GameState, action: GameAction): GameState => {
     const nextState = gameReducerInternal(state, action);
     
-    // Interception to duplicate popbase posts for popcrave
+    // Interception to duplicate popbase posts for popcrave and apply public image suppression
     if (nextState.artistsData !== state.artistsData) {
         let modified = false;
         const newArtistsData = { ...nextState.artistsData };
         for (const artistId in newArtistsData) {
-            const data = newArtistsData[artistId];
-            if (!data.xUsers.some(u => u.id === 'popcrave')) continue;
-            
+            let data = newArtistsData[artistId];
             const oldData = state.artistsData[artistId];
             if (!oldData) continue;
             
             const newPosts = data.xPosts.filter(p => !oldData.xPosts.some(op => op.id === p.id));
-            const newPopBasePosts = newPosts.filter(p => p.authorId === 'popbase');
-            if (newPopBasePosts.length > 0) {
-                const popCravePosts = newPopBasePosts.map(p => ({
-                    ...p,
-                    id: crypto.randomUUID(),
-                    authorId: 'popcrave',
-                    views: Math.floor(p.views * (Math.random() * 0.4 + 0.8)),
-                    likes: Math.floor(p.likes * (Math.random() * 0.4 + 0.8)),
-                    retweets: Math.floor(p.retweets * (Math.random() * 0.4 + 0.8)),
-                }));
-                // Insert popcrave posts right after the popbase posts (or just unshift them so they are at the top)
+            let finalNewPosts = [...newPosts];
+
+            if (data.xUsers.some(u => u.id === 'popcrave')) {
+                const newPopBasePosts = newPosts.filter(p => p.authorId === 'popbase');
+                if (newPopBasePosts.length > 0) {
+                    const popCravePosts = newPopBasePosts.map(p => ({
+                        ...p,
+                        id: crypto.randomUUID(),
+                        authorId: 'popcrave',
+                        views: Math.floor(p.views * (Math.random() * 0.4 + 0.8)),
+                        likes: Math.floor(p.likes * (Math.random() * 0.4 + 0.8)),
+                        retweets: Math.floor(p.retweets * (Math.random() * 0.4 + 0.8)),
+                    }));
+                    finalNewPosts = [...popCravePosts, ...finalNewPosts];
+                }
+            }
+            
+            // Public Image suppression
+            const publicImageVal = data.publicImage ?? 80;
+            if (publicImageVal <= 40 && finalNewPosts.length > 0) {
+                const modifier = publicImageVal <= 20 ? 0.05 : 0.15;
+                finalNewPosts = finalNewPosts.map(p => {
+                    // Suppress likes for fan accounts or news accounts, but let hater posts fly
+                    if (p.authorId.startsWith('hater_')) return p;
+                    if (p.authorId.startsWith('manager_')) return p; // Don't suppress manager? Or maybe yes because public hates them.
+                    
+                    return {
+                        ...p,
+                        likes: Math.floor((p.likes || 10) * modifier),
+                        retweets: Math.floor((p.retweets || 2) * modifier),
+                        // Views remain same
+                    };
+                });
+            }
+
+            if (finalNewPosts.length !== newPosts.length || publicImageVal <= 40) {
+                // Reconstruct xPosts with modified `finalNewPosts` 
+                // Wait, finalNewPosts contains our new popcrave tweets AND modified existing new tweets.
+                // We need to replace the new tweets that are already in `data.xPosts` with the ones in `finalNewPosts`
+                
+                const olderOldPosts = data.xPosts.slice(newPosts.length); // The ones that were already there
+                
                 newArtistsData[artistId] = {
                     ...data,
-                    xPosts: [...popCravePosts, ...data.xPosts]
+                    xPosts: [...finalNewPosts, ...olderOldPosts]
                 };
                 modified = true;
             }

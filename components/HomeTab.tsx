@@ -135,12 +135,22 @@ const HomeTab: React.FC = () => {
 
     const widthPercentagePopularity = `${popularity}%`;
     const widthPercentageHype = `${hype}%`;
+    const publicImageVal = activeArtistData.publicImage ?? 80;
+    const widthPercentagePublicImage = `${publicImageVal}%`;
 
     const getPopularityColor = (p: number) => {
         if (p < 50) return 'from-red-600 to-red-500';
         if (p < 70) return 'from-yellow-500 to-yellow-400';
         if (p < 91) return 'from-green-500 to-green-400';
         return 'from-emerald-600 to-emerald-500';
+    };
+
+    const getPublicImageInfo = (score: number) => {
+        if (score <= 20) return { label: 'Cancelled', color: 'bg-red-600', textColor: 'text-red-500' };
+        if (score <= 40) return { label: 'Problematic', color: 'bg-orange-500', textColor: 'text-orange-500' };
+        if (score <= 60) return { label: 'Controversial', color: 'bg-yellow-500', textColor: 'text-yellow-500' };
+        if (score <= 80) return { label: 'Respected', color: 'bg-green-400', textColor: 'text-green-400' };
+        return { label: 'Beloved', color: 'bg-emerald-500', textColor: 'text-emerald-500' };
     };
 
     const unreleasedSongs = songs.filter(s => !s.isReleased && !s.releaseId);
@@ -214,6 +224,25 @@ const HomeTab: React.FC = () => {
                         </div>
                     </div>
                     <p className="text-xs text-zinc-400 mt-1 text-right">Increases streams, views, sales, and likes.</p>
+                </div>
+
+                <div className="mb-4">
+                    <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-2">
+                            <svg className={`w-5 h-5 ${getPublicImageInfo(publicImageVal).textColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h2 className="text-xl font-bold">Public Image</h2>
+                        </div>
+                        <span className={`font-bold text-lg ${getPublicImageInfo(publicImageVal).textColor}`}>{getPublicImageInfo(publicImageVal).label}</span>
+                    </div>
+                    <div className="w-full bg-zinc-700 rounded-full h-4 overflow-hidden">
+                        <div 
+                            className={`${getPublicImageInfo(publicImageVal).color} h-4 rounded-full transition-all duration-500 ease-out`} 
+                            style={{ width: widthPercentagePublicImage }}
+                        ></div>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1 text-right">Impacts fan & media reaction to your actions.</p>
                 </div>
 
                 <div>

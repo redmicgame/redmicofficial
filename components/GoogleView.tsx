@@ -55,8 +55,11 @@ export const GoogleView: React.FC = () => {
     const isMatchFlights = lowerQuery.includes('flights') || lowerQuery.includes('tickets to');
     const isMatchCurrency = lowerQuery.includes('usd') || lowerQuery.includes('eur') || lowerQuery.includes('gbp') || lowerQuery.includes('currency') || lowerQuery.includes('to cad');
     const isMatchRecipe = lowerQuery.includes('recipe') || lowerQuery.includes('how to make');
+    
+    const isMatchBrandDeals = lowerQuery.includes('brand deal') || lowerQuery.includes('sponsor') || lowerQuery.includes('endorsement') || ['nike', 'gucci', 'calvin klein', 'pepsi', 'coca cola', 'apple', 'louis vuitton', 'mcdonalds'].some(b => lowerQuery.includes(b));
+    const isMatchVideoGames = lowerQuery.includes('video game') || lowerQuery.includes('soundtrack') || ['gta 6', 'fortnite', 'fifa', 'nba 2k', 'cyberpunk', 'madden', 'call of duty', 'valorant'].some(g => lowerQuery.includes(g));
 
-    const isMatchAnySpecial = isMatchArtist || isMatchTour || isMatchNetWorth || isTmzQuery || isMatchBeef || isMatchDating || isMatchUpcoming || isMatchBillboard || isMatchOnlyFans || isMatchCatalog || isMatchAwards || isMatchCoachella || isMatchSpotifyCharts || isMatchPayola || isMatchWeather || isMatchCalc || isMatchStock || isMatchTime || isMatchStopwatch || isMatchDefine || isMatchTranslate || isMatchFlights || isMatchCurrency || isMatchRecipe;
+    const isMatchAnySpecial = isMatchArtist || isMatchTour || isMatchBrandDeals || isMatchVideoGames || isMatchNetWorth || isTmzQuery || isMatchBeef || isMatchDating || isMatchUpcoming || isMatchBillboard || isMatchOnlyFans || isMatchCatalog || isMatchAwards || isMatchCoachella || isMatchSpotifyCharts || isMatchPayola || isMatchWeather || isMatchCalc || isMatchStock || isMatchTime || isMatchStopwatch || isMatchDefine || isMatchTranslate || isMatchFlights || isMatchCurrency || isMatchRecipe;
 
 
     const popularSongs = (activeArtistData.songs || []).filter(s => s.isReleased && !s.remixOfSongId).sort((a, b) => (b.streams || 0) - (a.streams || 0)).slice(0, 3);
@@ -422,6 +425,30 @@ export const GoogleView: React.FC = () => {
                         </div>
                     )}
 
+                    {activeTab === 'All' && isMatchArtist && (activeArtistData.publicImage ?? 80) <= 40 && (
+                        <div className="border border-red-200 rounded-xl overflow-hidden shadow-sm bg-red-50 p-4 mb-4">
+                            <h2 className="text-xl font-bold text-red-700 flex items-center gap-2 mb-2">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Controversy
+                            </h2>
+                            <h3 className="text-lg font-bold text-red-900 hover:underline cursor-pointer" onClick={() => setReadingArticle({
+                                title: `Is ${artistProfile.name} Officially Canceled?`,
+                                url: 'https://tmz.com/scandal',
+                                content: `The internet has turned against ${artistProfile.name} in what appears to be the biggest backlash of their career.\n\nFollowing a string of highly controversial moves, the public image of the star is currently in freefall. Fans are abandoning ship and the hate is dominating social platforms.\n\nWill they ever recover from this? PR experts are highly doubtful.`,
+                                type: 'tmz'
+                            })}>
+                                Why the Internet is "Canceling" {artistProfile.name}
+                            </h3>
+                            <p className="text-sm text-red-800 mt-2">
+                                {(activeArtistData.publicImage ?? 80) <= 20 
+                                    ? "The star is facing unprecedented backlash. Brand deals are reportedly in jeopardy, and public opinion has reached an all-time low." 
+                                    : "Recent controversies have severely damaged the artist's reputation. Social media is flooded with criticism."}
+                            </p>
+                        </div>
+                    )}
+
                     {activeTab === 'All' && isMatchArtist && (
                         <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                             <div className="flex space-x-1 p-2 overflow-x-auto bg-gray-50">
@@ -770,6 +797,98 @@ export const GoogleView: React.FC = () => {
                     )}
 
                     {/* Net Worth Snippet */}
+                    {activeTab === 'All' && isMatchBrandDeals && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4 mb-4">
+                            <h2 className="text-xl font-medium text-gray-800 tracking-tight mb-4">Sign a Brand Deal</h2>
+                            <p className="text-sm text-gray-600 mb-4">You can negotiate and sign these brand deals if you meet the popularity and public image requirements.</p>
+                            <div className="space-y-4">
+                                {[
+                                    { id: 'nike', name: 'Nike', cash: 20000000, reqPop: 80, reqImg: 60, desc: 'Global athletic footwear and apparel campaign.' },
+                                    { id: 'gucci', name: 'Gucci', cash: 15000000, reqPop: 70, reqImg: 50, desc: 'High-fashion ambassador deal including runway appearances.' },
+                                    { id: 'pepsi', name: 'Pepsi', cash: 10000000, reqPop: 60, reqImg: 40, desc: 'Star in a major Super Bowl commercial.' },
+                                    { id: 'calvinklein', name: 'Calvin Klein', cash: 5000000, reqPop: 40, reqImg: 30, desc: 'Underwear modeling campaign across billboards worldwide.' },
+                                ].map(deal => {
+                                    const canAfford = activeArtistData.popularity >= deal.reqPop && (activeArtistData.publicImage ?? 80) >= deal.reqImg;
+                                    const isSigned = activeArtistData.signedBrandDeals?.includes(deal.id);
+                                    return (
+                                        <div key={deal.id} className="p-3 border rounded-lg flex items-center justify-between">
+                                            <div>
+                                                <h3 className="font-bold text-blue-600 text-lg">{deal.name}</h3>
+                                                <p className="text-sm text-gray-700">{deal.desc}</p>
+                                                <div className="text-xs text-gray-500 mt-1">Requires {deal.reqPop}+ Popularity • ${formatNumber(deal.cash)}</div>
+                                            </div>
+                                            <div>
+                                                {isSigned ? (
+                                                    <button disabled className="px-4 py-2 bg-gray-200 text-gray-500 rounded font-bold text-sm">Signed</button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (canAfford) {
+                                                                dispatch({ type: 'SIGN_BRAND_DEAL', payload: { id: deal.id, cash: deal.cash } });
+                                                                alert(`You signed a $${formatNumber(deal.cash)} deal with ${deal.name}!`);
+                                                            } else {
+                                                                alert(`You need ${deal.reqPop}+ Popularity and ${deal.reqImg}+ Public Image to sign this.`);
+                                                            }
+                                                        }}
+                                                        className={`px-4 py-2 rounded font-bold text-sm ${canAfford ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                                                    >
+                                                        Negotiate & Sign
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchVideoGames && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4 mb-4">
+                            <h2 className="text-xl font-medium text-gray-800 tracking-tight mb-4">Video Game Features</h2>
+                            <p className="text-sm text-gray-600 mb-4">License your songs for these major video game soundtracks.</p>
+                            <div className="space-y-4">
+                                {[
+                                    { id: 'gta6', name: 'GTA 6 Soundtrack', cash: 5000000, reqPop: 85, desc: 'Get your song featured on the biggest entertainment launch in history.' },
+                                    { id: 'fortnite', name: 'Fortnite In-Game Concert', cash: 15000000, reqPop: 90, desc: 'Perform a live concert event in Fortnite and release a skin.' },
+                                    { id: 'fifa', name: 'EA Sports FC (FIFA)', cash: 2000000, reqPop: 50, desc: 'Feature on the global football soundtrack.' },
+                                    { id: 'nba2k', name: 'NBA 2K', cash: 1000000, reqPop: 40, desc: 'Curate a playlist or feature on the basketball simulator.' },
+                                ].map(game => {
+                                    const canAfford = activeArtistData.popularity >= game.reqPop;
+                                    const isSigned = activeArtistData.signedVideoGames?.includes(game.id);
+                                    return (
+                                        <div key={game.id} className="p-3 border rounded-lg flex items-center justify-between">
+                                            <div>
+                                                <h3 className="font-bold text-blue-600 text-lg">{game.name}</h3>
+                                                <p className="text-sm text-gray-700">{game.desc}</p>
+                                                <div className="text-xs text-gray-500 mt-1">Requires {game.reqPop}+ Popularity • ${formatNumber(game.cash)}</div>
+                                            </div>
+                                            <div>
+                                                {isSigned ? (
+                                                    <button disabled className="px-4 py-2 bg-gray-200 text-gray-500 rounded font-bold text-sm">Signed</button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (canAfford) {
+                                                                dispatch({ type: 'SIGN_VIDEO_GAME_DEAL', payload: { id: game.id, cash: game.cash } });
+                                                                alert(`You signed a $${formatNumber(game.cash)} deal with ${game.name}!`);
+                                                            } else {
+                                                                alert(`You need ${game.reqPop}+ Popularity to sign this.`);
+                                                            }
+                                                        }}
+                                                        className={`px-4 py-2 rounded font-bold text-sm ${canAfford ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                                                    >
+                                                        Negotiate & Feature
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'All' && isMatchNetWorth && (
                         <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
                             <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wider mb-2">{artistProfile.name} Net Worth</h2>
