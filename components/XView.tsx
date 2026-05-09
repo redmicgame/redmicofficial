@@ -144,6 +144,29 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
                     post.image && <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />
                 )}
 
+                {post.poll && (
+                    <div className="mt-3 border border-zinc-800 rounded-xl overflow-hidden">
+                        {post.poll.options.map(opt => {
+                            const percent = post.poll!.totalVotes > 0 ? Math.round((opt.votes / post.poll!.totalVotes) * 100) : 0;
+                            return (
+                                <div key={opt.id} className="relative p-3 border-b border-zinc-800 last:border-b-0 cursor-pointer hover:bg-zinc-900 transition-colors" onClick={() => {
+                                    // Make some interaction? If player hasn't voted. 
+                                    // For now just visually, usually games don't do real voting unless requested
+                                }}>
+                                    <div className="absolute left-0 top-0 bottom-0 bg-zinc-800" style={{ width: `${percent}%` }}></div>
+                                    <div className="relative flex justify-between text-sm font-bold text-white z-10 px-2 mix-blend-difference">
+                                        <span>{opt.text}</span>
+                                        <span>{percent}%</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <div className="p-2 text-xs text-zinc-500 font-semibold bg-zinc-900/50">
+                            {Intl.NumberFormat('en-US').format(post.poll.totalVotes)} votes • Final results
+                        </div>
+                    </div>
+                )}
+
                 {post.quoteOf && (
                     <div className="mt-2 border border-zinc-700 rounded-xl p-3">
                         <div className="flex items-center gap-1 text-sm mb-1">
@@ -389,13 +412,15 @@ const AccountsView: React.FC = () => {
 export const ComposeXPostModal: React.FC<{
     user: XUser;
     onClose: () => void;
-    onPost: (payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push'; targetId?: string; songId?: string; quoteOf?: XPost }) => void;
+    onPost: (payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push' | 'announce'; targetId?: string; songId?: string; quoteOf?: XPost; announceItem?: any; poll?: { options: { id: string; text: string; votes: number }[]; totalVotes: number } }) => void;
     quotePost?: XPost;
 }> = ({ user, onClose, onPost, quotePost }) => {
     const { gameState, activeArtistData } = useGame();
     const [content, setContent] = useState('');
     const [image, setImage] = useState<string | null>(null);
-    const [postType, setPostType] = useState<'normal' | 'fanWar' | 'push'>('normal');
+    const [isPollVisible, setIsPollVisible] = useState(false);
+    const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+    const [postType, setPostType] = useState<'normal' | 'fanWar' | 'push' | 'announce'>('normal');
     const [targetId, setTargetId] = useState<string>('');
     const [songId, setSongId] = useState<string>('');
     const imageInputRef = useRef<HTMLInputElement>(null);
@@ -449,7 +474,10 @@ export const ComposeXPostModal: React.FC<{
 
 
     const handlePost = () => {
-        if (content.trim() || image || postType === 'push' || postType === 'announce' || quotePost) {
+        const validPollOptions = pollOptions.filter(o => o.trim() !== '');
+        const hasValidPoll = isPollVisible && validPollOptions.length >= 2;
+
+        if (content.trim() || image || postType === 'push' || postType === 'announce' || quotePost || hasValidPoll) {
             let announceItemData = undefined;
             if (postType === 'announce') {
                 const item = scheduledItems.find(i => i.id === announceItemId);
@@ -464,7 +492,15 @@ export const ComposeXPostModal: React.FC<{
                 targetId: postType === 'fanWar' ? targetId : undefined,
                 songId: postType === 'push' ? songId : undefined,
                 quoteOf: quotePost,
-                announceItem: announceItemData
+                announceItem: announceItemData,
+                poll: hasValidPoll ? {
+                    options: validPollOptions.map((text, index) => ({
+                        id: `opt-${index}`,
+                        text,
+                        votes: 0
+                    })),
+                    totalVotes: 0
+                } : undefined
             });
         }
     };
@@ -518,6 +554,34 @@ export const ComposeXPostModal: React.FC<{
                                     <p className="text-sm text-white whitespace-pre-wrap line-clamp-3">{quotePost.content}</p>
                                 </div>
                             )}
+                            {isPollVisible && (
+                                <div className="mt-2 border border-zinc-700 rounded-xl p-3 space-y-2">
+                                    {pollOptions.map((opt, index) => (
+                                        <div key={index} className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                placeholder={`Choice ${index + 1}`} 
+                                                value={opt} 
+                                                onChange={e => {
+                                                    const newOpts = [...pollOptions];
+                                                    newOpts[index] = e.target.value;
+                                                    setPollOptions(newOpts);
+                                                }}
+                                                className="w-full bg-zinc-800 border border-zinc-700 p-2 rounded text-white focus:outline-none focus:border-blue-500"
+                                            />
+                                            {index > 1 && (
+                                                <button onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== index))} className="text-zinc-500 hover:text-red-500 font-bold px-2">X</button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {pollOptions.length < 4 && (
+                                        <button onClick={() => setPollOptions([...pollOptions, ''])} className="text-blue-500 hover:text-blue-400 text-sm font-bold">+ Add choice</button>
+                                    )}
+                                    <div className="flex justify-end mt-2">
+                                        <button onClick={() => { setIsPollVisible(false); setPollOptions(['', '']); }} className="text-red-500 hover:text-red-400 text-sm font-bold bg-zinc-800 px-3 py-1 rounded">Remove poll</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div>
@@ -549,8 +613,11 @@ export const ComposeXPostModal: React.FC<{
                 <div className="p-4 flex justify-between items-center border-t border-zinc-700/70">
                     <div>
                         <input type="file" ref={imageInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                        <button onClick={() => imageInputRef.current?.click()} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-full">
+                        <button onClick={() => imageInputRef.current?.click()} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-full" disabled={isPollVisible}>
                             <ImageIcon className="w-6 h-6"/>
+                        </button>
+                        <button onClick={() => setIsPollVisible(true)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-full" disabled={!!image || isPollVisible}>
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                         </button>
                     </div>
                     <div className="flex items-center">

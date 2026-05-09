@@ -2285,6 +2285,150 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (artistData.xPosts.length > 250) {
                         artistData.xPosts = artistData.xPosts.slice(0, 250);
                     }
+
+                    // --- REDDIT LOGIC ---
+                    if (!artistData.redditPosts) artistData.redditPosts = [];
+                    const numRedditPosts = Math.floor(Math.random() * 3) + 3; // 3-5 posts
+                    const newRedditPosts: RedditPost[] = [];
+                    
+                    const recentSongs = [...artistData.songs].filter(s => s.isReleased).sort((a,b) => (b.releaseDate?.year || 0)*52 + (b.releaseDate?.week || 0) - ((a.releaseDate?.year || 0)*52 + (a.releaseDate?.week || 0)));
+                    const topSong = [...artistData.songs].filter(s => s.isReleased).sort((a,b) => (b.streams||0) - (a.streams||0))[0];
+                    const recentVideos = [...artistData.videos].filter(v => v.artistId === artistId).sort((a,b) => (b.releaseDate?.year || 0)*52 + (b.releaseDate?.week || 0) - ((a.releaseDate?.year || 0)*52 + (a.releaseDate?.week || 0)));
+
+                    const redditPostTemplates: { title: string, content: string, image?: string|null}[] = [];
+
+                    // Milestone
+                    if (topSong) {
+                        const streams = topSong.streams || 0;
+                        let milestone = 0;
+                        if (streams >= 1000000000) milestone = 1000000000;
+                        else if (streams >= 500000000) milestone = 500000000;
+                        else if (streams >= 100000000) milestone = 100000000;
+                        else if (streams >= 10000000) milestone = 10000000;
+                        else if (streams >= 1000000) milestone = 1000000;
+                        else if (streams >= 100000) milestone = 100000;
+
+                        if (milestone > 0 && Math.random() > 0.3) {
+                            redditPostTemplates.push({
+                                title: `[Milestone] "${topSong.title}" has officially crossed ${Intl.NumberFormat('en-US', {notation: "compact"}).format(milestone)} streams on Spotify!`,
+                                content: `I remember when this first dropped, it's so crazy to see the growth. Congrats ${artistProfileForEmail?.name}!`,
+                                image: topSong.coverArt
+                            });
+                        }
+                    }
+
+                    // Recent Song
+                    if (recentSongs.length > 0) {
+                        const song = recentSongs[0];
+                        redditPostTemplates.push({
+                            title: `Discussion: Thoughts on "${song.title}"?`,
+                            content: `Now that it's been out for a bit, how are we feeling about "${song.title}"? Honestly I think it's one of their best tracks. The production is so crisp.`,
+                            image: song.coverArt
+                        });
+                        if (Math.random() > 0.5 && recentSongs.length > 1) {
+                            redditPostTemplates.push({
+                                title: `Which one do you prefer: "${recentSongs[0].title}" or "${recentSongs[1].title}"?`,
+                                content: `Both are absolutely stellar but if you had to pick only one to listen to for the rest of your life... what would you choose?`,
+                            });
+                        }
+                    }
+
+                    // Recent Video
+                    if (recentVideos.length > 0 && Math.random() > 0.4) {
+                        const vid = recentVideos[0];
+                        redditPostTemplates.push({
+                            title: `The music video for "${vid.title}" is so underrated.`,
+                            content: `I was rewatching the MV today and the visuals are literally insane. Does anyone know who styled this?`,
+                            image: vid.thumbnail
+                        });
+                    }
+
+                    // Generic templates
+                    redditPostTemplates.push(
+                        { title: `Unpopular opinion about ${artistProfileForEmail?.name}'s latest era`, content: `I might get downvoted for this but honestly I preferred their earlier sound. Please don't hate me! 😭` },
+                        { title: `Manifesting a world tour soon 🕯️`, content: `I've been saving up just in case! Does anyone have any rumors or theories on when dates might drop?` },
+                        { title: `What do you think of the recent styling?`, content: `Been seeing some new paparazzi photos and I actually love the fits lately.` }
+                    );
+
+                    for (let i = 0; i < numRedditPosts; i++) {
+                        const randomTemplate = redditPostTemplates[Math.floor(Math.random() * redditPostTemplates.length)];
+                        
+                        let img = randomTemplate.image;
+                        if (!img && Math.random() > 0.7 && artistData.artistImages.length > 0) {
+                            img = artistData.artistImages[Math.floor(Math.random() * artistData.artistImages.length)];
+                        } else if (!img && Math.random() > 0.6) {
+                            const stanGifs = [
+                                'https://media.tenor.com/J1yR7XQh7a8AAAAd/stan-twitter-nicki-minaj.gif',
+                                'https://media.tenor.com/B7c908-i1R8AAAAC/stan-twitter-reaction.gif',
+                                'https://media.tenor.com/nJ2uUeI_gP4AAAAC/stan-twitter-nicki-minaj.gif',
+                                'https://media.tenor.com/mYlC9g-5A9wAAAAC/stan-twitter-reaction.gif',
+                                'https://media.tenor.com/AByF925u22UAAAAC/stan-twitter.gif',
+                                'https://media.tenor.com/e2oBstC8p50AAAAC/stan-twitter-reaction.gif',
+                                'https://media.tenor.com/GzBqN-jRpyoAAAAC/stan-twitter-reaction.gif',
+                                'https://media.tenor.com/k6w7100e4AIAAAAC/stan-twitter-reaction.gif',
+                                'https://media.tenor.com/K_r9k914_J0AAAAM/new-york-ny-tiffany-pollard.gif',
+                                'https://media.tenor.com/xH5-J9A9o_QAAAAC/stan-twitter.gif',
+                                'https://media.tenor.com/bO0yN0b2KQsAAAAd/floptok.gif'
+                            ];
+                            img = stanGifs[Math.floor(Math.random() * stanGifs.length)];
+                        }
+
+                        const postUpvotes = Math.floor(Math.random() * (artistData.popularity * 10)) + 50;
+                        const postCommentCount = Math.floor(Math.random() * 500) + 10;
+                        
+                        const realisticComments: RedditComment[] = [];
+                        const commentPossibilities = [
+                            `Honestly I just hope they keep this energy going.`,
+                            `If they release on a Friday they'll easily grab the #1 spot, no contest.`,
+                            `I WILL DEFEND ${artistProfileForEmail?.name?.toUpperCase()} WITH MY LIFE.`,
+                            `Wait, is this real?? Omggg`,
+                            `I really want a tour announcement next!`,
+                            `Their growth has been insane to watch as a day 1 fan.`,
+                            `Does anyone have a link to the MV outtakes?`,
+                            `I disagree but I see your point. We all know they can do better.`,
+                            `The vocals on the last chorus are heavenly. 😭`,
+                            `The charts don't lie. They're dominating.`,
+                            `Are we witnessing a new main pop girl/boy era?`,
+                            `They really need to drop a vinyl for this!!`,
+                            `This is literally my song of the year.`,
+                            `I showed this to my friends and they're obsessed now too.`,
+                            `This deserves everything, so proud.`
+                        ];
+                        
+                        const numComments = Math.floor(Math.random() * 5) + 2;
+                        for (let j = 0; j < numComments; j++) {
+                            const hasReply = Math.random() > 0.6;
+                            realisticComments.push({
+                                id: crypto.randomUUID(),
+                                author: `u/fan_account_${Math.floor(Math.random() * 1000)}`,
+                                text: commentPossibilities[Math.floor(Math.random() * commentPossibilities.length)],
+                                upvotes: Math.floor(postUpvotes * (Math.random() * 0.2 + 0.05)),
+                                timeAgo: `${Math.floor(Math.random() * 12) + 1}h ago`,
+                                replies: hasReply ? [{
+                                    id: crypto.randomUUID(),
+                                    author: `u/reply_guy_${Math.floor(Math.random() * 1000)}`,
+                                    text: Math.random() > 0.5 ? `Agreed 100%.` : `Wait rlly? I never thought about it like that.`,
+                                    upvotes: Math.floor(Math.random() * 50),
+                                    timeAgo: `${Math.floor(Math.random() * 60) + 1}m ago`,
+                                }] : undefined
+                            });
+                        }
+
+                        newRedditPosts.unshift({
+                            id: crypto.randomUUID(),
+                            author: `pop_fanatic_${Math.floor(Math.random() * 1000)}`,
+                            timeAgo: `${Math.floor(Math.random() * 24) + 1} hours ago`,
+                            title: randomTemplate.title,
+                            content: randomTemplate.content,
+                            upvotes: postUpvotes,
+                            commentCount: postCommentCount,
+                            image: img || null,
+                            comments: realisticComments,
+                        });
+                    }
+
+                    artistData.redditPosts = [...newRedditPosts, ...artistData.redditPosts].slice(0, 50); // Keep max 50 posts
+
                 }
                 
                 // --- YEAR-END ALBUM CHART TWEET LOGIC ---

@@ -462,11 +462,21 @@ export interface XUser {
     followingCount: number;
 }
 
+export interface XPollOption {
+    id: string;
+    text: string;
+    votes: number;
+}
+
 export interface XPost {
     id: string;
     authorId: string;
     content: string;
     image?: string;
+    poll?: {
+        options: XPollOption[];
+        totalVotes: number;
+    };
     likes: number;
     retweets: number;
     views: number;
@@ -711,6 +721,27 @@ export interface Relationship {
     image?: string;
 }
 
+export interface RedditComment {
+    id: string;
+    author: string;
+    text: string;
+    upvotes: number;
+    timeAgo: string;
+    replies?: RedditComment[];
+}
+
+export interface RedditPost {
+    id: string;
+    author: string;
+    timeAgo: string;
+    title: string;
+    content: string;
+    upvotes: number;
+    commentCount: number;
+    image: string | null;
+    comments?: RedditComment[];
+}
+
 export interface ArtistData {
     money: number;
     hype: number;
@@ -730,6 +761,7 @@ export interface ArtistData {
     grammyBanner?: string;
     oscarBanner?: string;
     inbox: Email[];
+    redditPosts?: RedditPost[];
     streamsThisMonth: number;
     viewsThisQuarter: number;
     subsThisQuarter: number;

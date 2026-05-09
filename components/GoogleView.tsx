@@ -4,6 +4,8 @@ import SearchIcon from './icons/SearchIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import { Artist, Group } from '../types';
+import VogueSiteView from './VogueSiteView';
+import RedditSiteView from './RedditSiteView';
 
 export const GoogleView: React.FC = () => {
     const { gameState, activeArtistData, dispatch } = useGame();
@@ -43,7 +45,18 @@ export const GoogleView: React.FC = () => {
     const isMatchSpotifyCharts = (lowerQuery.includes('spotify chart') || lowerQuery.includes('spotify record') || lowerQuery.includes('spotify streams') || lowerQuery.includes('spotify')) && lowerQuery.includes(artistProfile.name.toLowerCase());
     const isMatchPayola = (lowerQuery.includes('payola') || lowerQuery.includes('buying streams') || lowerQuery.includes('scandal')) && lowerQuery.includes(artistProfile.name.toLowerCase());
 
-    const isMatchAnySpecial = isMatchArtist || isMatchTour || isMatchNetWorth || isTmzQuery || isMatchBeef || isMatchDating || isMatchUpcoming || isMatchBillboard || isMatchOnlyFans || isMatchCatalog || isMatchAwards || isMatchCoachella || isMatchSpotifyCharts || isMatchPayola;
+    const isMatchWeather = lowerQuery.includes('weather');
+    const isMatchCalc = lowerQuery.includes('calculator') || lowerQuery.includes('calc') || /^[0-9\s\+\-\*\/\(\)]+$/.test(lowerQuery);
+    const isMatchStock = lowerQuery.includes('stock') || lowerQuery.includes('nasdaq') || lowerQuery.includes('nyse') || lowerQuery.includes('price');
+    const isMatchTime = lowerQuery.includes('time') && lowerQuery.includes('in');
+    const isMatchStopwatch = lowerQuery.includes('stopwatch') || lowerQuery.includes('timer');
+    const isMatchDefine = lowerQuery.startsWith('define ') || lowerQuery.includes('meaning');
+    const isMatchTranslate = lowerQuery.includes('translate');
+    const isMatchFlights = lowerQuery.includes('flights') || lowerQuery.includes('tickets to');
+    const isMatchCurrency = lowerQuery.includes('usd') || lowerQuery.includes('eur') || lowerQuery.includes('gbp') || lowerQuery.includes('currency') || lowerQuery.includes('to cad');
+    const isMatchRecipe = lowerQuery.includes('recipe') || lowerQuery.includes('how to make');
+
+    const isMatchAnySpecial = isMatchArtist || isMatchTour || isMatchNetWorth || isTmzQuery || isMatchBeef || isMatchDating || isMatchUpcoming || isMatchBillboard || isMatchOnlyFans || isMatchCatalog || isMatchAwards || isMatchCoachella || isMatchSpotifyCharts || isMatchPayola || isMatchWeather || isMatchCalc || isMatchStock || isMatchTime || isMatchStopwatch || isMatchDefine || isMatchTranslate || isMatchFlights || isMatchCurrency || isMatchRecipe;
 
 
     const popularSongs = (activeArtistData.songs || []).filter(s => s.isReleased && !s.remixOfSongId).sort((a, b) => (b.streams || 0) - (a.streams || 0)).slice(0, 3);
@@ -155,28 +168,7 @@ export const GoogleView: React.FC = () => {
         }
 
         if (readingArticle.type === 'vogue') {
-            return (
-                <div className="bg-[#faf9f6] text-zinc-900 min-h-screen font-serif relative pb-16">
-                    <header className="p-4 border-b border-zinc-200 sticky top-0 bg-[#faf9f6]/95 backdrop-blur z-10 w-full flex items-center justify-between">
-                        <button onClick={() => setReadingArticle(null)} className="p-2 text-zinc-600 hover:text-black transition-colors">
-                            <ArrowLeftIcon className="w-6 h-6" />
-                        </button>
-                        <div className="font-serif text-3xl tracking-widest text-zinc-900 uppercase mx-auto">VOGUE</div>
-                        <div className="w-10"></div>
-                    </header>
-                    <main className="max-w-3xl mx-auto px-4 py-12">
-                        <h1 className="text-4xl md:text-6xl font-normal leading-tight text-center mb-8">{readingArticle.title}</h1>
-                        <p className="text-center font-sans tracking-widest text-xs uppercase text-zinc-500 mb-12 border-b border-zinc-200 pb-8">By Vogue Editors</p>
-                        
-                        {activeArtistData.artistImages && activeArtistData.artistImages.length > 0 && (
-                            <img src={activeArtistData.artistImages[0]} className="w-full h-auto aspect-[3/4] md:aspect-square object-cover mb-12 shadow-sm" alt="Artist fashion portrait" />
-                        )}
-                        <div className="text-lg md:text-xl leading-relaxed text-zinc-800 space-y-6 first-letter:text-7xl first-letter:float-left first-letter:pr-2 first-letter:font-serif first-letter:leading-[0.8]">
-                            {readingArticle.content.split('\n').filter(p => p.trim()).map((paragraph, i) => <p key={i}>{paragraph}</p>)}
-                        </div>
-                    </main>
-                </div>
-            );
+            return <VogueSiteView initialArticle={readingArticle} onClose={() => setReadingArticle(null)} />;
         }
 
         if (readingArticle.type === 'rollingstone') {
@@ -210,54 +202,7 @@ export const GoogleView: React.FC = () => {
         }
 
         if (readingArticle.type === 'reddit') {
-            return (
-                <div className="bg-[#030303] text-gray-200 min-h-screen font-sans relative pb-16">
-                    <header className="p-3 border-b border-[#343536] sticky top-0 bg-[#1A1A1B] z-10 w-full flex items-center shadow-sm">
-                        <button onClick={() => setReadingArticle(null)} className="p-2 mr-2 text-gray-400 hover:text-white rounded-full transition-colors">
-                            <ArrowLeftIcon className="w-5 h-5" />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center font-bold text-white leading-none">r/</div>
-                            <span className="font-bold text-gray-100">r/popheads</span>
-                        </div>
-                    </header>
-                    <main className="max-w-3xl mx-auto px-0 sm:px-2 py-4">
-                        <div className="bg-[#1A1A1B] sm:border border-[#343536] sm:rounded-md hover:border-gray-500 transition-colors">
-                            <div className="flex">
-                                <div className="w-10 bg-[#1A1A1B] rounded-l-md p-2 hidden sm:flex flex-col items-center gap-1 border-r border-[#343536]">
-                                    <button className="text-gray-500 hover:text-orange-500 font-bold">▲</button>
-                                    <span className="text-xs font-bold text-gray-200">14.2k</span>
-                                    <button className="text-gray-500 hover:text-blue-500 font-bold">▼</button>
-                                </div>
-                                <div className="p-3 flex-1">
-                                    <div className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                                        <div className="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center text-[10px] text-white font-bold sm:hidden">r/</div>
-                                        <span className="font-bold text-gray-300">u/stan_account</span>
-                                        <span>•</span>
-                                        <span>5 hours ago</span>
-                                    </div>
-                                    <h1 className="text-lg sm:text-xl font-medium text-white mb-4 leading-snug">{readingArticle.title}</h1>
-                                    <div className="text-sm leading-relaxed text-gray-300 space-y-4 max-w-prose mb-4">
-                                        {readingArticle.content.split('\n').filter(p => p.trim()).map((paragraph, i) => <p key={i}>{paragraph}</p>)}
-                                    </div>
-                                    
-                                    {/* Mobile Vote Buttons */}
-                                    <div className="sm:hidden flex items-center gap-2 mb-4 border border-[#343536] rounded-full w-fit p-1 bg-[#1A1A1B]">
-                                        <button className="text-gray-500 hover:text-orange-500 px-2 font-bold">▲</button>
-                                        <span className="text-xs font-bold text-gray-200">14.2k</span>
-                                        <button className="text-gray-500 hover:text-blue-500 px-2 font-bold">▼</button>
-                                    </div>
-
-                                    <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
-                                        <div className="flex items-center gap-1 hover:bg-[#272729] p-1.5 rounded cursor-pointer"><svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M10 15l-4 4v-4H2a2 2 0 01-2-2V3c0-1.1.9-2 2-2h16a2 2 0 012 2v10a2 2 0 01-2 2h-8z"/></svg> 3.4k Comments</div>
-                                        <div className="flex items-center gap-1 hover:bg-[#272729] p-1.5 rounded cursor-pointer">Share</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-            );
+            return <RedditSiteView initialPost={readingArticle} onClose={() => setReadingArticle(null)} />;
         }
 
         if (readingArticle.type === 'popcrave') {
@@ -413,12 +358,8 @@ export const GoogleView: React.FC = () => {
                         {(['All', 'Images', 'News', 'Videos', 'Shopping'] as const).map((tab) => (
                             <button 
                                 key={tab} 
-                                onClick={() => {
-                                    if (tab === 'All' || tab === 'Images' || tab === 'News') {
-                                        setActiveTab(tab as any);
-                                    }
-                                }}
-                                className={`px-4 py-1.5 rounded-full text-sm font-medium border whitespace-nowrap ${activeTab === tab ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-white text-gray-600 border-gray-300'}`}>
+                                onClick={() => setActiveTab(tab as any)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium border whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
                                 {tab}
                             </button>
                         ))}
@@ -428,7 +369,13 @@ export const GoogleView: React.FC = () => {
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                             {(activeArtistData.artistImages || []).map((img, i) => (
                                 <div key={i} className="rounded-lg overflow-hidden relative shadow-sm hover:shadow-md transition-shadow cursor-pointer aspect-square bg-gray-100 flex items-center justify-center">
-                                    <img src={img} alt="Search result" className="w-full h-full object-cover" />
+                                    <img src={img} alt="Search result" className={`w-full h-full object-cover transition-all ${isMatchOnlyFans ? 'blur-xl scale-110' : ''}`} />
+                                    {isMatchOnlyFans && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20">
+                                            <span className="text-white font-black text-2xl border-4 border-white rounded-full w-14 h-14 flex items-center justify-center mb-1 drop-shadow-md">18+</span>
+                                            <span className="text-white font-bold text-[10px] uppercase tracking-widest bg-black/50 px-2 py-0.5 rounded drop-shadow">Sensitive</span>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                             {/* Fill out some fake images if not enough */}
@@ -833,7 +780,207 @@ export const GoogleView: React.FC = () => {
                         </div>
                     )}
 
+                    {/* Utilities Snippets */}
+                    {activeTab === 'All' && isMatchWeather && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <h2 className="text-gray-500 text-sm mb-2 uppercase tracking-wide">Weather</h2>
+                            <div className="flex items-center gap-4">
+                                <span className="text-5xl font-light text-gray-900">72°F</span>
+                                <div className="text-gray-600 text-sm">
+                                    <div className="font-bold">Sunny</div>
+                                    <div>Precipitation: 0%</div>
+                                    <div>Humidity: 45%</div>
+                                    <div>Wind: 5 mph</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchCalc && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <div className="text-right text-gray-400 text-sm mb-1">{activeQuery.replace(/[^0-9\+\-\*\/\(\)\.]/g, '') || '0'} =</div>
+                            <div className="text-right text-4xl font-normal text-gray-900 mb-4">{
+                                (() => {
+                                    try {
+                                        const mathStr = activeQuery.replace(/[^0-9\+\-\*\/\(\)\.]/g, '');
+                                        return mathStr ? new Function(`return ${mathStr}`)() : 'Error';
+                                    } catch(e) { return 'Error'; }
+                                })()
+                            }</div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {['C','()','%','/','7','8','9','*','4','5','6','-','1','2','3','+','0','.','=',''].map((btn,i) => (
+                                    <div key={i} className={`p-3 text-center border rounded ${btn === '=' ? 'bg-blue-500 text-white' : btn ? 'bg-gray-50 text-gray-800' : 'bg-transparent border-transparent'}`}>
+                                        {btn}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchStock && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wider mb-2">Market Summary</h2>
+                            <div className="text-3xl font-medium text-gray-900 mb-1">154.23 <span className="text-green-600 text-lg">+1.45 (0.95%)</span></div>
+                            <p className="text-xs text-gray-500 mb-4">Closed: Today 4:00 PM EDT</p>
+                            <div className="h-24 flex items-end border-b border-gray-200 gap-1 pb-1">
+                                {Array.from({length: 20}).map((_,i) => (
+                                    <div key={i} className="flex-1 bg-green-500 rounded-t" style={{height: `${Math.random() * 80 + 20}%`}}></div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchTime && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <div className="text-4xl font-light text-gray-900 mb-1">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            <p className="text-sm text-gray-600">Local Time • {new Date().toLocaleDateString()}</p>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchStopwatch && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4 text-center">
+                            <div className="flex justify-center gap-4 border-b border-gray-100 mb-4">
+                                <button className="font-medium text-blue-600 border-b-2 border-blue-600 pb-2">Timer</button>
+                                <button className="font-medium text-gray-500 pb-2 hover:text-gray-800">Stopwatch</button>
+                            </div>
+                            <div className="text-5xl font-light text-gray-900 mb-6">05:00:00</div>
+                            <div className="flex justify-center gap-4">
+                                <button className="px-6 py-2 bg-blue-600 text-white font-bold rounded-full text-sm">Start</button>
+                                <button className="px-6 py-2 bg-gray-100 text-gray-800 font-bold rounded-full text-sm">Reset</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchDefine && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-gray-100 rounded-full"><svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9m-5.656 0a5 5 0 000 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 010-7.072m2.828 9.9a9 9 0 010-12.728"/></svg></div>
+                                <h1 className="text-3xl font-serif text-gray-900 truncate">{activeQuery.replace('define ', '').replace(' meaning', '') || 'word'}</h1>
+                            </div>
+                            <p className="text-sm text-gray-500 italic mb-4">/ wərd /</p>
+                            <div className="mb-2">
+                                <span className="italic text-gray-600 font-serif mr-2">noun</span>
+                                <ol className="list-decimal pl-5 space-y-1 mt-1 text-gray-800">
+                                    <li>a single distinct meaningful element of speech or writing.</li>
+                                    <li>a command, password, or signal.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchTranslate && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <div className="flex divide-x divide-gray-200 border border-gray-300 rounded mb-4">
+                                <div className="flex-1 p-2 text-sm font-medium text-blue-600 text-center">English</div>
+                                <div className="w-10 flex items-center justify-center p-2"><svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></div>
+                                <div className="flex-1 p-2 text-sm font-medium text-blue-600 text-center">Spanish</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <textarea className="w-full h-20 p-2 border-0 resize-none outline-none text-xl" placeholder="Enter text" defaultValue={activeQuery.replace('translate ', '')}></textarea>
+                                </div>
+                                <div className="bg-gray-50 p-2 text-xl text-gray-800 break-words">
+                                    [Translation]
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchFlights && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white py-2">
+                            <div className="px-4 py-2 flex items-center gap-2 border-b border-gray-100">
+                                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+                                <span className="font-bold text-gray-800">Flights</span>
+                            </div>
+                            <div className="p-4 grid grid-cols-2 gap-4">
+                                <div className="border border-gray-300 rounded p-2">
+                                    <div className="text-xs text-gray-500 uppercase">From</div>
+                                    <div className="font-bold">New York (NYC)</div>
+                                </div>
+                                <div className="border border-gray-300 rounded p-2">
+                                    <div className="text-xs text-gray-500 uppercase">To</div>
+                                    <div className="font-bold">London (LHR)</div>
+                                </div>
+                            </div>
+                            <div className="px-4 text-sm text-blue-600 font-medium hover:underline cursor-pointer">View flights on Google Travel</div>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchCurrency && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                             <div className="flex gap-4 items-center mb-4">
+                                <div className="flex-1">
+                                    <input type="text" className="w-full text-right text-3xl outline-none border-b border-gray-300 pb-1" defaultValue="1" />
+                                    <div className="text-sm text-gray-500 mt-2 font-medium">United States Dollar</div>
+                                </div>
+                                <div className="text-2xl text-gray-400">=</div>
+                                <div className="flex-1">
+                                    <input type="text" className="w-full text-right text-3xl outline-none border-b border-gray-300 pb-1" defaultValue="0.92" readOnly />
+                                    <div className="text-sm text-gray-500 mt-2 font-medium">Euro</div>
+                                </div>
+                             </div>
+                             <p className="text-xs text-gray-400">Data provided by financial exchanges.</p>
+                        </div>
+                    )}
+
+                    {activeTab === 'All' && isMatchRecipe && (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                            <h2 className="text-xl font-bold mb-3 capitalize text-gray-900">{activeQuery.replace('recipe for ', '').replace('how to make ', '')} Recipe</h2>
+                            <div className="flex gap-4">
+                                <div className="w-24 h-24 bg-orange-100 rounded flex items-center justify-center text-4xl">🍲</div>
+                                <div className="flex-1">
+                                    <div className="font-bold text-sm mb-1">Ingredients:</div>
+                                    <ul className="text-sm text-gray-600 space-y-1 pl-4 list-disc mb-2">
+                                        <li>2 cups water</li>
+                                        <li>1 cup main ingredient</li>
+                                        <li>Pinch of salt</li>
+                                    </ul>
+                                    <div className="text-xs text-green-700 font-medium">★★★★☆ 4.8 (124 reviews) • 30 mins</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Standard Search Results */}
+
+                    {activeTab === 'Videos' && (
+                        <div className="space-y-4">
+                            {[1, 2, 3].map((_, i) => (
+                                <div key={i} className="flex gap-4 border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white p-4">
+                                    <div className="w-32 h-20 md:w-48 md:h-28 bg-gray-200 rounded relative flex-shrink-0">
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                                        </div>
+                                        <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1 rounded font-bold">3:42</div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-medium text-blue-600 line-clamp-2 hover:underline cursor-pointer" onClick={() => setReadingArticle({title: `Video: ${activeQuery}`, url:'https://www.youtube.com/watch', content: 'Watching video stream...', type: 'generic'})}>{activeQuery} - Official Video {i+1}</h3>
+                                        <div className="text-xs text-gray-600 font-bold mb-1">YouTube • Channel Name</div>
+                                        <div className="text-xs text-gray-500 mb-2">1.2M views • 2 weeks ago</div>
+                                        <p className="text-sm text-gray-600 line-clamp-1 hidden md:block">The highly anticipated video for {activeQuery}.</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {activeTab === 'Shopping' && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[1,2,3,4,5,6,7,8].map((_, i) => (
+                                <div key={i} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white flex flex-col cursor-pointer hover:shadow-md transition-shadow">
+                                    <div className="w-full aspect-square bg-gray-100 flex items-center justify-center p-4">
+                                        <div className="w-20 h-20 bg-gray-300 rounded-full opacity-50"></div>
+                                    </div>
+                                    <div className="p-3 flex-1 flex flex-col">
+                                        <h3 className="text-sm font-medium text-gray-900 line-clamp-2 hover:text-blue-600">{activeQuery} Merchandise {i+1}</h3>
+                                        <div className="text-lg font-bold text-gray-900 mt-auto mb-1">${(Math.random() * 50 + 10).toFixed(2)}</div>
+                                        <div className="text-xs text-green-700 font-bold mb-1">Free shipping</div>
+                                        <div className="text-xs text-gray-500">Official Store</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     {activeTab === 'All' && (
                          <div className="space-y-6 mt-6">
                             <div className="max-w-xl">

@@ -731,6 +731,21 @@ export const generateWeeklyXContent = (
             let image: string | undefined = undefined;
             if (artistImages.length > 0 && Math.random() > 0.5) {
                 image = pickRandom(artistImages);
+            } else if (Math.random() > 0.4) {
+                const stanGifs = [
+                    'https://media.tenor.com/J1yR7XQh7a8AAAAd/stan-twitter-nicki-minaj.gif',
+                    'https://media.tenor.com/B7c908-i1R8AAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/nJ2uUeI_gP4AAAAC/stan-twitter-nicki-minaj.gif',
+                    'https://media.tenor.com/mYlC9g-5A9wAAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/AByF925u22UAAAAC/stan-twitter.gif',
+                    'https://media.tenor.com/e2oBstC8p50AAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/GzBqN-jRpyoAAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/k6w7100e4AIAAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/K_r9k914_J0AAAAM/new-york-ny-tiffany-pollard.gif',
+                    'https://media.tenor.com/xH5-J9A9o_QAAAAC/stan-twitter.gif',
+                    'https://media.tenor.com/bO0yN0b2KQsAAAAd/floptok.gif'
+                ];
+                image = pickRandom(stanGifs);
             }
             newPosts.push({
                 id: crypto.randomUUID(), authorId: fanId, content: pickRandom(fanTemplates), image,
@@ -753,8 +768,27 @@ export const generateWeeklyXContent = (
                 `${artistName} making the exact same song for the 5th time in a row 😭`,
                 `the absolute state of the music industry if this is what y'all are charting`
             ];
+            
+            let image: string | undefined = undefined;
+            if (Math.random() > 0.5) {
+                const haterGifs = [
+                    'https://media.tenor.com/J1yR7XQh7a8AAAAd/stan-twitter-nicki-minaj.gif',
+                    'https://media.tenor.com/B7c908-i1R8AAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/nJ2uUeI_gP4AAAAC/stan-twitter-nicki-minaj.gif',
+                    'https://media.tenor.com/mYlC9g-5A9wAAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/AByF925u22UAAAAC/stan-twitter.gif',
+                    'https://media.tenor.com/e2oBstC8p50AAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/GzBqN-jRpyoAAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/k6w7100e4AIAAAAC/stan-twitter-reaction.gif',
+                    'https://media.tenor.com/K_r9k914_J0AAAAM/new-york-ny-tiffany-pollard.gif',
+                    'https://media.tenor.com/xH5-J9A9o_QAAAAC/stan-twitter.gif',
+                    'https://media.tenor.com/bO0yN0b2KQsAAAAd/floptok.gif'
+                ];
+                image = pickRandom(haterGifs);
+            }
+
             newPosts.push({
-                id: crypto.randomUUID(), authorId: haterId, content: pickRandom(haterTemplates),
+                id: crypto.randomUUID(), authorId: haterId, content: pickRandom(haterTemplates), image,
                 likes: Math.floor(Math.random() * 500), retweets: Math.floor(Math.random() * 50), views: Math.floor(Math.random() * 8000), date
             });
         }
