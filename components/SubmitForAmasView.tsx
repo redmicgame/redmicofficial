@@ -17,7 +17,7 @@ const SubmitForAmasView: React.FC = () => {
     }, [activeArtistData.releases, date.year]);
 
     const eligibleAlbums = useMemo(() => {
-        return thisYearReleases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)');
+        return thisYearReleases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation');
     }, [thisYearReleases]);
 
     const eligibleSongs = useMemo(() => {

@@ -45,7 +45,7 @@ const StudioView: React.FC = () => {
     const selectedStudio = STUDIOS[studioIndex];
 
     const hasReleasedAlbum = useMemo(() => {
-        return releases.some(r => r.type === 'Album' || r.type === 'Album (Deluxe)');
+        return releases.some(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation');
     }, [releases]);
 
     const potentialRemixTargets = useMemo(() => {

@@ -64,7 +64,7 @@ export interface Song {
     rightsOwnerLabelId?: string;
 }
 
-export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)';
+export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)' | 'Compilation';
 
 export interface Review {
     publication: 'Pitchfork';

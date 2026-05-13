@@ -2715,8 +2715,23 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             );
 
             // --- ALBUM CHART CALCULATION ---
+            const releaseRawStreams = new Map<string, number>();
+            allPlayerReleases.filter(r => r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').forEach(release => {
+                const artistData = updatedArtistsData[release.artistId];
+                let rawStreams = 0;
+                release.songIds.forEach(songId => {
+                    const song = artistData.songs.find(s => s.id === songId);
+                    if (song) {
+                        rawStreams += song.lastWeekStreams || 0;
+                        const remixes = artistData.songs.filter(s => s.isReleased && s.remixOfSongId === song.id);
+                        remixes.forEach(remix => { rawStreams += remix.lastWeekStreams || 0; });
+                    }
+                });
+                releaseRawStreams.set(release.id, rawStreams);
+            });
+
             const playerAlbumContenders = allPlayerReleases
-                .filter(r => r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)')
+                .filter(r => r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation')
                 .map(release => {
                     const artist = allPlayerArtistsAndGroups.find(a => a.id === release.artistId);
                     const artistData = updatedArtistsData[release.artistId];
@@ -2731,6 +2746,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             remixes.forEach(remix => {
                                 songStreams += remix.lastWeekStreams;
                             });
+                        }
+
+                        // Check if this song is on a "larger" release
+                        const otherReleases = allPlayerReleases.filter(r => r.artistId === release.artistId && (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && r.songIds.includes(songId));
+                        const thisRaw = releaseRawStreams.get(release.id) || 0;
+                        const bestRelease = otherReleases.reduce((best, r) => {
+                            const raw = releaseRawStreams.get(r.id) || 0;
+                            // If there's a tie, prioritize standard albums/EPs over compilations for fairness, or simply higher ID to be deterministic
+                            if (raw > best.raw) return { id: r.id, raw };
+                            return best;
+                        }, { id: release.id, raw: thisRaw });
+
+                        if (bestRelease.id !== release.id) {
+                            return sum; // Streams are credited to the larger release
                         }
 
                         return sum + songStreams;

@@ -37,13 +37,17 @@ const ReleaseView: React.FC = () => {
     const availableSongs = useMemo(() => {
         const songsInEPOrAlbum = new Set<string>();
         releases.forEach(r => {
-            if (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)') {
+            if (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') {
                 r.songIds.forEach(songId => songsInEPOrAlbum.add(songId));
             }
         });
 
         if (releaseType === 'Album (Deluxe)') {
             return songs.filter(s => !s.isReleased && s.isDeluxeTrack);
+        }
+
+        if (releaseType === 'Compilation') {
+            return songs.filter(s => s.isReleased);
         }
 
         return songs.filter(s => !s.isReleased || !songsInEPOrAlbum.has(s.id));
@@ -111,6 +115,9 @@ const ReleaseView: React.FC = () => {
             }
             if (releaseType === 'Album' && count < 8 && !allRemixes) {
                 setError('An album must have at least 8 songs.'); return;
+            }
+            if (releaseType === 'Compilation' && count < 2) {
+                setError('A compilation must have at least 2 songs.'); return;
             }
             if (!coverArt) {
                 setError('Could not determine cover art. Select at least one song.'); return;
@@ -205,7 +212,7 @@ const ReleaseView: React.FC = () => {
                 <div>
                     <label className="block text-sm font-medium text-zinc-300">Release Type</label>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                        {(['Single', 'EP', 'Album', 'Album (Deluxe)'] as ReleaseType[]).map(type => (
+                        {(['Single', 'EP', 'Album', 'Album (Deluxe)', 'Compilation'] as ReleaseType[]).map(type => (
                             <button key={type} onClick={() => { setReleaseType(type); setSelectedSongIds(new Set()); setBaseAlbumForDeluxe(''); setTitle(''); }} className={`py-2 px-4 rounded-md text-sm font-semibold transition-colors ${releaseType === type ? 'bg-red-600 text-white' : 'bg-zinc-700 hover:bg-zinc-600'}`}>
                                 {type}
                             </button>

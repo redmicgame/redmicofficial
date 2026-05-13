@@ -79,7 +79,7 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
         const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc);
         
         if (filter === 'Albums') {
-            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)') && !isFeature(r));
+            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !isFeature(r));
         }
         if (filter === 'Singles and EPs') {
             return sortedReleases.filter(r => (r.type === 'Single' || r.type === 'EP') && !isFeature(r));

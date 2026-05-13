@@ -27,7 +27,7 @@ const AddMerchModal: React.FC<{
     const { merch, releases } = activeArtistData;
 
     const availableReleases = useMemo(() => {
-        return releases.filter(r => (r.type === 'Album' || r.type === 'EP'));
+        return releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation'));
     }, [releases]);
     
     const selectedRelease = useMemo(() => {

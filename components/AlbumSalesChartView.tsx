@@ -19,12 +19,36 @@ const AlbumSalesChartView: React.FC = () => {
     const { songs, releases } = activeArtistData;
 
     const albumsWithSales = useMemo<AlbumWithSales[]>(() => {
-        return releases
-            .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)')
+        const eligibleReleases = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation');
+        
+        const releaseRawStreams = new Map<string, number>();
+        eligibleReleases.forEach(release => {
+            const rawStreams = release.songIds.reduce((total, songId) => {
+                const song = songs.find(s => s.id === songId);
+                return total + (song?.streams || 0);
+            }, 0);
+            releaseRawStreams.set(release.id, rawStreams);
+        });
+
+        return eligibleReleases
             .map(release => {
                 const releaseStreams = release.songIds.reduce((total, songId) => {
                     const song = songs.find(s => s.id === songId);
-                    return total + (song?.streams || 0);
+                    const songStreams = song?.streams || 0;
+
+                    const otherReleases = eligibleReleases.filter(r => r.songIds.includes(songId));
+                    const thisRaw = releaseRawStreams.get(release.id) || 0;
+                    const bestRelease = otherReleases.reduce((best, r) => {
+                        const raw = releaseRawStreams.get(r.id) || 0;
+                        if (raw > best.raw) return { id: r.id, raw };
+                        return best;
+                    }, { id: release.id, raw: thisRaw });
+
+                    if (bestRelease.id !== release.id) {
+                        return total;
+                    }
+
+                    return total + songStreams;
                 }, 0);
                 const units = Math.floor(releaseStreams / 1500);
                 return { ...release, units };

@@ -85,7 +85,7 @@ const AchievementsView: React.FC = () => {
         .sort((a, b) => (b.firstWeekStreams ?? 0) - (a.firstWeekStreams ?? 0)), [songs]);
 
     const topAlbumsFirstWeek = useMemo(() => releases
-        .filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)') && typeof r.firstWeekStreams === 'number')
+        .filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && typeof r.firstWeekStreams === 'number')
         .sort((a, b) => (b.firstWeekStreams ?? 0) - (a.firstWeekStreams ?? 0)), [releases]);
         
     const topVideosFirstWeek = useMemo(() => videos

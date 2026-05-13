@@ -165,7 +165,7 @@ const CatalogView: React.FC = () => {
     
     const releasedProjects = useMemo(() => {
         return activeArtistData.releases
-            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)') && !r.soundtrackInfo)
+            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo)
             .map(release => {
                 const releaseStreams = release.songIds.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
