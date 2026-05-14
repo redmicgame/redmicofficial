@@ -50,7 +50,7 @@ const AlbumSalesChartView: React.FC = () => {
 
                     return total + songStreams;
                 }, 0);
-                const units = Math.floor(releaseStreams / 1500);
+                const units = Math.floor(releaseStreams / 1500) + (release.preorderSales || 0);
                 return { ...release, units };
             })
             .sort((a, b) => b.units - a.units);

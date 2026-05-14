@@ -99,6 +99,7 @@ export interface Release {
     rightsSoldPercent?: number;
     rightsOwnerLabelId?: string;
     isAnnounced?: boolean;
+    preorderSales?: number;
 }
 
 export interface Video {
@@ -123,6 +124,7 @@ export interface MerchProduct {
     name: string;
     type: 'Vinyl' | 'CD';
     price: number;
+    isPreorder?: boolean;
     image: string;
     artistId: string;
 }
@@ -447,6 +449,7 @@ export interface LabelSubmission {
     geniusInterviewRequestedForSongId?: string;
     fallonPerformanceRequestedForSongId?: string;
     recommendedSingles?: { songId: string; reason: string }[];
+    preorderSales?: number;
 }
 
 

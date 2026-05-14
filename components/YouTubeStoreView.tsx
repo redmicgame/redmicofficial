@@ -27,12 +27,16 @@ const AddMerchModal: React.FC<{
     const { merch, releases } = activeArtistData;
 
     const availableReleases = useMemo(() => {
-        return releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation'));
-    }, [releases]);
+        const released = releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation'));
+        const scheduled = activeArtistData.labelSubmissions
+            .filter(s => s.status === 'scheduled' && (s.release.type === 'Album' || s.release.type === 'EP' || s.release.type === 'Album (Deluxe)' || s.release.type === 'Compilation'))
+            .map(s => s.release);
+        return [...released, ...scheduled];
+    }, [releases, activeArtistData.labelSubmissions]);
     
     const selectedRelease = useMemo(() => {
-        return releases.find(r => r.id === releaseId);
-    }, [releases, releaseId]);
+        return availableReleases.find(r => r.id === releaseId);
+    }, [availableReleases, releaseId]);
     
     const itemsForSelectedRelease = useMemo(() => {
         return merch.filter(m => m.releaseId === releaseId).length;
@@ -55,6 +59,8 @@ const AddMerchModal: React.FC<{
         if (!image && !selectedRelease.coverArt) { setError('Please provide an image.'); return; }
         if (itemsForSelectedRelease >= 8) { setError('You can only have 8 product variants per release.'); return; }
 
+        const isScheduled = !releases.some(r => r.id === selectedRelease.id);
+
         const newItem: MerchProduct = {
             id: crypto.randomUUID(),
             releaseId: selectedRelease.id,
@@ -63,6 +69,7 @@ const AddMerchModal: React.FC<{
             price,
             image: image || selectedRelease.coverArt,
             artistId: activeArtist.id,
+            isPreorder: isScheduled, // Automatically set based on release status
         };
         dispatch({ type: 'ADD_MERCH', payload: { item: newItem } });
         onClose();
@@ -72,7 +79,7 @@ const AddMerchModal: React.FC<{
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold">Add New Product</h2>
-                <select value={releaseId} onChange={e => { setReleaseId(e.target.value); setImage(releases.find(r=>r.id===e.target.value)?.coverArt || null); }} className="w-full bg-zinc-700 p-2 rounded">
+                <select value={releaseId} onChange={e => { setReleaseId(e.target.value); setImage(availableReleases.find(r=>r.id===e.target.value)?.coverArt || null); }} className="w-full bg-zinc-700 p-2 rounded">
                     <option value="">Select a Release...</option>
                     {availableReleases.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
                 </select>
@@ -98,7 +105,7 @@ const MerchStoreView: React.FC = () => {
     const [showAddModal, setShowAddModal] = useState(false);
 
     if (!activeArtistData || !activeArtist) return null;
-    const { merch, merchStoreBanner, youtubeStoreUnlocked } = activeArtistData;
+    const { merch, merchStoreBanner, youtubeStoreUnlocked, releases } = activeArtistData;
 
     const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -166,6 +173,9 @@ const MerchStoreView: React.FC = () => {
                             {merch.map(item => (
                                 <div key={item.id} className="group relative">
                                     <img src={item.image} alt={item.name} className="w-full aspect-square object-cover" />
+                                    {(item.isPreorder && !releases.some(r => r.id === item.releaseId)) && (
+                                        <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">PRE-ORDER</div>
+                                    )}
                                     <div className="mt-2 text-center md:text-left">
                                         <p className="font-semibold">{item.name}</p>
                                         <p className="text-zinc-600">${item.price.toFixed(2)} USD</p>

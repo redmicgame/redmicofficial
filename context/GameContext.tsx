@@ -1612,6 +1612,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         if (artistData.redMicPro.unlocked && artistData.salesBoost > 0) {
                             weeklySales = Math.floor(weeklySales * (1 + artistData.salesBoost / 100));
                         }
+
+                        if (item.isPreorder) {
+                            const sub = artistData.labelSubmissions.find(s => s.release.id === item.releaseId);
+                            if (sub) {
+                                sub.preorderSales = (sub.preorderSales || 0) + weeklySales;
+                            }
+                        }
+
                         merchIncome += weeklySales * item.price;
                     });
                 }
@@ -1944,7 +1952,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         // Check for main project release
                         if (sub.projectReleaseDate && sub.projectReleaseDate.week === newDate.week && sub.projectReleaseDate.year === newDate.year) {
                             const release = sub.release;
-                            artistData.releases.push({ ...release, releaseDate: newDate, releasingLabel: releasingLabelInfo });
+                            artistData.releases.push({ ...release, releaseDate: newDate, releasingLabel: releasingLabelInfo, preorderSales: sub.preorderSales || 0 });
+
+                            artistData.merch = artistData.merch.map(m => m.releaseId === release.id ? { ...m, isPreorder: false } : m);
 
                             artistData.songs = artistData.songs.map(s => {
                                 if (release.songIds.includes(s.id)) {
@@ -2766,10 +2776,15 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }, 0);
 
                     const albumMerch = artistData.merch.filter(m => m.releaseId === release.id);
-                    const totalWeeklySales = albumMerch.reduce((sum, item) => {
+                    let totalWeeklySales = albumMerch.reduce((sum, item) => {
                         const weeklySales = artistData.youtubeStoreUnlocked ? Math.floor((artistData.youtubeSubscribers / 50000) * (Math.random() * 5 + 1)) : 0;
                         return sum + weeklySales;
                     }, 0);
+
+                    // Inject accumulated preorder sales on the first charting week
+                    if ((newDate.year * 52 + newDate.week) - (release.releaseDate.year * 52 + release.releaseDate.week) === 1) {
+                        totalWeeklySales += (release.preorderSales || 0);
+                    }
 
                     const weeklyActivity = Math.floor(totalWeeklyStreams / 1500) + totalWeeklySales;
                     const labelName = release.releasingLabel ? release.releasingLabel.name : 'Independent';
