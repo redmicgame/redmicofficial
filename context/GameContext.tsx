@@ -230,6 +230,8 @@ const initialArtistData: ArtistData = {
     lastFourWeeksStreams: [],
     lastFourWeeksViews: [],
     youtubeSubscribers: 0,
+    tiktokFollowers: 0,
+    tiktokVideos: [],
     videos: [],
     youtubeStoreUnlocked: false,
     merch: [],
@@ -544,6 +546,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 hype: 10,
                 popularity: 10,
                 youtubeSubscribers: initialSubs,
+                tiktokFollowers: initialSubs * 2,
                 inbox: [welcomeEmail],
                 xUsers: initialXUsers,
                 xPosts: initialXPosts,
@@ -650,6 +653,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 hype: 15, // Start with a bit more hype
                 popularity: 15,
                 youtubeSubscribers: Math.floor(Math.random() * 8000) + 2000,
+                tiktokFollowers: Math.floor(Math.random() * 16000) + 4000,
                 inbox: [createWelcomeEmail(group.name)],
                 xUsers: initialXUsers,
                 xPosts: initialXPosts,
@@ -670,6 +674,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     hype: 5,
                     popularity: 5,
                     youtubeSubscribers: Math.floor(Math.random() * 2000) + 500,
+                    tiktokFollowers: Math.floor(Math.random() * 4000) + 1000,
                     inbox: [createWelcomeEmail(member.name)],
                     xUsers: [memberXUser, popBaseUser, chartDataUser, tmzUser, addictionUser, chartsFanUser],
                     xPosts: initialXPosts,
@@ -4430,6 +4435,60 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 },
                 activeSubmissionId: null,
                 currentView: 'game',
+            };
+        }
+        case 'CREATE_TIKTOK': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            const followers = activeData.tiktokFollowers || 0;
+            const popFactor = Math.pow(activeData.popularity || 0, 1.5) * 50; 
+            const hypeFactor = ((activeData.hype || 0) / 100) * 0.2 + 1;
+            const baseViews = (1000 + (followers * 0.2) + popFactor) * hypeFactor;
+            
+            const viewVariance = baseViews * 0.5 * (Math.random() - 0.5);
+            let views = Math.floor(Math.max(10, baseViews + viewVariance));
+
+            // 5-10% chance for viral video (1M-75M views)
+            if (Math.random() < 0.08) {
+                views = Math.floor(Math.random() * (75000000 - 1000000)) + 1000000;
+            }
+
+            const likes = Math.floor(views * (0.05 + Math.random() * 0.05));
+            const comments = Math.floor(views * (0.005 + Math.random() * 0.01));
+
+            const newTiktok: TikTokVideo = {
+                id: crypto.randomUUID(),
+                authorId: state.activeArtistId,
+                content: action.payload.content,
+                songId: action.payload.songId,
+                thumbnail: action.payload.thumbnail,
+                views,
+                likes,
+                comments,
+                createdAt: state.date,
+            };
+
+            const hypeGained = Math.floor((views / 100000) * 1.5); // reduced hype gain
+
+            let updatedSongs = activeData.songs;
+            if (action.payload.songId) {
+                const addedStreams = Math.floor(views * 0.05); // 5% of views become streams
+                updatedSongs = updatedSongs.map(s => s.id === action.payload.songId ? { ...s, streams: (s.streams || 0) + addedStreams } : s);
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs,
+                        tiktokVideos: [newTiktok, ...(activeData.tiktokVideos || [])],
+                        hype: Math.min(100, activeData.hype + hypeGained),
+                        tiktokFollowers: followers + Math.floor(views * 0.01)
+                    }
+                }
             };
         }
         case 'ACCEPT_GENIUS_OFFER': {
