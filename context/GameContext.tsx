@@ -7322,7 +7322,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if (!activeArtist) return state;
 
             const updatedRelationships = (activeData.relationships || []).map(r => 
-                r.id === action.payload.relationshipId ? { ...r, endYear: state.date.year, endWeek: state.date.week } : r
+                r.id === action.payload.relationshipId ? { ...r, endYear: state.date.year, endWeek: state.date.week, status: 'ex' as const } : r
             );
 
             const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
@@ -7380,7 +7380,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if (!activeArtist) return state;
 
             const updatedRelationships = (activeData.relationships || []).map(r => 
-                r.id === action.payload.relationshipId ? { ...r, status: 'dating' as const, endYear: undefined, endWeek: undefined, startYear: state.date.year, startWeek: state.date.week } : r
+                r.id === action.payload.relationshipId ? { ...r, status: 'dating' as const, endYear: null, endWeek: undefined, startYear: state.date.year, startWeek: state.date.week } : r
             );
 
             const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
