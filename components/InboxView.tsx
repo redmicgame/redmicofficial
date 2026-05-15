@@ -264,6 +264,49 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             )
         }
         
+        if (email.offer.type === 'giveBirth') {
+            const offer = email.offer;
+            return (
+                <div className="mt-6 pt-4 border-t border-zinc-700">
+                    {!offer.isAnswered ? (
+                        <div className="space-y-3">
+                            <input type="text" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Enter child's name..." className="w-full bg-zinc-700 p-3 rounded-md focus:ring-pink-500 focus:border-pink-500 text-white" />
+                            <button onClick={() => {
+                                if (reply.trim()) {
+                                    dispatch({ type: 'GIVE_BIRTH', payload: { childName: reply.trim() } });
+                                    dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                                }
+                            }} disabled={!reply.trim()} className="w-full h-12 font-bold py-2 px-4 rounded-lg transition-colors shadow-lg bg-pink-500 hover:bg-pink-600 text-white disabled:bg-zinc-600">Name Child</button>
+                        </div>
+                    ) : (<div className="text-center font-semibold p-3 bg-zinc-700/50 rounded-lg">Welcome to the world!</div>)}
+                </div>
+            )
+        }
+
+        if (email.offer.type === 'cheatingScandal') {
+            const offer = email.offer;
+            return (
+                <div className="mt-6 pt-4 border-t border-zinc-700">
+                    {!offer.isAnswered ? (
+                        <div className="space-y-3">
+                            <button onClick={() => {
+                                dispatch({ type: 'RESPOND_TO_CHEATING', payload: { response: 'break_up', relationshipId: offer.relationshipId } });
+                                dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                            }} className="w-full h-12 font-bold py-2 px-4 rounded-lg transition-colors shadow-lg bg-red-600 hover:bg-red-700 text-white">Break Up</button>
+                            <button onClick={() => {
+                                dispatch({ type: 'RESPOND_TO_CHEATING', payload: { response: 'forgive', relationshipId: offer.relationshipId } });
+                                dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                            }} className="w-full h-12 font-bold py-2 px-4 rounded-lg transition-colors shadow-lg bg-green-500 hover:bg-green-600 text-white">Forgive Them</button>
+                            <button onClick={() => {
+                                dispatch({ type: 'RESPOND_TO_CHEATING', payload: { response: 'ignore', relationshipId: offer.relationshipId } });
+                                dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                            }} className="w-full h-12 font-bold py-2 px-4 rounded-lg transition-colors shadow-lg bg-zinc-600 hover:bg-zinc-700 text-white">Ignore the Rumors</button>
+                        </div>
+                    ) : (<div className="text-center font-semibold p-3 bg-zinc-700/50 rounded-lg">Scandal Handled</div>)}
+                </div>
+            )
+        }
+
         if (email.offer.type === 'featureRelease') return null;
 
         let buttonText = '';

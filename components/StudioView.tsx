@@ -69,8 +69,14 @@ const StudioView: React.FC = () => {
                 .filter(m => m.id !== activeArtist.id)
                 .map(m => m.name);
         }
-        return [...npcs, ...groupMembers].sort();
-    }, [careerMode, group, activeArtist]);
+        const activeArtistId = gameState.activeArtistId;
+        const activeData = activeArtistId ? gameState.artistsData[activeArtistId] : null;
+        let kidsArtists: string[] = [];
+        if (activeData?.kids) {
+            kidsArtists = activeData.kids.filter(k => k.isArtist).map(k => k.name);
+        }
+        return [...npcs, ...groupMembers, ...kidsArtists].sort();
+    }, [careerMode, group, activeArtist, gameState.artistsData, gameState.activeArtistId]);
 
     const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -83,11 +89,19 @@ const StudioView: React.FC = () => {
         }
     };
 
+    const getFeatureCost = (artistName: string) => {
+        const activeArtistId = gameState.activeArtistId;
+        const activeData = activeArtistId ? gameState.artistsData[activeArtistId] : null;
+        if (activeData?.kids?.some(k => k.name === artistName)) {
+            return 0; // Kids are free to feature
+        }
+        return Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
+    };
+
     const handleCollaborationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const artistName = e.target.value;
         if (artistName) {
-            const cost = Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
-            setCollaboration({ artistName, cost });
+            setCollaboration({ artistName, cost: getFeatureCost(artistName) });
         } else {
             setCollaboration(null);
         }
@@ -96,8 +110,7 @@ const StudioView: React.FC = () => {
     const handleFeature1Change = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const artistName = e.target.value;
         if (artistName) {
-            const cost = Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
-            setFeature1({ artistName, cost });
+            setFeature1({ artistName, cost: getFeatureCost(artistName) });
         } else {
             setFeature1(null);
         }
@@ -106,8 +119,7 @@ const StudioView: React.FC = () => {
     const handleFeature2Change = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const artistName = e.target.value;
         if (artistName) {
-            const cost = Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
-            setFeature2({ artistName, cost });
+            setFeature2({ artistName, cost: getFeatureCost(artistName) });
         } else {
             setFeature2(null);
         }

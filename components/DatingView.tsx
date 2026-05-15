@@ -154,6 +154,24 @@ const DatingView: React.FC = () => {
                                     </button>
                                 )}
 
+                                {activeRelationship.status === 'married' && !activeArtistData.pregnancy && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'START_PREGNANCY', payload: { partnerName: activeRelationship.partnerName } })}
+                                        className="bg-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-pink-400"
+                                    >
+                                        Try for Baby
+                                    </button>
+                                )}
+
+                                {activeArtistData.pregnancy && !activeArtistData.pregnancy.revealed && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'REVEAL_PREGNANCY' })}
+                                        className="bg-pink-600 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-pink-500"
+                                    >
+                                        Reveal Pregnancy
+                                    </button>
+                                )}
+
                                 <button 
                                     onClick={() => dispatch({ type: 'BREAK_UP', payload: { relationshipId: activeRelationship.id } })}
                                     className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-full font-bold text-sm"
@@ -207,9 +225,58 @@ const DatingView: React.FC = () => {
                                             <p className="text-zinc-400 text-sm">Dated from {formatRelationshipDate(rel.startYear, rel.startWeek)} - {rel.endYear ? formatRelationshipDate(rel.endYear, rel.endWeek) : 'Present'}</p>
                                         </div>
                                     </div>
-                                    <StatusBadge status={rel.status} isPublic={rel.isPublic} />
+                                    <div className="flex gap-4 items-center">
+                                        <StatusBadge status={rel.status} isPublic={rel.isPublic} />
+                                        {!activeRelationship && (
+                                            <button 
+                                                onClick={() => dispatch({ type: 'GET_BACK_WITH_EX', payload: { relationshipId: rel.id } })}
+                                                className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold"
+                                            >
+                                                Get Back Together
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* Kids section */}
+                {activeArtistData.kids && activeArtistData.kids.length > 0 && (
+                    <section>
+                        <h2 className="text-xl font-bold mb-4">Children</h2>
+                        <div className="space-y-4">
+                            {activeArtistData.kids.map(kid => {
+                                const ageInWeeks = (gameState.date.year * 52 + gameState.date.week) - (kid.birthDate.year * 52 + kid.birthDate.week);
+                                const ageInYears = Math.floor(ageInWeeks / 52);
+                                
+                                return (
+                                    <div key={kid.id} className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 space-y-4 shadow-xl">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-2xl font-black text-pink-400">{kid.name}</h3>
+                                                <p className="text-zinc-400">Age: {ageInYears}</p>
+                                            </div>
+                                            {kid.isArtist && (
+                                                <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-xs font-semibold uppercase">
+                                                    Music Artist
+                                                </span>
+                                            )}
+                                        </div>
+                                        {ageInYears >= 10 && !kid.isArtist && (
+                                            <div className="pt-2">
+                                                <button 
+                                                    onClick={() => dispatch({ type: 'START_KID_CAREER', payload: { kidId: kid.id } })}
+                                                    className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-full font-bold text-sm"
+                                                >
+                                                    Start Music Career
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
                 )}

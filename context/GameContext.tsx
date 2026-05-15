@@ -414,7 +414,10 @@ const getHypeCap = (artistData: ArtistData): number => {
 };
 
 const gameReducerInternal = (state: GameState, action: GameAction): GameState => {
-    const allPlayerArtistsAndGroups: (Artist | Group)[] = state.careerMode === 'solo' && state.soloArtist ? [state.soloArtist] : (state.group ? [state.group, ...state.group.members] : []);
+    const allPlayerArtistsAndGroups: (Artist | Group)[] = [
+        ...(state.careerMode === 'solo' && state.soloArtist ? [state.soloArtist] : (state.group ? [state.group, ...state.group.members] : [])),
+        ...(state.extraPlayableArtists || [])
+    ];
     const tmzUser: XUser = {
         id: 'tmz', name: 'TMZ', username: 'TMZ',
         avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjRkZGRkZGIi8+PHJlY3QgeD0iNCIgeT0iNCIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNCIgZmlsbD0iI0QzMjYyNiIvPjxwYXRoIGQ9Ik0xNiAyMHYyNGg2VjMybDQtNGg0djIwbC0xMi0xMi0xMiAxMnoiIGZpbGw9IiNGRkYiLz48cGF0aCBkPSJNMzYgMjB2MjRoNlYzMmw0LTRoNHYyMGwtMTItMTItMTIgMTJ6IiBmaWxsPSIjRkZGIi8+PC9zdmc+',
@@ -1377,6 +1380,57 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         // Pick a new account if we deleted the current one
                         if (artistData.selectedPlayerXUserId === targetAccountId) {
                             artistData.selectedPlayerXUserId = artistData.xUsers.find(u => u.isPlayer)?.id;
+                        }
+                    }
+                }
+
+                // --- CHEATING SCANDAL LOGIC ---
+                const activeRelationship = (artistData.relationships || []).find(r => r.endYear === null);
+                if (activeRelationship && activeRelationship.isPublic && artistProfileForEmail) {
+                    if (Math.random() < 0.005) { // 0.5%
+                        const emailId = crypto.randomUUID();
+                        newEmails.push({
+                            id: emailId,
+                            sender: 'PR Team',
+                            senderIcon: 'default',
+                            subject: 'URGENT: Cheating Allegations',
+                            body: `Hi ${artistProfileForEmail.name},\n\nTMZ just published an article alleging that ${activeRelationship.partnerName} was seen getting close with someone else. Social media is blowing up.\n\nHow do you want to handle this scandal?`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { 
+                                type: 'cheatingScandal', 
+                                relationshipId: activeRelationship.id 
+                            }
+                        });
+
+                        artistData.xPosts.unshift({
+                            id: crypto.randomUUID(), authorId: 'tmz',
+                            content: `🚨 EXCLUSIVE: Sources claim they spotted ${activeRelationship.partnerName} acting VERY single despite dating ${artistProfileForEmail.name}. Trouble in paradise? 👀☕️`,
+                            likes: Math.floor(Math.random() * 500000) + 150000, 
+                            retweets: Math.floor(Math.random() * 150000) + 40000, 
+                            views: Math.floor(Math.random() * 12000000) + 4000000, 
+                            date: newDate,
+                        });
+                    }
+                }
+
+                // --- PREGNANCY LOGIC ---
+                if (artistData.pregnancy) {
+                    const conceptionWeeks = artistData.pregnancy.conceptionDate.year * 52 + artistData.pregnancy.conceptionDate.week;
+                    const currentWeeks = newDate.year * 52 + newDate.week;
+                    if (currentWeeks - conceptionWeeks >= 39) {
+                        const hasReceivedBirthEmail = artistData.inbox.some(e => e.offer?.type === 'giveBirth') || newEmails.some(e => e.offer?.type === 'giveBirth');
+                        if (!hasReceivedBirthEmail && artistProfileForEmail) {
+                            newEmails.push({
+                                id: crypto.randomUUID(),
+                                sender: 'Personal Update',
+                                senderIcon: 'default',
+                                subject: 'It\'s Time!',
+                                body: `Hi ${artistProfileForEmail.name},\n\nThe big day is here! You're ready to welcome your new baby into the world. It's time to name your child!`,
+                                date: newDate,
+                                isRead: false,
+                                offer: { type: 'giveBirth' }
+                            });
                         }
                     }
                 }
@@ -7319,6 +7373,299 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'GET_BACK_WITH_EX': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist) return state;
+
+            const updatedRelationships = (activeData.relationships || []).map(r => 
+                r.id === action.payload.relationshipId ? { ...r, status: 'dating' as const, endYear: undefined, endWeek: undefined, startYear: state.date.year, startWeek: state.date.week } : r
+            );
+
+            const rel = updatedRelationships.find(r => r.id === action.payload.relationshipId);
+            let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+
+            if (rel?.isPublic) {
+                const postContext = `👀 SPOTTED: ${activeArtist.name} and ex ${rel?.partnerName} reportedly back together!`;
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popcrave',
+                    content: postContext,
+                    image: activeArtist.image,
+                    likes: Math.floor(Math.random() * 200000) + 50000,
+                    retweets: Math.floor(Math.random() * 50000) + 10000,
+                    views: Math.floor(Math.random() * 4000000) + 1000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: updatedRelationships,
+                        hype: rel?.isPublic ? Math.min(1000, activeData.hype + 100) : activeData.hype,
+                        xPosts: newPosts
+                    }
+                }
+            };
+        }
+        case 'MARK_EMAIL_OFFER_ANSWERED': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        inbox: activeData.inbox.map(email => 
+                            email.id === action.payload.emailId 
+                                ? { ...email, offer: { ...email.offer, isAnswered: true } as any } 
+                                : email
+                        )
+                    }
+                }
+            };
+        }
+        case 'RESPOND_TO_CHEATING': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist) return state;
+
+            const rel = (activeData.relationships || []).find(r => r.id === action.payload.relationshipId);
+            if (!rel) return state;
+
+            let updatedRelationships = [...(activeData.relationships || [])];
+            let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+
+            if (action.payload.response === 'break_up') {
+                updatedRelationships = updatedRelationships.map(r => 
+                    r.id === action.payload.relationshipId ? { ...r, status: 'ex' as const, endYear: state.date.year, endWeek: state.date.week } : r
+                );
+                const postContext = `💔 Following cheating allegations, ${activeArtist.name} has officially ended things with ${rel.partnerName}.`;
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'tmz',
+                    content: postContext,
+                    likes: Math.floor(Math.random() * 300000) + 50000,
+                    retweets: Math.floor(Math.random() * 50000) + 10000,
+                    views: Math.floor(Math.random() * 5000000) + 1000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            } else if (action.payload.response === 'forgive') {
+                const postContext = `👀 Sources say ${activeArtist.name} has decided to forgive ${rel.partnerName} and work through the recent cheating scandal.`;
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: postContext,
+                    likes: Math.floor(Math.random() * 100000) + 50000,
+                    retweets: Math.floor(Math.random() * 20000) + 10000,
+                    views: Math.floor(Math.random() * 2000000) + 1000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            } else {
+                const postContext = `😶 ${activeArtist.name} remains silent amidst the rumors of ${rel.partnerName} cheating.`;
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popcrave',
+                    content: postContext,
+                    likes: Math.floor(Math.random() * 80000) + 50000,
+                    retweets: Math.floor(Math.random() * 10000) + 10000,
+                    views: Math.floor(Math.random() * 1500000) + 1000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        relationships: updatedRelationships,
+                        hype: Math.min(1000, activeData.hype + 50),
+                        xPosts: newPosts
+                    }
+                }
+            };
+        }
+        case 'START_PREGNANCY': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        pregnancy: {
+                            partnerName: action.payload.partnerName,
+                            conceptionDate: state.date,
+                            revealed: false
+                        }
+                    }
+                }
+            };
+        }
+        case 'REVEAL_PREGNANCY': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist || !activeData.pregnancy) return state;
+
+            const postContext = `🚨 BREAKING: ${activeArtist.name} is expecting a baby with ${activeData.pregnancy.partnerName}!`;
+            const newPost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'tmz',
+                content: postContext,
+                image: activeArtist.image,
+                likes: Math.floor(Math.random() * 500000) + 100000,
+                retweets: Math.floor(Math.random() * 100000) + 20000,
+                views: Math.floor(Math.random() * 10000000) + 2000000,
+                date: state.date,
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        pregnancy: { ...activeData.pregnancy, revealed: true },
+                        hype: Math.min(1000, activeData.hype + 200),
+                        xPosts: [newPost, ...(activeData.xPosts || [])]
+                    }
+                }
+            };
+        }
+        case 'GIVE_BIRTH': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const activeArtist = state.soloArtist || state.group;
+            if (!activeArtist) return state;
+
+            const newKid: Kid = {
+                id: crypto.randomUUID(),
+                name: action.payload.childName,
+                birthDate: state.date,
+                isArtist: false
+            };
+
+            let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+            if (activeData.pregnancy?.revealed) {
+                const postContext = `👶🍼 IT'S A BABY! ${activeArtist.name} has officially welcomed their new baby, ${newKid.name}!`;
+                const newPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: postContext,
+                    likes: Math.floor(Math.random() * 800000) + 100000,
+                    retweets: Math.floor(Math.random() * 100000) + 20000,
+                    views: Math.floor(Math.random() * 12000000) + 2000000,
+                    date: state.date,
+                };
+                newPosts = [newPost, ...newPosts];
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        pregnancy: undefined,
+                        kids: [...(activeData.kids || []), newKid],
+                        hype: activeData.pregnancy?.revealed ? Math.min(1000, activeData.hype + 150) : activeData.hype,
+                        xPosts: newPosts
+                    }
+                }
+            };
+        }
+        case 'START_KID_CAREER': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            const kids = activeData.kids || [];
+            const kid = kids.find(k => k.id === action.payload.kidId);
+            if (!kid) return state;
+
+            const updatedKids = kids.map(k => k.id === action.payload.kidId ? { ...k, isArtist: true } : k);
+
+            const activeArtistProfile = state.soloArtist || state.group;
+
+            const newKidArtistId = kid.id;
+            const newKidArtist: Artist = {
+                id: newKidArtistId,
+                name: kid.name,
+                type: 'artist',
+                skills: { singing: 50, rapping: 50, writing: 50, production: 50 },
+                image: activeArtistProfile?.image || 'https://images.unsplash.com/photo-1516280440502-6c2e39194e80',
+            };
+
+            const newKidArtistData: ArtistData = {
+                id: newKidArtistId,
+                money: 0,
+                hype: 0,
+                popularity: 0,
+                songs: [],
+                releases: [],
+                inbox: [],
+                managerId: null,
+                securityId: null,
+                labelSubmissions: [],
+                musicVideos: [],
+                monthlyListeners: 0,
+                totalFollowers: 0,
+                streamsLastWeek: 0,
+                tours: [],
+                merchStore: null,
+                contract: null,
+                publicImage: 80,
+                xUsers: [{
+                    id: 'user',
+                    name: newKidArtist.name,
+                    username: newKidArtist.name.replace(/\s+/g, '').toLowerCase(),
+                    avatar: newKidArtist.image,
+                    isVerified: false,
+                    bio: 'Official account.',
+                    followersCount: 0,
+                    followingCount: 0,
+                    isPlayer: true
+                }],
+                xPosts: [],
+                followersHistory: [],
+                pastContracts: [],
+                customLabels: [],
+                achievements: [],
+                redMicPro: { unlocked: false, subscriptionType: null },
+                oscarHistory: [],
+                amaHistory: [],
+                grammyHistory: [],
+                chartHistory: { singles: [], albums: [], globalSingles: [], globalAlbums: [] },
+                paparazziPhotos: [],
+            };
+
+            return {
+                ...state,
+                extraPlayableArtists: [...(state.extraPlayableArtists || []), newKidArtist],
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        kids: updatedKids
+                    },
+                    [newKidArtistId]: newKidArtistData
+                }
+            };
+        }
         default:
             return state;
     }
@@ -7467,12 +7814,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let allPlayerArtists: Array<Artist | Group> = [];
 
     if (careerMode === 'solo' && soloArtist) {
-        activeArtist = soloArtist;
         allPlayerArtists = [soloArtist];
     } else if (careerMode === 'group' && group) {
         allPlayerArtists = [group, ...group.members];
-        activeArtist = allPlayerArtists.find(a => a.id === activeArtistId) || null;
     }
+    
+    if (gameState.extraPlayableArtists) {
+        allPlayerArtists = [...allPlayerArtists, ...gameState.extraPlayableArtists];
+    }
+    
+    activeArtist = allPlayerArtists.find(a => a.id === activeArtistId) || null;
     
     if (isLoading) {
         return (

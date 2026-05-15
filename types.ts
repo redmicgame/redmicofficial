@@ -302,6 +302,17 @@ export interface CoachellaOffer {
 }
 
 
+export interface CheatingScandalEmail {
+    type: 'cheatingScandal';
+    relationshipId: string;
+    isAnswered?: boolean;
+}
+
+export interface GiveBirthEmail {
+    type: 'giveBirth';
+    isAnswered?: boolean;
+}
+
 export interface Email {
     id: string;
     sender: string;
@@ -310,7 +321,7 @@ export interface Email {
     body: string;
     date: GameDate;
     isRead: boolean;
-    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer;
+    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail;
 }
 
 export interface GameDate {
@@ -731,9 +742,22 @@ export interface Relationship {
     startWeek?: number;
     endYear: number | null;
     endWeek?: number;
-    status: 'dating' | 'engaged' | 'married';
+    status: 'dating' | 'engaged' | 'married' | 'ex';
     isPublic: boolean;
     image?: string;
+}
+
+export interface Kid {
+    id: string;
+    name: string;
+    birthDate: GameDate;
+    isArtist: boolean;
+}
+
+export interface Pregnancy {
+    partnerName: string;
+    conceptionDate: GameDate;
+    revealed: boolean;
 }
 
 export interface RedditComment {
@@ -842,6 +866,8 @@ export interface ArtistData {
     weeksUntilNextFeatureOffer?: number;
     signedBrandDeals?: string[];
     signedVideoGames?: string[];
+    kids?: Kid[];
+    pregnancy?: Pregnancy | null;
 }
 
 export interface RedCarpetLook {
@@ -859,6 +885,7 @@ export interface GameState {
     soloArtist: Artist | null;
     group: Group | null;
     activeArtistId: string | null;
+    extraPlayableArtists?: Artist[];
 
     artistsData: {
         [artistId: string]: ArtistData;
@@ -1086,5 +1113,12 @@ export type GameAction =
     | { type: 'REVEAL_RELATIONSHIP'; payload: { relationshipId: string; outlet: 'popbase' | 'tmz' } }
     | { type: 'ADVANCE_RELATIONSHIP'; payload: { relationshipId: string; newStatus: 'engaged' | 'married' } }
     | { type: 'BREAK_UP'; payload: { relationshipId: string } }
+    | { type: 'GET_BACK_WITH_EX'; payload: { relationshipId: string } }
     | { type: 'UPDATE_RELATIONSHIP_IMAGE'; payload: { relationshipId: string, image: string } }
+    | { type: 'START_PREGNANCY'; payload: { partnerName: string } }
+    | { type: 'REVEAL_PREGNANCY' }
+    | { type: 'GIVE_BIRTH'; payload: { childName: string } }
+    | { type: 'START_KID_CAREER'; payload: { kidId: string } }
+    | { type: 'MARK_EMAIL_OFFER_ANSWERED'; payload: { emailId: string } }
+    | { type: 'RESPOND_TO_CHEATING'; payload: { response: 'break_up' | 'forgive' | 'ignore', relationshipId: string } }
     | { type: 'CREATE_TIKTOK'; payload: { content: string; songId?: string; thumbnail?: string } };
