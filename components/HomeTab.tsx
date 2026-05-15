@@ -181,7 +181,7 @@ const HomeTab: React.FC = () => {
                     <p className="text-sm text-zinc-400">{getWeekDate(date)}</p>
                     <p className="text-3xl font-bold text-green-400 mt-1">${formatNumber(money)}</p>
                 </div>
-                {careerMode === 'group' && (
+                {allPlayerArtists.length > 1 && (
                     <button onClick={() => setIsSwitcherOpen(true)} className="flex items-center gap-2 bg-zinc-800 p-2 rounded-lg hover:bg-zinc-700 transition-colors">
                         <img src={activeArtist.image} alt={activeArtist.name} className="w-10 h-10 rounded-full object-cover" />
                         <div className="text-left">
