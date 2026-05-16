@@ -5390,11 +5390,40 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         }
         case 'RESET_GAME':
             return initialState;
-        case 'LOAD_GAME':
-            return {
+        case 'LOAD_GAME': {
+            const newState = {
                 ...action.payload,
                 difficultyMode: action.payload.difficultyMode || 'normal',
             };
+            if (newState.artistsData) {
+                for (const id in newState.artistsData) {
+                    const data = newState.artistsData[id];
+                    newState.artistsData[id] = {
+                        ...initialArtistData,
+                        ...data,
+                    };
+                    newState.artistsData[id].videos = newState.artistsData[id].videos || [];
+                    newState.artistsData[id].tiktokVideos = newState.artistsData[id].tiktokVideos || [];
+                    newState.artistsData[id].merch = newState.artistsData[id].merch || [];
+                    newState.artistsData[id].tours = newState.artistsData[id].tours || [];
+                    newState.artistsData[id].contractHistory = newState.artistsData[id].contractHistory || [];
+                    newState.artistsData[id].customLabels = newState.artistsData[id].customLabels || [];
+                    newState.artistsData[id].artistImages = newState.artistsData[id].artistImages || [];
+                    newState.artistsData[id].artistVideoThumbnails = newState.artistsData[id].artistVideoThumbnails || [];
+                    newState.artistsData[id].paparazziPhotos = newState.artistsData[id].paparazziPhotos || [];
+                    newState.artistsData[id].tourPhotos = newState.artistsData[id].tourPhotos || [];
+                    newState.artistsData[id].followersHistory = newState.artistsData[id].followersHistory || [];
+                    newState.artistsData[id].promotions = newState.artistsData[id].promotions || [];
+                    newState.artistsData[id].streamsHistory = newState.artistsData[id].streamsHistory || [];
+                    newState.artistsData[id].xFollowingIds = newState.artistsData[id].xFollowingIds || [];
+                    newState.artistsData[id].xTrends = newState.artistsData[id].xTrends || [];
+                    newState.artistsData[id].xChats = newState.artistsData[id].xChats || [];
+                    newState.artistsData[id].lastFourWeeksStreams = newState.artistsData[id].lastFourWeeksStreams || [];
+                    newState.artistsData[id].lastFourWeeksViews = newState.artistsData[id].lastFourWeeksViews || [];
+                }
+            }
+            return newState;
+        }
         case 'UNLOCK_RED_MIC_PRO': {
             if (!state.activeArtistId) return state;
             const { type, cost } = action.payload;
@@ -6306,6 +6335,16 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], image: newImage };
                         newState.group = { ...newState.group, members: updatedMembers };
                     }
+                }
+            }
+
+            // Update extraPlayableArtists (kids)
+            if (newState.extraPlayableArtists) {
+                const kidIndex = newState.extraPlayableArtists.findIndex(k => k.id === artistId);
+                if (kidIndex > -1) {
+                    const updatedKids = [...newState.extraPlayableArtists];
+                    updatedKids[kidIndex] = { ...updatedKids[kidIndex], image: newImage };
+                    newState.extraPlayableArtists = updatedKids;
                 }
             }
 
@@ -7611,24 +7650,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             };
 
             const newKidArtistData: ArtistData = {
+                ...initialArtistData,
                 id: newKidArtistId,
                 money: 0,
                 hype: 0,
                 popularity: 0,
-                songs: [],
-                releases: [],
-                inbox: [],
-                managerId: null,
-                securityId: null,
-                labelSubmissions: [],
-                musicVideos: [],
-                monthlyListeners: 0,
-                totalFollowers: 0,
-                streamsLastWeek: 0,
-                tours: [],
-                merchStore: null,
-                contract: null,
-                publicImage: 80,
                 xUsers: [{
                     id: 'user',
                     name: newKidArtist.name,
@@ -7640,17 +7666,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     followingCount: 0,
                     isPlayer: true
                 }],
-                xPosts: [],
-                followersHistory: [],
-                pastContracts: [],
-                customLabels: [],
-                achievements: [],
-                redMicPro: { unlocked: false, subscriptionType: null },
-                oscarHistory: [],
-                amaHistory: [],
-                grammyHistory: [],
-                chartHistory: { singles: [], albums: [], globalSingles: [], globalAlbums: [] },
-                paparazziPhotos: [],
             };
 
             return {

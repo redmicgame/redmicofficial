@@ -176,7 +176,7 @@ const S4AHome: React.FC = () => {
         }, 0);
     }, [latestRelease, songs]);
     
-    const last7DaysStreams = activeArtistData.lastFourWeeksStreams[0] || 0;
+    const last7DaysStreams = (activeArtistData.lastFourWeeksStreams || [])[0] || 0;
 
     const topSongs = useMemo(() => {
         return [...songs]

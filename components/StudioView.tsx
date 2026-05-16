@@ -7,7 +7,7 @@ import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 const StudioView: React.FC = () => {
-    const { gameState, dispatch, activeArtist, activeArtistData, group } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData, group, allPlayerArtists } = useGame();
     
     const [mode, setMode] = useState<'single' | 'remixPack'>('single');
 
@@ -63,20 +63,11 @@ const StudioView: React.FC = () => {
 
     const potentialCollaborators = useMemo(() => {
         const npcs = NPC_ARTIST_NAMES;
-        let groupMembers: string[] = [];
-        if (careerMode === 'group' && group) {
-            groupMembers = group.members
-                .filter(m => m.id !== activeArtist.id)
-                .map(m => m.name);
-        }
-        const activeArtistId = gameState.activeArtistId;
-        const activeData = activeArtistId ? gameState.artistsData[activeArtistId] : null;
-        let kidsArtists: string[] = [];
-        if (activeData?.kids) {
-            kidsArtists = activeData.kids.filter(k => k.isArtist).map(k => k.name);
-        }
-        return [...npcs, ...groupMembers, ...kidsArtists].sort();
-    }, [careerMode, group, activeArtist, gameState.artistsData, gameState.activeArtistId]);
+        const otherPlayerArtists = allPlayerArtists
+            .filter(a => a.id !== activeArtist.id)
+            .map(a => a.name);
+        return [...npcs, ...otherPlayerArtists].sort();
+    }, [allPlayerArtists, activeArtist]);
 
     const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -90,10 +81,8 @@ const StudioView: React.FC = () => {
     };
 
     const getFeatureCost = (artistName: string) => {
-        const activeArtistId = gameState.activeArtistId;
-        const activeData = activeArtistId ? gameState.artistsData[activeArtistId] : null;
-        if (activeData?.kids?.some(k => k.name === artistName)) {
-            return 0; // Kids are free to feature
+        if (allPlayerArtists.some(a => a.name === artistName && a.id !== activeArtist.id)) {
+            return 0; // Other playable characters (including kids) are free to feature
         }
         return Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
     };

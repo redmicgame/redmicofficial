@@ -84,7 +84,24 @@ const SpotifyView: React.FC = () => {
         fileInputRef.current?.click();
     };
 
-    const topSongs = songs
+    const allSongs = useMemo(() => {
+        const playerFeatureSongs: Song[] = [];
+        const activeArtistName = activeArtist?.name;
+        
+        if (activeArtistName) {
+            Object.entries(gameState.artistsData).forEach(([artistId, data]) => {
+                if (artistId === activeArtist?.id) return;
+                data.songs.forEach(song => {
+                    if (song.isReleased && !song.isTakenDown && song.collaboration?.artistName === activeArtistName) {
+                        playerFeatureSongs.push(song);
+                    }
+                });
+            });
+        }
+        return [...songs, ...playerFeatureSongs];
+    }, [songs, activeArtist, gameState.artistsData]);
+
+    const topSongs = allSongs
         .filter(s => s.isReleased && !s.isTakenDown)
         .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
         .slice(0, 10);

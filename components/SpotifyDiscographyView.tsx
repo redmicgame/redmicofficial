@@ -85,11 +85,36 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
             return sortedReleases.filter(r => (r.type === 'Single' || r.type === 'EP') && !isFeature(r));
         }
         if (filter === 'Featured') {
-            return sortedReleases.filter(r => isFeature(r));
+            const playerFeatureReleases: Release[] = [];
+            const activeArtist = gameState.soloArtist?.id === gameState.activeArtistId 
+                ? gameState.soloArtist 
+                : gameState.group?.id === gameState.activeArtistId 
+                    ? gameState.group
+                    : gameState.extraPlayableArtists?.find(a => a.id === gameState.activeArtistId)
+                        || gameState.group?.members.find(m => m.id === gameState.activeArtistId);
+
+            if (activeArtist) {
+                Object.entries(gameState.artistsData).forEach(([artistId, data]) => {
+                    if (artistId === activeArtist.id) return;
+                    data.releases.forEach(r => {
+                        if (!r.isTakenDown && !r.soundtrackInfo) {
+                            const hasFeature = r.songIds.some(songId => {
+                                const song = data.songs.find(s => s.id === songId);
+                                return song?.collaboration?.artistName === activeArtist.name;
+                            });
+                            if (hasFeature && !playerFeatureReleases.find(existing => existing.id === r.id)) {
+                                playerFeatureReleases.push(r);
+                            }
+                        }
+                    });
+                });
+            }
+            const allFeatures = [...sortedReleases.filter(r => isFeature(r)), ...playerFeatureReleases];
+            return allFeatures.sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
         }
         // Placeholder for other filters
         return [];
-    }, [sortedReleases, filter, activeArtistData?.songs]);
+    }, [sortedReleases, filter, activeArtistData?.songs, gameState.activeArtistId, gameState.artistsData, gameState.soloArtist, gameState.group, gameState.extraPlayableArtists]);
     
     const mainList = useMemo(() => {
         const list = filteredReleases;
