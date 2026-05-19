@@ -51,6 +51,7 @@ const appCategories: AppCategory[] = [
         title: 'Social & Video',
         apps: [
             { name: 'TikTok', description: 'Make short videos', icon: <TikTokIcon className="w-8 h-8"/>, view: 'tiktok', bgColor: '#000000', iconColor: '#25F4EE' },
+            { name: 'Instagram', description: 'Share photos visually', icon: <span className="font-bold text-2xl font-serif text-white">Ig</span>, view: 'instagram', bgColor: '#E1306C' },
             { name: 'Google', description: 'Search the web', icon: <GoogleIcon className="w-8 h-8"/>, view: 'google', bgColor: '#FFFFFF', iconColor: '#000000' },
             { name: 'X', description: 'Connect with fans worldwide', icon: <XIcon className="w-7 h-7"/>, view: 'x', bgColor: '#000000' },
             { name: 'YouTube', description: 'Watch and share videos', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtube', bgColor: '#FF0000' },

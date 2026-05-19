@@ -83,6 +83,7 @@ import RedCarpetHistoryView from './components/RedCarpetHistoryView';
 import DatingView from './components/DatingView';
 import GoogleView from './components/GoogleView';
 import TikTokView from './components/TikTokView';
+import InstagramView from './components/InstagramView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -95,6 +96,8 @@ const AppContent: React.FC = () => {
 
     const renderView = () => {
         switch (currentView) {
+            case 'instagram':
+                return <InstagramView />;
             case 'tiktok':
                 return <TikTokView />;
             case 'google':

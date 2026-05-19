@@ -233,6 +233,8 @@ const initialArtistData: ArtistData = {
     youtubeSubscribers: 0,
     tiktokFollowers: 0,
     tiktokVideos: [],
+    instagramFollowers: 0,
+    instagramPosts: [],
     videos: [],
     youtubeStoreUnlocked: false,
     merch: [],
@@ -564,6 +566,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 popularity: 10,
                 youtubeSubscribers: initialSubs,
                 tiktokFollowers: initialSubs * 2,
+                instagramFollowers: initialSubs * 3,
                 inbox: [welcomeEmail],
                 xUsers: initialXUsers,
                 xPosts: initialXPosts,
@@ -671,6 +674,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 popularity: 15,
                 youtubeSubscribers: Math.floor(Math.random() * 8000) + 2000,
                 tiktokFollowers: Math.floor(Math.random() * 16000) + 4000,
+                instagramFollowers: Math.floor(Math.random() * 20000) + 5000,
                 inbox: [createWelcomeEmail(group.name)],
                 xUsers: initialXUsers,
                 xPosts: initialXPosts,
@@ -692,6 +696,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     popularity: 5,
                     youtubeSubscribers: Math.floor(Math.random() * 2000) + 500,
                     tiktokFollowers: Math.floor(Math.random() * 4000) + 1000,
+                    instagramFollowers: Math.floor(Math.random() * 5000) + 1000,
                     inbox: [createWelcomeEmail(member.name)],
                     xUsers: [memberXUser, popBaseUser, chartDataUser, tmzUser, addictionUser, chartsFanUser],
                     xPosts: initialXPosts,
@@ -2363,6 +2368,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const tikTokPopMult = 1 + (artistData.popularity / 100);
                     const tiktokPassiveGain = Math.floor((totalWeeklyStreams / 15000) * tikTokPopMult) + Math.floor(Math.random() * 50);
                     artistData.tiktokFollowers = (artistData.tiktokFollowers || 0) + tiktokPassiveGain;
+
+                    // Grow Instagram followers passively
+                    const instagramPassiveGain = Math.floor((totalWeeklyStreams / 12000) * tikTokPopMult) + Math.floor(Math.random() * 60);
+                    artistData.instagramFollowers = (artistData.instagramFollowers || 0) + instagramPassiveGain;
 
 
                     artistData.xPosts.unshift(...newPosts);
@@ -4578,6 +4587,44 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 },
                 activeSubmissionId: null,
                 currentView: 'game',
+            };
+        }
+        case 'CREATE_INSTAGRAM_POST': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            const followers = activeData.instagramFollowers || 0;
+            const popFactor = Math.pow(activeData.popularity || 0, 1.5) * 50; 
+            const hypeFactor = ((activeData.hype || 0) / 100) * 0.2 + 1;
+            
+            // Base engagement metrics based on followers and popularity
+            const baseLikes = (500 + (followers * 0.1) + popFactor) * hypeFactor;
+            const viewVariance = baseLikes * 0.5 * (Math.random() - 0.5);
+            let likes = Math.floor(Math.max(10, baseLikes + viewVariance));
+            const comments = Math.floor(likes * (Math.random() * 0.05 + 0.01)); // 1% to 6% of likes
+
+            const newPost: InstagramPost = {
+                id: crypto.randomUUID(),
+                imageUrl: action.payload.imageUrl,
+                caption: action.payload.caption,
+                likes,
+                comments,
+                date: state.date
+            };
+
+            const hypeGained = Math.floor(likes / 200000); 
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        instagramPosts: [newPost, ...(activeData.instagramPosts || [])],
+                        hype: Math.min(100, activeData.hype + hypeGained),
+                        instagramFollowers: followers + Math.floor(likes * 0.05)
+                    }
+                }
             };
         }
         case 'CREATE_TIKTOK': {
