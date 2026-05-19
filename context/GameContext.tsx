@@ -222,6 +222,7 @@ const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[], npcImages?: Re
 const initialArtistData: ArtistData = {
     money: INITIAL_MONEY,
     hype: 0,
+    peakHype: 0,
     publicImage: 80, // Start as Respected/Beloved
     popularity: 10,
     songs: [],
@@ -283,6 +284,18 @@ const initialArtistData: ArtistData = {
 };
 
 
+const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
+    { id: 'tth', name: "Today's Top Hits", description: "Top hits right now.", followers: 34000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'rapcaviar', name: "RapCaviar", description: "New est hip hop.", followers: 15000000, type: 'genre', genre: 'Hip Hop/Rap', coverArt: 'https://images.unsplash.com/photo-1544785349-c4a5301826fd?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'poprising', name: "Pop Rising", description: "The hits of tomorrow.", followers: 3000000, type: 'genre', genre: 'Pop', coverArt: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'newmusicfriday', name: "New Music Friday", description: "New music.", followers: 4000000, type: 'new', coverArt: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'mint', name: "mint", description: "Electronic.", followers: 6000000, type: 'genre', genre: 'Dance/Electronic', coverArt: 'https://images.unsplash.com/photo-1570535921867-0c7f711f185c?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'hotcountry', name: "Hot Country", description: "Country.", followers: 7000000, type: 'genre', genre: 'Country', coverArt: 'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'rnb', name: "Are & Be", description: "R&B.", followers: 6000000, type: 'genre', genre: 'R&B', coverArt: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'rockthis', name: "Rock This", description: "Rock.", followers: 5000000, type: 'genre', genre: 'Rock', coverArt: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'viral50', name: "Viral 50 - Global", description: "Viral.", followers: 2000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&h=500&fit=crop', tracks: [] },
+];
+
 const initialState: GameState = {
     offlineMode: true,
     difficultyMode: 'normal',
@@ -291,6 +304,7 @@ const initialState: GameState = {
     group: null,
     activeArtistId: null,
     artistsData: {},
+    spotifyPlaylists: DEFAULT_SPOTIFY_PLAYLISTS,
     date: { week: 1, year: 2024 },
     currentView: 'game',
     activeTab: 'Home',
@@ -1512,9 +1526,19 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             weeklyStreams = Math.floor(weeklyStreams * (Math.random() * 2 + 2));
                         }
                         
+                        let playlistStreams = 0;
+                        const spotifyPlaylists = state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS;
+                        spotifyPlaylists.forEach(playlist => {
+                            const trackIndex = playlist.tracks.findIndex(t => t.songId === song.id);
+                            if (trackIndex !== -1) {
+                                const percentage = Math.max(0.001, 0.03 - (trackIndex * 0.0006));
+                                playlistStreams += Math.floor(playlist.followers * percentage);
+                            }
+                        });
+                        weeklyStreams += playlistStreams;
+                        
                         let newPlaylistBoostWeeks = song.playlistBoostWeeks;
                         if (typeof song.playlistBoostWeeks === 'number' && song.playlistBoostWeeks > 0) {
-                            weeklyStreams = Math.floor(weeklyStreams * PLAYLIST_BOOST_MULTIPLIER);
                             newPlaylistBoostWeeks = song.playlistBoostWeeks - 1;
                         }
 
@@ -1596,6 +1620,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const updatedLastFourWeeksStreams = [totalWeeklyStreams, ...artistData.lastFourWeeksStreams].slice(0, 4);
                 const totalStreamsLastMonth = updatedLastFourWeeksStreams.reduce((sum, streams) => sum + streams, 0);
                 artistData.monthlyListeners = Math.floor(totalStreamsLastMonth * 0.1);
+                artistData.peakMonthlyListeners = Math.max(artistData.monthlyListeners, artistData.peakMonthlyListeners || 0);
                 
                 artistData.listeningNow = Math.floor(artistData.monthlyListeners * (Math.random() * 0.001));
                 artistData.saves = Math.floor((artistData.saves || 0) + (totalWeeklyStreams / 1000) * (Math.random() * 0.5 + 0.5));
@@ -2334,6 +2359,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                     });
 
+                    // Grow TikTok followers passively
+                    const tikTokPopMult = 1 + (artistData.popularity / 100);
+                    const tiktokPassiveGain = Math.floor((totalWeeklyStreams / 15000) * tikTokPopMult) + Math.floor(Math.random() * 50);
+                    artistData.tiktokFollowers = (artistData.tiktokFollowers || 0) + tiktokPassiveGain;
+
+
                     artistData.xPosts.unshift(...newPosts);
                     artistData.xTrends = newTrends;
 
@@ -2580,6 +2611,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistData.popularity = Math.max(0, Math.min(100, newPopularity));
                 artistData.money = Math.floor(artistData.money + totalIncome);
                 artistData.hype = newHype;
+                artistData.peakHype = Math.max(artistData.peakHype || 0, newHype);
                 artistData.lastFourWeeksStreams = updatedLastFourWeeksStreams;
                 artistData.lastFourWeeksViews = updatedLastFourWeeksViews;
                 artistData.youtubeSubscribers = newYoutubeSubscribers;
@@ -3713,11 +3745,67 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistData.inbox.push(...newChartEmails);
             }
 
+            const newSpotifyPlaylists = (state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS).map(playlist => {
+                let playlistContenders = allContenders;
+                if (playlist.type === 'genre' && playlist.genre) {
+                    playlistContenders = playlistContenders.filter(c => {
+                        if (playlist.genre === 'Pop' && c.genre === 'Pop') return true;
+                        if (playlist.genre === 'Hip Hop/Rap' && c.genre === 'Hip Hop/Rap') return true;
+                        if (playlist.genre === 'Dance/Electronic' && ['EDM', 'Dance/Electronic', 'House'].includes(c.genre)) return true;
+                        if (playlist.genre === 'Country' && c.genre === 'Country') return true;
+                        if (playlist.genre === 'R&B' && c.genre === 'R&B') return true;
+                        if (playlist.genre === 'Rock' && c.genre === 'Rock') return true;
+                        if (playlist.genre === 'Christmas' && c.genre === 'Christmas') return true;
+                        return false; 
+                    });
+                }
+                
+                const scoredContenders = playlistContenders.map(c => {
+                    let score = c.weeklyStreams + (Math.random() * 5000); // add a little randomness to the playlist curation
+                    
+                    if (c.isPlayerSong && c.songId) {
+                        const artistDataForBoost = Object.values(updatedArtistsData).find(d => d.songs.some(s => s.id === c.songId));
+                        const actualSong = artistDataForBoost?.songs.find(s => s.id === c.songId);
+                        if (actualSong && actualSong.playlistBoostWeeks && actualSong.playlistBoostWeeks > 0) {
+                            score *= PLAYLIST_BOOST_MULTIPLIER; // High chance to hit playlists
+                        }
+                        
+                        // Independent penalty / Label boost for big playlists
+                        if (playlist.followers > 10000000) {
+                            if (!artistDataForBoost?.contract) {
+                                score *= 0.5; // Harder for independent artists
+                            } else if (!artistDataForBoost.contract.isCustom) {
+                                const label = LABELS.find(l => l.id === artistDataForBoost.contract?.labelId);
+                                if (label?.contractType === 'petty') score *= 3.0; // Major labels push harder
+                                else if (label?.contractType === 'major') score *= 2.0;
+                            }
+                        }
+                    }
+                    return { ...c, score };
+                }).sort((a,b) => b.score - a.score).slice(0, 50);
+                
+                const newTracks: SpotifyPlaylistTrack[] = scoredContenders.map((c, index) => {
+                    const existingTrack = playlist.tracks.find(t => t.songId === c.uniqueId);
+                    return {
+                        songId: c.uniqueId,
+                        artistName: c.artist,
+                        artistId: c.isPlayerSong ? (allPlayerSongsFlat.find(s => s.id === c.songId)?.artistId || 'unknown') : 'unknown',
+                        title: c.song,
+                        coverArt: c.coverArt,
+                        position: index + 1,
+                        addedDate: existingTrack ? existingTrack.addedDate : newDate,
+                    }
+                });
+                
+                return { ...playlist, tracks: newTracks };
+            });
+
             if (contractRenewalForActivePlayer) {
                 return {
                     ...finalState,
                     date: newDate,
                     artistsData: updatedArtistsData,
+                    spotifyPlaylists: newSpotifyPlaylists,
                     billboardHot100: newBillboardHot100,
                     billboardTopAlbums: newBillboardTopAlbums,
                     chartHistory: newChartHistory,
@@ -3746,6 +3834,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 ...finalState,
                 date: newDate,
                 artistsData: updatedArtistsData,
+                spotifyPlaylists: newSpotifyPlaylists,
                 billboardHot100: newBillboardHot100,
                 billboardTopAlbums: newBillboardTopAlbums,
                 chartHistory: newChartHistory,
@@ -5189,15 +5278,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             let updatedSongs = [...activeData.songs];
 
-            if (Math.random() < PLAYLIST_PITCH_SUCCESS_RATE) {
-                // Success
-                updatedSongs = updatedSongs.map(song => {
-                    if (song.id === action.payload.songId) {
-                        return { ...song, playlistBoostWeeks: PLAYLIST_BOOST_WEEKS };
-                    }
-                    return song;
-                });
-            }
+            // In the new system, we just set playlistBoostWeeks. The actual inclusion and success
+            // is organically calculated every week inside ADVANCE_WEEK based on their resulting score!
+            updatedSongs = updatedSongs.map(song => {
+                if (song.id === action.payload.songId) {
+                    return { ...song, playlistBoostWeeks: PLAYLIST_BOOST_WEEKS };
+                }
+                return song;
+            });
 
             return {
                 ...state,
@@ -5393,6 +5481,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         case 'LOAD_GAME': {
             const newState = {
                 ...action.payload,
+                spotifyPlaylists: action.payload.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS,
                 difficultyMode: action.payload.difficultyMode || 'normal',
             };
             if (newState.artistsData) {

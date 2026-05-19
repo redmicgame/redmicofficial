@@ -96,6 +96,22 @@ const AchievementsView: React.FC = () => {
         .filter(s => (s.removedStreams ?? 0) > 0)
         .sort((a, b) => (b.removedStreams ?? 0) - (a.removedStreams ?? 0)), [songs]);
 
+    const bestReviewedProjects = useMemo(() => releases
+        .filter(r => r.pitchforkReview)
+        .sort((a, b) => (b.pitchforkReview?.score ?? 0) - (a.pitchforkReview?.score ?? 0)), [releases]);
+
+    const topStreamedProjects = useMemo(() => releases
+        .filter(r => !r.isTakenDown)
+        .map(r => {
+            const projectStreams = r.songIds.reduce((sum, songId) => {
+                const song = songs.find(s => s.id === songId);
+                return sum + (song?.streams || 0);
+            }, 0);
+            return { ...r, totalStreams: projectStreams };
+        })
+        .filter(r => r.totalStreams > 0)
+        .sort((a, b) => b.totalStreams - a.totalStreams), [releases, songs]);
+
     return (
         <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
             <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
@@ -135,6 +151,30 @@ const AchievementsView: React.FC = () => {
                         </div>
                     </div>
                 )}
+                
+                {activeArtistData.peakMonthlyListeners && activeArtistData.peakMonthlyListeners > 0 && (
+                    <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 p-4 rounded-xl border border-blue-500/30">
+                        <h2 className="text-xl font-bold mb-4 text-blue-400">Peak Monthly Listeners</h2>
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1 w-full flex flex-col justify-center">
+                                <p className="text-5xl font-black text-white">{formatNumber(activeArtistData.peakMonthlyListeners)}</p>
+                                <p className="text-zinc-400 font-semibold mt-1">Listeners on Spotify</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeArtistData.peakHype && activeArtistData.peakHype > 0 && (
+                    <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 p-4 rounded-xl border border-orange-500/30">
+                        <h2 className="text-xl font-bold mb-4 text-orange-400">Peak Hype Achieved</h2>
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1 w-full flex flex-col justify-center">
+                                <p className="text-5xl font-black text-white">{formatNumber(Math.floor(activeArtistData.peakHype))}</p>
+                                <p className="text-zinc-400 font-semibold mt-1">Hype Level</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <AchievementCard title="Top First Week Streams" accentColorClass="text-green-400">
                     <ExpandableList 
@@ -148,6 +188,14 @@ const AchievementsView: React.FC = () => {
                     <ExpandableList 
                         items={topAlbumsFirstWeek} 
                         getValue={(item) => item.firstWeekStreams ?? 0} 
+                        emptyMessage="No projects with first week data yet." 
+                    />
+                </AchievementCard>
+
+                <AchievementCard title="Highest First Week Album Sales (SPS)" accentColorClass="text-purple-400">
+                    <ExpandableList 
+                        items={topAlbumsFirstWeek} 
+                        getValue={(item) => Math.floor((item.firstWeekStreams ?? 0) / 1500)} 
                         emptyMessage="No projects with first week data yet." 
                     />
                 </AchievementCard>
@@ -165,6 +213,22 @@ const AchievementsView: React.FC = () => {
                         items={topFraudulentSongs} 
                         getValue={(item) => item.removedStreams ?? 0} 
                         emptyMessage="No songs have had artificial streams removed yet." 
+                    />
+                </AchievementCard>
+                
+                <AchievementCard title="Highest Rated Projects (Pitchfork)" accentColorClass="text-red-400">
+                    <ExpandableList 
+                        items={bestReviewedProjects} 
+                        getValue={(item) => item.pitchforkReview?.score ?? 0} 
+                        emptyMessage="No projects reviewed by Pitchfork yet." 
+                    />
+                </AchievementCard>
+                
+                <AchievementCard title="Most Streamed Projects" accentColorClass="text-green-500">
+                    <ExpandableList 
+                        items={topStreamedProjects as any} 
+                        getValue={(item) => item.totalStreams ?? 0} 
+                        emptyMessage="No streamed projects yet." 
                     />
                 </AchievementCard>
             </main>

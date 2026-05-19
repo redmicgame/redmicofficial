@@ -276,6 +276,27 @@ export interface VogueOffer {
     emailId: string;
 }
 
+export interface SpotifyPlaylistTrack {
+    songId: string;
+    artistName: string;
+    artistId: string;
+    title: string;
+    coverArt: string;
+    position: number;
+    addedDate: GameDate;
+}
+
+export interface SpotifyPlaylist {
+    id: string;
+    name: string;
+    description: string;
+    followers: number;
+    coverArt: string;
+    type: 'global' | 'genre' | 'viral' | 'new';
+    genre?: string;
+    tracks: SpotifyPlaylistTrack[];
+}
+
 export interface FeatureOffer {
     type: 'featureOffer';
     npcArtistName: string;
@@ -784,11 +805,13 @@ export interface RedditPost {
 export interface ArtistData {
     money: number;
     hype: number;
+    peakHype?: number;
     publicImage: number;
     popularity: number;
     songs: Song[];
     releases: Release[];
     monthlyListeners: number;
+    peakMonthlyListeners?: number;
     lastFourWeeksStreams: number[];
     lastFourWeeksViews: number[];
     youtubeSubscribers: number;
@@ -890,6 +913,7 @@ export interface GameState {
     artistsData: {
         [artistId: string]: ArtistData;
     };
+    spotifyPlaylists: SpotifyPlaylist[];
     
     date: GameDate;
     currentView: GameView;

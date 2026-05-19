@@ -8,6 +8,7 @@ import TrianglePlayIcon from './icons/TrianglePlayIcon';
 import type { Song, Release, GameDate } from '../types';
 import SpotifyDiscographyView from './SpotifyDiscographyView';
 import SpotifyReleaseDetailView from './SpotifyReleaseDetailView';
+import SpotifyPlaylistDetailView from './SpotifyPlaylistDetailView';
 
 const PopularSongItem: React.FC<{ song: Song; index: number }> = ({ song, index }) => {
     return (
@@ -57,9 +58,10 @@ const UpcomingReleaseItem: React.FC<{ release: Release; releaseDate: GameDate; o
 
 const SpotifyView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
-    const [view, setView] = useState<'profile' | 'discography' | 'releaseDetail'>('profile');
+    const [view, setView] = useState<'profile' | 'discography' | 'releaseDetail' | 'playlistDetail'>('profile');
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
-    const [history, setHistory] = useState<Array<'profile' | 'discography'>>(['profile']);
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+    const [history, setHistory] = useState<Array<'profile' | 'discography' | 'playlistDetail'>>(['profile']);
     const [isPopularExpanded, setIsPopularExpanded] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -170,9 +172,22 @@ const SpotifyView: React.FC = () => {
             .sort((a, b) => toTotalWeeks(a.releaseDate) - toTotalWeeks(b.releaseDate));
     }, [labelSubmissions, date]);
 
-    const navigateTo = (newView: 'profile' | 'discography' | 'releaseDetail') => {
+    const appearsOnPlaylists = useMemo(() => {
+        const playlists = gameState.spotifyPlaylists || [];
+        return playlists.filter(p => 
+            p.tracks.some(t => t.artistName === activeArtist.name)
+        ).map(p => {
+            const track = p.tracks.find(t => t.artistName === activeArtist.name);
+            return {
+                ...p,
+                artistPosition: track?.position
+            };
+        });
+    }, [gameState.spotifyPlaylists, activeArtist.name]);
+
+    const navigateTo = (newView: 'profile' | 'discography' | 'releaseDetail' | 'playlistDetail') => {
         if (newView !== view) {
-            if (view !== 'releaseDetail') {
+            if (view !== 'releaseDetail' && view !== 'playlistDetail') {
                 setHistory(prev => [...prev, view]);
             }
         }
@@ -194,6 +209,11 @@ const SpotifyView: React.FC = () => {
         navigateTo('releaseDetail');
     };
 
+    const handleShowPlaylistDetail = (playlistId: string) => {
+        setSelectedPlaylistId(playlistId);
+        navigateTo('playlistDetail');
+    };
+
     const handleShowCompilationDetail = (compilationId: string) => {
         dispatch({ type: 'SELECT_SOUNDTRACK', payload: compilationId });
     }
@@ -204,6 +224,10 @@ const SpotifyView: React.FC = () => {
 
     if (view === 'releaseDetail' && selectedReleaseId) {
         return <SpotifyReleaseDetailView releaseId={selectedReleaseId} onBack={handleBack} />;
+    }
+
+    if (view === 'playlistDetail' && selectedPlaylistId) {
+        return <SpotifyPlaylistDetailView playlistId={selectedPlaylistId} onBack={handleBack} />;
     }
 
 
@@ -346,6 +370,25 @@ const SpotifyView: React.FC = () => {
                                         dispatch({ type: 'CHANGE_VIEW', payload: 'spotifyAlbumCountdown' });
                                     }}
                                 />
+                            ))}
+                        </div>
+                    </div>
+                )}
+                
+                {/* Appears On */}
+                {appearsOnPlaylists.length > 0 && (
+                    <div className="space-y-4">
+                        <h2 className="text-2xl font-bold">Appears on</h2>
+                        <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
+                            {appearsOnPlaylists.map(playlist => (
+                                <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[140px] max-w-[140px] flex-shrink-0 snap-start bg-zinc-800/40 p-3 rounded-md hover:bg-zinc-800 transition-colors cursor-pointer">
+                                    <img src={playlist.coverArt} alt={playlist.name} className="w-full aspect-square object-cover rounded-md mb-3 shadow-lg" />
+                                    <h3 className="font-bold text-sm truncate">{playlist.name}</h3>
+                                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-tight flex flex-col gap-1">
+                                        <span>Position: #{playlist.artistPosition}</span>
+                                        <span>{formatNumber(playlist.followers)} likes</span>
+                                    </p>
+                                </div>
                             ))}
                         </div>
                     </div>
