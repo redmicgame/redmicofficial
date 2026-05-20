@@ -3799,7 +3799,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         songId: c.uniqueId,
                         artistName: c.artist,
                         artistId: c.isPlayerSong ? (allPlayerSongsFlat.find(s => s.id === c.songId)?.artistId || 'unknown') : 'unknown',
-                        title: c.song,
+                        title: c.title || 'Unknown Title',
                         coverArt: c.coverArt,
                         position: index + 1,
                         addedDate: existingTrack ? existingTrack.addedDate : newDate,

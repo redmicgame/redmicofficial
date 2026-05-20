@@ -28,11 +28,18 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
                 </button>
                 
                 <div className="flex flex-col md:flex-row gap-6 mt-8 md:mt-0 items-center md:items-end w-full">
-                    <img 
-                        src={playlist.coverArt} 
-                        alt={playlist.name} 
-                        className="w-48 h-48 md:w-60 md:h-60 shadow-2xl object-cover rounded-sm"
-                    />
+                    <div className="relative w-48 h-48 md:w-60 md:h-60 shadow-2xl rounded-sm overflow-hidden flex-shrink-0 bg-[#282828]">
+                        <img 
+                            src={activeArtist?.image || playlist.coverArt} 
+                            alt={playlist.name} 
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
+                            <span className="text-white font-black text-2xl md:text-4xl leading-tight uppercase tracking-tighter drop-shadow-md">
+                                {playlist.name}
+                            </span>
+                        </div>
+                    </div>
                     <div className="flex flex-col gap-2 w-full text-center md:text-left">
                         <span className="text-sm font-bold uppercase hidden md:block">Playlist</span>
                         <h1 className="text-4xl md:text-7xl font-black tracking-tighter" style={{ lineHeight: 1.1 }}>

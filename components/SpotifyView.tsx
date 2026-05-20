@@ -381,8 +381,15 @@ const SpotifyView: React.FC = () => {
                         <h2 className="text-2xl font-bold">Appears on</h2>
                         <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
                             {appearsOnPlaylists.map(playlist => (
-                                <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[140px] max-w-[140px] flex-shrink-0 snap-start bg-zinc-800/40 p-3 rounded-md hover:bg-zinc-800 transition-colors cursor-pointer">
-                                    <img src={playlist.coverArt} alt={playlist.name} className="w-full aspect-square object-cover rounded-md mb-3 shadow-lg" />
+                                <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[140px] max-w-[140px] flex-shrink-0 snap-start bg-zinc-800/40 p-3 rounded-md hover:bg-zinc-800 transition-colors cursor-pointer group">
+                                    <div className="relative w-full aspect-square bg-[#282828] rounded-md mb-3 shadow-lg overflow-hidden">
+                                        <img src={activeArtist?.image || playlist.coverArt} alt={playlist.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2">
+                                            <span className="text-white font-black text-sm uppercase tracking-tighter drop-shadow-md leading-tight line-clamp-2">
+                                                {playlist.name}
+                                            </span>
+                                        </div>
+                                    </div>
                                     <h3 className="font-bold text-sm truncate">{playlist.name}</h3>
                                     <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-tight flex flex-col gap-1">
                                         <span>Position: #{playlist.artistPosition}</span>
