@@ -4,7 +4,7 @@ import { db, getActiveSaveId } from '../db/db';
 import { useFirebase } from './FirebaseContext';
 import { loadGameFromCloud, saveGameToCloud } from '../firebase';
 import type { GameState, GameAction, Email, NpcSong, ChartEntry, ChartHistory, ArtistData, Artist, Group, Song, LabelSubmission, Contract, Release, XUser, XPost, XTrend, XChat, CustomLabel, PopBaseOffer, NpcAlbum, AlbumChartEntry, RedMicProState, GrammyCategory, GrammyAward, GrammyContender, OscarCategory, OscarAward, OscarContender, OnlyFansProfile, OnlyFansPost, XSuspensionStatus, SoundtrackAlbum, SoundtrackTrack, Manager, SecurityTeam, Label, VoguePhotoshoot, FeatureOffer } from '../types';
-import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_COVER_ART, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
+import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_COVER_ART, NPC_ARTIST_IMAGES, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
 import { generateWeeklyXContent } from '../utils/xContentGenerator';
 import { REAL_WORLD_DISCOGRAPHIES } from '../realWorldDiscographies';
 
@@ -106,7 +106,7 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: R
             artist,
             genre: GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
-            coverArt: npcImages?.[artist],
+            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || NPC_COVER_ART,
         });
     }
     return npcs;
@@ -158,7 +158,7 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Rec
             artist,
             genre: GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
-            coverArt: npcImages?.[artist],
+            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || NPC_COVER_ART,
         });
     }
     return hits;
@@ -210,7 +210,7 @@ const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[], npcImages?: Re
             title,
             artist: mainArtist,
             label: labels[Math.floor(Math.random() * labels.length)],
-            coverArt: npcImages?.[mainArtist] || NPC_COVER_ART,
+            coverArt: NPC_ARTIST_IMAGES?.[mainArtist] || npcImages?.[mainArtist] || NPC_COVER_ART,
             songIds: albumSongs.map(s => s.uniqueId),
             salesPotential,
         });
@@ -288,14 +288,29 @@ const initialArtistData: ArtistData = {
 
 const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
     { id: 'tth', name: "Today's Top Hits", description: "Top hits right now.", followers: 34000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'megahit', name: "Mega Hit Mix", description: "A mega mix of 75 favorites from the last few years!", followers: 11000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1493225457124-a1a2a5fa51cc?w=500&h=500&fit=crop', tracks: [] },
     { id: 'rapcaviar', name: "RapCaviar", description: "New est hip hop.", followers: 15000000, type: 'genre', genre: 'Hip Hop/Rap', coverArt: 'https://images.unsplash.com/photo-1544785349-c4a5301826fd?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'hiphopcentral', name: "Hip-Hop Central", description: "The center of Hip-Hop.", followers: 8000000, type: 'genre', genre: 'Hip Hop/Rap', coverArt: 'https://images.unsplash.com/photo-1549497554-46328dbbd4f7?w=500&h=500&fit=crop', tracks: [] },
     { id: 'poprising', name: "Pop Rising", description: "The hits of tomorrow.", followers: 3000000, type: 'genre', genre: 'Pop', coverArt: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'pophits', name: "Soft Pop Hits", description: "Listen to easy songs from your favorite artists!", followers: 7000000, type: 'genre', genre: 'Pop', coverArt: 'https://images.unsplash.com/photo-1518098042468-208169123863?w=500&h=500&fit=crop', tracks: [] },
     { id: 'newmusicfriday', name: "New Music Friday", description: "New music.", followers: 4000000, type: 'new', coverArt: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&h=500&fit=crop', tracks: [] },
     { id: 'mint', name: "mint", description: "Electronic.", followers: 6000000, type: 'genre', genre: 'Dance/Electronic', coverArt: 'https://images.unsplash.com/photo-1570535921867-0c7f711f185c?w=500&h=500&fit=crop', tracks: [] },
     { id: 'hotcountry', name: "Hot Country", description: "Country.", followers: 7000000, type: 'genre', genre: 'Country', coverArt: 'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?w=500&h=500&fit=crop', tracks: [] },
     { id: 'rnb', name: "Are & Be", description: "R&B.", followers: 6000000, type: 'genre', genre: 'R&B', coverArt: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=500&h=500&fit=crop', tracks: [] },
     { id: 'rockthis', name: "Rock This", description: "Rock.", followers: 5000000, type: 'genre', genre: 'Rock', coverArt: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'latin', name: "Viva Latino", description: "Today's top Latin hits.", followers: 14000000, type: 'genre', genre: 'Latin', coverArt: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'kpop', name: "K-Pop ON!", description: "The best K-Pop songs.", followers: 5000000, type: 'genre', genre: 'K-Pop', coverArt: 'https://images.unsplash.com/photo-1598363650965-0ae09efbd3da?w=500&h=500&fit=crop', tracks: [] },
     { id: 'viral50', name: "Viral 50 - Global", description: "Viral.", followers: 2000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'viralhits', name: "Viral Hits", description: "Viral.", followers: 3000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'bighit', name: "Big on the Internet", description: "Currently trending tracks across the internet.", followers: 4000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1494232410401-ad00d5433cfa?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'chillhits', name: "Chill Hits", description: "Kick back to the best new and recent chill hits.", followers: 6000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1499557404179-880945952db5?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'singcar', name: "Songs to Sing in the Car", description: "Sing along and enjoy the drive.", followers: 10000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'coffeetable', name: "Coffee Table Jazz", description: "Relaxing.", followers: 1500000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'christmas', name: "Christmas Hits", description: "The biggest Christmas songs of all time.", followers: 5000000, type: 'genre', genre: 'Christmas', coverArt: 'https://images.unsplash.com/photo-1543589077-47d81606c1ec?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'indie', name: "Lorem", description: "Indie songs.", followers: 2000000, type: 'genre', genre: 'Indie', coverArt: 'https://images.unsplash.com/photo-1482855549413-2a62884c7be6?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'afrobeats', name: "African Heat", description: "Top Afrobeats.", followers: 2500000, type: 'genre', genre: 'Afrobeats', coverArt: 'https://images.unsplash.com/photo-1601616858063-4f9e1e765507?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'reggae', name: "Dancehall Official", description: "Top Reggae.", followers: 1500000, type: 'genre', genre: 'Reggae', coverArt: 'https://images.unsplash.com/photo-1520696989433-2ba37a90fdd2?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'throwback', name: "All Out 2010s", description: "The biggest hits of the 2010s.", followers: 8000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=500&h=500&fit=crop', tracks: [] }
 ];
 
 const initialState: GameState = {
@@ -3566,7 +3581,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             .filter(song => !genreFilter || song.genre === genreFilter)
                             .slice(0, numNpcContenders)
                             .forEach(song => {
-                                contenders.push({ id: song.uniqueId, name: song.title, artistName: song.artist, isPlayer: false, score: song.basePopularity / 100000, coverArt: NPC_COVER_ART });
+                                contenders.push({ id: song.uniqueId, name: song.title, artistName: song.artist, isPlayer: false, score: song.basePopularity / 100000, coverArt: song.coverArt || NPC_COVER_ART });
                             });
                     } else {
                         [...new Set(newNpcAlbums.slice(0, numNpcContenders).map(a => a.artist))].slice(0, 5).forEach(artistName => {
@@ -3759,12 +3774,17 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 if (playlist.type === 'genre' && playlist.genre) {
                     playlistContenders = playlistContenders.filter(c => {
                         if (playlist.genre === 'Pop' && c.genre === 'Pop') return true;
-                        if (playlist.genre === 'Hip Hop/Rap' && c.genre === 'Hip Hop/Rap') return true;
-                        if (playlist.genre === 'Dance/Electronic' && ['EDM', 'Dance/Electronic', 'House'].includes(c.genre)) return true;
+                        if (playlist.genre === 'Hip Hop/Rap' && c.genre === 'Hip Hop') return true;
+                        if (playlist.genre === 'Dance/Electronic' && ['Electronic', 'EDM', 'House'].includes(c.genre)) return true;
                         if (playlist.genre === 'Country' && c.genre === 'Country') return true;
                         if (playlist.genre === 'R&B' && c.genre === 'R&B') return true;
                         if (playlist.genre === 'Rock' && c.genre === 'Rock') return true;
                         if (playlist.genre === 'Christmas' && c.genre === 'Christmas') return true;
+                        if (playlist.genre === 'K-Pop' && c.genre === 'K-Pop') return true;
+                        if (playlist.genre === 'Latin' && c.genre === 'Latin') return true;
+                        if (playlist.genre === 'Indie' && c.genre === 'Indie') return true;
+                        if (playlist.genre === 'Afrobeats' && c.genre === 'Afrobeats') return true;
+                        if (playlist.genre === 'Reggae' && c.genre === 'Reggae') return true;
                         return false; 
                     });
                 }
@@ -5526,9 +5546,18 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         case 'RESET_GAME':
             return initialState;
         case 'LOAD_GAME': {
+            const loadedPlaylists = action.payload.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS;
+            const mergedPlaylists = [...loadedPlaylists];
+            
+            DEFAULT_SPOTIFY_PLAYLISTS.forEach(defaultPlaylist => {
+                if (!mergedPlaylists.find(p => p.id === defaultPlaylist.id)) {
+                    mergedPlaylists.push(defaultPlaylist);
+                }
+            });
+
             const newState = {
                 ...action.payload,
-                spotifyPlaylists: action.payload.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS,
+                spotifyPlaylists: mergedPlaylists,
                 difficultyMode: action.payload.difficultyMode || 'normal',
             };
             if (newState.artistsData) {

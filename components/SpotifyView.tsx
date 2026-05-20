@@ -6,6 +6,7 @@ import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import ShuffleIcon from './icons/ShuffleIcon';
 import TrianglePlayIcon from './icons/TrianglePlayIcon';
 import type { Song, Release, GameDate } from '../types';
+import { NPC_ARTIST_IMAGES } from '../constants';
 import SpotifyDiscographyView from './SpotifyDiscographyView';
 import SpotifyReleaseDetailView from './SpotifyReleaseDetailView';
 import SpotifyPlaylistDetailView from './SpotifyPlaylistDetailView';
@@ -380,10 +381,21 @@ const SpotifyView: React.FC = () => {
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold">Appears on</h2>
                         <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
-                            {appearsOnPlaylists.map(playlist => (
+                            {appearsOnPlaylists.map(playlist => {
+                                let playlistCover = playlist.coverArt;
+                                if (playlist.tracks && playlist.tracks.length > 0) {
+                                    const topTrack = playlist.tracks[0];
+                                    if (topTrack.artistId !== 'unknown') {
+                                        const topPlayerArtist = allPlayerArtists.find(a => a.id === topTrack.artistId);
+                                        if (topPlayerArtist) playlistCover = topPlayerArtist.image;
+                                    } else {
+                                        playlistCover = NPC_ARTIST_IMAGES?.[topTrack.artistName] || topTrack.coverArt || playlist.coverArt;
+                                    }
+                                }
+                                return (
                                 <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[140px] max-w-[140px] flex-shrink-0 snap-start bg-zinc-800/40 p-3 rounded-md hover:bg-zinc-800 transition-colors cursor-pointer group">
                                     <div className="relative w-full aspect-square bg-[#282828] rounded-md mb-3 shadow-lg overflow-hidden">
-                                        <img src={activeArtist?.image || playlist.coverArt} alt={playlist.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                        <img src={playlistCover} alt={playlist.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2">
                                             <span className="text-white font-black text-sm uppercase tracking-tighter drop-shadow-md leading-tight line-clamp-2">
                                                 {playlist.name}
@@ -396,7 +408,7 @@ const SpotifyView: React.FC = () => {
                                         <span>{formatNumber(playlist.followers)} likes</span>
                                     </p>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     </div>
                 )}

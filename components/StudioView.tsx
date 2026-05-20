@@ -62,11 +62,12 @@ const StudioView: React.FC = () => {
     };
 
     const potentialCollaborators = useMemo(() => {
-        const npcs = NPC_ARTIST_NAMES;
+        const npcs = NPC_ARTIST_NAMES.slice().sort();
         const otherPlayerArtists = allPlayerArtists
             .filter(a => a.id !== activeArtist.id)
-            .map(a => a.name);
-        return [...npcs, ...otherPlayerArtists].sort();
+            .map(a => a.name)
+            .sort();
+        return [...otherPlayerArtists, ...npcs];
     }, [allPlayerArtists, activeArtist]);
 
     const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

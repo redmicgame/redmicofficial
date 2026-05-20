@@ -3,9 +3,10 @@ import { useGame, formatNumber } from '../context/GameContext';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import TrianglePlayIcon from './icons/TrianglePlayIcon';
 import HeartIcon from './icons/HeartIcon';
+import { NPC_ARTIST_IMAGES } from '../constants';
 
 const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => void }> = ({ playlistId, onBack }) => {
-    const { gameState, activeArtist } = useGame();
+    const { gameState, activeArtist, allPlayerArtists } = useGame();
     
     const playlist = useMemo(() => {
         return gameState.spotifyPlaylists?.find(p => p.id === playlistId);
@@ -13,10 +14,21 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
 
     if (!playlist) return null;
 
+    let playlistCover = playlist.coverArt;
+    if (playlist.tracks && playlist.tracks.length > 0) {
+        const topTrack = playlist.tracks[0];
+        if (topTrack.artistId !== 'unknown') {
+            const topPlayerArtist = allPlayerArtists.find(a => a.id === topTrack.artistId);
+            if (topPlayerArtist) playlistCover = topPlayerArtist.image;
+        } else {
+            playlistCover = NPC_ARTIST_IMAGES?.[topTrack.artistName] || topTrack.coverArt || playlist.coverArt;
+        }
+    }
+
     const totalDuration = playlist.tracks.length * 3.5; // placeholder duration
 
     return (
-        <div className="bg-[#121212] text-white min-h-screen pb-20">
+        <div className="bg-[#121212] text-white min-h-screen mb-16 pb-[100px]">
             {/* Header */}
             <div className="flex bg-gradient-to-b from-zinc-700/50 to-[#121212] pt-12 pb-6 px-4 md:px-8">
                 <button 
@@ -30,10 +42,11 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
                 <div className="flex flex-col md:flex-row gap-6 mt-8 md:mt-0 items-center md:items-end w-full">
                     <div className="relative w-48 h-48 md:w-60 md:h-60 shadow-2xl rounded-sm overflow-hidden flex-shrink-0 bg-[#282828]">
                         <img 
-                            src={activeArtist?.image || playlist.coverArt} 
+                            src={playlistCover} 
                             alt={playlist.name} 
                             className="w-full h-full object-cover"
                         />
+
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
                             <span className="text-white font-black text-2xl md:text-4xl leading-tight uppercase tracking-tighter drop-shadow-md">
                                 {playlist.name}
