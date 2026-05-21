@@ -8025,6 +8025,45 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             
             // Public Image suppression
             const publicImageVal = data.publicImage ?? 80;
+
+            // Generate generic NPC quotes
+            if (oldData.xPosts.length > 0 && Math.random() < 0.8) { // 80% chance each week for some engagement
+                const targetPost = oldData.xPosts[Math.floor(Math.random() * Math.min(oldData.xPosts.length, 20))];
+                if (targetPost && !targetPost.quoteOf) {
+                    let quoteAuthorId = 'popbase';
+                    let quoteContent = "Thoughts on this?";
+                    
+                    const rand = Math.random();
+                    if (rand < 0.25 && data.xUsers.some(u => u.id === 'popcrave')) {
+                        quoteAuthorId = 'popcrave';
+                    } else if (rand < 0.5) {
+                        const hater = data.xUsers.find(u => u.id.startsWith('hater_'));
+                        if (hater) {
+                            quoteAuthorId = hater.id;
+                            quoteContent = ["This is literally so bad lol", "Flop behavior tbh", "We don't care"][Math.floor(Math.random() * 3)];
+                        }
+                    } else if (rand < 0.75) {
+                        const fan = data.xUsers.find(u => u.id.startsWith('addiction_fan_'));
+                        if (fan) {
+                            quoteAuthorId = fan.id;
+                            quoteContent = ["MOTHER", "OMG YESSS", "I'm literally shaking"][Math.floor(Math.random() * 3)];
+                        }
+                    }
+                    
+                    const quotePost: XPost = {
+                        id: crypto.randomUUID(),
+                        authorId: quoteAuthorId,
+                        content: quoteContent,
+                        quoteOf: targetPost,
+                        likes: Math.floor(Math.random() * 50000) + 1000,
+                        retweets: Math.floor(Math.random() * 10000) + 500,
+                        views: Math.floor(Math.random() * 800000) + 10000,
+                        date: nextState.date
+                    };
+                    finalNewPosts.push(quotePost);
+                }
+            }
+
             if (publicImageVal <= 40 && finalNewPosts.length > 0) {
                 const modifier = publicImageVal <= 20 ? 0.05 : 0.15;
                 finalNewPosts = finalNewPosts.map(p => {

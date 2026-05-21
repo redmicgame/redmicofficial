@@ -116,11 +116,11 @@ const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({ dataString }) =
                 </div>
                 
                 <div className="flex gap-4 items-center mb-4 z-10 relative">
-                    <img src={data.coverArt} className="w-16 h-16 sm:w-20 sm:h-20 rounded-md shadow-lg object-cover" />
-                    <div>
-                        <p className="text-xl sm:text-2xl font-bold leading-tight">{data.type === 'album' ? data.albumName : data.songName}</p>
-                        <p className="text-zinc-400 text-sm">{data.artistName}</p>
-                        <p className="text-[#1DB954] text-sm mt-1 font-bold">BEST WEEK EVER</p>
+                    <img src={data.coverArt} className="w-16 h-16 sm:w-20 sm:h-20 rounded-md shadow-lg object-cover flex-shrink-0" />
+                    <div className="min-w-0 overflow-hidden">
+                        <p className="text-lg sm:text-xl font-bold leading-tight line-clamp-2" title={data.type === 'album' ? data.albumName : data.songName}>{data.type === 'album' ? data.albumName : data.songName}</p>
+                        <p className="text-zinc-400 text-sm truncate" title={data.artistName}>{data.artistName}</p>
+                        <p className="text-[#1DB954] text-xs sm:text-sm mt-1 font-bold">BEST WEEK EVER</p>
                     </div>
                 </div>
 
@@ -154,14 +154,16 @@ const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({ dataString }) =
                 )}
 
                 {data.type === 'album' && data.tracks && (
-                    <div className="space-y-1.5 z-10 relative text-sm sm:text-base font-mono">
+                    <div className="z-10 relative font-mono">
                         <div className="text-xs text-zinc-400 mb-2 uppercase tracking-wider font-sans">Tracklist Performance</div>
-                        {data.tracks.map((track: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center bg-black/20 px-3 py-1.5 rounded">
-                                <span className="text-zinc-300 truncate mr-2" style={{ maxWidth: '60%' }}>{i+1}. {track.title}</span>
-                                <span className="font-bold whitespace-nowrap">{track.dailyStreams.toLocaleString()}</span>
-                            </div>
-                        ))}
+                        <div className={`space-y-1 overflow-y-auto max-h-[250px] scrollbar-hide ${data.tracks.length > 8 ? 'text-xs' : 'text-sm sm:text-base'}`}>
+                            {data.tracks.map((track: any, i: number) => (
+                                <div key={i} className={`flex justify-between items-center bg-black/20 px-2 ${data.tracks.length > 8 ? 'py-1' : 'py-1.5'} rounded`}>
+                                    <span className="text-zinc-300 truncate mr-2" style={{ maxWidth: '65%' }} title={track.title}>{i+1}. {track.title}</span>
+                                    <span className="font-bold whitespace-nowrap">{track.dailyStreams.toLocaleString()}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
@@ -280,6 +282,8 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) =>
     const { activeArtistData } = useGame();
     const { xPosts, xUsers } = activeArtistData!;
 
+    const [displayCount, setDisplayCount] = useState(20);
+
     const SYSTEM_USERS_FALLBACK: Record<string, XUser> = {
         'spotifysnapshot': {
             id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
@@ -294,31 +298,143 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) =>
         const dateA = a.date.year * 52 + a.date.week;
         const dateB = b.date.year * 52 + b.date.week;
         return dateB - dateA;
-    }).slice(0, 20);
+    });
+
+    const displayedPosts = sortedPosts.slice(0, displayCount);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const bottom = e.currentTarget.scrollHeight - e.currentTarget.scrollTop === e.currentTarget.clientHeight;
+        if (bottom && displayCount < sortedPosts.length) {
+            setDisplayCount(prev => prev + 20);
+        }
+    };
+
+    // Dummy Stories
+    const storyUsers = xUsers.filter(u => u.isVerified).slice(0, 10);
 
     return (
-        <div>
-            {sortedPosts.map(post => <Post key={post.id} post={post} author={findUser(post.authorId)} onQuote={onQuote} />)}
+        <div onScroll={handleScroll} className="h-full overflow-y-auto pb-32">
+            <div className="flex gap-4 overflow-x-auto p-4 border-b border-zinc-800 scrollbar-hide">
+                <div className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer">
+                    <div className="w-16 h-16 rounded-full border-2 border-zinc-700 flex items-center justify-center relative">
+                        <img src={xUsers.find(u => u.isPlayer)?.avatar} className="w-14 h-14 rounded-full object-cover" />
+                        <div className="absolute bottom-0 right-0 bg-blue-500 rounded-full w-5 h-5 flex items-center justify-center border-2 border-black">
+                            <span className="text-white text-xs font-bold leading-none">+</span>
+                        </div>
+                    </div>
+                    <span className="text-xs text-zinc-400">Add Story</span>
+                </div>
+                {storyUsers.map(user => (
+                    <div key={user.id} className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer">
+                        <div className="w-16 h-16 rounded-full border-2 border-blue-500 p-[2px]">
+                            <img src={user.avatar} className="w-full h-full rounded-full object-cover" />
+                        </div>
+                        <span className="text-xs text-zinc-300 w-16 truncate text-center">{user.name}</span>
+                    </div>
+                ))}
+            </div>
+            {displayedPosts.map(post => <Post key={post.id} post={post} author={findUser(post.authorId)} onQuote={onQuote} />)}
+            {displayCount < sortedPosts.length && (
+                <div className="p-4 text-center text-blue-500 font-bold cursor-pointer hover:bg-zinc-900" onClick={() => setDisplayCount(prev => prev + 20)}>
+                    Show more
+                </div>
+            )}
         </div>
     );
 };
 
-const TrendsView: React.FC = () => {
-    const { activeArtistData } = useGame();
-    const { xTrends } = activeArtistData!;
-    
+const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) => {
+    const { activeArtistData, dispatch } = useGame();
+    const { xTrends, xUsers, xPosts } = activeArtistData!;
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<{users: XUser[], posts: XPost[]}>({users: [], posts: []});
+
+    const SYSTEM_USERS_FALLBACK: Record<string, XUser> = {
+        'spotifysnapshot': {
+            id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
+            avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFkMWQxZCIvPjxwYXRoIGQ9Ik00Ni41MzIgNDYuNTMyQzQ2LjUzMiA0Ni41MzIgNDYuNTMy...IiBmaWxsPSIjMThEMzRFIi8+PC9zdmc+',
+            isVerified: true, bio: 'Real-time Spotify numbers for your favorite artists.', followersCount: 1100000, followingCount: 0,
+        }
+    };
+    const findUser = (id: string) => xUsers.find(u => u.id === id) || SYSTEM_USERS_FALLBACK[id];
+
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults({users: [], posts: []});
+            return;
+        }
+        
+        const q = searchQuery.toLowerCase();
+        const users = xUsers.filter(u => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q)).slice(0, 3);
+        const posts = xPosts.filter(p => p.content.toLowerCase().includes(q)).sort((a,b) => b.likes - a.likes).slice(0, 10);
+        
+        setSearchResults({users, posts});
+    }, [searchQuery, xUsers, xPosts]);
+
     return (
-        <div className="p-3">
-             <h2 className="text-xl font-bold mb-4">Trends for you</h2>
-             <div className="space-y-4">
-                {xTrends.map(trend => (
-                    <div key={trend.id}>
-                        <p className="text-xs text-zinc-500">{trend.category}</p>
-                        <p className="font-bold">{trend.title}</p>
-                        <p className="text-xs text-zinc-500">{formatNumber(trend.postCount)} posts</p>
+        <div>
+             <div className="p-3 sticky top-0 bg-black/80 backdrop-blur z-10 border-b border-zinc-800">
+                <input 
+                    type="text" 
+                    placeholder="Search" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-zinc-800 border border-transparent focus:border-blue-500 rounded-full px-4 py-2 text-sm focus:outline-none" 
+                />
+            </div>
+            
+            {searchQuery.trim() ? (
+                <div className="pb-32 h-full overflow-y-auto">
+                    {searchResults.users.length > 0 && (
+                        <div className="border-b border-zinc-800">
+                            <h3 className="font-bold p-3 text-lg">People</h3>
+                            {searchResults.users.map(u => (
+                                <div key={u.id} className="flex gap-3 p-3 hover:bg-zinc-900 cursor-pointer" onClick={() => dispatch({ type: 'VIEW_X_PROFILE', payload: u.id })}>
+                                    <img src={u.avatar} className="w-10 h-10 rounded-full object-cover" />
+                                    <div>
+                                        <div className="flex gap-1 items-center">
+                                            <span className="font-bold truncate">{u.name}</span>
+                                            {u.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />}
+                                        </div>
+                                        <div className="text-sm text-zinc-500">@{u.username}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {searchResults.posts.length > 0 && (
+                        <div>
+                            <h3 className="font-bold p-3 text-lg">Posts</h3>
+                            {searchResults.posts.map(p => <Post key={p.id} post={p} author={findUser(p.authorId)} onQuote={onQuote} />)}
+                        </div>
+                    )}
+                    {searchResults.users.length === 0 && searchResults.posts.length === 0 && (
+                        <div className="p-8 text-center text-zinc-500">
+                            No results for "{searchQuery}"
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="p-3">
+                    <h2 className="text-xl font-black mb-4 px-1">Trends for you</h2>
+                    <div className="space-y-0">
+                        {xTrends.map((trend, i) => (
+                            <div key={trend.id} className="py-2.5 px-1 hover:bg-zinc-900 cursor-pointer">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-xs text-zinc-500 font-medium">{i + 1} · {trend.category}</p>
+                                        <p className="font-bold text-md mt-0.5">{trend.title}</p>
+                                        <p className="text-xs text-zinc-500 mt-0.5">{formatNumber(trend.postCount)} posts</p>
+                                    </div>
+                                    <button className="text-zinc-500 hover:text-blue-500 p-1">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true" className="w-5 h-5 fill-current"><g><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm7 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path></g></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ))}
-             </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -716,7 +832,7 @@ export const ComposeXPostModal: React.FC<{
 };
 
 
-type XViewTab = 'For you' | 'Trending' | 'Messages' | 'Accounts';
+type XViewTab = 'For you' | 'Explore' | 'Messages' | 'Accounts';
 
 const XView: React.FC = () => {
     const { dispatch, activeArtistData } = useGame();
@@ -751,8 +867,8 @@ const XView: React.FC = () => {
         switch (activeTab) {
             case 'For you':
                 return <FeedView onQuote={handleQuote} />;
-            case 'Trending':
-                return <TrendsView />;
+            case 'Explore':
+                return <ExploreView onQuote={handleQuote} />;
             case 'Messages':
                 return <MessagesView />;
             case 'Accounts':
@@ -802,7 +918,7 @@ const XView: React.FC = () => {
                 <div className="w-1/3"></div>
             </header>
 
-            <main className="flex-grow overflow-y-auto pb-20">
+            <main className="flex-grow overflow-hidden h-full pb-20">
                  {isActiveUserSuspended && xSuspensionStatus && (
                     <div className="bg-black p-4 border-b border-zinc-700">
                         <h2 className="text-2xl font-bold text-white">Your account is suspended</h2>
@@ -824,10 +940,10 @@ const XView: React.FC = () => {
                 </button>
             </div>
             
-            <footer className="fixed bottom-0 left-0 right-0 h-20 bg-black border-t border-zinc-700/70 flex justify-around items-center z-30">
-                <button onClick={() => setActiveTab('For you')} className={`${activeTab === 'For you' ? 'text-white' : 'text-zinc-500'}`}><HomeIcon className="w-7 h-7" /></button>
-                <button onClick={() => setActiveTab('Trending')} className={`${activeTab === 'Trending' ? 'text-white' : 'text-zinc-500'}`}><SearchIcon className="w-7 h-7" /></button>
-                <button onClick={() => setActiveTab('Accounts')} className={`${activeTab === 'Accounts' ? 'text-white' : 'text-zinc-500'}`}><UserGroupIcon className="w-7 h-7" /></button>
+            <footer className="fixed bottom-0 left-0 right-0 h-14 bg-black border-t border-zinc-800 flex justify-around items-center z-30 pb-safe">
+                <button onClick={() => setActiveTab('For you')} className={`p-2 ${activeTab === 'For you' ? 'text-white' : 'text-zinc-500'}`}><HomeIcon className="w-7 h-7" /></button>
+                <button onClick={() => setActiveTab('Explore')} className={`p-2 ${activeTab === 'Explore' ? 'text-white' : 'text-zinc-500'}`}><SearchIcon className="w-7 h-7" /></button>
+                <button onClick={() => setActiveTab('Accounts')} className={`p-2 ${activeTab === 'Accounts' ? 'text-white' : 'text-zinc-500'}`}><UserGroupIcon className="w-7 h-7" /></button>
                 <button onClick={() => setActiveTab('Messages')} className={`${activeTab === 'Messages' ? 'text-white' : 'text-zinc-500'}`}><EnvelopeIcon className="w-7 h-7" /></button>
             </footer>
         </div>
