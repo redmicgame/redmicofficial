@@ -861,6 +861,8 @@ export interface ArtistData {
     pastRedCarpetLooks: RedCarpetLook[];
     streamsRemovedThisWeek?: number;
     manager: { id: string; contractEndDate: GameDate } | null;
+    lastPushToItunesWeek?: number;
+    lastPushedSongId?: string;
     securityTeamId: string | null;
     xUsers: XUser[];
     selectedPlayerXUserId?: string;

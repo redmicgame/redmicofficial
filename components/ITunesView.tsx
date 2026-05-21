@@ -13,6 +13,7 @@ interface ITunesSong extends ChartEntry {
     price: string;
     duration: number;
     explicit: boolean;
+    sales: number;
 }
 
 interface ITunesAlbum extends AlbumChartEntry {
@@ -22,6 +23,7 @@ interface ITunesAlbum extends AlbumChartEntry {
     isPreorder: boolean;
     songCount: number;
     releaseDate: GameDate;
+    sales: number;
 }
 
 type ITunesViewMode = 'home' | 'charts' | 'songChart' | 'albumChart' | 'artist' | 'albumDetail';
@@ -44,30 +46,108 @@ const useItunesData = () => {
     const { billboardHot100, billboardTopAlbums, npcs, npcAlbums, artistsData } = gameState;
 
     const allSongs = useMemo<ITunesSong[]>(() => {
-        return billboardHot100.map(entry => {
+        let entries = [...billboardHot100];
+        const billboardSongIds = new Set(billboardHot100.filter(e => e.isPlayerSong).map(e => e.songId));
+        
+        for (const artistId in artistsData) {
+            const aData = artistsData[artistId];
+            const artist = allPlayerArtists.find(a => a.id === artistId);
+            aData.songs.filter(s => s.isReleased && !billboardSongIds.has(s.id)).forEach(song => {
+                entries.push({
+                    rank: 101,
+                    lastWeek: null,
+                    peak: 101,
+                    weeksOnChart: 1,
+                    title: song.title,
+                    artist: artist?.name || 'Unknown',
+                    coverArt: song.coverArt,
+                    isPlayerSong: true,
+                    songId: song.id,
+                    uniqueId: song.id,
+                    weeklyStreams: song.lastWeekStreams || 0,
+                });
+            });
+        }
+
+        return entries.map(entry => {
             let duration = 180 + Math.floor(Math.random() * 60);
             let explicit = false;
+            let boost = 1;
             if (entry.isPlayerSong && entry.songId) {
                 for (const artistId in artistsData) {
                     const song = artistsData[artistId].songs.find(s => s.id === entry.songId);
                     if (song) {
                         duration = song.duration;
                         explicit = song.explicit;
+                        
+                        const aData = artistsData[artistId];
+                        const pushWeek = aData.lastPushToItunesWeek;
+                        const currentWeek = gameState.date.year * 52 + gameState.date.week;
+                        if (aData.lastPushedSongId === entry.songId && pushWeek && currentWeek - pushWeek <= 1) {
+                            boost = 5 + Math.random() * 5; // massive boost
+                        }
+                        
                         break;
                     }
                 }
             }
+            const hash = entry.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const divisor = 750 + (hash % 250);
+            const sales = Math.floor((entry.weeklyStreams || 0) / divisor) * boost;
+
             return {
                 ...entry,
                 price: getPrice(entry.uniqueId, 'song'),
                 duration,
                 explicit,
+                sales,
+            };
+        }).sort((a, b) => b.sales - a.sales).slice(0, 100).map((song, index) => {
+            // Give a baseline to sales to ensure the 100th song has 1k - 1.5k sales
+            const baselineSales = 1000 + Math.random() * 500 + ((100 - index) * 150);
+            return {
+                ...song,
+                sales: Math.max(song.sales, Math.floor(baselineSales)),
+                rank: index + 1
             };
         });
-    }, [billboardHot100, artistsData]);
+    }, [billboardHot100, artistsData, allPlayerArtists]);
 
     const allAlbums = useMemo<ITunesAlbum[]>(() => {
-        return billboardTopAlbums.map(entry => {
+        let entries = [...billboardTopAlbums];
+        const billboardAlbumIds = new Set(billboardTopAlbums.filter(e => e.isPlayerAlbum).map(e => e.albumId));
+
+        for (const artistId in artistsData) {
+            const aData = artistsData[artistId];
+            const artist = allPlayerArtists.find(a => a.id === artistId);
+            aData.releases.filter(r => r.isReleased && !billboardAlbumIds.has(r.id)).forEach(release => {
+                let totalWeeklyActivity = 0;
+                release.songIds.forEach(songId => {
+                    const song = aData.songs.find(s => s.id === songId);
+                    if (song) {
+                        totalWeeklyActivity += (song.lastWeekStreams || 0);
+                        const remixes = aData.songs.filter(s => s.isReleased && s.remixOfSongId === song.id);
+                        remixes.forEach(r => totalWeeklyActivity += (r.lastWeekStreams || 0));
+                    }
+                });
+                entries.push({
+                    rank: 201,
+                    lastWeek: null,
+                    peak: 201,
+                    weeksOnChart: 1,
+                    title: release.title,
+                    artist: artist?.name || 'Unknown',
+                    coverArt: release.coverArt,
+                    isPlayerAlbum: true,
+                    albumId: release.id,
+                    uniqueId: release.id,
+                    weeklyActivity: Math.floor(totalWeeklyActivity / 1500),
+                    weeklySales: 0
+                });
+            });
+        }
+
+        return entries.map(entry => {
             let rating = 0;
             let reviewCount = 0;
             let isPreorder = false;
@@ -101,6 +181,10 @@ const useItunesData = () => {
                 reviewCount = Math.floor(entry.weeklyActivity * 10 * (Math.random() * 0.5 + 0.8));
             }
 
+            const hash = entry.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const divisor = 750 + (hash % 250);
+            const sales = Math.floor((entry.weeklyActivity || entry.weeklySales * divisor || 100000) / divisor);
+
             return {
                 ...entry,
                 price: getPrice(entry.uniqueId, 'album', songCount),
@@ -108,10 +192,18 @@ const useItunesData = () => {
                 reviewCount,
                 isPreorder,
                 songCount,
-                releaseDate
+                releaseDate,
+                sales,
+            };
+        }).sort((a, b) => b.sales - a.sales).slice(0, 100).map((album, index) => {
+            const baselineSales = 800 + Math.random() * 400 + ((100 - index) * 120);
+            return {
+                ...album,
+                sales: Math.max(album.sales, Math.floor(baselineSales)),
+                rank: index + 1
             };
         });
-    }, [billboardTopAlbums, artistsData, gameState.date]);
+    }, [billboardTopAlbums, artistsData, gameState.date, allPlayerArtists]);
     
     const findArtistByName = (name: string) => {
         const player = allPlayerArtists.find(a => a.name === name);
@@ -299,21 +391,58 @@ const StarRating: React.FC<{ rating: number, count: number }> = ({ rating, count
 };
 
 const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function }> = ({ data, navigateTo }) => {
+    const featuredAlbums = data.allAlbums.slice(0, 5);
+    const preorders = data.allAlbums.filter(a => a.isPreorder);
+    const bestNewReleases = data.allAlbums.filter(a => !a.isPreorder).slice(5, 15);
+
     return (
-        <div className="space-y-4">
-            <Section title="Today's Hits" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
-                <div className="px-4">
-                    {data.allSongs.slice(0, 5).map(song => <SongRow key={song.uniqueId} song={song} onClick={() => {}} />)}
+        <div className="space-y-6 pb-6">
+            {/* Carousel Banners */}
+            <div className="flex overflow-x-auto gap-4 px-4 snap-x pb-2 pt-4 hide-scrollbar">
+                {featuredAlbums.map(album => (
+                    <button 
+                        key={`banner-${album.uniqueId}`} 
+                        onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)}
+                        className="snap-center flex-shrink-0 w-80 md:w-96 text-left group"
+                    >
+                        <p className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">{album.isPreorder ? 'Pre-Order Now' : 'Featured Album'}</p>
+                        <h3 className="text-xl sm:text-2xl font-normal line-clamp-1">{album.title}</h3>
+                        <p className="text-xl sm:text-2xl text-zinc-400 font-normal line-clamp-1 mb-2">{album.artist}</p>
+                        <div className="relative w-full aspect-[2/1] md:aspect-video rounded-xl overflow-hidden">
+                            <img src={album.coverArt} alt={album.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        </div>
+                    </button>
+                ))}
+            </div>
+
+            <Section title="Best New Releases" onSeeAll={() => navigateTo('albumChart', { albums: bestNewReleases, title: 'Best New Releases' }, 'Best New Releases')}>
+                <div className="flex gap-4 px-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                    {bestNewReleases.slice(0, 10).map(album => <AlbumGridItem key={album.uniqueId} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
                 </div>
             </Section>
-            <Section title="Recent Releases" onSeeAll={() => navigateTo('albumChart', { albums: data.allAlbums, title: 'Top Albums' }, 'Top Albums')}>
-                <div className="flex gap-4 px-4 overflow-x-auto pb-4">
-                    {data.allAlbums.slice(0, 6).map(album => <AlbumGridItem key={album.uniqueId} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
-                </div>
-            </Section>
-            <Section title="Viral Hits" onSeeAll={() => navigateTo('songChart', { songs: [...data.allSongs].reverse(), title: 'Viral Hits' }, 'Viral Hits')}>
+
+            {preorders.length > 0 && (
+                <Section title="Pre-Orders" onSeeAll={() => navigateTo('albumChart', { albums: preorders, title: 'Pre-Orders' }, 'Pre-Orders')}>
+                    <div className="flex gap-4 px-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                        {preorders.slice(0, 10).map(album => <AlbumGridItem key={album.uniqueId} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
+                    </div>
+                </Section>
+            )}
+
+            <Section title="Top Songs" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
                 <div className="px-4">
-                    {[...data.allSongs].reverse().slice(0, 5).map(song => <SongRow key={song.uniqueId} song={song} onClick={() => {}} />)}
+                    {data.allSongs.slice(0, 5).map((song, i) => (
+                        <button key={song.uniqueId} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
+                             <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover" />
+                             <div className="flex-grow text-left">
+                                 <p className="font-semibold line-clamp-1">{song.title}</p>
+                                 <p className="text-zinc-400 line-clamp-1 text-sm">{song.artist}</p>
+                             </div>
+                             <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                                 {song.price}
+                             </div>
+                        </button>
+                    ))}
                 </div>
             </Section>
         </div>
@@ -321,58 +450,76 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
 };
 
 const ITunesCharts: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function }> = ({ data, navigateTo }) => (
-    <div className="space-y-4">
-        <Section title="Songs" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
-            <div className="px-4">
-                {data.allSongs.slice(0, 5).map((song, i) => (
-                    <button key={song.uniqueId} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
-                         <div className="text-xl font-bold w-6 text-zinc-400">{i + 1}</div>
-                         <img src={song.coverArt} alt={song.title} className="w-12 h-12 rounded-md object-cover" />
+    <div className="space-y-6 pt-4 pb-6">
+        <Section title="Top Songs" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
+             <div className="px-4">
+                {data.allSongs.slice(0, 20).map((song, i) => (
+                    <button key={song.uniqueId} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
+                         <div className="text-xl font-bold w-6 text-zinc-400 text-center">{i + 1}</div>
+                         <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover shadow-sm" />
                          <div className="flex-grow text-left">
                              <p className="font-semibold line-clamp-1">{song.title}</p>
-                             <p className="text-zinc-400 line-clamp-1">{song.artist}</p>
+                             <p className="text-zinc-400 line-clamp-1 text-sm">{song.artist}</p>
                          </div>
-                         <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe]">{song.price}</div>
+                         <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                             {song.price}
+                         </div>
                     </button>
                 ))}
             </div>
         </Section>
-        <Section title="Albums" onSeeAll={() => navigateTo('albumChart', { albums: data.allAlbums, title: 'Top Albums' }, 'Top Albums')}>
-            <div className="flex gap-4 px-4 overflow-x-auto pb-4">
-                {data.allAlbums.slice(0, 6).map(album => <AlbumGridItem key={album.uniqueId} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
+        <Section title="Top Albums" onSeeAll={() => navigateTo('albumChart', { albums: data.allAlbums, title: 'Top Albums' }, 'Top Albums')}>
+            <div className="flex gap-4 px-4 overflow-x-auto pb-4 hide-scrollbar snap-x">
+                {data.allAlbums.slice(0, 20).map((album, i) => (
+                    <button key={album.uniqueId} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} className="flex-shrink-0 w-32 md:w-40 text-left snap-start">
+                        <div className="relative">
+                            <img src={album.coverArt} alt={album.title} className="w-full aspect-square rounded-lg object-cover shadow-md mb-2" />
+                            <div className="absolute -bottom-2 -left-2 bg-black/80 backdrop-blur-md rounded-full w-8 h-8 flex items-center justify-center font-bold text-white border border-zinc-700/50">{i + 1}</div>
+                        </div>
+                        <p className="font-semibold line-clamp-1 mt-2 text-sm">{album.title}</p>
+                        <p className="text-zinc-400 line-clamp-1 text-xs">{album.artist}</p>
+                    </button>
+                ))}
             </div>
         </Section>
     </div>
 );
 
 const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string }> = ({ songs, title }) => (
-    <div className="px-4">
+    <div className="px-4 pb-8 pt-2">
         {songs.map((song, i) => (
-            <button key={song.uniqueId} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
-                <div className="text-xl font-bold w-8 text-zinc-400">{i + 1}</div>
-                <img src={song.coverArt} alt={song.title} className="w-12 h-12 rounded-md object-cover" />
+            <button key={song.uniqueId} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
+                <div className="text-xl font-bold w-8 text-zinc-400 text-center">{i + 1}</div>
+                <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover shadow-sm" />
                 <div className="flex-grow text-left">
                     <p className="font-semibold line-clamp-1">{song.title}</p>
-                    <p className="text-zinc-400 line-clamp-1">{song.artist}</p>
+                    <p className="text-zinc-400 line-clamp-1 text-sm">{song.artist}</p>
+                    {/* Fake Sales Data string */}
+                    <p className="text-zinc-600 text-[10px] mt-0.5">{formatNumber(song.sales)} unit sales</p>
                 </div>
-                <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe]">{song.price}</div>
+                <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                    {song.price}
+                </div>
             </button>
         ))}
     </div>
 );
 
 const ITunesAlbumChart: React.FC<{ albums: ITunesAlbum[]; title: string; navigateTo: Function }> = ({ albums, title, navigateTo }) => (
-     <div className="px-4">
+     <div className="px-4 pb-8 pt-2">
         {albums.map((album, i) => (
-            <button key={album.uniqueId} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
-                <div className="text-xl font-bold w-8 text-zinc-400">{i + 1}</div>
-                <img src={album.coverArt} alt={album.title} className="w-16 h-16 rounded-md object-cover" />
+            <button key={album.uniqueId} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
+                <div className="text-xl font-bold w-8 text-zinc-400 text-center">{i + 1}</div>
+                <img src={album.coverArt} alt={album.title} className="w-16 h-16 rounded-md object-cover shadow-sm" />
                 <div className="flex-grow text-left">
                     <p className="font-semibold line-clamp-1">{album.title}</p>
-                    <p className="text-zinc-400 line-clamp-1">{album.artist}</p>
+                    <p className="text-zinc-400 line-clamp-1 text-sm">{album.artist}</p>
                     <StarRating rating={album.rating} count={album.reviewCount} />
+                    <p className="text-zinc-600 text-[10px]">{formatNumber(album.sales)} unit sales</p>
                 </div>
-                <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe]">{album.price}</div>
+                <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                    {album.price}
+                </div>
             </button>
         ))}
     </div>

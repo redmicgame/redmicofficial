@@ -2751,7 +2751,34 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             const newChartHistory: ChartHistory = { ...state.chartHistory };
 
-            const eligibleBillboardContenders = allContenders.filter((song, index) => {
+            const hot100Contenders = allContenders.map(song => {
+                const hash = song.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const divisor = 750 + (hash % 250);
+                
+                let boost = 1;
+                if (song.isPlayerSong && song.songId) {
+                    for (const artistId in updatedArtistsData) {
+                        const aData = updatedArtistsData[artistId];
+                        const s = aData.songs.find(x => x.id === song.songId);
+                        if (s) {
+                            const pushWeek = aData.lastPushToItunesWeek;
+                            const currentWeek = newDate.year * 52 + newDate.week;
+                            if (aData.lastPushedSongId === song.songId && pushWeek && currentWeek - pushWeek <= 1) {
+                                boost = 5 + Math.random() * 5;
+                            }
+                            break;
+                        }
+                    }
+                }
+                const sales = Math.floor(song.weeklyStreams / divisor) * boost;
+                
+                const points = (song.weeklyStreams * 0.5) + (sales * 150 * 0.5);
+                
+                return { ...song, hot100Points: points };
+            });
+            hot100Contenders.sort((a, b) => b.hot100Points - a.hot100Points);
+
+            const eligibleBillboardContenders = hot100Contenders.filter((song, index) => {
                 const potentialRank = index + 1;
                 const history = state.chartHistory[song.uniqueId];
                 if (history && history.weeksOnChart >= 52 && potentialRank > 25) return false;
@@ -5166,6 +5193,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 ...activeData,
                 xPosts: updatedPosts,
             };
+
+            if (postType === 'push' && songId) {
+                updatedData.lastPushToItunesWeek = state.date.year * 52 + state.date.week;
+                updatedData.lastPushedSongId = songId;
+            }
 
             if (postType === 'fanWar' && targetId) {
                 updatedData.fanWarStatus = {

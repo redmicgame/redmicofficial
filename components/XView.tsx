@@ -516,7 +516,7 @@ export const ComposeXPostModal: React.FC<{
         }
     };
 
-    const isPushDisabled = !activeArtistData?.fanWarStatus;
+    const isPushDisabled = activeArtistData?.lastPushToItunesWeek === (gameState.date.year * 52 + gameState.date.week);
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-start pt-16" onClick={onClose}>
@@ -591,7 +591,7 @@ export const ComposeXPostModal: React.FC<{
                             <button onClick={() => setPostType('push')} disabled={isPushDisabled} className={`py-2 text-sm font-semibold rounded-md ${postType === 'push' ? 'bg-green-500 text-white' : 'bg-zinc-800'} disabled:opacity-50 disabled:cursor-not-allowed`}>Push iTunes</button>
                             <button onClick={() => setPostType('announce')} disabled={scheduledItems.length === 0} className={`py-2 text-xs font-semibold rounded-md ${postType === 'announce' ? 'bg-purple-500 text-white' : 'bg-zinc-800'} disabled:opacity-50 disabled:cursor-not-allowed`}>Announce</button>
                         </div>
-                        {isPushDisabled && postType === 'push' && <p className="text-xs text-zinc-500 text-center">Only available during a fan war.</p>}
+                        {isPushDisabled && postType === 'push' && <p className="text-xs text-zinc-500 text-center">You can only push one song per week.</p>}
 
                         {postType === 'fanWar' && (
                             <select value={targetId} onChange={e => setTargetId(e.target.value)} className="w-full bg-zinc-800 p-2 rounded-md mt-2">

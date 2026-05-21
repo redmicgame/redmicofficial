@@ -1,5 +1,5 @@
-import React from 'react';
-import { useGame } from '../context/GameContext';
+import React, { useState } from 'react';
+import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
@@ -9,6 +9,8 @@ import ArrowRightIcon from './icons/ArrowRightIcon';
 
 const ChartEntryItem: React.FC<{ entry: ChartEntry }> = ({ entry }) => {
     const { rank, lastWeek, peak, weeksOnChart, title, artist, coverArt, isPlayerSong } = entry;
+    const [expanded, setExpanded] = useState(false);
+    const { gameState } = useGame();
 
     const renderStatus = () => {
         const isNewEntry = lastWeek === null && weeksOnChart === 1;
@@ -33,25 +35,60 @@ const ChartEntryItem: React.FC<{ entry: ChartEntry }> = ({ entry }) => {
         return <ArrowRightIcon className="w-4 h-4 text-zinc-400" />;
     };
 
+    let boost = 1;
+    if (entry.isPlayerSong && entry.songId) {
+        for (const artistId in gameState.artistsData) {
+            const aData = gameState.artistsData[artistId];
+            const song = aData.songs.find(s => s.id === entry.songId);
+            if (song) {
+                const pushWeek = aData.lastPushToItunesWeek;
+                const currentWeek = gameState.date.year * 52 + gameState.date.week;
+                if (aData.lastPushedSongId === entry.songId && pushWeek && currentWeek - pushWeek <= 1) {
+                    boost = 5 + Math.random() * 5;
+                }
+                break;
+            }
+        }
+    }
+    const hash = entry.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const divisor = 750 + (hash % 250);
+    const sales = Math.floor((entry.weeklyStreams || 0) / divisor) * boost;
+
     return (
-        <div className="flex w-full items-center gap-4 py-4 px-2">
-            <div className="w-12 text-center flex-shrink-0">
-                <p className="text-3xl font-black text-black">{rank}</p>
-                <div className="mt-1 h-5 flex items-center justify-center">
-                    {renderStatus()}
+        <div className="w-full border-b border-gray-200">
+            <div className="flex w-full items-center gap-4 py-4 px-2">
+                <div className="w-12 text-center flex-shrink-0">
+                    <p className="text-3xl font-black text-black">{rank}</p>
+                    <div className="mt-1 h-5 flex items-center justify-center">
+                        {renderStatus()}
+                    </div>
                 </div>
+                <img src={coverArt} alt={title} className="w-16 h-16 object-cover flex-shrink-0" />
+                <div className="flex-grow min-w-0">
+                    <p className={`font-bold text-xl truncate ${isPlayerSong ? 'text-red-600' : 'text-black'}`}>{title}</p>
+                    <p className="text-zinc-600 text-base truncate">{artist}</p>
+                    <p className="text-zinc-400 text-xs font-semibold mt-1 uppercase tracking-wider">
+                        LW {lastWeek ?? '-'} - PEAK {peak} - WEEKS {weeksOnChart}
+                    </p>
+                </div>
+                <button onClick={() => setExpanded(!expanded)} className="flex-shrink-0 p-2 border-2 border-zinc-300 rounded-full text-zinc-400 hover:border-black hover:text-black transition-colors bg-white">
+                    <PlusIcon className={`w-5 h-5 transition-transform ${expanded ? 'rotate-45' : ''}`} />
+                </button>
             </div>
-            <img src={coverArt} alt={title} className="w-16 h-16 object-cover flex-shrink-0" />
-            <div className="flex-grow min-w-0">
-                <p className={`font-bold text-xl truncate ${isPlayerSong ? 'text-red-600' : 'text-black'}`}>{title}</p>
-                <p className="text-zinc-600 text-base truncate">{artist}</p>
-                <p className="text-zinc-400 text-xs font-semibold mt-1 uppercase tracking-wider">
-                    LW {lastWeek ?? '-'} - PEAK {peak} - WEEKS {weeksOnChart}
-                </p>
-            </div>
-            <button className="flex-shrink-0 p-2 border-2 border-zinc-300 rounded-full text-zinc-400 hover:border-black hover:text-black transition-colors">
-                <PlusIcon className="w-5 h-5" />
-            </button>
+            {expanded && (
+                <div className="px-4 pb-4 animate-fade-in-up">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex gap-8">
+                         <div className="flex-1">
+                             <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Weekly Streams</p>
+                             <p className="text-2xl font-black">{formatNumber(entry.weeklyStreams)}</p>
+                         </div>
+                         <div className="flex-1">
+                             <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Digital Sales</p>
+                             <p className="text-2xl font-black">{formatNumber(Math.floor(sales))}</p>
+                         </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
