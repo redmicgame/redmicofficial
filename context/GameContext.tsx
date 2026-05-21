@@ -492,6 +492,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+',
                 isVerified: true, bio: 'facts & stats', followersCount: 2300000, followingCount: 1,
             };
+            const spotifySnapshotUser: XUser = {
+                id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFkMWQxZCIvPjxwYXRoIGQ9Ik00Ni41MzIgNDYuNTMyQzQ2LjUzMiA0Ni41MzIgNDYuNTMy...IiBmaWxsPSIjMThEMzRFIi8+PC9zdmc+',
+                isVerified: true, bio: 'Real-time Spotify numbers for your favorite artists.', followersCount: 1100000, followingCount: 0,
+            };
             const addictionUser: XUser = {
                 id: `addiction_fan_solo`,
                 name: `addiction to ${artist.name}`,
@@ -542,7 +547,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 followingCount: Math.floor(Math.random() * (500 - 50 + 1)) + 50,
             }));
 
-            const initialXUsers: XUser[] = [playerXUser, popBaseUser, chartDataUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers];
+            const initialXUsers: XUser[] = [playerXUser, popBaseUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers];
             
             const initialXPosts: XPost[] = [{
                 id: crypto.randomUUID(), authorId: 'popbase', content: `Welcome to the industry, ${artist.name}! All eyes are on you.`,
@@ -642,6 +647,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+',
                 isVerified: true, bio: 'facts & stats', followersCount: 2300000, followingCount: 1,
             };
+            const spotifySnapshotUser: XUser = {
+                id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFkMWQxZCIvPjxwYXRoIGQ9Ik00Ni41MzIgNDYuNTMyQzQ2LjUzMiA0Ni41MzIgNDYuNTMy...IiBmaWxsPSIjMThEMzRFIi8+PC9zdmc+',
+                isVerified: true, bio: 'Real-time Spotify numbers for your favorite artists.', followersCount: 1100000, followingCount: 0,
+            };
              const addictionUser: XUser = {
                 id: 'addiction_fan_group',
                 name: `addiction to ${group.name}`,
@@ -672,7 +682,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 followersCount: Math.floor(Math.random() * 100000) + 40000,
                 followingCount: 1,
             };
-            const initialXUsers: XUser[] = [playerXUser, popBaseUser, chartDataUser, tmzUser, addictionUser, chartsFanUser, statsFanUser];
+            const initialXUsers: XUser[] = [playerXUser, popBaseUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser];
             const initialXPosts: XPost[] = [{
                 id: crypto.randomUUID(), authorId: 'popbase', content: `The industry is buzzing about the debut of ${group.name}!`,
                 likes: 2500, retweets: 800, views: 52000, date: startDate,
@@ -713,7 +723,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     tiktokFollowers: Math.floor(Math.random() * 4000) + 1000,
                     instagramFollowers: Math.floor(Math.random() * 5000) + 1000,
                     inbox: [createWelcomeEmail(member.name)],
-                    xUsers: [memberXUser, popBaseUser, chartDataUser, tmzUser, addictionUser, chartsFanUser],
+                    xUsers: [memberXUser, popBaseUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser],
                     xPosts: initialXPosts,
                     xTrends: initialTrends,
                     xFollowingIds: [],
@@ -3067,6 +3077,88 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             // --- OSCARS LOGIC ---
             let newOscarNominations: GameState['oscarCurrentYearNominations'] = state.oscarCurrentYearNominations;
             
+            // --- Spotify Snapshot Posts ---
+            for (const artistId in updatedArtistsData) {
+                const artistData = updatedArtistsData[artistId];
+                const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                
+                // For songs
+                artistData.songs.forEach(song => {
+                    const isEligible = song.isReleased && song.lastWeekStreams >= 100000 && !song.remixOfSongId;
+                    if (isEligible && song.lastWeekStreams > (song.peakWeeklyStreams || 0)) {
+                        // Generate daily streams mockup
+                        const dailyStreams = [];
+                        let remain = song.lastWeekStreams;
+                        for(let i=0; i<6; i++) {
+                            const val = Math.floor(song.lastWeekStreams / 7 * (0.8 + Math.random() * 0.4));
+                            dailyStreams.push(val);
+                            remain -= val;
+                        }
+                        dailyStreams.push(Math.max(0, remain));
+                        
+                        const jsonStr = JSON.stringify({
+                            type: 'song',
+                            songName: song.title,
+                            artistName: artistProfile?.name || 'Unknown',
+                            coverArt: song.coverArt,
+                            streams: song.lastWeekStreams,
+                            totalStreams: song.streams,
+                            dailyStreams: dailyStreams,
+                            date: newDate,
+                        });
+
+                        artistData.xPosts.unshift({
+                            id: crypto.randomUUID(), authorId: 'spotifysnapshot',
+                            content: `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
+                            image: `snapshot:${jsonStr}`,
+                            likes: Math.floor(Math.random() * 50000) + 10000,
+                            retweets: Math.floor(Math.random() * 10000) + 2000,
+                            views: Math.floor(Math.random() * 1000000) + 200000,
+                            date: newDate
+                        });
+                        
+                        song.peakWeeklyStreams = song.lastWeekStreams;
+                    }
+                });
+
+                // For albums
+                artistData.releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)').forEach(release => {
+                    const albumSongs = release.songIds.map(id => artistData.songs.find(s => s.id === id)).filter((s): s is Song => !!s);
+                    const weeklyAlbumStreams = albumSongs.reduce((sum, s) => sum + s.lastWeekStreams, 0);
+                    
+                    if (release.isReleased && weeklyAlbumStreams >= 500000 && weeklyAlbumStreams > (release.peakWeeklyStreams || 0)) {
+                        const tracks = albumSongs.map(s => ({
+                           title: s.title,
+                           totalStreams: s.streams,
+                           dailyStreams: s.lastWeekStreams, 
+                        }));
+                        
+                        const jsonStr = JSON.stringify({
+                            type: 'album',
+                            albumName: release.title,
+                            artistName: artistProfile?.name || 'Unknown',
+                            coverArt: release.coverArt,
+                            streams: weeklyAlbumStreams,
+                            totalStreams: albumSongs.reduce((sum, s) => sum + s.streams, 0),
+                            tracks: tracks,
+                            date: newDate,
+                        });
+
+                        artistData.xPosts.unshift({
+                            id: crypto.randomUUID(), authorId: 'spotifysnapshot',
+                            content: `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
+                            image: `snapshot:${jsonStr}`,
+                            likes: Math.floor(Math.random() * 80000) + 20000,
+                            retweets: Math.floor(Math.random() * 15000) + 3000,
+                            views: Math.floor(Math.random() * 1500000) + 300000,
+                            date: newDate
+                        });
+                        
+                        release.peakWeeklyStreams = weeklyAlbumStreams;
+                    }
+                });
+            }
+
             // Week 1: Oscar Submission Email & Pop Crave Logic
             if (newDate.week === 1) {
                 // 50% chance to create Pop Crave account each year if it doesn't exist

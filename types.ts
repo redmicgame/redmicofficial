@@ -39,6 +39,7 @@ export interface Song {
     removedStreams?: number;
     playlistBoostWeeks?: number;
     tourBoostWeeks?: number;
+    peakWeeklyStreams?: number;
     remixOfSongId?: string;
     leakInfo?: {
         illegalStreams: number;
@@ -100,6 +101,7 @@ export interface Release {
     rightsOwnerLabelId?: string;
     isAnnounced?: boolean;
     preorderSales?: number;
+    peakWeeklyStreams?: number;
 }
 
 export interface Video {
