@@ -3078,6 +3078,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             let newOscarNominations: GameState['oscarCurrentYearNominations'] = state.oscarCurrentYearNominations;
             
             // --- Spotify Snapshot Posts ---
+            const snapshotCandidates: { artistId: string; post: XPost; streams: number }[] = [];
+
             for (const artistId in updatedArtistsData) {
                 const artistData = updatedArtistsData[artistId];
                 const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
@@ -3107,14 +3109,18 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             date: newDate,
                         });
 
-                        artistData.xPosts.unshift({
-                            id: crypto.randomUUID(), authorId: 'spotifysnapshot',
-                            content: `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
-                            image: `snapshot:${jsonStr}`,
-                            likes: Math.floor(Math.random() * 50000) + 10000,
-                            retweets: Math.floor(Math.random() * 10000) + 2000,
-                            views: Math.floor(Math.random() * 1000000) + 200000,
-                            date: newDate
+                        snapshotCandidates.push({
+                            artistId,
+                            streams: song.lastWeekStreams,
+                            post: {
+                                id: crypto.randomUUID(), authorId: 'spotifysnapshot',
+                                content: `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
+                                image: `snapshot:${jsonStr}`,
+                                likes: Math.floor(Math.random() * 50000) + 10000,
+                                retweets: Math.floor(Math.random() * 10000) + 2000,
+                                views: Math.floor(Math.random() * 1000000) + 200000,
+                                date: newDate
+                            }
                         });
                         
                         song.peakWeeklyStreams = song.lastWeekStreams;
@@ -3122,7 +3128,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 });
 
                 // For albums
-                artistData.releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)').forEach(release => {
+                artistData.releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').forEach(release => {
                     const albumSongs = release.songIds.map(id => artistData.songs.find(s => s.id === id)).filter((s): s is Song => !!s);
                     const weeklyAlbumStreams = albumSongs.reduce((sum, s) => sum + s.lastWeekStreams, 0);
                     
@@ -3144,20 +3150,32 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             date: newDate,
                         });
 
-                        artistData.xPosts.unshift({
-                            id: crypto.randomUUID(), authorId: 'spotifysnapshot',
-                            content: `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
-                            image: `snapshot:${jsonStr}`,
-                            likes: Math.floor(Math.random() * 80000) + 20000,
-                            retweets: Math.floor(Math.random() * 15000) + 3000,
-                            views: Math.floor(Math.random() * 1500000) + 300000,
-                            date: newDate
+                        snapshotCandidates.push({
+                            artistId,
+                            streams: weeklyAlbumStreams,
+                            post: {
+                                id: crypto.randomUUID(), authorId: 'spotifysnapshot',
+                                content: `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
+                                image: `snapshot:${jsonStr}`,
+                                likes: Math.floor(Math.random() * 80000) + 20000,
+                                retweets: Math.floor(Math.random() * 15000) + 3000,
+                                views: Math.floor(Math.random() * 1500000) + 300000,
+                                date: newDate
+                            }
                         });
                         
                         release.peakWeeklyStreams = weeklyAlbumStreams;
                     }
                 });
             }
+
+            // Cap Snapshot posts top 3 per week
+            snapshotCandidates.sort((a, b) => b.streams - a.streams);
+            snapshotCandidates.slice(0, 3).forEach(candidate => {
+                if (updatedArtistsData[candidate.artistId]) {
+                    updatedArtistsData[candidate.artistId].xPosts.unshift(candidate.post);
+                }
+            });
 
             // Week 1: Oscar Submission Email & Pop Crave Logic
             if (newDate.week === 1) {
