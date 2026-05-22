@@ -73,7 +73,7 @@ const appCategories: AppCategory[] = [
     {
         title: 'Charts & Career',
         apps: [
-            { name: 'S for A', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#402000' },
+            { name: 'Spotify for Artists', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#000000' },
             { name: 'Spotify Charts', description: 'Weekly top songs and albums', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954' },
             { name: 'GRAMMYs', description: 'Your awards history', icon: <TrophyIcon className="w-8 h-8"/>, view: 'grammys', bgColor: '#f59e0b' },
             { name: 'Oscars', description: 'Your film awards history', icon: <OscarAwardIcon className="w-8 h-8" />, view: 'oscars', bgColor: '#c7a34a' },
@@ -83,7 +83,7 @@ const appCategories: AppCategory[] = [
     }
 ];
 
-const essentialAppNames = ['Spotify', 'S for A', 'Catalog', 'X'];
+const essentialAppNames = ['Spotify', 'Spotify for Artists', 'Catalog', 'X'];
 const essentialApps = appCategories.flatMap(cat => cat.apps).filter(app => essentialAppNames.includes(app.name));
 
 

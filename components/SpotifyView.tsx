@@ -58,7 +58,7 @@ const UpcomingReleaseItem: React.FC<{ release: Release; releaseDate: GameDate; o
 
 
 const SpotifyView: React.FC = () => {
-    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData, allPlayerArtists } = useGame();
     const [view, setView] = useState<'profile' | 'discography' | 'releaseDetail' | 'playlistDetail'>('profile');
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);

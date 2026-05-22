@@ -54,6 +54,15 @@ export const generateWeeklyXContent = (
     const { date } = gameState;
     const { artistImages, artistVideoThumbnails, releases, streamsRemovedThisWeek, paparazziPhotos, tours, voguePhotoshoots, songs, tourPhotos, popularity, xChats } = artistData;
 
+    const artistProfile = [gameState.soloArtist, ...(gameState.group?.members || []), gameState.group, ...(gameState.extraPlayableArtists || [])].find(a => a?.id === gameState.activeArtistId);
+    // @ts-ignore
+    const pronouns = artistProfile?.pronouns || 'they/them';
+    const pronounNominative = pronouns === 'he/him' ? 'he' : pronouns === 'she/her' ? 'she' : 'they';
+    const pronounPossessive = pronouns === 'he/him' ? 'his' : pronouns === 'she/her' ? 'her' : 'their';
+    const pronounObjective = pronouns === 'he/him' ? 'him' : pronouns === 'she/her' ? 'her' : 'them';
+    const isAre = pronouns === 'they/them' ? 'are' : 'is';
+    const hasHave = pronouns === 'they/them' ? 'have' : 'has';
+
     // --- GRAMMY PREDICTION POST (WEEK 50) ---
     if (date.week === 50) {
         const chartDataUser = artistData.xUsers.find(u => u.id === 'chartdata');
@@ -728,7 +737,7 @@ export const generateWeeklyXContent = (
             
             const fanTemplates = [
                 `STREAMING ${topSong.title.toUpperCase()} ALL DAY!! Let's get it to #1.`,
-                `${artistName} is the best artist of our generation and I'm tired of pretending they're not.`,
+                `${artistName} is the best artist of our generation and I'm tired of pretending ${pronounNominative}'re not.`.replace("they're", "they're").replace("she're", "she's").replace("he're", "he's"),
                 `I can't get "${topSong.title}" out of my head! 😭❤️`,
                 `obsessed with ${artistName}'s new era. the visuals, the music... everything is perfect.`,
                 `Listening to ${topSong.title} on repeat! What a masterpiece.`,
@@ -757,8 +766,14 @@ export const generateWeeklyXContent = (
                 ];
                 image = pickRandom(stanGifs);
             }
+            let quoteTarget: XPost | undefined = undefined;
+            if (artistData?.xPosts?.length > 0 && Math.random() > 0.7) {
+                const recentPosts = artistData.xPosts.slice(0, 10);
+                quoteTarget = pickRandom(recentPosts);
+            }
+
             newPosts.push({
-                id: crypto.randomUUID(), authorId: fanId, content: pickRandom(fanTemplates), image,
+                id: crypto.randomUUID(), authorId: fanId, content: pickRandom(fanTemplates), image, quoteOf: quoteTarget,
                 likes: Math.floor(Math.floor(Math.random() * 2000) * engagementModifier), 
                 retweets: Math.floor(Math.floor(Math.random() * 500) * engagementModifier), 
                 views: Math.floor(Math.random() * 15000), date
@@ -774,7 +789,7 @@ export const generateWeeklyXContent = (
                 `Is anyone actually listening to "${topSong.title}"? 😬`,
                 `Another generic song from ${artistName}. Shocker.`,
                 `The hype around ${artistName} is manufactured. #industryplant`,
-                `they really think they're an artist huh`,
+                `${pronounNominative} really think${pronouns === 'they/them' ? '' : 's'} ${pronounNominative === 'they' ? "they're" : pronounNominative + "'s"} an artist huh`,
                 `paying for streams again I see... "${topSong.title}" is nowhere to be heard in public 💀`,
                 `who is streaming this?? it's unlistenable noise.`,
                 `${artistName} making the exact same song for the 5th time in a row 😭`,
@@ -799,8 +814,14 @@ export const generateWeeklyXContent = (
                 image = pickRandom(haterGifs);
             }
 
+            let quoteTarget: XPost | undefined = undefined;
+            if (artistData?.xPosts?.length > 0 && Math.random() > 0.6) {
+                const recentPosts = artistData.xPosts.slice(0, 10);
+                quoteTarget = pickRandom(recentPosts);
+            }
+
             newPosts.push({
-                id: crypto.randomUUID(), authorId: haterId, content: pickRandom(haterTemplates), image,
+                id: crypto.randomUUID(), authorId: haterId, content: pickRandom(haterTemplates), image, quoteOf: quoteTarget,
                 likes: Math.floor(Math.random() * 500), retweets: Math.floor(Math.random() * 50), views: Math.floor(Math.random() * 8000), date
             });
         }
@@ -1131,7 +1152,7 @@ export const generateWeeklyXContent = (
                 `please unblock me from your spam account`,
                 `bestie drop the skincare routine immediately`,
                 `your last song was incredible. keeping it on repeat!`,
-                `hi queen/king just wanted to say i'm your biggest fan!!`,
+                `hi ${pronouns === 'he/him' ? 'king' : pronouns === 'she/her' ? 'queen' : 'icon'} just wanted to say i'm your biggest fan!!`,
                 `is there a deluxe album coming??`,
                 `so proud of you ${artistName}!!`,
                 `hope you receive this... thank you for everything!`

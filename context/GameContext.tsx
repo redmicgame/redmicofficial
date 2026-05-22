@@ -2011,10 +2011,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                     artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + 15);
 
                                     if (!single.isAnnounced) {
+                                        const pronounPossessive = artistProfile?.pronouns === 'he/him' ? 'his' : artistProfile?.pronouns === 'she/her' ? 'her' : 'their';
                                         const popBasePost: XPost = {
                                             id: crypto.randomUUID(),
                                             authorId: 'popbase',
-                                            content: `${artistProfile.name} has surprise released their new Single "${songToRelease.title}".`,
+                                            content: `${artistProfile?.name} has surprise released ${pronounPossessive} new Single "${songToRelease.title}".`,
                                             image: singleRelease.coverArt,
                                             likes: Math.floor(Math.random() * 80000) + 30000,
                                             retweets: Math.floor(Math.random() * 20000) + 5000,
@@ -2089,10 +2090,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             }
 
                             if (!sub.isProjectAnnounced) {
+                                const pronounPossessive = artistProfile?.pronouns === 'he/him' ? 'his' : artistProfile?.pronouns === 'she/her' ? 'her' : 'their';
                                 const popBasePost: XPost = {
                                     id: crypto.randomUUID(),
                                     authorId: 'popbase',
-                                    content: `${artistProfile.name} has surprise released their new ${release.type} "${release.title}".`,
+                                    content: `${artistProfile?.name} has surprise released ${pronounPossessive} new ${release.type} "${release.title}".`,
                                     image: release.coverArt,
                                     likes: Math.floor(Math.random() * 80000) + 30000,
                                     retweets: Math.floor(Math.random() * 20000) + 5000,
@@ -2455,9 +2457,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     // Recent Song
                     if (recentSongs.length > 0) {
                         const song = recentSongs[0];
+                        const pronounPossessive = artistProfileForEmail?.pronouns === 'he/him' ? 'his' : artistProfileForEmail?.pronouns === 'she/her' ? 'her' : 'their';
                         redditPostTemplates.push({
                             title: `Discussion: Thoughts on "${song.title}"?`,
-                            content: `Now that it's been out for a bit, how are we feeling about "${song.title}"? Honestly I think it's one of their best tracks. The production is so crisp.`,
+                            content: `Now that it's been out for a bit, how are we feeling about "${song.title}"? Honestly I think it's one of ${pronounPossessive} best tracks. The production is so crisp.`,
                             image: song.coverArt
                         });
                         if (Math.random() > 0.5 && recentSongs.length > 1) {
@@ -2479,8 +2482,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }
 
                     // Generic templates
+                    const pronounPossessiveEmail = artistProfileForEmail?.pronouns === 'he/him' ? 'his' : artistProfileForEmail?.pronouns === 'she/her' ? 'her' : 'their';
                     redditPostTemplates.push(
-                        { title: `Unpopular opinion about ${artistProfileForEmail?.name}'s latest era`, content: `I might get downvoted for this but honestly I preferred their earlier sound. Please don't hate me! 😭` },
+                        { title: `Unpopular opinion about ${artistProfileForEmail?.name}'s latest era`, content: `I might get downvoted for this but honestly I preferred ${pronounPossessiveEmail} earlier sound. Please don't hate me! 😭` },
                         { title: `Manifesting a world tour soon 🕯️`, content: `I've been saving up just in case! Does anyone have any rumors or theories on when dates might drop?` },
                         { title: `What do you think of the recent styling?`, content: `Been seeing some new paparazzi photos and I actually love the fits lately.` }
                     );
@@ -4163,12 +4167,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             }
 
             let newEmails: Email[] = [];
-            const artistName = state.soloArtist?.name || state.group?.name || 'Artist';
+            const artistProfile = [state.soloArtist, ...(state.group?.members || []), state.group, ...(state.extraPlayableArtists || [])].find(a => a?.id === state.activeArtistId);
+            const artistName = artistProfile?.name || 'Artist';
+            const pronounPossessive = artistProfile?.pronouns === 'he/him' ? 'his' : artistProfile?.pronouns === 'she/her' ? 'her' : 'their';
 
             const popBasePost: XPost = {
                 id: crypto.randomUUID(),
                 authorId: 'popbase',
-                content: `${artistName} has surprise released their new ${releaseWithLabel.type} "${releaseWithLabel.title}".`,
+                content: `${artistName} has surprise released ${pronounPossessive} new ${releaseWithLabel.type} "${releaseWithLabel.title}".`,
                 image: releaseWithLabel.coverArt,
                 likes: Math.floor(Math.random() * 80000) + 30000,
                 retweets: Math.floor(Math.random() * 20000) + 5000,
@@ -5069,10 +5075,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             } else if (video.type === 'Interview') {
                 const release = activeData.releases.find(r => r.id === state.activeFallonOffer!.releaseId);
+                const pronounNominative = artistProfile.pronouns === 'he/him' ? 'he' : artistProfile.pronouns === 'she/her' ? 'she' : 'they';
+                const pronounPossessive = artistProfile.pronouns === 'he/him' ? 'his' : artistProfile.pronouns === 'she/her' ? 'her' : 'their';
                 const interviewTropes = [
-                    `reveals on Jimmy Fallon that they want to do more acting: "I'm very scared to freak my fans out... but I really do love acting. I'd love for that."`,
-                    `teases a new sound for their next project on Jimmy Fallon: "I'm experimenting a lot right now, it's very different."`,
-                    `talks about the meaning behind their new album '${release?.title || ''}' on Jimmy Fallon: "It's my most personal work yet, I poured everything into it."`
+                    `reveals on Jimmy Fallon that ${pronounNominative} want${artistProfile.pronouns === 'they/them' ? '' : 's'} to do more acting: "I'm very scared to freak my fans out... but I really do love acting. I'd love for that."`,
+                    `teases a new sound for ${pronounPossessive} next project on Jimmy Fallon: "I'm experimenting a lot right now, it's very different."`,
+                    `talks about the meaning behind ${pronounPossessive} new album '${release?.title || ''}' on Jimmy Fallon: "It's my most personal work yet, I poured everything into it."`
                 ];
                 postContent = `${artistProfile.name} ${interviewTropes[Math.floor(Math.random() * interviewTropes.length)]}`;
             }
@@ -5285,10 +5293,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     updatedPosts.unshift(popBasePost);
 
                     // TMZ Tweet
+                    const pronounPossessive = activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their';
+                    const pronounNominative = activeArtist.pronouns === 'he/him' ? 'he' : activeArtist.pronouns === 'she/her' ? 'she' : 'they';
+                    const isAre = activeArtist.pronouns === 'they/them' ? 'are' : 'is';
                     const tmzPost: XPost = {
                         id: crypto.randomUUID(),
                         authorId: 'tmz',
-                        content: `${artistName} is dropping ${projectTypeStr === 'Single' ? 'a new track' : 'another project'} soon... let's hope they actually put effort into this one, unlike their tragic outfit choices lately. 😬👀`,
+                        content: `${artistName} is dropping ${projectTypeStr === 'Single' ? 'a new track' : 'another project'} soon... let's hope ${pronounNominative} actually put${activeArtist.pronouns === 'they/them' ? '' : 's'} effort into this one, unlike ${pronounPossessive} tragic outfit choices lately. 😬👀`,
                         image: activeData.paparazziPhotos.length > 0 ? activeData.paparazziPhotos[Math.floor(Math.random() * activeData.paparazziPhotos.length)].url : undefined,
                         likes: Math.floor(Math.random() * 40000) + 10000,
                         retweets: Math.floor(Math.random() * 8000) + 2000,
@@ -5296,6 +5307,31 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         date: state.date
                     };
                     updatedPosts.unshift(tmzPost);
+
+                    // Add Fan Excitement Quote
+                    const fanContent1 = [
+                        `we prayed for times like these 😭`,
+                        `oh my god ${pronounNominative}'${isAre === 'is' ? 's' : 're'} actually dropping!!`,
+                        `${pronounNominative} ${isAre} finally coming to save pop music`,
+                        `wait ${pronounNominative} ${isAre} dropping ${projectTypeStr === 'Single' ? 'a single' : 'an album'}? IM SHAKING`,
+                        `i literally just screamed. ${pronounPossessive} new era ${isAre} going to end everyone`
+                    ][Math.floor(Math.random() * 5)];
+
+                    const fanFanUser = activeData.xUsers.find(u => u.id.startsWith('addiction_fan_')) || activeData.xUsers.find(u => !u.isPlayer && !u.isVerified && !['popbase', 'tmz', 'chartdata', 'spotifysnapshot'].includes(u.id));
+
+                    if (fanFanUser) {
+                        const fanPost: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: fanFanUser.id,
+                            quoteOf: popBasePost,
+                            content: fanContent1,
+                            likes: Math.floor(Math.random() * 50000) + 10000,
+                            retweets: Math.floor(Math.random() * 10000) + 2000,
+                            views: Math.floor(Math.random() * 500000) + 100000,
+                            date: state.date
+                        };
+                        updatedPosts.unshift(fanPost);
+                    }
                 }
             }
 
@@ -5530,7 +5566,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if(artist) {
                 const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
                 if (playerUser) {
-                    let content = `${artist.name} is starting their own record label, "${label.name}". Boss moves.`;
+                    const pronounPossessive = activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their';
+                    let content = `${activeArtist.name} is starting ${pronounPossessive} own record label, "${label.name}". Boss moves.`;
                     if (label.dealWithMajorId) {
                         const major = LABELS.find(l => l.id === label.dealWithMajorId);
                         content = `${artist.name} is launching a new imprint, "${label.name}", in partnership with ${major?.name}.`;
@@ -7505,9 +7542,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             });
     
             // TMZ post (shady)
+            const pronounPossessive = activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their';
             const shadyComments = [
                 `Is that... hair? ${activeArtist.name}'s new ${photoshoot.magazine} cover has people talking, and not in a good way.`,
-                `Sources say ${activeArtist.name} was a nightmare on the set of their ${photoshoot.magazine} shoot. Diva alert?`,
+                `Sources say ${activeArtist.name} was a nightmare on the set of ${pronounPossessive} ${photoshoot.magazine} shoot. Diva alert?`,
                 `Another magazine cover for ${activeArtist.name}. Groundbreaking. 🙄`,
                 `Someone's trying hard to stay relevant. ${activeArtist.name}'s ${photoshoot.magazine} spread is... a choice.`
             ];
@@ -7908,7 +7946,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
             if (activeData.pregnancy?.revealed) {
-                const postContext = `👶🍼 IT'S A BABY! ${activeArtist.name} has officially welcomed their new baby, ${newKid.name}!`;
+                const pronounPossessive = activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their';
+                const postContext = `👶🍼 IT'S A BABY! ${activeArtist.name} has officially welcomed ${pronounPossessive} new baby, ${newKid.name}!`;
                 const newPost: XPost = {
                     id: crypto.randomUUID(),
                     authorId: 'popbase',

@@ -300,13 +300,10 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) =>
         return dateB - dateA;
     });
 
-    const displayedPosts = sortedPosts.slice(0, displayCount);
+    const displayedPosts = sortedPosts;
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const bottom = e.currentTarget.scrollHeight - e.currentTarget.scrollTop === e.currentTarget.clientHeight;
-        if (bottom && displayCount < sortedPosts.length) {
-            setDisplayCount(prev => prev + 20);
-        }
+        // Kept for backward compatibility if ever needed
     };
 
     // Dummy Stories
@@ -334,11 +331,6 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) =>
                 ))}
             </div>
             {displayedPosts.map(post => <Post key={post.id} post={post} author={findUser(post.authorId)} onQuote={onQuote} />)}
-            {displayCount < sortedPosts.length && (
-                <div className="p-4 text-center text-blue-500 font-bold cursor-pointer hover:bg-zinc-900" onClick={() => setDisplayCount(prev => prev + 20)}>
-                    Show more
-                </div>
-            )}
         </div>
     );
 };
