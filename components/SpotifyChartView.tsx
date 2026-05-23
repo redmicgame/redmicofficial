@@ -8,7 +8,7 @@ import ChevronLeftIcon from './icons/ChevronLeftIcon';
 
 const SpotifyChartView: React.FC = () => {
     const { gameState, dispatch } = useGame();
-    const { spotifyGlobal50, billboardTopAlbums, chartHistory, albumChartHistory, date } = gameState;
+    const { spotifyGlobal = [], billboardTopAlbums, chartHistory, albumChartHistory, date } = gameState;
     const [activeSlide, setActiveSlide] = useState(0);
 
     const slides = useMemo(() => {
@@ -33,7 +33,7 @@ const SpotifyChartView: React.FC = () => {
         }
         
         // Fact 2: Highest New Song Entry
-        const highestNewEntry = spotifyGlobal50.find(s => s.lastWeek === null && s.weeksOnChart === 1);
+        const highestNewEntry = spotifyGlobal.find((s: ChartEntry) => s.lastWeek === null && s.weeksOnChart === 1);
         if (highestNewEntry) {
             facts.push({
                 bgColor: 'bg-rose-800',
@@ -44,18 +44,18 @@ const SpotifyChartView: React.FC = () => {
         }
 
         // Fact 3: Generic fact if others fail
-        if (facts.length === 0 && spotifyGlobal50.length > 0) {
-            const topArtist = spotifyGlobal50[0].artist;
+        if (facts.length === 0 && spotifyGlobal.length > 0) {
+            const topArtist = spotifyGlobal[0].artist;
             facts.push({
                 bgColor: 'bg-indigo-800',
                 text: `${topArtist} is dominating the charts this week.`,
-                image: spotifyGlobal50[0].coverArt,
+                image: spotifyGlobal[0].coverArt,
                 subText: `Top Artists Global · Week of ${date.week}`
             });
         }
         
         return facts;
-    }, [spotifyGlobal50, billboardTopAlbums, albumChartHistory, date, gameState.npcAlbums]);
+    }, [spotifyGlobal, billboardTopAlbums, albumChartHistory, date, gameState.npcAlbums]);
 
     useEffect(() => {
         if (slides.length <= 1) return;
@@ -65,7 +65,7 @@ const SpotifyChartView: React.FC = () => {
         return () => clearInterval(interval);
     }, [slides.length]);
 
-    const topSong: ChartEntry | undefined = spotifyGlobal50[0];
+    const topSong: ChartEntry | undefined = spotifyGlobal[0];
     const topAlbum: AlbumChartEntry | undefined = billboardTopAlbums[0];
 
     return (

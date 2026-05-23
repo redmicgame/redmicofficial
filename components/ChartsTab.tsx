@@ -21,10 +21,10 @@ const ChartItemPreview: React.FC<{
 
 const ChartsTab: React.FC = () => {
     const { gameState, dispatch } = useGame();
-    const { billboardHot100, spotifyGlobal50, billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart } = gameState;
+    const { billboardHot100, spotifyGlobal = [], billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart } = gameState;
 
     const billboardTop3 = billboardHot100.slice(0, 3);
-    const spotifyTop3 = spotifyGlobal50.slice(0, 3);
+    const spotifyTop3 = spotifyGlobal.slice(0, 3);
     const billboardAlbumsTop3 = billboardTopAlbums.slice(0, 3);
     const hotPopTop3 = hotPopSongs.slice(0, 3);
     const hotRapRnbTop3 = hotRapRnb.slice(0, 3);
@@ -80,7 +80,7 @@ const ChartsTab: React.FC = () => {
                 <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                         <SpotifyIcon className="w-6 h-6"/>
-                        <h3 className="font-bold text-lg">Global Top 50</h3>
+                        <h3 className="font-bold text-lg">Spotify Charts</h3>
                     </div>
                     <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotifyChart' })} className="text-sm text-red-400 flex items-center gap-1">
                         View Chart <ChevronRightIcon className="w-4 h-4" />

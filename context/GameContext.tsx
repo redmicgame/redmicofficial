@@ -333,7 +333,7 @@ const initialState: GameState = {
     billboardTopAlbums: [],
     albumChartHistory: {},
     chartHistory: {},
-    spotifyGlobal50: [],
+    spotifyGlobal: [],
     hotPopSongs: [],
     hotRapRnb: [],
     electronicChart: [],
@@ -2849,16 +2849,16 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             }
             
-            const top50 = allContenders.slice(0, 50);
-            const newSpotifyGlobal50: ChartEntry[] = [];
-            const prevSpotifyMap = new Map(state.spotifyGlobal50.map(entry => [entry.uniqueId, entry.rank]));
+            const spotifyLocalTop = allContenders.slice(0, 100);
+            const newSpotifyGlobal: ChartEntry[] = [];
+            const prevSpotifyMap = new Map(state.spotifyGlobal.map(entry => [entry.uniqueId, entry.rank]));
             let newEntriesCount = 0;
             
-            top50.forEach((song, index) => {
+            spotifyLocalTop.forEach((song, index) => {
                 const rank = index + 1;
                 const lastWeekRank = prevSpotifyMap.get(song.uniqueId) ?? null;
                 if (lastWeekRank === null) newEntriesCount++;
-                newSpotifyGlobal50.push({
+                newSpotifyGlobal.push({
                     rank: rank, lastWeek: lastWeekRank, peak: newChartHistory[song.uniqueId].peak,
                     weeksOnChart: newChartHistory[song.uniqueId].weeksOnChart, title: song.title, artist: song.artist,
                     coverArt: song.coverArt, isPlayerSong: song.isPlayerSong, songId: song.songId,
@@ -3887,10 +3887,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }
 
                     // Spotify Chart Email
-                    const playerSpotifyEntries = newSpotifyGlobal50.filter(e => e.isPlayerSong && allPlayerSongsFlat.find(s => s.id === e.songId)?.artistId === artistId);
+                    const playerSpotifyEntries = newSpotifyGlobal.filter(e => e.isPlayerSong && allPlayerSongsFlat.find(s => s.id === e.songId)?.artistId === artistId);
                     
                     if (playerSpotifyEntries.length > 0) {
-                        let body = `Hi ${artistProfileForEmail.name},\n\nHere are your current entries on the Spotify Global Top 50 chart this week.\n\n**Global Top 50**\n`;
+                        let body = `Hi ${artistProfileForEmail.name},\n\nHere are your current entries on the Spotify Global Top 100 chart this week.\n\n**Global Top 100**\n`;
                         playerSpotifyEntries.forEach(entry => {
                             body += `#${entry.rank} "${entry.title}" - ${formatNumber(entry.weeklyStreams)} streams\n`;
                         });
@@ -3899,7 +3899,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         newChartEmails.push({
                             id: crypto.randomUUID(),
                             sender: 'Spotify Charts',
-                            subject: 'Your Global Top 50 Chart Update',
+                            subject: 'Your Spotify Charts Update',
                             body: body,
                             date: newDate,
                             isRead: false,
@@ -3980,7 +3980,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     billboardTopAlbums: newBillboardTopAlbums,
                     chartHistory: newChartHistory,
                     albumChartHistory: newAlbumChartHistory,
-                    spotifyGlobal50: newSpotifyGlobal50,
+                    spotifyGlobal: newSpotifyGlobal,
                     hotPopSongs: newHotPopSongs,
                     hotRapRnb: newHotRapRnb,
                     electronicChart: newElectronicChart,
@@ -4009,7 +4009,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 billboardTopAlbums: newBillboardTopAlbums,
                 chartHistory: newChartHistory,
                 albumChartHistory: newAlbumChartHistory,
-                spotifyGlobal50: newSpotifyGlobal50,
+                spotifyGlobal: newSpotifyGlobal,
                 hotPopSongs: newHotPopSongs,
                 hotRapRnb: newHotRapRnb,
                 electronicChart: newElectronicChart,
@@ -5736,6 +5736,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             const newState = {
                 ...action.payload,
+                spotifyGlobal: action.payload.spotifyGlobal || (action.payload as any).spotifyGlobal50 || [],
                 spotifyPlaylists: mergedPlaylists,
                 difficultyMode: action.payload.difficultyMode || 'normal',
             };
@@ -7442,7 +7443,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 npcs: state.npcs.map(npc => npc.artist === artistName ? { ...npc, coverArt: newCover } : npc),
                 npcAlbums: state.npcAlbums.map(album => album.artist === artistName ? { ...album, coverArt: newCover } : album),
                 billboardHot100: mapChartEntries(state.billboardHot100),
-                spotifyGlobal50: mapChartEntries(state.spotifyGlobal50),
+                spotifyGlobal: mapChartEntries(state.spotifyGlobal),
                 hotPopSongs: mapChartEntries(state.hotPopSongs || []),
                 hotRapRnb: mapChartEntries(state.hotRapRnb || []),
                 electronicChart: mapChartEntries(state.electronicChart || []),

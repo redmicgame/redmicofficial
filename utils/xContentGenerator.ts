@@ -885,7 +885,7 @@ export const generateWeeklyXContent = (
     }
 
     // 2.5 Spotify Global #1 Post from Chart Data
-    const spotifyNumberOne = gameState.spotifyGlobal50[0];
+    const spotifyNumberOne = gameState.spotifyGlobal[0];
     if (spotifyNumberOne && spotifyNumberOne.isPlayerSong && spotifyNumberOne.songId) {
         const matchingPlayerSong = playerSongs.find(s => s.id === spotifyNumberOne.songId);
         if (matchingPlayerSong && matchingPlayerSong.lastWeekStreams > 0) {

@@ -943,7 +943,7 @@ export interface GameState {
     billboardTopAlbums: AlbumChartEntry[];
     albumChartHistory: ChartHistory;
     chartHistory: ChartHistory;
-    spotifyGlobal50: ChartEntry[];
+    spotifyGlobal: ChartEntry[];
     hotPopSongs: ChartEntry[];
     hotRapRnb: ChartEntry[];
     electronicChart: ChartEntry[];
