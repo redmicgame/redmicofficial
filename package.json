@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "latest",
+    "@vercel/analytics": "^2.0.1",
     "dexie": "^4.0.8",
     "dexie-react-hooks": "^1.1.7",
     "firebase": "^12.12.1",
