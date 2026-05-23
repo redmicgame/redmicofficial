@@ -4,7 +4,7 @@ import { db, getActiveSaveId } from '../db/db';
 import { useFirebase } from './FirebaseContext';
 import { loadGameFromCloud, saveGameToCloud } from '../firebase';
 import type { GameState, GameAction, Email, NpcSong, ChartEntry, ChartHistory, ArtistData, Artist, Group, Song, LabelSubmission, Contract, Release, XUser, XPost, XTrend, XChat, CustomLabel, PopBaseOffer, NpcAlbum, AlbumChartEntry, RedMicProState, GrammyCategory, GrammyAward, GrammyContender, OscarCategory, OscarAward, OscarContender, OnlyFansProfile, OnlyFansPost, XSuspensionStatus, SoundtrackAlbum, SoundtrackTrack, Manager, SecurityTeam, Label, VoguePhotoshoot, FeatureOffer } from '../types';
-import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_COVER_ART, NPC_ARTIST_IMAGES, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
+import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_ARTIST_IMAGES, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
 import { generateWeeklyXContent } from '../utils/xContentGenerator';
 import { REAL_WORLD_DISCOGRAPHIES } from '../realWorldDiscographies';
 
@@ -106,7 +106,7 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: R
             artist,
             genre: GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
-            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || NPC_COVER_ART,
+            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(artist)}&background=random&color=fff&size=250`,
         });
     }
     return npcs;
@@ -158,7 +158,7 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Rec
             artist,
             genre: GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
-            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || NPC_COVER_ART,
+            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(artist)}&background=random&color=fff&size=250`,
         });
     }
     return hits;
@@ -210,7 +210,7 @@ const generateNpcAlbums = (count: number, allNpcSongs: NpcSong[], npcImages?: Re
             title,
             artist: mainArtist,
             label: labels[Math.floor(Math.random() * labels.length)],
-            coverArt: NPC_ARTIST_IMAGES?.[mainArtist] || npcImages?.[mainArtist] || NPC_COVER_ART,
+            coverArt: NPC_ARTIST_IMAGES?.[mainArtist] || npcImages?.[mainArtist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(mainArtist)}&background=random&color=fff&size=250`,
             songIds: albumSongs.map(s => s.uniqueId),
             salesPotential,
         });
@@ -2756,7 +2756,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const npcChartContenders = newNpcsWithReleases.map(npc => ({
                 uniqueId: npc.uniqueId, title: npc.title, artist: npc.artist,
                 weeklyStreams: Math.floor(npc.basePopularity * (Math.random() * 0.4 + 0.8)),
-                isPlayerSong: false, coverArt: npc.coverArt || NPC_COVER_ART, songId: undefined,
+                isPlayerSong: false, coverArt: npc.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(npc.artist)}&background=random&color=fff&size=250`, songId: undefined,
                 genre: npc.genre
             }));
             
@@ -3243,7 +3243,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 // NPC contenders
                 const npcSongsForOscars = [...newNpcsList].sort((a,b) => b.basePopularity - a.basePopularity).slice(0, 10);
                 npcSongsForOscars.forEach(song => {
-                    contenders.push({ id: song.uniqueId, name: song.title, artistName: song.artist, isPlayer: false, score: (song.basePopularity / 100000) * 1.5, coverArt: song.coverArt || NPC_COVER_ART });
+                    contenders.push({ id: song.uniqueId, name: song.title, artistName: song.artist, isPlayer: false, score: (song.basePopularity / 100000) * 1.5, coverArt: song.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250` });
                 });
 
                 contenders.sort((a,b) => b.score - a.score);
@@ -3722,7 +3722,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             .filter(song => !genreFilter || song.genre === genreFilter)
                             .slice(0, numNpcContenders)
                             .forEach(song => {
-                                contenders.push({ id: song.uniqueId, name: song.title, artistName: song.artist, isPlayer: false, score: song.basePopularity / 100000, coverArt: song.coverArt || NPC_COVER_ART });
+                                contenders.push({ id: song.uniqueId, name: song.title, artistName: song.artist, isPlayer: false, score: song.basePopularity / 100000, coverArt: song.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250` });
                             });
                     } else {
                         [...new Set(newNpcAlbums.slice(0, numNpcContenders).map(a => a.artist))].slice(0, 5).forEach(artistName => {

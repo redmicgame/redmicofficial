@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Song, Label, XUser } from '../types';
-import { LABELS, NPC_COVER_ART } from '../constants';
+import { LABELS } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
@@ -224,7 +224,7 @@ const RedMicProDashboardView: React.FC = () => {
                         {uniqueNpcArtists.map(artistName => (
                             <div key={artistName} className="flex items-center gap-4">
                                 <label htmlFor={`npc-cover-upload-${artistName}`} className="cursor-pointer group relative">
-                                    <img src={gameState.npcImages?.[artistName] || NPC_COVER_ART} alt={artistName} className="w-12 h-12 rounded object-cover"/>
+                                    <img src={gameState.npcImages?.[artistName] || `https://ui-avatars.com/api/?name=${encodeURIComponent(artistName)}&background=random&color=fff&size=250`} alt={artistName} className="w-12 h-12 rounded object-cover"/>
                                     <div className="absolute inset-0 bg-black/60 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />

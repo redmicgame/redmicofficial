@@ -119,5 +119,81 @@ export const REAL_WORLD_DISCOGRAPHIES: { [key: string]: { songs: string[], album
     "Morgan Wallen": {
         songs: ["Last Night", "Wasted On You", "You Proof", "Whiskey Glasses", "Chasin' You", "Thinkin' Bout Me", "Cowgirls", "Sand In My Boots", "Cover Me Up", "More Than My Hometown"],
         albums: ["One Thing At A Time", "Dangerous: The Double Album", "If I Know Me"]
+    },
+    "Nicki Minaj": {
+        songs: ["Super Bass", "Starships", "Anaconda", "Chun-Li", "Super Freaky Girl", "Pink Friday Girls", "Moment 4 Life", "Pound The Alarm", "Va Va Voom", "Barbie World"],
+        albums: ["Pink Friday 2", "Queen", "The Pinkprint", "Pink Friday: Roman Reloaded", "Pink Friday"]
+    },
+    "Cardi B": {
+        songs: ["Bodak Yellow", "I Like It", "Up", "WAP", "Money", "Be Careful", "Bartier Cardi", "Press", "Bongos", "Enough (Miami)"],
+        albums: ["Invasion of Privacy"]
+    },
+    "BTS": {
+        songs: ["Dynamite", "Butter", "Boy With Luv", "Fake Love", "DNA", "Spring Day", "Blood Sweat & Tears", "MIC Drop", "ON", "Idol"],
+        albums: ["BE", "MAP OF THE SOUL : 7", "Love Yourself: Answer", "WINGS", "Dark & Wild"]
+    },
+    "BLACKPINK": {
+        songs: ["How You Like That", "DDU-DU DDU-DU", "Kill This Love", "Pink Venom", "Shut Down", "As If It's Your Last", "Boombayah", "Whistle", "Typa Girl", "Lovesick Girls"],
+        albums: ["BORN PINK", "THE ALBUM"]
+    },
+    "Future": {
+        songs: ["Mask Off", "Life Is Good", "March Madness", "Wait For U", "Stick Talk", "Thought It Was a Drought", "Low Life", "Codeine Crazy", "Type Shit", "Like That"],
+        albums: ["WE DON'T TRUST YOU", "I NEVER LIKED YOU", "High Off Life", "DS2", "Pluto"]
+    },
+    "21 Savage": {
+        songs: ["Bank Account", "a lot", "redrum", "No Heart", "X", "Rich Flex", "Glock In My Lap", "Secret", "Nee-nah", "Ocean Drive"],
+        albums: ["american dream", "i am > i was", "Savage Mode II", "Issa Album"]
+    },
+    "J. Cole": {
+        songs: ["No Role Modelz", "MIDDLE CHILD", "Wet Dreamz", "Work Out", "Power Trip", "G.O.M.D.", "Love Yourz", "a m a r i", "She Knows", "Crooked Smile"],
+        albums: ["The Off-Season", "KOD", "4 Your Eyez Only", "2014 Forest Hills Drive", "Cole World: The Sideline Story"]
+    },
+    "Megan Thee Stallion": {
+        songs: ["Savage", "HISS", "Body", "Thot Shit", "Cobra", "Hot Girl Summer", "Plan B", "Captain Hook", "BOA", "Cash Shit"],
+        albums: ["MEGAN", "Traumazine", "Good News", "Suga", "Fever"]
+    },
+    "Tyler, the Creator": {
+        songs: ["EARFQUAKE", "See You Again", "NEW MAGIC WAND", "WUSYANAME", "LUMBERJACK", "DOGTOOTH", "SORRY NOT SORRY", "YONKERS", "She", "911 / Mr. Lonely"],
+        albums: ["CALL ME IF YOU GET LOST", "IGOR", "Flower Boy", "Cherry Bomb", "Wolf", "Goblin"]
+    },
+    "Frank Ocean": {
+        songs: ["Thinkin Bout You", "Pink + White", "Nights", "Ivy", "Novacane", "Super Rich Kids", "Pyramids", "White Ferrari", "Chanel", "Biking"],
+        albums: ["Blonde", "channel ORANGE", "Endless", "nostalgia, ULTRA"]
+    },
+    "Coldplay": {
+        songs: ["Yellow", "Viva La Vida", "Fix You", "The Scientist", "A Sky Full of Stars", "Something Just Like This", "Paradise", "Clocks", "My Universe", "Sparks"],
+        albums: ["Music of the Spheres", "Everyday Life", "A Head Full of Dreams", "Ghost Stories", "Mylo Xyloto", "Viva La Vida", "X&Y", "A Rush of Blood to the Head", "Parachutes"]
+    },
+    "Maroon 5": {
+        songs: ["Sugar", "Girls Like You", "Moves Like Jagger", "Payphone", "She Will Be Loved", "Maps", "Memories", "Animals", "Misery", "This Love"],
+        albums: ["JORDI", "Red Pill Blues", "V", "Overexposed", "Hands All Over", "It Won't Be Soon Before Long", "Songs About Jane"]
+    },
+    "Imagine Dragons": {
+        songs: ["Believer", "Demons", "Radioactive", "Thunder", "Enemy", "Bones", "Natural", "Whatever It Takes", "Bad Liar", "Sharks"],
+        albums: ["Mercury - Acts 1 & 2", "Origins", "Evolve", "Smoke + Mirrors", "Night Visions"]
+    },
+    "Arctic Monkeys": {
+        songs: ["Do I Wanna Know?", "505", "I Wanna Be Yours", "Fluorescent Adolescent", "R U Mine?", "Why'd You Only Call Me When You're High?", "Mardy Bum", "Arabella", "Snap Out of It", "Crying Lightning"],
+        albums: ["The Car", "Tranquility Base Hotel & Casino", "AM", "Suck It and See", "Humbug", "Favourite Worst Nightmare", "Whatever People Say I Am, That's What I'm Not"]
+    },
+    "Jay-Z": {
+        songs: ["Empire State of Mind", "Niggas In Paris", "Encore", "99 Problems", "Dirt Off Your Shoulder", "Hard Knock Life", "Holy Grail", "Izzo (H.O.V.A.)", "Run This Town", "Big Pimpin'"],
+        albums: ["4:44", "Magna Carta Holy Grail", "The Blueprint 3", "The Black Album", "The Blueprint", "Reasonable Doubt"]
+    },
+    "Charli XCX": {
+        songs: ["Boom Clap", "Vroom Vroom", "Boys", "1999", "Von dutch", "360", "Brat", "Unlock It", "Track 10", "Good Ones"],
+        albums: ["brat", "CRASH", "how i'm feeling now", "Charli", "Pop 2", "Number 1 Angel", "Sucker"]
+    },
+    "Shawn Mendes": {
+        songs: ["Treat You Better", "There's Nothing Holdin' Me Back", "In My Blood", "Stitches", "Mercy", "Senorita", "Wonder", "Lost in Japan", "If I Can't Have You", "Summer of Love"],
+        albums: ["Wonder", "Shawn Mendes", "Illuminate", "Handwritten"]
+    },
+    "Karol G": {
+        songs: ["PROVENZA", "TQG", "MI EX TENÍA RAZÓN", "BICHOTA", "Tusa", "MAMIII", "QLONA", "OKI DOKI", "AMARGURA", "EL MAKINON"],
+        albums: ["MAÑANA SERÁ BONITO", "KG0516", "OCEAN", "Unstoppable"]
+    },
+    "Shakira": {
+        songs: ["Hips Don't Lie", "Waka Waka", "Bzrp Music Sessions, Vol. 53", "TQG", "Whenever, Wherever", "La Tortura", "Chantaje", "Puntería", "Te Felicito", "Ojos Así"],
+        albums: ["Las Mujeres Ya No Lloran", "El Dorado", "Sale el Sol", "She Wolf", "Fijación Oral, Vol. 1", "Laundry Service"]
     }
 };
