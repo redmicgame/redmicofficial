@@ -5566,8 +5566,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if(artist) {
                 const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
                 if (playerUser) {
-                    const pronounPossessive = activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their';
-                    let content = `${activeArtist.name} is starting ${pronounPossessive} own record label, "${label.name}". Boss moves.`;
+                    const pronounPossessive = 'pronouns' in artist ? (artist.pronouns === 'he/him' ? 'his' : artist.pronouns === 'she/her' ? 'her' : 'their') : 'their';
+                    let content = `${artist.name} is starting ${pronounPossessive} own record label, "${label.name}". Boss moves.`;
                     if (label.dealWithMajorId) {
                         const major = LABELS.find(l => l.id === label.dealWithMajorId);
                         content = `${artist.name} is launching a new imprint, "${label.name}", in partnership with ${major?.name}.`;

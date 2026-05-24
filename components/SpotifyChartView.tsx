@@ -30,11 +30,11 @@ const SpotifyChartView: React.FC = () => {
 
         // Player countdowns
         if (gameState.artistsData) {
-            Object.values(gameState.artistsData).forEach(data => {
+            Object.entries(gameState.artistsData).forEach(([artistId, data]) => {
                 if (data.labelSubmissions) {
                     data.labelSubmissions.forEach(sub => {
                         if (sub.status === 'scheduled' && sub.hasCountdownPage && sub.projectReleaseDate) {
-                            const artistProfile = allPlayerArtists.find(a => a.id === sub.artistId);
+                            const artistProfile = allPlayerArtists.find(a => a.id === artistId);
                             
                             // Compute pre-saves
                             let totalSongStreams = 0;
@@ -53,7 +53,8 @@ const SpotifyChartView: React.FC = () => {
                             }
 
                             const popularity = data.popularity || 0;
-                            const basePreSaves = (popularity * 10000) + (totalSongStreams * 0.05);
+                            const weeksSinceSubmit = Math.max(0, (gameState.date.year * 52 + gameState.date.week) - (sub.submittedDate.year * 52 + sub.submittedDate.week));
+                            const basePreSaves = ((popularity * 15000) + (totalSongStreams * 0.05)) * (1 + (weeksSinceSubmit * 0.25));
                             
                             countdowns.push({
                                 id: sub.itemId,
