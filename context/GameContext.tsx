@@ -5292,14 +5292,15 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     };
                     updatedPosts.unshift(popBasePost);
 
-                    // TMZ Tweet
-                    const pronounPossessive = activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their';
-                    const pronounNominative = activeArtist.pronouns === 'he/him' ? 'he' : activeArtist.pronouns === 'she/her' ? 'she' : 'they';
-                    const isAre = activeArtist.pronouns === 'they/them' ? 'are' : 'is';
+                    const activeArtist = allPlayerArtistsAndGroups.find(a => a.id === state.activeArtistId);
+                    const pronounPossessive = (activeArtist && 'pronouns' in activeArtist) ? (activeArtist.pronouns === 'he/him' ? 'his' : activeArtist.pronouns === 'she/her' ? 'her' : 'their') : 'their';
+                    const pronounNominative = (activeArtist && 'pronouns' in activeArtist) ? (activeArtist.pronouns === 'he/him' ? 'he' : activeArtist.pronouns === 'she/her' ? 'she' : 'they') : 'they';
+                    const isAre = (activeArtist && 'pronouns' in activeArtist && activeArtist.pronouns === 'they/them') ? 'are' : 'is';
+                    const addsS = (activeArtist && 'pronouns' in activeArtist && activeArtist.pronouns === 'they/them') ? '' : 's';
                     const tmzPost: XPost = {
                         id: crypto.randomUUID(),
                         authorId: 'tmz',
-                        content: `${artistName} is dropping ${projectTypeStr === 'Single' ? 'a new track' : 'another project'} soon... let's hope ${pronounNominative} actually put${activeArtist.pronouns === 'they/them' ? '' : 's'} effort into this one, unlike ${pronounPossessive} tragic outfit choices lately. 😬👀`,
+                        content: `${artistName} is dropping ${projectTypeStr === 'Single' ? 'a new track' : 'another project'} soon... let's hope ${pronounNominative} actually put${addsS} effort into this one, unlike ${pronounPossessive} tragic outfit choices lately. 😬👀`,
                         image: activeData.paparazziPhotos.length > 0 ? activeData.paparazziPhotos[Math.floor(Math.random() * activeData.paparazziPhotos.length)].url : undefined,
                         likes: Math.floor(Math.random() * 40000) + 10000,
                         retweets: Math.floor(Math.random() * 8000) + 2000,
