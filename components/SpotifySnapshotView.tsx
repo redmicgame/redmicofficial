@@ -25,8 +25,8 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
     }
     
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 p-4 flex items-center justify-center" onClick={onBack}>
-            <div className="w-full max-w-2xl bg-white shadow-2xl rounded-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 p-4 flex items-center justify-center overflow-y-auto" onClick={onBack}>
+            <div className="w-full max-w-2xl bg-white shadow-2xl rounded-lg overflow-hidden" onClick={e => e.stopPropagation()} style={{ transform: `scale(${releaseSongs.length > 8 ? 8 / releaseSongs.length : 1})` }}>
                 {/* Red header */}
                 <div className="bg-[#c83b37] p-6 text-white flex gap-6 items-center">
                     <img src={release.coverArt} className="w-36 h-36 rounded-lg shadow-lg flex-shrink-0" alt={release.title} />
