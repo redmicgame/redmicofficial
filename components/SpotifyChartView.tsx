@@ -3,13 +3,98 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import SpotifyIcon from './icons/SpotifyIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
-import { ChartEntry, AlbumChartEntry } from '../types';
+import { ChartEntry, AlbumChartEntry, GameDate } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
+import PlusIcon from './icons/PlusIcon';
+import ArrowUpTrayIcon from './icons/ArrowUpTrayIcon';
+import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
+
+const formatGameDateToMonthDay = (gameDate: { week: number; year: number }) => {
+    const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const formatNumber = (num: number) => {
+    if (num >= 1000000) return (num / 1000000).toFixed(2).replace(/\.00$/, '') + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return num.toString();
+};
 
 const SpotifyChartView: React.FC = () => {
-    const { gameState, dispatch } = useGame();
+    const { gameState, dispatch, allPlayerArtists } = useGame();
     const { spotifyGlobal = [], billboardTopAlbums, chartHistory, albumChartHistory, date } = gameState;
     const [activeSlide, setActiveSlide] = useState(0);
+
+    const upcomingCountdowns = useMemo(() => {
+        const countdowns: { id: string, title: string, artistName: string, coverArt: string, releaseDate: GameDate, preSaves: number, isExplicit: boolean }[] = [];
+
+        // Player countdowns
+        if (gameState.artistsData) {
+            Object.values(gameState.artistsData).forEach(data => {
+                if (data.labelSubmissions) {
+                    data.labelSubmissions.forEach(sub => {
+                        if (sub.status === 'scheduled' && sub.hasCountdownPage && sub.projectReleaseDate) {
+                            const artistProfile = allPlayerArtists.find(a => a.id === sub.artistId);
+                            
+                            // Compute pre-saves
+                            let totalSongStreams = 0;
+                            let isExplicit = false;
+                            
+                            if (sub.release && sub.release.songIds) {
+                               sub.release.songIds.forEach(id => {
+                                   const song = data.songs.find(s => s.id === id);
+                                   if (song && song.isReleased) totalSongStreams += song.streams;
+                                   if (song && song.explicit) isExplicit = true;
+                               });
+                            } else {
+                               const song = data.songs.find(s => s.id === sub.itemId);
+                               if (song && song.isReleased) totalSongStreams += song.streams;
+                               if (song && song.explicit) isExplicit = true;
+                            }
+
+                            const popularity = data.popularity || 0;
+                            const basePreSaves = (popularity * 10000) + (totalSongStreams * 0.05);
+                            
+                            countdowns.push({
+                                id: sub.itemId,
+                                title: sub.release?.title || sub.itemName,
+                                artistName: artistProfile?.name || 'Unknown',
+                                coverArt: sub.release?.coverArt || 'https://ui-avatars.com/api/?name=Unknown',
+                                releaseDate: sub.projectReleaseDate,
+                                preSaves: basePreSaves,
+                                isExplicit,
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Add some fake NPC countdowns if we don't have enough
+        const fakeNpcCountdowns = 10 - countdowns.length;
+        if (fakeNpcCountdowns > 0 && gameState.npcAlbums) {
+            const upcomingNpcs = gameState.npcAlbums.slice(0, fakeNpcCountdowns);
+            upcomingNpcs.forEach((album, index) => {
+                const w = (gameState.date.week + 1 + index) % 52 || 52;
+                const y = gameState.date.year + (gameState.date.week + 1 + index > 52 ? 1 : 0);
+                const releaseDate = { year: y, week: w };
+                const albumSongs = album.songIds.map(id => gameState.npcs.find(s => s.uniqueId === id)).filter(Boolean);
+                const avgPop = albumSongs.length > 0 ? albumSongs.reduce((sum, s) => sum + (s?.basePopularity || 0), 0) / albumSongs.length : 500000;
+                
+                countdowns.push({
+                    id: `fake_${album.uniqueId}`,
+                    title: album.title,
+                    artistName: album.artist,
+                    coverArt: album.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(album.artist)}`,
+                    releaseDate: releaseDate,
+                    preSaves: (avgPop * 0.05) * (1 - (index * 0.05)), 
+                    isExplicit: Math.random() > 0.5
+                });
+            });
+        }
+
+        return countdowns.sort((a, b) => b.preSaves - a.preSaves).slice(0, 10);
+    }, [gameState.artistsData, gameState.npcAlbums, allPlayerArtists, gameState.date]);
 
     const slides = useMemo(() => {
         const facts = [];
@@ -100,6 +185,54 @@ const SpotifyChartView: React.FC = () => {
                     </div>
                 )}
                 
+                {/* Top 10 Countdowns (Upcoming Releases) */}
+                {upcomingCountdowns.length > 0 && (
+                    <div className="pt-4 pb-2 border-b border-zinc-800">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">Top 10 countdowns</h2>
+                            <button className="text-zinc-400 hover:text-white">
+                                <ArrowUpTrayIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex gap-4 overflow-x-auto pb-4 snap-x no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <style>{`
+                                .no-scrollbar::-webkit-scrollbar {
+                                    display: none;
+                                }
+                            `}</style>
+                            {upcomingCountdowns.map((release) => (
+                                <div key={release.id} className="min-w-[160px] max-w-[160px] snap-start flex-shrink-0 flex flex-col cursor-pointer hover:opacity-90 transition-opacity group">
+                                    <div className="relative mb-3">
+                                        <img src={release.coverArt} alt={release.title} className="w-40 h-40 object-cover rounded-md shadow-md bg-zinc-800" />
+                                        {release.isExplicit && (
+                                            <div className="absolute top-2 right-2 bg-zinc-800 rounded flex items-center justify-center w-4 h-4 shadow-sm">
+                                                <span className="text-[10px] font-bold text-white leading-none">E</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-zinc-400 mb-1">Releases on {formatGameDateToMonthDay(release.releaseDate)}</p>
+                                    <p className="text-sm font-bold text-white truncate">{release.title}</p>
+                                    <p className="text-sm text-zinc-400 truncate">{release.artistName}</p>
+                                    <p className="text-xs text-zinc-500 mt-1">{formatNumber(release.preSaves)} pre-saves</p>
+                                    
+                                    <div className="flex items-center gap-4 mt-3 text-zinc-400 opacity-60 group-hover:opacity-100 transition-opacity">
+                                        <button className="hover:text-white transition-colors" aria-label="Pre-save">
+                                            <PlusIcon className="w-5 h-5" />
+                                        </button>
+                                        <button className="hover:text-white transition-colors" aria-label="Share">
+                                            <ArrowUpTrayIcon className="w-4 h-4" />
+                                        </button>
+                                        <button className="hover:text-white transition-colors ml-auto" aria-label="More options">
+                                            <DotsHorizontalIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Chart Links */}
                 {topSong && (
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'spotifyTopSongs'})} className="w-full bg-[#a03fec] p-4 rounded-lg text-left">
