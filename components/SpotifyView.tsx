@@ -9,6 +9,7 @@ import CheckCircleIcon from './icons/CheckCircleIcon';
 import MusicNoteIcon from './icons/MusicNoteIcon';
 import SpotifyIcon from './icons/SpotifyIcon';
 import UserIcon from './icons/UserIcon';
+import VerifiedBadgeIcon from './icons/VerifiedBadgeIcon';
 import type { Song, Release, GameDate } from '../types';
 import { NPC_ARTIST_IMAGES } from '../constants';
 import SpotifyDiscographyView from './SpotifyDiscographyView';
@@ -79,10 +80,7 @@ const VerifiedModal: React.FC<{ isOpen: boolean; onClose: () => void; sinceYear:
 
                 <div className="bg-zinc-800/50 rounded-xl p-4 mb-6">
                     <div className="flex items-center gap-2 mb-2">
-                        <div className="relative w-5 h-5 bg-transparent flex items-center justify-center">
-                            <div className="absolute inset-[2px] bg-white rounded-full"></div>
-                            <CheckCircleIcon className="w-5 h-5 text-sky-400 relative z-10" />
-                        </div>
+                        <VerifiedBadgeIcon className="w-5 h-5 text-[#A0D9B1]" />
                         <span className="font-bold text-white">Verified by Spotify</span>
                     </div>
                     <p className="text-sm text-zinc-300">
@@ -328,10 +326,7 @@ const SpotifyView: React.FC = () => {
                             className="flex items-center gap-2 mt-2 cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity w-max"
                             onClick={(e) => { e.stopPropagation(); setShowVerifiedModal(true); }}
                         >
-                            <div className="relative w-6 h-6 bg-transparent flex items-center justify-center">
-                                <div className="absolute inset-[3px] bg-white rounded-full"></div>
-                                <CheckCircleIcon className="w-6 h-6 text-sky-400 relative z-10" />
-                            </div>
+                            <VerifiedBadgeIcon className="w-6 h-6 text-[#A0D9B1]" />
                             <span className="font-semibold text-white drop-shadow-md">Verified by Spotify</span>
                         </div>
                     )}
