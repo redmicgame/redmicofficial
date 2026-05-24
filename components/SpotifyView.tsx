@@ -5,6 +5,10 @@ import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import ShuffleIcon from './icons/ShuffleIcon';
 import TrianglePlayIcon from './icons/TrianglePlayIcon';
+import CheckCircleIcon from './icons/CheckCircleIcon';
+import MusicNoteIcon from './icons/MusicNoteIcon';
+import SpotifyIcon from './icons/SpotifyIcon';
+import UserIcon from './icons/UserIcon';
 import type { Song, Release, GameDate } from '../types';
 import { NPC_ARTIST_IMAGES } from '../constants';
 import SpotifyDiscographyView from './SpotifyDiscographyView';
@@ -56,6 +60,67 @@ const UpcomingReleaseItem: React.FC<{ release: Release; releaseDate: GameDate; o
     );
 };
 
+const formatPlaylistsList = (playlists: string[]) => {
+    if (playlists.length === 0) return '';
+    if (playlists.length === 1) return playlists[0];
+    if (playlists.length === 2) return `${playlists[0]} and ${playlists[1]}`;
+    return playlists.slice(0, -1).join(', ') + ', and ' + playlists[playlists.length - 1];
+};
+
+const VerifiedModal: React.FC<{ isOpen: boolean; onClose: () => void; sinceYear: number; releasesCount: number; playlists: string[] }> = ({ isOpen, onClose, sinceYear, releasesCount, playlists }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 sm:items-center p-0 sm:p-4">
+            <div className="bg-zinc-900 w-full max-w-md sm:rounded-2xl rounded-t-2xl p-6 pb-12 sm:pb-6 relative animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in duration-300" onClick={e => e.stopPropagation()}>
+                <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mb-6 sm:hidden"></div>
+                
+                <h2 className="text-base font-bold text-white text-center mb-6">Artist badges</h2>
+
+                <div className="bg-zinc-800/50 rounded-xl p-4 mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="relative w-5 h-5 bg-transparent flex items-center justify-center">
+                            <div className="absolute inset-[2px] bg-white rounded-full"></div>
+                            <CheckCircleIcon className="w-5 h-5 text-sky-400 relative z-10" />
+                        </div>
+                        <span className="font-bold text-white">Verified by Spotify</span>
+                    </div>
+                    <p className="text-sm text-zinc-300">
+                        This artist has grown an active fanbase to be eligible for review and has met Spotify's criteria for profile authenticity. <a href="#" className="text-zinc-400 hover:text-white underline">Learn more</a>
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2 mb-4">
+                    <h3 className="text-base font-bold text-white">Artist details</h3>
+                    <span className="text-[10px] font-bold text-black bg-[#1ed760] px-1.5 py-0.5 rounded-sm">Beta</span>
+                </div>
+
+                <div className="space-y-6 mt-6">
+                    <div className="flex gap-4">
+                        <MusicNoteIcon className="w-6 h-6 text-zinc-400 shrink-0" />
+                        <p className="text-sm text-zinc-300">Has released music since {sinceYear}, with {releasesCount} {releasesCount === 1 ? 'album, EP, single, or remix' : 'albums, EPs, singles, or remixes'} on Spotify globally.</p>
+                    </div>
+                    
+                    {playlists.length > 0 && (
+                        <div className="flex gap-4">
+                            <div className="w-6 h-6 shrink-0 flex items-center justify-center">
+                                <SpotifyIcon className="w-5 h-5 text-zinc-400 grayscale opacity-80" />
+                            </div>
+                            <p className="text-sm text-zinc-300">Playlisted by Spotify's editors on {formatPlaylistsList(playlists)} in the past year.</p>
+                        </div>
+                    )}
+
+                    <div className="flex gap-4">
+                        <UserIcon className="w-6 h-6 text-zinc-400 shrink-0" />
+                        <p className="text-sm text-zinc-300">This artist has a claimed profile in Spotify for Artists.</p>
+                    </div>
+                </div>
+            </div>
+            <div className="absolute inset-0 z-[-1]" onClick={onClose}></div>
+        </div>
+    );
+};
+
 
 const SpotifyView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, allPlayerArtists } = useGame();
@@ -64,6 +129,7 @@ const SpotifyView: React.FC = () => {
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
     const [history, setHistory] = useState<Array<'profile' | 'discography' | 'playlistDetail'>>(['profile']);
     const [isPopularExpanded, setIsPopularExpanded] = useState(false);
+    const [showVerifiedModal, setShowVerifiedModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!activeArtist || !activeArtistData) return null;
@@ -185,6 +251,10 @@ const SpotifyView: React.FC = () => {
             };
         });
     }, [gameState.spotifyPlaylists, activeArtist.name]);
+    
+    const isVerified = monthlyListeners >= 1000000 || appearsOnPlaylists.length > 0;
+    const sinceYear = useMemo(() => releases.length > 0 ? Math.min(...releases.map(r => r.releaseDate.year)) : date.year, [releases, date.year]);
+    const playlistsNames = useMemo(() => appearsOnPlaylists.map(p => p.name), [appearsOnPlaylists]);
 
     const navigateTo = (newView: 'profile' | 'discography' | 'releaseDetail' | 'playlistDetail') => {
         if (newView !== view) {
@@ -253,8 +323,28 @@ const SpotifyView: React.FC = () => {
                     <h1 className="text-5xl md:text-7xl font-black tracking-tighter" style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.7)' }}>
                         {activeArtist.name}
                     </h1>
+                    {isVerified && (
+                        <div 
+                            className="flex items-center gap-2 mt-2 cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity w-max"
+                            onClick={(e) => { e.stopPropagation(); setShowVerifiedModal(true); }}
+                        >
+                            <div className="relative w-6 h-6 bg-transparent flex items-center justify-center">
+                                <div className="absolute inset-[3px] bg-white rounded-full"></div>
+                                <CheckCircleIcon className="w-6 h-6 text-sky-400 relative z-10" />
+                            </div>
+                            <span className="font-semibold text-white drop-shadow-md">Verified by Spotify</span>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            <VerifiedModal 
+                isOpen={showVerifiedModal} 
+                onClose={() => setShowVerifiedModal(false)}
+                sinceYear={sinceYear}
+                releasesCount={releases.length}
+                playlists={playlistsNames}
+            />
 
             {/* Main Content */}
             <div className="p-4 space-y-8 pb-20">
