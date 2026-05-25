@@ -11,6 +11,9 @@ import PlayIcon from './icons/PlayIcon';
 import UserIcon from './icons/UserIcon';
 import HomeIcon from './icons/HomeIcon';
 import TikTokIcon from './icons/TikTokIcon';
+import ChartBarIcon from './icons/ChartBarIcon';
+import ChevronDownIcon from './icons/ChevronDownIcon';
+import VideoIcon from './icons/VideoIcon';
 import { TikTokVideo } from '../types';
 
 const TikTokFeedVideo: React.FC<{ video: TikTokVideo & { username: string, userAvatar: string, songName?: string, isVerified?: boolean } }> = ({ video }) => {
@@ -70,8 +73,9 @@ const TikTokFeedVideo: React.FC<{ video: TikTokVideo & { username: string, userA
 
 const TikTokView: React.FC = () => {
     const { activeArtist, activeArtistData, dispatch, gameState } = useGame();
-    const [currentTab, setCurrentTab] = useState<'foryou' | 'profile' | 'create'>('profile');
+    const [currentTab, setCurrentTab] = useState<'foryou' | 'profile' | 'create' | 'charts'>('profile');
     const [profileTab, setProfileTab] = useState<'videos' | 'sounds' | 'liked'>('videos');
+    const [chartsTab, setChartsTab] = useState<'top50' | 'viral50'>('top50');
     const [createContent, setCreateContent] = useState('');
     const [createSongId, setCreateSongId] = useState<string>('');
     const [createThumbnail, setCreateThumbnail] = useState<string>('');
@@ -109,6 +113,70 @@ const TikTokView: React.FC = () => {
 
     const myVideos = activeArtistData.tiktokVideos || [];
 
+    const videosBySongMap = useMemo(() => {
+        const map = new Map<string, any[]>();
+        myVideos.forEach(v => {
+            if (v.songId) {
+                if (!map.has(v.songId)) map.set(v.songId, []);
+                map.get(v.songId)!.push(v);
+            }
+        });
+        map.forEach((videos, key) => {
+            map.set(key, videos.sort((a,b) => b.likes - a.likes));
+        });
+        return map;
+    }, [myVideos]);
+
+    const top50 = useMemo(() => {
+        return (gameState.spotifyGlobal || []).slice(0, 50).map((entry, index) => ({
+            ...entry,
+            rank: index + 1,
+            tiktokVideos: videosBySongMap.get(entry.uniqueId) || [],
+            isNew: entry.lastWeek === null
+        }));
+    }, [gameState.spotifyGlobal, videosBySongMap]);
+
+    const viral50 = useMemo(() => {
+        if (!gameState.spotifyGlobal) return [];
+        let entries = (gameState.spotifyGlobal || []).map(entry => {
+            const videos = videosBySongMap.get(entry.uniqueId) || [];
+            const likes = videos.reduce((sum, v) => sum + v.likes, 0);
+            return {
+                ...entry,
+                tiktokVideos: videos,
+                score: likes > 0 ? likes * 100 : (entry.lastWeek === null ? 50000 : Math.random() * 20000),
+                isNew: entry.lastWeek === null || likes > 0
+            };
+        });
+        
+        activeArtistData.songs.forEach(song => {
+            if (videosBySongMap.has(song.id)) {
+                const hasEntry = entries.find(e => e.uniqueId === song.id);
+                if (!hasEntry) {
+                    const videos = videosBySongMap.get(song.id)!;
+                    const likes = videos.reduce((sum, v) => sum + v.likes, 0);
+                    entries.push({
+                        uniqueId: song.id,
+                        title: song.title,
+                        artist: activeArtist.name,
+                        coverArt: song.coverArt || activeArtist.image,
+                        rank: 0,
+                        isPlayerSong: true,
+                        tiktokVideos: videos,
+                        score: likes * 100,
+                        isNew: true,
+                        lastWeek: null,
+                        weeksOnChart: 1,
+                        peak: 1,
+                        weeklyStreams: 0
+                    });
+                }
+            }
+        });
+        
+        return entries.sort((a,b) => b.score - a.score).slice(0, 50).map((e, index) => ({...e, rank: index + 1}));
+    }, [gameState.spotifyGlobal, activeArtistData.songs, videosBySongMap, activeArtist.name, activeArtist.image]);
+
     if (selectedVideo) {
         return (
             <div className="h-full w-full bg-black relative max-w-[400px] mx-auto overflow-hidden">
@@ -132,7 +200,7 @@ const TikTokView: React.FC = () => {
     return (
         <div className="h-full flex flex-col bg-black text-white relative font-sans max-w-[400px] mx-auto overflow-hidden">
             {/* Top Bar for Profile/Create Tabs */}
-            {currentTab !== 'foryou' && (
+            {currentTab !== 'foryou' && currentTab !== 'charts' && (
                <div className="absolute top-0 w-full z-20 flex justify-between items-center px-4 py-4 bg-black">
                    <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="text-white flex items-center">
                        <ArrowLeftIcon className="w-6 h-6 mr-1" />
@@ -140,7 +208,9 @@ const TikTokView: React.FC = () => {
                    <h1 className="text-lg font-bold">
                         {currentTab === 'profile' ? activeArtist.name : 'Create Video'}
                    </h1>
-                   <div className="w-6 h-6"></div>
+                   <button onClick={() => setCurrentTab('charts')} className="text-white">
+                        <ChartBarIcon className="w-6 h-6" />
+                   </button>
                </div>
             )}
 
@@ -316,6 +386,85 @@ const TikTokView: React.FC = () => {
                                 <p className="font-bold text-lg mb-1">Only you can see which videos you liked</p>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {currentTab === 'charts' && (
+                    <div className="w-full h-full bg-white text-black overflow-y-auto flex-shrink-0">
+                        {/* Header */}
+                        <div className="flex flex-col px-4 pt-10 pb-2 relative overflow-hidden">
+                            <button onClick={() => setCurrentTab('profile')} className="mb-6 relative z-10 w-fit"><ArrowLeftIcon className="w-7 h-7 text-black drop-shadow-md" /></button>
+                            <div className="flex relative z-10 w-full mb-2">
+                                <div>
+                                    <h1 className="text-5xl font-black leading-none tracking-tight flex flex-col items-start gap-1">
+                                        <div className="flex items-center text-lg gap-1 border-b-2 border-black pb-1 mb-1 font-sans font-bold">
+                                            <TikTokIcon className="w-5 h-5 text-black"/> TikTok
+                                        </div>
+                                        <span>Music</span>
+                                        <span>Charts</span>
+                                    </h1>
+                                </div>
+                                <div className="absolute right-[-10px] top-[-30px] w-40 h-40 opacity-90">
+                                    <img src={activeArtist.image} className="w-full h-full object-cover" style={{ borderRadius: '40% 60% 70% 30% / 40% 50% 60% 50%' }} />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Tabs */}
+                        <div className="flex px-4 border-b border-zinc-200 text-lg font-bold gap-6 mt-2 relative">
+                            <button onClick={() => setChartsTab('top50')} className={`pb-2 transition-colors ${chartsTab === 'top50' ? 'border-b-2 border-black text-black' : 'text-zinc-400 hover:text-zinc-600'}`}>Top 50</button>
+                            <button onClick={() => setChartsTab('viral50')} className={`pb-2 transition-colors ${chartsTab === 'viral50' ? 'border-b-2 border-black text-black' : 'text-zinc-400 hover:text-zinc-600'}`}>Viral 50</button>
+                            <div className="ml-auto text-sm text-zinc-600 font-semibold flex items-center justify-center bg-zinc-100 rounded-full h-8 px-4 cursor-pointer mt-0 mb-2 border border-zinc-200">
+                                US <ChevronDownIcon className="w-4 h-4 ml-1 opacity-70" />
+                            </div>
+                        </div>
+                        
+                        {/* List */}
+                        <div className="pb-24">
+                            {(chartsTab === 'top50' ? top50 : viral50).map(entry => (
+                                <div key={entry.uniqueId} className="py-4 border-b border-zinc-100 px-4">
+                                    <div className="flex items-center">
+                                        <div className="w-8 flex flex-col items-center mr-2 relative z-10">
+                                            <span className="font-bold text-lg leading-tight">{entry.rank}</span>
+                                            {entry.isNew ? (
+                                                <span className="text-[#25F4EE] text-3xl leading-[0] mt-[-10px] drop-shadow-sm">.</span>
+                                            ) : (
+                                                <span className="text-zinc-300 text-3xl leading-[0] mt-[-10px]">-</span>
+                                            )}
+                                        </div>
+                                        <img src={entry.coverArt} className="w-14 h-14 rounded-lg object-cover mr-3 bg-zinc-100 shadow-sm" />
+                                        <div className="flex-1 min-w-0 pr-2 pb-1">
+                                            <p className="font-bold truncate text-[17px] leading-tight text-black">{entry.title}</p>
+                                            <div className="flex items-center gap-2 text-sm mt-0.5">
+                                                <span className="truncate text-zinc-500 font-medium">{entry.artist}</span>
+                                                {entry.isNew && <span className="text-[#FE2C55] font-bold text-[11px] tracking-wider uppercase ml-1">New</span>}
+                                            </div>
+                                        </div>
+                                        <button className="bg-[#FE2C55] p-2.5 rounded-xl flex-shrink-0 ml-1 shadow-md shadow-red-500/20 hover:bg-[#E0264B] transition-colors relative">
+                                            <VideoIcon className="w-6 h-6 text-white" />
+                                        </button>
+                                    </div>
+                                    
+                                    {entry.tiktokVideos && entry.tiktokVideos.length > 0 && (
+                                        <div className="mt-4 flex gap-2 overflow-hidden w-full pl-12 pr-2">
+                                            {entry.tiktokVideos.slice(0, 2).map((v: any, idx: number) => (
+                                                <div key={idx} className="relative flex-1 aspect-[9/16] bg-zinc-900 rounded-xl overflow-hidden group shadow-md cursor-pointer" onClick={() => setSelectedVideo(v)}>
+                                                    <img src={v.thumbnail || activeArtist.image} className="w-full h-full object-cover opacity-90 transition-transform group-hover:scale-105 duration-300" />
+                                                    <div className="absolute bottom-2 left-2 flex items-center text-xs font-bold text-white drop-shadow-md z-10">
+                                                        <HeartIcon className="w-4 h-4 mr-1 text-white opacity-90 drop-shadow-sm" />
+                                                        {formatNumber(v.likes)}
+                                                    </div>
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90 pointer-events-none"></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                            {chartsTab === 'top50' && top50.length === 0 && (
+                                <div className="p-8 text-center text-zinc-500 font-semibold mt-10">Chart calculating...</div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
