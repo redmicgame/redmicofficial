@@ -250,6 +250,19 @@ const MiscTab: React.FC = () => {
                     <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
                 </button>
 
+                <div className="bg-zinc-800 p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-lg">Public Encounters</h3>
+                        <p className="text-sm text-zinc-400">Random popups from paparazzi or fans.</p>
+                    </div>
+                    <button 
+                        onClick={() => dispatch({ type: 'TOGGLE_ENCOUNTERS' })}
+                        className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${!gameState.disableEncounters ? 'bg-red-500' : 'bg-zinc-600'}`}
+                    >
+                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${!gameState.disableEncounters ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                </div>
+
                 <div className="bg-zinc-800 p-4 rounded-lg">
                     <h3 className="font-bold text-lg mb-2">Red Mic Pro</h3>
                     {activeArtistData.redMicPro.unlocked ? (

@@ -4,6 +4,7 @@ import React from 'react';
 import { GameProvider, useGame } from './context/GameContext';
 import StartScreen from './components/StartScreen';
 import GameUI from './components/GameUI';
+import EncounterModalView from './components/EncounterModalView';
 import SpotifyView from './components/SpotifyView';
 import StudioView from './components/StudioView';
 import ReleaseView from './components/ReleaseView';
@@ -263,6 +264,7 @@ const AppContent: React.FC = () => {
     return (
         <div className={`bg-zinc-900 text-white min-h-screen ${isGoldTheme ? 'gold-theme' : ''}`}>
             {renderView()}
+            {gameState.activeEncounter && <EncounterModalView />}
         </div>
     );
 };

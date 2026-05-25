@@ -917,6 +917,8 @@ export interface RedCarpetLook {
 }
 
 export interface GameState {
+    disableEncounters?: boolean;
+    activeEncounter?: ActiveEncounter | null;
     cloudSaveId?: string;
     offlineMode?: boolean;
     difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme';
@@ -1006,7 +1008,25 @@ export interface GameState {
     activeOscarRedCarpetOffer: { emailId: string } | null;
 }
 
+export interface EncounterChoice {
+    label: string;
+    tweetTemplate: string;
+    authorName: string;
+    isTMZ: boolean;
+    publicImageEffect: number;
+    hypeEffect: number;
+}
+
+export interface ActiveEncounter {
+    id: string;
+    text: string;
+    requiresImage: boolean;
+    choices: EncounterChoice[];
+}
+
 export type GameAction =
+    | { type: 'RESOLVE_ENCOUNTER'; payload: { choice: EncounterChoice; imageUrl: string } }
+    | { type: 'TOGGLE_ENCOUNTERS' }
     | { type: 'START_SOLO_GAME'; payload: { artist: Artist; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme' } }
     | { type: 'START_GROUP_GAME'; payload: { group: Group; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme' } }
     | { type: 'CHANGE_VIEW'; payload: GameView }

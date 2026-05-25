@@ -7,6 +7,76 @@ import type { GameState, GameAction, Email, NpcSong, ChartEntry, ChartHistory, A
 import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_ARTIST_IMAGES, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
 import { generateWeeklyXContent } from '../utils/xContentGenerator';
 import { REAL_WORLD_DISCOGRAPHIES } from '../realWorldDiscographies';
+import { ActiveEncounter, EncounterChoice } from '../types';
+
+export const getPossibleEncounters = (artist: Artist | Group, artistData: ArtistData): ActiveEncounter[] => {
+    const isGroup = artist.type === 'group';
+    const isMarried = artistData.relationships?.some(r => r.status === 'married');
+
+    const encounters: ActiveEncounter[] = [
+        {
+            id: 'music_release',
+            text: 'A fan approaches you while you are out getting coffee and asks when you are releasing new music.',
+            requiresImage: true,
+            choices: [
+                { label: 'Say "Soon"', tweetTemplate: '"{artist} said new music is coming soon! 😭"', authorName: 'Pop Crave', isTMZ: false, publicImageEffect: 2, hypeEffect: 5 },
+                { label: 'Ignore them', tweetTemplate: '{artist} completely ignored a fan asking about new music... 💀', authorName: 'TMZ', isTMZ: true, publicImageEffect: -5, hypeEffect: 2 },
+                { label: 'Yell at them', tweetTemplate: '{artist} yells at a fan asking for new music!! Disgusting behavior.', authorName: 'TMZ', isTMZ: true, publicImageEffect: -15, hypeEffect: 10 }
+            ]
+        },
+        {
+            id: 'how_many_likes',
+            text: 'A fan with a camera runs up to you: "How many likes for us to do a song together??"',
+            requiresImage: true,
+            choices: [
+                { label: '50k likes', tweetTemplate: 'asking {artist} how many likes to do a song 😭 they said 50k!', authorName: 'RandomFan', isTMZ: false, publicImageEffect: 3, hypeEffect: 2 },
+                { label: '500k likes', tweetTemplate: 'asking {artist} how many likes to do a song 😭 they said 500k!', authorName: 'RandomFan', isTMZ: false, publicImageEffect: 5, hypeEffect: 3 },
+                { label: '1M likes', tweetTemplate: 'asking {artist} how many likes to do a song 😭 1 MILLION?!', authorName: 'RandomFan', isTMZ: false, publicImageEffect: 3, hypeEffect: 1 },
+                { label: 'Ignore', tweetTemplate: '{artist} walks right past a fan offering a collab... rude much?', authorName: 'TMZ', isTMZ: true, publicImageEffect: -5, hypeEffect: 2 },
+                { label: 'Yell at them', tweetTemplate: '{artist} goes off on a fan offering a collab. YIKES.', authorName: 'TMZ', isTMZ: true, publicImageEffect: -15, hypeEffect: 10 },
+            ]
+        },
+        {
+            id: 'outfit_praise',
+            text: 'A fan points out your outfit and asks where you got it from.',
+            requiresImage: true,
+            choices: [
+                { label: 'Tell them', tweetTemplate: '"{artist} is so humble, they told me where their outfit is from! ✨"', authorName: 'FashionFan', isTMZ: false, publicImageEffect: 5, hypeEffect: 2 },
+                { label: '"It\'s custom"', tweetTemplate: '"{artist} says their outfit is custom. We love a fashion icon!"', authorName: 'Pop Crave', isTMZ: false, publicImageEffect: 2, hypeEffect: 3 },
+                { label: 'Ignore', tweetTemplate: '{artist} completely ignores a fan complimenting their outfit 🙄', authorName: 'TMZ', isTMZ: true, publicImageEffect: -3, hypeEffect: 1 }
+            ]
+        }
+    ];
+
+    if (isGroup) {
+        encounters.push({
+            id: 'group_relationship',
+            text: 'Paparazzi ambush you: "What is your relationship really like with the other group members?"',
+            requiresImage: true,
+            choices: [
+                { label: '"They are my family"', tweetTemplate: '"{artist} says the group is like family! So sweet 🥺"', authorName: 'Pop Crave', isTMZ: false, publicImageEffect: 5, hypeEffect: 2 },
+                { label: '"We hate each other"', tweetTemplate: '{artist} ADMITS they hate their group members! The drama! 😱', authorName: 'TMZ', isTMZ: true, publicImageEffect: -10, hypeEffect: 20 },
+                { label: 'Ignore', tweetTemplate: '{artist} stays silent on group drama rumors...', authorName: 'TMZ', isTMZ: true, publicImageEffect: -2, hypeEffect: 2 },
+                { label: 'Yell "Leave us alone!"', tweetTemplate: '{artist} SNAPS at paparazzi asking about group members.', authorName: 'TMZ', isTMZ: true, publicImageEffect: -5, hypeEffect: 8 },
+            ]
+        });
+    }
+
+    if (isMarried) {
+        encounters.push({
+            id: 'marriage',
+            text: 'Paparazzi: "How is married life treating you?"',
+            requiresImage: true,
+            choices: [
+                { label: '"Happily married!"', tweetTemplate: '"{artist} smiling and says they are happily married! ❤️"', authorName: 'Pop Crave', isTMZ: false, publicImageEffect: 5, hypeEffect: 2 },
+                { label: 'Ignore', tweetTemplate: '{artist} ignores questions about their marriage... trouble in paradise?', authorName: 'TMZ', isTMZ: true, publicImageEffect: -5, hypeEffect: 5 },
+                { label: 'Yell at them', tweetTemplate: '{artist} yells at paparazzi for asking about their marriage.', authorName: 'TMZ', isTMZ: true, publicImageEffect: -10, hypeEffect: 8 },
+            ]
+        });
+    }
+
+    return encounters;
+};
 
 export const formatNumber = (num: number): string => {
     const number = Math.floor(num);
@@ -4049,6 +4119,19 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 };
             }
 
+            if (!finalState.disableEncounters && finalState.currentView !== 'contractRenewal' && !finalState.activeEncounter && !finalState.contractOffer) {
+                const updatedActiveData = updatedArtistsData[state.activeArtistId];
+                if (updatedActiveData) {
+                    const artist = allPlayerArtistsAndGroups.find(a => a.id === state.activeArtistId);
+                    if (artist && Math.random() < (updatedActiveData.popularity / 100) * 0.33) {
+                        const possibleEncounters = getPossibleEncounters(artist, updatedActiveData);
+                        if (possibleEncounters.length > 0) {
+                            finalState.activeEncounter = possibleEncounters[Math.floor(Math.random() * possibleEncounters.length)];
+                        }
+                    }
+                }
+            }
+
             return {
                 ...finalState,
                 date: newDate,
@@ -8075,6 +8158,62 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         kids: updatedKids
                     },
                     [newKidArtistId]: newKidArtistData
+                }
+            };
+        }
+        case 'TOGGLE_ENCOUNTERS':
+            return {
+                ...state,
+                disableEncounters: !state.disableEncounters
+            };
+        case 'RESOLVE_ENCOUNTER': {
+            if (!state.activeArtistId) return state;
+            const { choice, imageUrl } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (!activeData) return state;
+
+            let authorId = 'tmz';
+            if (!choice.isTMZ) {
+                const fanFanUser = activeData.xUsers.find(u => !u.isPlayer && !u.isVerified && !['popbase', 'tmz', 'chartdata', 'spotifysnapshot'].includes(u.id));
+                if (fanFanUser) {
+                    authorId = fanFanUser.id;
+                } else {
+                    authorId = choice.authorName; // fallback just in case
+                }
+            }
+            
+            const activeArtist = state.careerMode === 'solo' ? state.soloArtist : 
+                (state.group?.id === state.activeArtistId ? state.group : state.group?.members.find(m => m.id === state.activeArtistId) || state.extraPlayableArtists?.find(a => a.id === state.activeArtistId));
+                
+            let newPosts = activeData.xPosts || [];
+            if (activeArtist) {
+                const tweetText = choice.tweetTemplate.replace(/\{artist\}/g, activeArtist.name);
+                const pop = (activeData.popularity || 50);
+                const newPost: XPost = {
+                    id: 'post-' + Date.now(),
+                    authorId: authorId,
+                    content: tweetText,
+                    likes: Math.floor(pop * 1000 * Math.random()) || 0,
+                    retweets: Math.floor(pop * 300 * Math.random()) || 0,
+                    views: Math.floor(pop * 5000 * Math.random()) || 0,
+                    date: state.date,
+                    image: imageUrl || undefined
+                };
+                newPosts = [newPost, ...newPosts];
+            }
+
+            return {
+                ...state,
+                activeEncounter: null,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        publicImage: Math.max(0, Math.min(100, (activeData.publicImage || 50) + choice.publicImageEffect)),
+                        hype: Math.max(0, Math.min(100, (activeData.hype || 50) + choice.hypeEffect)),
+                        xPosts: newPosts,
+                        xUnreadMentions: (activeData.xUnreadMentions || 0) + 1
+                    }
                 }
             };
         }
