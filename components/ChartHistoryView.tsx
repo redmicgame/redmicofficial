@@ -28,30 +28,46 @@ const ChartHistoryView: React.FC = () => {
                 break;
             case 'hotPopSongs':
                 history = gameState.hotPopSongsHistory;
-                items = songs;
-                title = 'Hot Pop Songs';
+                items = [...songs];
                 break;
             case 'hotRapRnb':
                 history = gameState.hotRapRnbHistory;
-                items = songs;
-                title = 'Hot Rap/R&B Songs';
+                items = [...songs];
                 break;
             case 'electronicChart':
                 history = gameState.electronicChartHistory;
-                items = songs;
-                title = 'Electronic Chart';
+                items = [...songs];
                 break;
             case 'countryChart':
                 history = gameState.countryChartHistory;
-                items = songs;
-                title = 'Country Chart';
+                items = [...songs];
                 break;
             case 'billboardHot100':
             default:
                 history = gameState.chartHistory;
-                items = songs;
+                items = [...songs];
                 title = 'Billboard Hot 100';
                 break;
+        }
+
+        if (selectedChart !== 'billboardTopAlbums') {
+            Object.values(gameState.artistsData).forEach(data => {
+                data.songs.forEach(song => {
+                    if (song.collaboration?.artistName === activeArtist.name) {
+                        items.push({ ...song, title: `${song.title} (with ${song.collaboration.artistName})` });
+                    }
+                });
+            });
+            
+            // Define titles after switch block to handle all cases properly
+            switch (selectedChart) {
+                case 'hotPopSongs': title = 'Hot Pop Songs'; break;
+                case 'hotRapRnb': title = 'Hot Rap/R&B Songs'; break;
+                case 'electronicChart': title = 'Electronic Chart'; break;
+                case 'countryChart': title = 'Country Chart'; break;
+                case 'billboardHot100':
+                default: title = 'Billboard Hot 100'; break;
+            }
         }
 
         const chartedItems = items

@@ -2661,6 +2661,45 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistData.inbox.push(...newEmails);
             }
 
+            // --- ATTRIBUTE FEATURE STREAMS TO FEATURED ARTISTS ---
+            const featureStreamsMap: Record<string, number> = {};
+            for (const outId in updatedArtistsData) {
+                updatedArtistsData[outId].songs.forEach(song => {
+                    if (song.isReleased && song.collaboration && song.collaboration.artistName) {
+                        const featArtist = allPlayerArtistsAndGroups.find(a => a.name === song.collaboration!.artistName);
+                        if (featArtist && featArtist.id !== outId) {
+                            featureStreamsMap[featArtist.id] = (featureStreamsMap[featArtist.id] || 0) + (song.lastWeekStreams || 0);
+                        }
+                    }
+                });
+            }
+
+            for (const featId in featureStreamsMap) {
+                const fStreams = featureStreamsMap[featId];
+                if (fStreams > 0 && updatedArtistsData[featId]) {
+                    const featData = updatedArtistsData[featId];
+                    if (featData.lastFourWeeksStreams.length > 0) {
+                        featData.lastFourWeeksStreams[0] += fStreams;
+                    } else {
+                        featData.lastFourWeeksStreams = [fStreams];
+                    }
+                    
+                    const totalStreamsLastMonth = featData.lastFourWeeksStreams.reduce((sum, s) => sum + s, 0);
+                    featData.monthlyListeners = Math.floor(totalStreamsLastMonth * 0.1);
+                    featData.peakMonthlyListeners = Math.max(featData.monthlyListeners, featData.peakMonthlyListeners || 0);
+                    featData.listeningNow = Math.floor(featData.monthlyListeners * (Math.random() * 0.001));
+                    featData.saves = Math.floor((featData.saves || 0) + (fStreams / 1000) * (Math.random() * 0.5 + 0.5));
+                    featData.followers = (featData.followers || 0) + Math.floor(fStreams / 50000);
+                    
+                    if (featData.streamsHistory && featData.streamsHistory.length > 0) {
+                        featData.streamsHistory[featData.streamsHistory.length - 1].streams += fStreams;
+                    }
+                    if (newDate.week % 4 !== 0) {
+                        featData.streamsThisMonth += fStreams;
+                    }
+                }
+            }
+
             // --- FEATURE SONG RELEASE LOGIC ---
             const newNpcsWithReleases = [...newNpcsList];
             for (const artistId in updatedArtistsData) {
