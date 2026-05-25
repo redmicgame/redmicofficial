@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Release, Song, Artist, Group, GameDate } from '../types';
-import { PLAYLIST_PITCH_COST } from '../constants';
+import { PLAYLIST_PITCH_COST, NPC_ARTIST_IMAGES } from '../constants';
 import HomeIcon from './icons/HomeIcon';
 import MusicNoteIcon from './icons/MusicNoteIcon';
 import UserGroupIcon from './icons/UserGroupIcon';
@@ -264,11 +264,28 @@ const S4AHome: React.FC = () => {
 
 // --- MUSIC TAB ---
 const S4AMusic: React.FC<{ onSelectSong: (song: Song) => void; onSelectUpcomingRelease: (submissionId: string) => void; }> = ({ onSelectSong, onSelectUpcomingRelease }) => {
-    const { activeArtistData, gameState } = useGame();
+    const { activeArtistData, gameState, allPlayerArtists } = useGame();
     const [musicTab, setMusicTab] = useState<'Songs' | 'Releases' | 'Playlists' | 'Upcoming'>('Upcoming');
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
     if (!activeArtistData) return null;
-    const { songs, streamsHistory } = activeArtistData;
+    const { songs, streamsHistory, playlistPlacements } = activeArtistData;
+
+    const getPlaylistCover = (playlistId: string, fallbackCover: string) => {
+        const p = gameState.spotifyPlaylists?.find(p => p.id === playlistId);
+        if (!p) return fallbackCover;
+        let playlistCover = p.coverArt || fallbackCover;
+        if (p.tracks && p.tracks.length > 0) {
+            const topTrack = p.tracks[0];
+            if (topTrack.artistId !== 'unknown') {
+                const topPlayerArtist = allPlayerArtists.find(a => a.id === topTrack.artistId);
+                if (topPlayerArtist && topPlayerArtist.image) playlistCover = topPlayerArtist.image;
+            } else {
+                playlistCover = NPC_ARTIST_IMAGES?.[topTrack.artistName] || topTrack.coverArt || p.coverArt || fallbackCover;
+            }
+        }
+        return playlistCover;
+    };
 
     type SortPeriod = 'all' | '12m' | '7d' | '24h';
     const [sortPeriod, setSortPeriod] = useState<SortPeriod>('12m');
@@ -404,7 +421,71 @@ const S4AMusic: React.FC<{ onSelectSong: (song: Song) => void; onSelectUpcomingR
             )}
 
             {musicTab === 'Releases' && <div className="p-8 text-center text-zinc-500">Feature coming soon.</div>}
-            {musicTab === 'Playlists' && <div className="p-8 text-center text-zinc-500">Feature coming soon.</div>}
+            {musicTab === 'Playlists' && (
+                <div className="p-4">
+                    {selectedPlaylistId ? (
+                        <div>
+                            <button onClick={() => setSelectedPlaylistId(null)} className="flex items-center gap-2 mb-4 text-sm font-semibold text-zinc-600 hover:text-black">
+                                <ArrowLeftIcon className="w-5 h-5" /> Back to Playlists
+                            </button>
+                            {(() => {
+                                const playlist = playlistPlacements?.find(p => p.playlistId === selectedPlaylistId);
+                                if (!playlist) return null;
+                                const sortedSongsId = Object.keys(playlist.songStreams).sort((a, b) => playlist.songStreams[b] - playlist.songStreams[a]);
+                                return (
+                                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                                        <div className="flex items-center gap-4 mb-6 relative">
+                                            <img src={getPlaylistCover(playlist.playlistId, playlist.coverArt)} className="w-20 h-20 shadow-md rounded-md object-cover" />
+                                            <div>
+                                                <h2 className="text-2xl font-bold">{playlist.playlistName}</h2>
+                                                <p className="text-zinc-500 font-semibold">{formatNumber(playlist.totalStreams)} total streams</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {sortedSongsId.map(songId => {
+                                                const song = songs.find(s => s.id === songId);
+                                                if (!song) return null;
+                                                return (
+                                                    <div key={songId} className="flex items-center gap-3">
+                                                        <img src={song.coverArt} alt={song.title} className="w-12 h-12 object-cover rounded-md" />
+                                                        <p className="font-semibold flex-grow truncate">{song.title}</p>
+                                                        <p className="font-bold flex-shrink-0">{formatNumber(playlist.songStreams[songId])}</p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    ) : (
+                        <div>
+                            <div className="flex justify-between items-center text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4">
+                                <span>Playlists</span>
+                                <span>Streams</span>
+                            </div>
+                            {playlistPlacements && playlistPlacements.length > 0 ? (
+                                <div className="space-y-4">
+                                    {[...playlistPlacements].sort((a, b) => b.totalStreams - a.totalStreams).map(playlist => (
+                                        <button key={playlist.playlistId} onClick={() => setSelectedPlaylistId(playlist.playlistId)} className="w-full flex items-center gap-3 text-left hover:bg-zinc-100 p-2 -m-2 rounded-lg">
+                                            <img src={getPlaylistCover(playlist.playlistId, playlist.coverArt)} className="w-14 h-14 object-cover rounded-md" />
+                                            <div className="flex-grow min-w-0">
+                                                <p className="font-bold text-black truncate">{playlist.playlistName}</p>
+                                                <p className="text-sm text-zinc-500">{Object.keys(playlist.songStreams).length} track{Object.keys(playlist.songStreams).length === 1 ? '' : 's'}</p>
+                                            </div>
+                                            <p className="font-bold flex-shrink-0 text-right">{formatNumber(playlist.totalStreams)}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center text-zinc-500 py-10">
+                                    <p>Your songs haven't been added to any major playlists yet.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {musicTab === 'Upcoming' && (
                 <div className="p-4">

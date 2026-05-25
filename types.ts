@@ -880,6 +880,7 @@ export interface ArtistData {
     listeningNow: number;
     streamsHistory: { date: GameDate; streams: number }[];
     firstChartEntry?: { songTitle: string; rank: number; date: GameDate } | null;
+    playlistPlacements?: { playlistId: string; playlistName: string; coverArt: string; totalStreams: number; songStreams: Record<string, number> }[];
     // Red Mic Pro
     redMicPro: RedMicProState;
     salesBoost: number; // percentage

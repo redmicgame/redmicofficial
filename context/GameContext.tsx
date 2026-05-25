@@ -1562,7 +1562,17 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             const trackIndex = playlist.tracks.findIndex(t => t.songId === song.id);
                             if (trackIndex !== -1) {
                                 const percentage = Math.max(0.001, 0.03 - (trackIndex * 0.0006));
-                                playlistStreams += Math.floor(playlist.followers * percentage);
+                                const pStreams = Math.floor(playlist.followers * percentage);
+                                playlistStreams += pStreams;
+
+                                if (!artistData.playlistPlacements) artistData.playlistPlacements = [];
+                                let placement = artistData.playlistPlacements.find(p => p.playlistId === playlist.id);
+                                if (!placement) {
+                                    placement = { playlistId: playlist.id, playlistName: playlist.name, coverArt: playlist.coverArt, totalStreams: 0, songStreams: {} };
+                                    artistData.playlistPlacements.push(placement);
+                                }
+                                placement.totalStreams += pStreams;
+                                placement.songStreams[song.id] = (placement.songStreams[song.id] || 0) + pStreams;
                             }
                         });
                         weeklyStreams += playlistStreams;
