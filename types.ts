@@ -286,6 +286,7 @@ export interface SpotifyPlaylistTrack {
     coverArt: string;
     position: number;
     addedDate: GameDate;
+    explicit?: boolean;
 }
 
 export interface SpotifyPlaylist {

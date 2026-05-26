@@ -2,6 +2,10 @@ import React, { useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import TrianglePlayIcon from './icons/TrianglePlayIcon';
+import PlusCircleIcon from './icons/PlusCircleIcon';
+import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
+import ShuffleIcon from './icons/ShuffleIcon';
+import SpotifyIcon from './icons/SpotifyIcon';
 import HeartIcon from './icons/HeartIcon';
 import { NPC_ARTIST_IMAGES } from '../constants';
 
@@ -15,13 +19,18 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
     if (!playlist) return null;
 
     let playlistCover = playlist.coverArt;
+    let featuredArtistName = 'Various Artists';
     if (playlist.tracks && playlist.tracks.length > 0) {
         const topTrack = playlist.tracks[0];
         if (topTrack.artistId !== 'unknown') {
             const topPlayerArtist = allPlayerArtists.find(a => a.id === topTrack.artistId);
-            if (topPlayerArtist) playlistCover = topPlayerArtist.image;
+            if (topPlayerArtist) {
+                playlistCover = topPlayerArtist.image;
+                featuredArtistName = topPlayerArtist.name;
+            }
         } else {
             playlistCover = NPC_ARTIST_IMAGES?.[topTrack.artistName] || topTrack.coverArt || playlist.coverArt;
+            featuredArtistName = topTrack.artistName;
         }
     }
 
@@ -29,88 +38,100 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
 
     return (
         <div className="bg-[#121212] text-white min-h-screen mb-16 pb-[100px]">
-            {/* Header */}
-            <div className="flex bg-gradient-to-b from-zinc-700/50 to-[#121212] pt-12 pb-6 px-4 md:px-8">
+            {/* Header / Full Bleed Cover */}
+            <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[21/9] bg-[#121212]">
                 <button 
                     onClick={onBack} 
-                    className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-10"
+                    className="absolute top-8 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-20"
                     aria-label="Go back"
                 >
                     <ChevronLeftIcon className="w-6 h-6" />
                 </button>
-                
-                <div className="flex flex-col md:flex-row gap-6 mt-8 md:mt-0 items-center md:items-end w-full">
-                    <div className="relative w-48 h-48 md:w-60 md:h-60 shadow-2xl rounded-sm overflow-hidden flex-shrink-0 bg-[#282828]">
-                        <img 
-                            src={playlistCover} 
-                            alt={playlist.name} 
-                            className="w-full h-full object-cover"
-                        />
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-                            <span className="text-white font-black text-2xl md:text-4xl leading-tight uppercase tracking-tighter drop-shadow-md">
-                                {playlist.name}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 w-full text-center md:text-left">
-                        <span className="text-sm font-bold uppercase hidden md:block">Playlist</span>
-                        <h1 className="text-4xl md:text-7xl font-black tracking-tighter" style={{ lineHeight: 1.1 }}>
-                            {playlist.name}
-                        </h1>
-                        <p className="text-zinc-400 text-sm mt-2">{playlist.description}</p>
-                        <div className="flex items-center justify-center md:justify-start gap-2 text-sm text-zinc-300 mt-2 font-medium">
-                            <span className="text-white hover:underline cursor-pointer font-bold">Spotify</span>
-                            <span>•</span>
-                            <span>{formatNumber(playlist.followers)} likes</span>
-                            <span>•</span>
-                            <span>{playlist.tracks.length} songs</span>
-                        </div>
-                    </div>
+                <img 
+                    src={playlistCover} 
+                    alt={playlist.name} 
+                    className="w-full h-full object-cover"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-transparent flex items-end p-4 pb-0 z-10">
+                    <h1 className="text-6xl md:text-8xl font-black tracking-tighter w-full text-left -mb-2 pb-0">
+                        {playlist.name}
+                    </h1>
                 </div>
             </div>
 
-            {/* Actions */}
-            <div className="px-4 md:px-8 py-4 flex items-center gap-6">
-                <button className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center hover:bg-green-400 hover:scale-105 transition-all text-black shadow-lg">
-                    <TrianglePlayIcon />
-                </button>
-                <button className="text-zinc-400 hover:text-white transition-colors">
-                    <HeartIcon className="w-8 h-8" />
-                </button>
-                <button className="text-zinc-400 hover:text-white transition-colors text-2xl font-bold pb-2 tracking-widest leading-none">
-                    ...
-                </button>
+            {/* Description & Meta */}
+            <div className="px-4 mt-4 space-y-4">
+                <p className="text-zinc-300 text-sm font-medium">
+                    {playlist.description}. Cover: {featuredArtistName}
+                </p>
+                <div className="flex items-center gap-2">
+                    <SpotifyIcon className="w-6 h-6 text-[#1ed760]" />
+                    <span className="text-white font-bold text-sm">Spotify</span>
+                </div>
+                <div className="text-sm font-medium text-zinc-400">
+                    {formatNumber(playlist.followers)} saves • 2h 41m
+                </div>
+
+                {/* Actions Row */}
+                <div className="flex items-center justify-between mt-2 py-2">
+                    <div className="flex items-center gap-6">
+                        <div className="w-9 h-9 bg-black border border-zinc-500 rounded-sm flex items-center justify-center p-1 text-[8px] text-center font-black uppercase leading-tight overflow-hidden">
+                            {playlist.name}
+                        </div>
+                        <PlusCircleIcon className="w-8 h-8 text-zinc-400 font-light" />
+                        <div className="w-8 h-8 text-zinc-400 border-2 border-zinc-400 rounded-full flex items-center justify-center">
+                            <span className="text-lg leading-none font-bold pb-1 text-center items-center justify-center -ml-[1px]">↓</span>
+                        </div>
+                        <DotsHorizontalIcon className="w-8 h-8 text-zinc-400" />
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <span className="text-[#1ed760] font-bold text-xl leading-none">🔀</span>
+                        <button className="w-14 h-14 bg-[#1ed760] rounded-full flex items-center justify-center hover:bg-[#1fdf64] hover:scale-105 transition-all text-black shadow-lg">
+                            <TrianglePlayIcon className="w-7 h-7 ml-1" />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Tracks List */}
-            <div className="px-4 md:px-8 mt-4">
-                <div className="text-zinc-400 grid grid-cols-[16px_1fr_minmax(120px,1fr)] md:grid-cols-[16px_1fr_1fr] gap-4 px-4 py-2 border-b border-white/10 text-sm font-semibold uppercase tracking-wider items-center mb-4">
-                    <div className="text-right">#</div>
-                    <div>Title</div>
-                    <div className="hidden md:block">Date added</div>
-                </div>
-                
-                <div className="space-y-1">
+            <div className="px-4 md:px-8 mt-6">
+                <div className="space-y-4">
                     {playlist.tracks.map((track, index) => {
                         const isPlayerTrack = track.artistName === activeArtist?.name;
                         
+                        // Try to find if explicit (lookup from player data if missing from track object)
+                        let isExplicit = track.explicit || false;
+                        if (!isExplicit && isPlayerTrack && activeArtist) {
+                            const artistData = gameState.artistsData[activeArtist.id];
+                            const playerSong = artistData?.songs.find(s => s.id === track.songId);
+                            if (playerSong?.explicit) isExplicit = true;
+                        }
+
                         return (
-                            <div key={`${track.songId}-${index}`} className="group grid grid-cols-[16px_1fr_minmax(120px,1fr)] md:grid-cols-[16px_1fr_1fr] gap-4 px-4 py-2 rounded-md hover:bg-white/10 text-sm items-center transition-colors cursor-pointer">
-                                <div className="text-zinc-400 text-right w-4">{index + 1}</div>
-                                <div className="min-w-0 pr-4 flex items-center gap-3">
-                                    {track.coverArt && <img src={track.coverArt} className="w-10 h-10 object-cover rounded-sm flex-shrink-0" alt="" />}
-                                    <div className="min-w-0">
-                                        <div className={`font-medium truncate ${isPlayerTrack ? 'text-green-500' : 'text-white'}`}>
+                            <div key={`${track.songId}-${index}`} className="group flex justify-between items-center bg-transparent cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-md transition-colors">
+                                <div className="flex items-center gap-3 overflow-hidden flex-1 pr-4">
+                                    <div className="w-5 text-right flex-shrink-0 text-zinc-400 font-medium group-hover:hidden">{index + 1}</div>
+                                    <div className="w-5 text-right flex-shrink-0 text-white font-medium hidden group-hover:flex items-center justify-center">
+                                        <TrianglePlayIcon className="w-3 h-3" />
+                                    </div>
+                                    {track.coverArt && <img src={track.coverArt} className="w-12 h-12 object-cover flex-shrink-0 rounded-sm" alt="" />}
+                                    <div className="min-w-0 flex flex-col">
+                                        <div className={`font-semibold truncate text-base ${isPlayerTrack ? 'text-[#1ed760]' : 'text-white'}`}>
                                             {track.title}
                                         </div>
-                                        <div className="text-zinc-400 text-sm truncate group-hover:text-white transition-colors">
-                                            {track.artistName}
+                                        <div className="flex items-center gap-1.5 text-zinc-400 text-sm truncate group-hover:text-white transition-colors mt-0.5">
+                                            {isExplicit && (
+                                                <span className="bg-zinc-400 text-[#121212] text-[9px] font-bold px-1 rounded-sm leading-tight flex-shrink-0">E</span>
+                                            )}
+                                            <span className="truncate">{track.artistName}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="hidden md:block text-zinc-400 truncate">
-                                    {track.addedDate.year} Wk {track.addedDate.week}
+                                <div className="flex-shrink-0 text-zinc-400 flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-4">
+                                    <HeartIcon className="w-5 h-5 hover:text-white" />
+                                    <DotsHorizontalIcon className="w-5 h-5 hover:text-white" />
                                 </div>
                             </div>
                         );
