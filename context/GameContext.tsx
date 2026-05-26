@@ -97,6 +97,16 @@ export const formatNumber = (num: number): string => {
     return number.toLocaleString();
 };
 
+export const getFutureDate = (currentDate: GameDate, weeksOffset: number): GameDate => {
+    let year = currentDate.year;
+    let week = currentDate.week + weeksOffset;
+    while (week > 52) {
+        week -= 52;
+        year++;
+    }
+    return { year, week, day: 1 };
+};
+
 const getSongCertification = (streams: number): { level: string; multiplier: number } | null => {
     const DIAMOND = 1_200_000_000;
     const PLATINUM = 100_000_000;
@@ -2869,7 +2879,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 return {
                     uniqueId: baseSong.id, title: baseSong.title, artist: artist?.name || 'Unknown',
                     weeklyStreams: totalWeeklyStreams, isPlayerSong: true, coverArt: baseSong.coverArt, songId: baseSong.id,
-                    genre: baseSong.genre
+                    genre: baseSong.genre,
+                    itunesPrice: baseSong.itunesPrice
                 }
             });
             
@@ -2899,6 +2910,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             const currentWeek = newDate.year * 52 + newDate.week;
                             if (aData.lastPushedSongId === song.songId && pushWeek && currentWeek - pushWeek <= 1) {
                                 boost = 5 + Math.random() * 5;
+                            }
+                            if (s.itunesPrice === '$0.69') {
+                                boost *= 2.5;
+                            } else if (s.itunesPrice === '$0.99') {
+                                boost *= 1.5;
+                            } else if (s.itunesPrice === '$1.29') {
+                                boost *= 0.9;
                             }
                             break;
                         }
@@ -4090,6 +4108,53 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 return { ...playlist, tracks: newTracks };
             });
 
+            // Generate "This Is [Artist]" playlists for any player artists with >= 10 songs
+            allPlayerArtistsAndGroups.forEach(artist => {
+                const artistData = updatedArtistsData[artist.id];
+                if (artistData) {
+                    const releasedSongs = artistData.songs.filter(s => s.isReleased && !s.remixOfSongId);
+                    if (releasedSongs.length >= 10) {
+                        // Sort by total streams (biggest hits)
+                        const biggestHits = [...releasedSongs].sort((a, b) => b.streams - a.streams).slice(0, 50);
+                        
+                        const playlistId = `this_is_${artist.id}`;
+                        const existingPlaylist = newSpotifyPlaylists.find(p => p.id === playlistId);
+                        
+                        const tracks: SpotifyPlaylistTrack[] = biggestHits.map((song, index) => {
+                            const existingTrack = existingPlaylist?.tracks.find(t => t.songId === song.id);
+                            return {
+                                songId: song.id,
+                                artistName: artist.name,
+                                artistId: artist.id,
+                                title: song.title,
+                                coverArt: song.coverArt,
+                                position: index + 1,
+                                addedDate: existingTrack ? existingTrack.addedDate : newDate,
+                                explicit: song.explicit || false,
+                            };
+                        });
+
+                        const thisIsPlaylist: SpotifyPlaylist = {
+                            id: playlistId,
+                            name: `This Is ${artist.name}`,
+                            description: `This is ${artist.name}. The essential tracks, all in one playlist.`,
+                            followers: existingPlaylist ? existingPlaylist.followers : (artistData.spotifyFollowers || 0),
+                            coverArt: artist.image,
+                            artistPosition: 1,
+                            type: 'this_is',
+                            tracks: tracks
+                        };
+
+                        if (existingPlaylist) {
+                            const index = newSpotifyPlaylists.findIndex(p => p.id === playlistId);
+                            newSpotifyPlaylists[index] = thisIsPlaylist;
+                        } else {
+                            newSpotifyPlaylists.push(thisIsPlaylist);
+                        }
+                    }
+                }
+            });
+
             if (contractRenewalForActivePlayer) {
                 return {
                     ...finalState,
@@ -4643,6 +4708,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'UPDATE_ITUNES_PRICE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: activeData.songs.map(s => s.id === action.payload.songId ? { ...s, itunesPrice: action.payload.newPriceStr } : s)
+                    }
+                }
+            };
+        }
         case 'TAKE_DOWN_RELEASE': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -4833,6 +4912,23 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistsData: {
                     ...state.artistsData,
                     [state.activeArtistId]: updatedData
+                }
+            };
+        }
+        case 'EDIT_SUBMISSION_DATE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedSubmissions = activeData.labelSubmissions.map(s => {
+                if (s.id === action.payload.submissionId) {
+                    return { ...s, projectReleaseDate: action.payload.newDate };
+                }
+                return s;
+            });
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: { ...activeData, labelSubmissions: updatedSubmissions }
                 }
             };
         }

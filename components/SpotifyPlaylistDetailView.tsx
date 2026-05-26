@@ -7,6 +7,7 @@ import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import ShuffleIcon from './icons/ShuffleIcon';
 import SpotifyIcon from './icons/SpotifyIcon';
 import HeartIcon from './icons/HeartIcon';
+import { SpotifyPlaylistCover } from './SpotifyPlaylistCover';
 import { NPC_ARTIST_IMAGES } from '../constants';
 
 const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => void }> = ({ playlistId, onBack }) => {
@@ -48,16 +49,13 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
                     <ChevronLeftIcon className="w-6 h-6" />
                 </button>
 
-                <img 
-                    src={playlistCover} 
-                    alt={playlist.name} 
-                    className="w-full h-full object-cover"
-                />
-
-                <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/20 to-transparent flex items-end p-4 pb-0 z-10">
-                    <h1 className="text-6xl md:text-8xl font-black tracking-tighter w-full text-left -mb-2 pb-0">
-                        {playlist.name}
-                    </h1>
+                <div className="absolute inset-0">
+                    <SpotifyPlaylistCover 
+                        name={playlist.name} 
+                        imageUrl={playlistCover} 
+                        artistName={featuredArtistName} 
+                        size="large" 
+                    />
                 </div>
             </div>
 

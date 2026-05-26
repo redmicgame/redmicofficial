@@ -73,6 +73,7 @@ const appCategories: AppCategory[] = [
     {
         title: 'Charts & Career',
         apps: [
+            { name: 'Apple Music for Artists', description: 'Artist Dashboard', icon: <ITunesIcon className="w-8 h-8"/>, view: 'itunesDashboard', bgColor: '#ffffff', textColor: '#fa243c' },
             { name: 'Spotify for Artists', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#000000' },
             { name: 'Spotify Charts', description: 'Weekly top songs and albums', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954' },
             { name: 'GRAMMYs', description: 'Your awards history', icon: <TrophyIcon className="w-8 h-8"/>, view: 'grammys', bgColor: '#f59e0b' },

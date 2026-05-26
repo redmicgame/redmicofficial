@@ -27,6 +27,7 @@ import XView from './components/XView';
 import XProfileView from './components/XProfileView';
 import XChatView from './components/XChatView';
 import SpotifyForArtistsView from './components/SpotifyForArtistsView';
+import AppleMusicForArtistsView from './components/AppleMusicForArtistsView';
 import './utils/xContentGenerator';
 import CreateFallonPerformanceView from './components/CreateFallonPerformanceView';
 import CreateFallonInterviewView from './components/CreateFallonInterviewView';
@@ -236,6 +237,8 @@ const AppContent: React.FC = () => {
                 return <ContractRenewalView />;
             case 'itunes':
                 return <ITunesView />;
+            case 'itunesDashboard':
+                return <AppleMusicForArtistsView />;
             case 'appleMusic':
                 return <AppleMusicView />;
             case 'onlyfansSetup':

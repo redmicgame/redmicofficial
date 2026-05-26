@@ -63,6 +63,7 @@ export interface Song {
     rightsSoldOriginalValue?: number;
     rightsSoldPercent?: number;
     rightsOwnerLabelId?: string;
+    itunesPrice?: string;
 }
 
 export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)' | 'Compilation';
@@ -295,7 +296,7 @@ export interface SpotifyPlaylist {
     description: string;
     followers: number;
     coverArt: string;
-    type: 'global' | 'genre' | 'viral' | 'new';
+    type: 'global' | 'genre' | 'viral' | 'new' | 'this_is';
     genre?: string;
     tracks: SpotifyPlaylistTrack[];
 }
@@ -401,6 +402,7 @@ export interface ChartEntry {
     songId?: string;
     uniqueId: string;
     weeklyStreams: number;
+    itunesPrice?: string;
 }
 
 export interface AlbumChartEntry {
@@ -1051,6 +1053,7 @@ export type GameAction =
     | { type: 'MARK_INBOX_READ' }
     | { type: 'TAKE_DOWN_SONG'; payload: { songId: string } }
     | { type: 'TAKE_DOWN_RELEASE'; payload: { releaseId: string } }
+    | { type: 'UPDATE_ITUNES_PRICE'; payload: { songId: string; newPriceStr: string } }
     | { type: 'BUY_BACK_SONG'; payload: { songId: string, cost: number } }
     | { type: 'BUY_BACK_RELEASE'; payload: { releaseId: string, cost: number } }
     | { type: 'SELL_RIGHTS'; payload: { itemType: 'song' | 'release', id: string, percent: number, labelId: string, value: number } }
@@ -1063,6 +1066,7 @@ export type GameAction =
     | { type: 'SIGN_CONTRACT'; payload: { contract: Contract } }
     | { type: 'END_CONTRACT' }
     | { type: 'SUBMIT_TO_LABEL'; payload: { submission: LabelSubmission } }
+    | { type: 'EDIT_SUBMISSION_DATE'; payload: { submissionId: string; newDate: GameDate } }
     | { type: 'GO_TO_LABEL_PLAN'; payload: { submissionId: string } }
     | { type: 'PLAN_LABEL_RELEASE'; payload: { submissionId: string; singles: { songId: string; releaseDate: GameDate }[]; projectReleaseDate: GameDate; } }
     | { type: 'ACCEPT_GENIUS_OFFER'; payload: { songId: string; emailId: string } }

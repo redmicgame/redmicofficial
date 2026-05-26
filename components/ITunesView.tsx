@@ -28,7 +28,9 @@ interface ITunesAlbum extends AlbumChartEntry {
 
 type ITunesViewMode = 'home' | 'charts' | 'songChart' | 'albumChart' | 'artist' | 'albumDetail';
 
-const getPrice = (id: string, type: 'song' | 'album', trackCount = 0) => {
+const getPrice = (id: string, type: 'song' | 'album', trackCount = 0, itunesPrice?: string) => {
+    if (type === 'song' && itunesPrice) return itunesPrice;
+    
     const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     if (type === 'song') {
         return (hash % 3 === 0) ? '$0.99' : '$1.29';
@@ -97,7 +99,7 @@ const useItunesData = () => {
 
             return {
                 ...entry,
-                price: getPrice(entry.uniqueId, 'song'),
+                price: getPrice(entry.uniqueId, 'song', 0, entry.itunesPrice),
                 duration,
                 explicit,
                 sales,
@@ -248,7 +250,7 @@ const useItunesData = () => {
                             songId: song.id,
                             uniqueId: song.id,
                             weeklyStreams: song.lastWeekStreams,
-                            price: getPrice(song.id, 'song'),
+                            price: getPrice(song.id, 'song', 0, song.itunesPrice),
                             duration: song.duration,
                             explicit: song.explicit
                         };
@@ -357,17 +359,22 @@ const Section: React.FC<{ title: string; onSeeAll: () => void; children: React.R
     </section>
 );
 
-const SongRow: React.FC<{ song: ITunesSong; onClick: () => void }> = ({ song, onClick }) => (
-    <button onClick={onClick} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
-        <img src={song.coverArt} alt={song.title} className="w-16 h-16 rounded-md object-cover" />
-        <div className="flex-grow text-left">
-            <p className="font-semibold line-clamp-1">{song.title}</p>
-            <p className="text-zinc-400 line-clamp-1">{song.artist}</p>
-        </div>
-        <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe]">
+const SongRow: React.FC<{ song: ITunesSong; onClick: () => void; onPriceClick?: (e: React.MouseEvent) => void }> = ({ song, onClick, onPriceClick }) => (
+    <div className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
+        <button onClick={onClick} className="flex flex-grow items-center gap-3 text-left">
+            <img src={song.coverArt} alt={song.title} className="w-16 h-16 rounded-md object-cover" />
+            <div>
+                <p className="font-semibold line-clamp-1">{song.title}</p>
+                <p className="text-zinc-400 line-clamp-1">{song.artist}</p>
+            </div>
+        </button>
+        <button 
+            onClick={onPriceClick}
+            className={`border rounded-full px-4 py-1 flex-shrink-0 text-sm font-bold ${onPriceClick ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10`}
+        >
             {song.price}
-        </div>
-    </button>
+        </button>
+    </div>
 );
 
 const AlbumGridItem: React.FC<{ album: ITunesAlbum; onClick: () => void }> = ({ album, onClick }) => (
@@ -391,9 +398,11 @@ const StarRating: React.FC<{ rating: number, count: number }> = ({ rating, count
 };
 
 const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function }> = ({ data, navigateTo }) => {
+    const { activeArtist } = useGame();
     const featuredAlbums = data.allAlbums.slice(0, 5);
     const preorders = data.allAlbums.filter(a => a.isPreorder);
     const bestNewReleases = data.allAlbums.filter(a => !a.isPreorder).slice(5, 15);
+    const yourReleases = activeArtist ? data.allAlbums.filter(a => a.isPlayerAlbum && a.artist === activeArtist.name) : [];
 
     return (
         <div className="space-y-6 pb-6">
@@ -415,6 +424,14 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
                 ))}
             </div>
 
+            {yourReleases.length > 0 && (
+                <Section title="Your Releases" onSeeAll={() => navigateTo('albumChart', { albums: yourReleases, title: 'Your Releases' }, 'Your Releases')}>
+                    <div className="flex gap-4 px-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                        {yourReleases.map(album => <AlbumGridItem key={`your-${album.uniqueId}`} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
+                    </div>
+                </Section>
+            )}
+
             <Section title="Best New Releases" onSeeAll={() => navigateTo('albumChart', { albums: bestNewReleases, title: 'Best New Releases' }, 'Best New Releases')}>
                 <div className="flex gap-4 px-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                     {bestNewReleases.slice(0, 10).map(album => <AlbumGridItem key={album.uniqueId} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
@@ -432,16 +449,27 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
             <Section title="Top Songs" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
                 <div className="px-4">
                     {data.allSongs.slice(0, 5).map((song, i) => (
-                        <button key={song.uniqueId} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
+                        <div key={song.uniqueId} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
                              <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover" />
                              <div className="flex-grow text-left">
                                  <p className="font-semibold line-clamp-1">{song.title}</p>
                                  <p className="text-zinc-400 line-clamp-1 text-sm">{song.artist}</p>
                              </div>
-                             <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                             <button 
+                                 onClick={() => {
+                                     if (!song.isPlayerSong) return;
+                                     const opts = ['$0.69', '$0.99', '$1.29'];
+                                     const currentIdx = opts.indexOf(song.price) >= 0 ? opts.indexOf(song.price) : 1;
+                                     const nextIdx = (currentIdx + 1) % opts.length;
+                                     if ((window as any)._dispatch) {
+                                         (window as any)._dispatch({ type: 'UPDATE_ITUNES_PRICE', payload: { songId: song.songId || song.uniqueId, newPriceStr: opts[nextIdx] } });
+                                     }
+                                 }}
+                                 className={`border border-[#0b84fe] rounded-full px-4 py-1 flex-shrink-0 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'}`}
+                             >
                                  {song.price}
-                             </div>
-                        </button>
+                             </button>
+                        </div>
                     ))}
                 </div>
             </Section>
@@ -485,10 +513,12 @@ const ITunesCharts: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunes
     </div>
 );
 
-const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string }> = ({ songs, title }) => (
+const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string }> = ({ songs, title }) => {
+    const { dispatch } = useGame();
+    return (
     <div className="px-4 pb-8 pt-2">
         {songs.map((song, i) => (
-            <button key={song.uniqueId} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
+            <div key={song.uniqueId} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
                 <div className="text-xl font-bold w-8 text-zinc-400 text-center">{i + 1}</div>
                 <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover shadow-sm" />
                 <div className="flex-grow text-left">
@@ -497,13 +527,22 @@ const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string }> = ({ son
                     {/* Fake Sales Data string */}
                     <p className="text-zinc-600 text-[10px] mt-0.5">{formatNumber(song.sales)} unit sales</p>
                 </div>
-                <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                <button 
+                    onClick={() => {
+                        if (!song.isPlayerSong) return;
+                        const opts = ['$0.69', '$0.99', '$1.29'];
+                        const currentIdx = opts.indexOf(song.price) >= 0 ? opts.indexOf(song.price) : 1;
+                        const nextIdx = (currentIdx + 1) % opts.length;
+                        dispatch({ type: 'UPDATE_ITUNES_PRICE', payload: { songId: song.songId || song.uniqueId, newPriceStr: opts[nextIdx] } });
+                    }}
+                    className={`border rounded-full px-4 py-1 text-sm font-bold flex-shrink-0 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10`}
+                >
                     {song.price}
-                </div>
-            </button>
+                </button>
+            </div>
         ))}
     </div>
-);
+)};
 
 const ITunesAlbumChart: React.FC<{ albums: ITunesAlbum[]; title: string; navigateTo: Function }> = ({ albums, title, navigateTo }) => (
      <div className="px-4 pb-8 pt-2">
@@ -534,56 +573,291 @@ const ITunesArtistView: React.FC<{ artist: any, songs: ITunesSong[], albums: ITu
         </Section>
         <Section title="Songs" onSeeAll={() => {}}>
              <div className="px-4">
-                {songs.slice(0, 5).map(song => <SongRow key={song.uniqueId} song={song} onClick={() => {}} />)}
+                {songs.slice(0, 5).map(song => (
+                    <SongRow 
+                        key={song.uniqueId} 
+                        song={song} 
+                        onClick={() => {}} 
+                        onPriceClick={() => {
+                            if (!song.isPlayerSong) return;
+                            const opts = ['$0.69', '$0.99', '$1.29'];
+                            const currentIdx = opts.indexOf(song.price) >= 0 ? opts.indexOf(song.price) : 1;
+                            const nextIdx = (currentIdx + 1) % opts.length;
+                            if ((window as any)._dispatch) {
+                                (window as any)._dispatch({ type: 'UPDATE_ITUNES_PRICE', payload: { songId: song.songId || song.uniqueId, newPriceStr: opts[nextIdx] } });
+                            }
+                        }}
+                    />
+                ))}
             </div>
         </Section>
     </div>
 );
 
-const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function }> = ({ albumData, navigateTo }) => {
+const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlbums: ITunesAlbum[]; allSongs: ITunesSong[] }> = ({ albumData, navigateTo, allAlbums, allSongs }) => {
+    const { dispatch } = useGame();
     const { title, artist, coverArt, price, rating, reviewCount, songCount, releaseDate, isPreorder, tracks } = albumData;
     const releaseYear = new Date(releaseDate.year, 0, 1).getFullYear();
     const popularityMax = Math.max(...tracks.map((t: any) => t.weeklyStreams || 0), 1);
+    const [tab, setTab] = useState<'songs' | 'reviews' | 'related'>('songs');
+
+    const genre = tracks[0]?.genre || "Pop";
+
+    // Make up some reviews if none exist
+    const reviews = useMemo(() => {
+        const bodies = [
+            "This is a great listen. Highly recommended for fans of the genre.",
+            "Absolutely amazing from start to finish. The production is flawless.",
+            "Not their best work, but it has a few good tracks.",
+            "Really disappointed with this release. Was hoping for more.",
+            "A masterpiece! Been playing it on repeat since it dropped.",
+            "Solid album, very cohesive sound.",
+            "Some skips, but overall a decent effort.",
+            "Vocals are incredible on this one.",
+            "Can't stop listening to the lead single!",
+            "It's okay, but feels a bit rushed."
+        ];
+        return Array.from({ length: 5 }).map((_, i) => {
+            const stars = Math.max(1, Math.min(5, Math.round(rating + (Math.random() * 2 - 1))));
+            const date = ['Sun', 'Fri', '44h ago', 'Last week', 'Yesterday'][i];
+            const titles = ['Amazing!', "Can't wait!", 'Skip', 'A masterpiece', 'Loading...'];
+            return {
+                title: titles[Math.floor(Math.random() * titles.length)],
+                stars,
+                author: `user${Math.floor(Math.random() * 1000)}`,
+                date,
+                body: bodies[Math.floor(Math.random() * bodies.length)]
+            };
+        });
+    }, [rating]);
+
+    const relatedAlbums = useMemo(() => allAlbums.filter(a => a.artist === artist && a.albumId !== albumData.albumId).slice(0, 5), [allAlbums, artist, albumData.albumId]);
+    const relatedSongs = useMemo(() => allSongs.filter(s => s.artist === artist).slice(0, 5), [allSongs, artist]);
+    
+    // Explicit format (e.g. 05:07)
+    const formatDuration = (seconds?: number) => {
+        if (!seconds) return '';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const expectedDateStr = isPreorder ? `Expected ${monthNames[Math.min(11, releaseDate.week % 12)]} ${Math.floor((releaseDate.week % 4) * 7 + 1)}, ${releaseDate.year}` : `Released ${monthNames[Math.min(11, releaseDate.week % 12)]} ${Math.floor((releaseDate.week % 4) * 7 + 1)}, ${releaseDate.year}`;
+
+    const handlePriceClick = (track: any) => {
+        if (!track.isPlayerSong) return;
+        const opts = ['$0.69', '$0.99', '$1.29'];
+        const currentIdx = opts.indexOf(track.price) >= 0 ? opts.indexOf(track.price) : 1;
+        const nextIdx = (currentIdx + 1) % opts.length;
+        const nextPrice = opts[nextIdx];
+        
+        dispatch({
+            type: 'UPDATE_ITUNES_PRICE',
+            payload: { songId: track.songId || track.uniqueId, newPriceStr: nextPrice }
+        });
+    };
 
     return (
-        <div className="px-4 pb-8">
-            <div className="flex gap-4 mt-4">
-                <img src={coverArt} alt={title} className="w-28 h-28 rounded-lg object-cover flex-shrink-0" />
-                <div>
-                    <h2 className="text-xl font-bold">{title}</h2>
-                    <button onClick={() => navigateTo('artist', { artistId: artist.id, artistName: artist.name }, artist.name)} className="text-lg text-red-400">{artist}</button>
-                    <p className="text-sm text-zinc-400 uppercase">Pop • {releaseYear}</p>
-                    <StarRating rating={rating} count={reviewCount} />
-                    {isPreorder && <p className="text-xs font-bold text-red-400 bg-red-900/50 px-2 py-1 rounded-full mt-1 inline-block">PRE-ORDER</p>}
+        <div className="pb-8">
+            <div className="px-4">
+                <div className="flex gap-4 mt-4 mb-4">
+                    <img src={coverArt} alt={title} className="w-36 h-36 rounded-md shadow-2xl object-cover flex-shrink-0" />
+                    <div className="flex flex-col justify-between py-1 flex-1">
+                        <div>
+                            <h2 className="text-xl font-bold leading-tight">{title} <span className="inline-block bg-red-600 text-black text-[10px] font-black px-1 rounded-sm align-middle ml-1">E</span></h2>
+                            <button onClick={() => navigateTo('artist', { artistId: artist, artistName: artist }, artist)} className="text-lg text-zinc-400 mt-1">{artist} &gt;</button>
+                        </div>
+                        <div>
+                            <p className="text-sm text-zinc-500">{genre}</p>
+                            <p className="text-sm text-zinc-500">{songCount} Songs</p>
+                            {isPreorder ? (
+                                <div>
+                                    <p className="text-sm text-[#ff9500] font-semibold mt-1">Pre-Order</p>
+                                    <p className="text-xs text-zinc-500">{expectedDateStr}</p>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-zinc-500">{expectedDateStr}</p>
+                            )}
+                            <div className="flex items-center gap-1 mt-1">
+                                <StarRating rating={rating} count={reviewCount} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-auto pb-1">
+                        <button className={`rounded-full px-4 py-1 text-sm font-bold ${isPreorder ? 'border border-[#ff9500] bg-[#ff9500]/10 text-[#ff9500]' : 'border border-[#0b84fe] bg-[#0b84fe]/10 text-[#0b84fe]'}`}>
+                            {price}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex bg-zinc-800 rounded-lg p-1 mb-6 max-w-sm mx-auto">
+                    {['songs', 'reviews', 'related'].map(t => (
+                        <button 
+                            key={t}
+                            onClick={() => setTab(t as any)}
+                            className={`flex-1 text-sm py-1.5 capitalize font-medium rounded-md ${tab === t ? 'bg-zinc-600 text-white shadow-sm' : 'text-zinc-300'}`}
+                        >
+                            {t}
+                        </button>
+                    ))}
                 </div>
             </div>
-            <button className="w-full bg-[#0b84fe] text-white font-bold py-2 rounded-md mt-4">{isPreorder ? `PRE-ORDER ${price}` : price}</button>
-            <div className="mt-4 border-b border-t border-zinc-800">
-                <table className="w-full text-left text-zinc-400">
-                    <thead>
-                        <tr className="text-xs uppercase">
-                            <th className="p-2 w-8 text-center">#</th>
-                            <th className="p-2">Name</th>
-                            <th className="p-2 w-24">Popularity</th>
-                            <th className="p-2 w-20 text-right">Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tracks.map((track: any, i: number) => (
-                            <tr key={track.uniqueId || i} className="border-t border-zinc-800">
-                                <td className="p-2 text-center">{i + 1}</td>
-                                <td className="p-2 text-white font-semibold">{track.title}</td>
-                                <td className="p-2"><div className="w-full h-1.5 bg-zinc-700 rounded-full"><div className="h-1.5 bg-zinc-400 rounded-full" style={{width: `${(track.weeklyStreams / popularityMax) * 100}%`}}></div></div></td>
-                                <td className="p-2 text-right">
-                                    {track.isAvailable ? <span className="text-[#0b84fe] font-bold">{track.price}</span> : <span className="text-xs">ALBUM ONLY</span>}
-                                </td>
+
+            {tab === 'songs' && (
+                <div className="px-4">
+                    <div className="mb-6">
+                        <h3 className="text-xl font-bold mb-1">iTunes Review</h3>
+                        <p className="text-zinc-400 text-sm italic">above you, below zero.</p>
+                        <div className="mt-4 flex items-center gap-2">
+                             <div className="text-white font-bold tracking-tighter text-sm flex items-center gap-1">
+                                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.316 11.233H9.864c-1.341 0-2.42-1.077-2.42-2.418s1.079-2.418 2.42-2.418h6.452l-2.036 2.035a.725.725 0 001.026 1.025l3.27-3.268a.725.725 0 000-1.025l-3.27-3.269a.725.725 0 00-1.026 1.025l2.036 2.035H9.864c-2.14 0-3.871 1.731-3.871 3.869s1.73 3.868 3.87 3.868h6.452a.725.725 0 000-1.45z"/></svg>
+                                 Apple Digital Master
+                             </div>
+                        </div>
+                    </div>
+                
+                    {isPreorder && (
+                        <p className="text-xs text-zinc-400 border-t border-zinc-800 pt-4 pb-2">
+                            Pre-order contents may change without notice. You'll be charged and receive items from this pre-order as they become available.
+                        </p>
+                    )}
+
+                    <table className="w-full text-left text-zinc-400 border-t border-zinc-800 mt-2">
+                        <thead>
+                            <tr className="text-[10px] uppercase tracking-wider">
+                                <th className="py-2 w-8 text-center text-zinc-500 font-normal">Name</th>
+                                <th></th>
+                                <th className="py-2 w-16 text-center text-zinc-500 font-normal">Duration</th>
+                                <th className="py-2 w-20 text-center text-zinc-500 font-normal">Popularity</th>
+                                <th className="py-2 w-16 text-right text-zinc-500 font-normal">Price</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {tracks.map((track: any, i: number) => (
+                                <tr key={track.uniqueId || i} className="border-t border-zinc-900 group">
+                                    <td className="py-3 text-center text-sm font-semibold">{i + 1}</td>
+                                    <td className="py-3 pl-2 max-w-[120px]">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex flex-col overflow-hidden">
+                                                 <span className={`font-semibold truncate ${track.isAvailable ? 'text-white' : 'text-zinc-500'}`}>{track.title}</span>
+                                                 <span className="text-xs text-zinc-500 truncate">{artist}</span>
+                                            </div>
+                                            {track.explicit && <span className="bg-red-600 text-black text-[9px] font-black px-1 rounded-sm flex-shrink-0">E</span>}
+                                        </div>
+                                    </td>
+                                    <td className="py-3 text-center text-xs text-zinc-500">{track.isAvailable ? formatDuration(track.duration) : ''}</td>
+                                    <td className="py-3">
+                                        <div className="w-full flex justify-center opacity-70 grayscale">
+                                            {/* little barcode style bars */}
+                                            <div className="flex items-end h-3 gap-[1px]">
+                                                 {Array.from({length: 8}).map((_, barIdx) => (
+                                                     <div key={barIdx} className="w-[1px] bg-zinc-600" style={{height: `${Math.max(20, Math.random() * 100)}%`}}></div>
+                                                 ))}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 text-right">
+                                        {track.isAvailable ? 
+                                            <button 
+                                                onClick={() => handlePriceClick(track)}
+                                                className={`border rounded-full px-3 py-1 text-xs font-bold ${track.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10`}
+                                            >
+                                                {track.price}
+                                            </button>
+                                         : 
+                                            <span className="text-[10px] text-zinc-600 font-bold tracking-tight">ALBUM ONLY</span>
+                                        }
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {tab === 'reviews' && (
+                <div className="px-4 mt-6">
+                    <h3 className="text-xl font-bold mb-4">Ratings and Reviews</h3>
+                    <div className="flex items-center gap-6 mb-8">
+                        <div>
+                            <div className="text-5xl font-bold text-center">{rating.toFixed(1)}</div>
+                            <div className="mt-1 flex justify-center">
+                                <StarRating rating={rating} count={0} />
+                            </div>
+                            <p className="text-xs text-zinc-500 text-center mt-1">{reviewCount} Ratings</p>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            {[5, 4, 3, 2, 1].map(stars => {
+                                const fillPercent = stars === 5 ? 80 : stars === 4 ? 15 : stars === 3 ? 5 : 2;
+                                return (
+                                    <div key={stars} className="flex items-center gap-2 text-[10px] text-zinc-500">
+                                        <div className="w-12 text-right tracking-[0.2em]">{"★".repeat(stars)}</div>
+                                        <div className="flex-1 h-[2px] bg-zinc-800 rounded-full overflow-hidden">
+                                            <div className="bg-white h-full rounded-full" style={{ width: `${fillPercent}%` }}></div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                    
+                    <button className="w-full text-center text-[#0b84fe] font-medium py-3 text-lg border-y border-zinc-800">
+                        Write a Review
+                    </button>
+
+                    <div className="divide-y divide-zinc-800 mt-4">
+                        {reviews.map((r, i) => (
+                            <div key={i} className="py-4">
+                                <div className="flex justify-between items-start mb-1">
+                                    <h4 className="font-bold text-white text-sm">{r.title}</h4>
+                                    <span className="text-xs text-zinc-500">{r.date}</span>
+                                </div>
+                                <div className="flex justify-between items-center mb-2">
+                                     <div className="text-[#ff9500] text-[10px]">
+                                        {'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}
+                                     </div>
+                                     <span className="text-xs text-zinc-500 ml-1">by {r.author}</span>
+                                </div>
+                                <p className="text-sm text-zinc-300">{r.body}</p>
+                            </div>
                         ))}
-                    </tbody>
-                </table>
-            </div>
-            <p className="text-xs text-zinc-500 mt-4">{releaseYear} {artist}</p>
-            <p className="text-xs text-zinc-500 mt-1">{songCount} Songs</p>
+                    </div>
+                </div>
+            )}
+
+            {tab === 'related' && (
+                <div className="px-4 mt-6">
+                    {relatedAlbums.length > 0 && (
+                        <div className="mb-8">
+                            <h3 className="text-xl font-bold mb-4">Top Albums by {artist}</h3>
+                            <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                                {relatedAlbums.map(album => <AlbumGridItem key={album.uniqueId} album={album} onClick={() => navigateTo('albumDetail', { albumId: album.albumId, artistName: album.artist }, album.title)} />)}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {relatedSongs.length > 0 && (
+                        <div>
+                            <h3 className="text-xl font-bold mb-4">Top Songs by {artist}</h3>
+                            <div className="space-y-4 pt-2">
+                                {relatedSongs.map((song, i) => (
+                                    <div key={song.uniqueId} className="flex gap-3 pt-2 border-t border-zinc-800/50">
+                                        <img src={song.coverArt} className="w-14 h-14 rounded-md object-cover flex-shrink-0 shadow-sm" alt=""/>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-bold text-white line-clamp-1">{song.title} <span className="text-[10px] bg-red-600 text-black px-1 ml-1 rounded-sm font-black align-middle">E</span></h4>
+                                            <p className="text-sm text-zinc-400 truncate">{artist} - {title}</p>
+                                        </div>
+                                        <button className="self-center border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
+                                            {song.price}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
@@ -591,6 +865,7 @@ const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function }> = ({
 // --- MAIN VIEW COMPONENT ---
 const ITunesView: React.FC = () => {
     const { dispatch } = useGame();
+    (window as any)._dispatch = dispatch;
     const data = useItunesData();
     const [viewStack, setViewStack] = useState<{ mode: ITunesViewMode; data?: any; title?: string }[]>([{ mode: 'home', title: 'Music' }]);
     const [currentTab, setCurrentTab] = useState<'featured' | 'charts'>('featured');
@@ -634,7 +909,7 @@ const ITunesView: React.FC = () => {
             case 'albumDetail':
                 const albumData = data.getAlbumDetails(currentView.data.albumId);
                 if (!albumData) return <p className="p-4">Album not found.</p>;
-                return <ITunesAlbumDetail albumData={albumData} navigateTo={navigateTo} />;
+                return <ITunesAlbumDetail albumData={albumData} navigateTo={navigateTo} allAlbums={data.allAlbums} allSongs={data.allSongs} />;
             default:
                 return null;
         }
