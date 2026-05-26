@@ -2979,8 +2979,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const lastWeekRank = prevSpotifyMap.get(song.uniqueId) ?? null;
                 if (lastWeekRank === null) newEntriesCount++;
                 newSpotifyGlobal.push({
-                    rank: rank, lastWeek: lastWeekRank, peak: newChartHistory[song.uniqueId].peak,
-                    weeksOnChart: newChartHistory[song.uniqueId].weeksOnChart, title: song.title, artist: song.artist,
+                    rank: rank, lastWeek: lastWeekRank, peak: newChartHistory[song.uniqueId]?.peak ?? rank,
+                    weeksOnChart: newChartHistory[song.uniqueId]?.weeksOnChart ?? 1, title: song.title, artist: song.artist,
                     coverArt: song.coverArt, isPlayerSong: song.isPlayerSong, songId: song.songId,
                     uniqueId: song.uniqueId, weeklyStreams: song.weeklyStreams,
                 });
