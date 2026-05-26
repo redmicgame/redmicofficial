@@ -79,6 +79,7 @@ export const getPossibleEncounters = (artist: Artist | Group, artistData: Artist
 };
 
 export const formatNumber = (num: number): string => {
+    if (isNaN(num)) return '0';
     const number = Math.floor(num);
 
     if (number >= 1e12) {
@@ -8165,6 +8166,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             return {
                 ...state,
                 disableEncounters: !state.disableEncounters
+            };
+        case 'SET_ACTIVE_TMZ_POST':
+            return {
+                ...state,
+                activeTmzPost: action.payload,
+                currentView: action.payload ? 'tmzArticle' : state.currentView,
             };
         case 'RESOLVE_ENCOUNTER': {
             if (!state.activeArtistId) return state;

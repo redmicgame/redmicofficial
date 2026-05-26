@@ -85,6 +85,7 @@ import DatingView from './components/DatingView';
 import GoogleView from './components/GoogleView';
 import TikTokView from './components/TikTokView';
 import InstagramView from './components/InstagramView';
+import TmzArticleView from './components/TmzArticleView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -255,6 +256,8 @@ const AppContent: React.FC = () => {
                 return <SecurityView />;
             case 'createVogueFeature':
                 return <CreateVogueFeatureView />;
+            case 'tmzArticle':
+                return <TmzArticleView />;
             case 'game':
             default:
                 return <GameUI />;

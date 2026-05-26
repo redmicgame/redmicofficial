@@ -193,6 +193,7 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
 
     const isChartPost = post.image && post.image.startsWith('chart:');
     const isSnapshotPost = post.image && post.image.startsWith('snapshot:');
+    const isTmzPost = author.id === 'tmz';
 
     return (
         <div className="flex gap-3 p-3 border-b border-zinc-700/70">
@@ -213,6 +214,22 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
                     <YearEndChart dataString={post.image!} />
                 ) : isSnapshotPost ? (
                     <SpotifySnapshotCard dataString={post.image!} />
+                ) : isTmzPost ? (
+                    <div 
+                        onClick={() => dispatch({ type: 'SET_ACTIVE_TMZ_POST', payload: post })} 
+                        className="mt-2 rounded-xl border border-zinc-700 overflow-hidden cursor-pointer hover:border-zinc-500 transition-colors bg-zinc-900"
+                    >
+                        <div className="relative">
+                            <img src={post.image || 'https://images.unsplash.com/photo-1584483766114-2cea6facdf57?q=80&w=3470&auto=format&fit=crop'} alt="Article thumbnail" className="w-full aspect-[16/9] object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                            <div className="absolute bottom-3 left-3 right-3 font-bold text-white text-lg leading-tight line-clamp-2 drop-shadow-md">
+                                {post.content}
+                            </div>
+                        </div>
+                        <div className="p-3 bg-zinc-800">
+                            <span className="text-zinc-400 text-sm">From tmz.com</span>
+                        </div>
+                    </div>
                 ) : (
                     post.image && <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />
                 )}
