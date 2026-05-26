@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import StarIcon from './icons/StarIcon';
@@ -26,6 +26,45 @@ const RedMicProUnlockView: React.FC = () => {
         dispatch({ type: 'UNLOCK_RED_MIC_PRO', payload: { type: 'code', cost: 0 }});
         dispatch({ type: 'CHANGE_VIEW', payload: 'redMicProDashboard' });
     };
+
+    const handlePatreonLogin = async () => {
+        try {
+            setError('');
+            const origin = window.location.origin;
+            const response = await fetch(`/api/patreon/url?origin=${encodeURIComponent(origin)}`);
+            if (!response.ok) {
+                setError('Failed to get Patreon auth URL');
+                return;
+            }
+            const { url } = await response.json();
+            
+            const authWindow = window.open(url, 'oauth_popup', 'width=600,height=700');
+            if (!authWindow) {
+                setError('Please allow popups for this site to connect Patreon.');
+            }
+        } catch (e) {
+             setError('Error connecting to Patreon');
+        }
+    };
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const origin = event.origin;
+            // Only allow from our app domain / localhost
+            if (!origin.endsWith('.run.app') && !origin.includes('localhost') && origin !== window.location.origin) {
+                return;
+            }
+            if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+                if (event.data.isPro) {
+                    setShowConfirmation(true);
+                } else {
+                    setError('We found your Patreon account, but you do not have an active patron status. Please subscribe to a tier to unlock Red Mic Pro!');
+                }
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     const faqs = [
         {
@@ -81,13 +120,24 @@ const RedMicProUnlockView: React.FC = () => {
                     </div>
 
                     <div className="space-y-4">
-                        <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700/50">
-                            <h3 className="text-xl font-bold">Secret Code</h3>
-                            <div className="flex gap-2 mt-3">
-                                <input type="text" value={code} onChange={e => { setCode(e.target.value); setError(''); }} placeholder="Enter code..." className="flex-grow bg-zinc-900 border border-zinc-700 p-3 rounded-lg focus:outline-none focus:border-yellow-500/50 transition-colors" />
-                                <button onClick={handleCodeUnlock} className="bg-zinc-700 hover:bg-zinc-600 font-bold px-6 rounded-lg transition-colors">Unlock</button>
+                        <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700/50 flex flex-col gap-4">
+                            <div>
+                                <h3 className="text-xl font-bold">Unlock with Patreon</h3>
+                                <p className="text-zinc-400 text-sm mt-1">If you are subscribed to any Red Mic Pro tier, login to unlock.</p>
+                                <button onClick={handlePatreonLogin} className="w-full mt-3 bg-[#FF424D] hover:bg-[#e03b44] text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <svg className="w-5 h-5 fill-current" viewBox="0 0 569 546" xmlns="http://www.w3.org/2000/svg"><g><circle cx="362.589996" cy="204.589996" r="204.589996"></circle><rect height="545.799988" width="100" x="0" y="0"></rect></g></svg>
+                                    Login with Patreon
+                                </button>
                             </div>
-                            {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
+
+                            <div className="border-t border-zinc-700 mt-2 pt-4">
+                                <h3 className="text-xl font-bold">Secret Code</h3>
+                                <div className="flex gap-2 mt-3">
+                                    <input type="text" value={code} onChange={e => { setCode(e.target.value); setError(''); }} placeholder="Enter code..." className="flex-grow bg-zinc-900 border border-zinc-700 p-3 rounded-lg focus:outline-none focus:border-yellow-500/50 transition-colors" />
+                                    <button onClick={handleCodeUnlock} className="bg-zinc-700 hover:bg-zinc-600 font-bold px-6 rounded-lg transition-colors">Unlock</button>
+                                </div>
+                            </div>
+                            {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
                         </div>
                     </div>
                     
