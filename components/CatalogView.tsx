@@ -80,9 +80,10 @@ interface TrackItemProps {
     grammyWin?: string;
     canTakeDown: boolean;
     onTakeDown: () => void;
+    onBuyBack: () => void;
 }
 
-const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown }) => {
+const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack }) => {
     return (
         <div className={`bg-zinc-800/50 p-2 rounded-lg ${song.isTakenDown ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-3">
@@ -91,6 +92,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                     <div className="flex items-center gap-2">
                          <p className="font-semibold">{song.title}</p>
                          {grammyWin && <GrammyAwardIcon className="w-4 h-4 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
+                         {song.isTakenDown && <span className="text-[10px] font-bold bg-red-900/80 text-red-400 px-1.5 py-0.5 rounded-full">TAKEN DOWN</span>}
                     </div>
                     <p className="text-sm text-zinc-400">{formatNumber(song.streams)} streams</p>
                 </div>
@@ -111,6 +113,13 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                          <div className="col-span-2 mt-2">
                              <button onClick={onTakeDown} className="w-full bg-red-600/20 hover:bg-red-600/40 text-red-400 py-1 rounded-md text-xs font-bold transition-colors">
                                  Take Down
+                             </button>
+                         </div>
+                     )}
+                     {song.isTakenDown && (
+                         <div className="col-span-2 mt-2">
+                             <button onClick={onBuyBack} className="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 py-1 rounded-md text-xs font-bold transition-colors">
+                                 Buy Back & Own 100%
                              </button>
                          </div>
                      )}
@@ -265,6 +274,30 @@ const CatalogView: React.FC = () => {
                                                         </button>
                                                     </div>
                                                 )}
+                                                {isTakenDown && (
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        <button 
+                                                            onClick={() => {
+                                                                const totalRev = project.songIds.reduce((sum, sId) => {
+                                                                    const s = activeArtistData.songs.find(sg => sg.id === sId);
+                                                                    return sum + (s?.revenue || 0);
+                                                                }, 0);
+                                                                const cost = Math.floor(Math.max(2500000, totalRev * 5 + (activeArtistData.popularity * 100000)));
+                                                                setConfirmAction({
+                                                                    title: 'Buy Back Release',
+                                                                    message: `Are you sure you want to buy back "${project.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+                                                                    confirmText: 'Buy Back',
+                                                                    action: () => {
+                                                                        dispatch({ type: 'BUY_BACK_RELEASE', payload: { releaseId: project.id, cost } });
+                                                                    }
+                                                                });
+                                                            }} 
+                                                            className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-1 rounded-md text-xs font-bold transition-colors"
+                                                        >
+                                                            Buy Back & Own 100%
+                                                        </button>
+                                                    </div>
+                                                )}
                                                 {!isTakenDown && (
                                                     <div className="mt-2">
                                                         <button onClick={() => setRightsTarget({ type: 'release', item: project })} className="bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded-md text-xs font-bold transition-colors flex items-center gap-1">
@@ -298,6 +331,18 @@ const CatalogView: React.FC = () => {
                                                             grammyWin={findGrammyWin(song.id, 'song')}
                                                             canTakeDown={canTakeDown}
                                                             onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                            onBuyBack={() => {
+                                                                const totalRev = song.revenue || 0;
+                                                                const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+                                                                setConfirmAction({
+                                                                    title: 'Buy Back Song',
+                                                                    message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+                                                                    confirmText: 'Buy Back',
+                                                                    action: () => {
+                                                                        dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
+                                                                    }
+                                                                });
+                                                            }}
                                                         />
                                                     );
                                                 })}
@@ -364,6 +409,27 @@ const CatalogView: React.FC = () => {
                                                 <div className="mt-3 flex items-center gap-2">
                                                     <button onClick={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })} className="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1 rounded-md text-xs font-bold transition-colors">
                                                         Take Down
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {isTakenDown && (
+                                                <div className="mt-3 flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => {
+                                                            const totalRev = song.revenue || 0;
+                                                            const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+                                                            setConfirmAction({
+                                                                title: 'Buy Back Song',
+                                                                message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+                                                                confirmText: 'Buy Back',
+                                                                action: () => {
+                                                                    dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
+                                                                }
+                                                            });
+                                                        }} 
+                                                        className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-1 rounded-md text-xs font-bold transition-colors"
+                                                    >
+                                                        Buy Back & Own 100%
                                                     </button>
                                                 </div>
                                             )}

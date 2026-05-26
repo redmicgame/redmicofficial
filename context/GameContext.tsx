@@ -4609,6 +4609,40 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'BUY_BACK_SONG': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (activeData.funds < action.payload.cost) return state;
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        funds: activeData.funds - action.payload.cost,
+                        songs: activeData.songs.map(s => s.id === action.payload.songId ? { ...s, isTakenDown: false, rightsSoldPercent: 0, rightsOwnerLabelId: undefined } : s)
+                    }
+                }
+            };
+        }
+        case 'BUY_BACK_RELEASE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (activeData.funds < action.payload.cost) return state;
+            
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        funds: activeData.funds - action.payload.cost,
+                        releases: activeData.releases.map(r => r.id === action.payload.releaseId ? { ...r, isTakenDown: false, rightsSoldPercent: 0, rightsOwnerLabelId: undefined } : r),
+                        songs: activeData.songs.map(s => s.releaseId === action.payload.releaseId ? { ...s, isTakenDown: false, rightsSoldPercent: 0, rightsOwnerLabelId: undefined } : s)
+                    }
+                }
+            };
+        }
         case 'TAKE_DOWN_RELEASE': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];

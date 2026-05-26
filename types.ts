@@ -1050,6 +1050,8 @@ export type GameAction =
     | { type: 'MARK_INBOX_READ' }
     | { type: 'TAKE_DOWN_SONG'; payload: { songId: string } }
     | { type: 'TAKE_DOWN_RELEASE'; payload: { releaseId: string } }
+    | { type: 'BUY_BACK_SONG'; payload: { songId: string, cost: number } }
+    | { type: 'BUY_BACK_RELEASE'; payload: { releaseId: string, cost: number } }
     | { type: 'SELL_RIGHTS'; payload: { itemType: 'song' | 'release', id: string, percent: number, labelId: string, value: number } }
     | { type: 'BUY_RIGHTS'; payload: { itemType: 'song' | 'release', id: string, percentToBuy: number, cost: number } }
     | { type: 'START_PROMOTION'; payload: { promotion: Promotion } }
