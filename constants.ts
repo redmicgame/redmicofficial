@@ -105,8 +105,39 @@ export const NPC_ARTIST_NAMES = [
     // K-Pop Artists
     'BTS', 'BLACKPINK', 'NewJeans', 'Stray Kids', 'TWICE', 'SEVENTEEN', 'LE SSERAFIM', '(G)I-DLE', 'Jungkook', 'Jennie', 'Lisa', 'aespa',
     // Latin Artists
-    'J Balvin', 'Maluma', 'Rosalía', 'Feid', 'Myke Towers', 'Young Miko', 'Ozuna', 'Bizarrap'
+    'J Balvin', 'Maluma', 'Rosalía', 'Feid', 'Myke Towers', 'Young Miko', 'Ozuna', 'Bizarrap',
+    // Electronic Artists
+    'Calvin Harris', 'David Guetta', 'Skrillex', 'Diplo', 'Zedd', 'Martin Garrix',
+    // Reggae Artists
+    'Bob Marley', 'Sean Paul', 'Koffee', 'Shaggy', 'Popcaan',
+    // Afrobeats Artists
+    'Burna Boy', 'Wizkid', 'Davido', 'Rema', 'Tems', 'Asake', 'Omah Lay',
+    // Indie Artists
+    'Huda Mustafa', 'TRIM', 'Sunshine Benzi', 'Stunna Sandy'
 ];
+
+export const NPC_ARTIST_GENRES: Record<string, string> = {
+    'Taylor Swift': 'Pop', 'Ariana Grande': 'Pop', 'Billie Eilish': 'Pop', 'The Weeknd': 'Pop', 'Drake': 'Hip Hop', 
+    'Justin Bieber': 'Pop', 'Ed Sheeran': 'Pop', 'Beyoncé': 'R&B', 'Rihanna': 'Pop', 'Adele': 'Pop', 
+    'Post Malone': 'Hip Hop', 'Dua Lipa': 'Pop', 'Olivia Rodrigo': 'Pop', 'Harry Styles': 'Pop', 'Bad Bunny': 'Latin',
+    'Kendrick Lamar': 'Hip Hop', 'J. Cole': 'Hip Hop', 'Travis Scott': 'Hip Hop', 'Doja Cat': 'Hip Hop', 'SZA': 'R&B',
+    'Lana Del Rey': 'Indie', 'Frank Ocean': 'R&B', 'Tyler, the Creator': 'Hip Hop', 'Lil Nas X': 'Hip Hop', 'Cardi B': 'Hip Hop',
+    'Nicki Minaj': 'Hip Hop', 'Megan Thee Stallion': 'Hip Hop', 'Kanye West': 'Hip Hop', 'Jay-Z': 'Hip Hop', 'Eminem': 'Hip Hop',
+    'Lady Gaga': 'Pop', 'Bruno Mars': 'Pop', 'Miley Cyrus': 'Pop', 'Selena Gomez': 'Pop', 'Demi Lovato': 'Pop',
+    'Shawn Mendes': 'Pop', 'Camila Cabello': 'Pop', 'Halsey': 'Pop', 'Lorde': 'Indie', 'Charli XCX': 'Pop',
+    'Coldplay': 'Rock', 'Imagine Dragons': 'Rock', 'Maroon 5': 'Pop', 'OneRepublic': 'Pop', 'Arctic Monkeys': 'Rock',
+    'The 1975': 'Rock', 'Tame Impala': 'Indie', 'Glass Animals': 'Indie', 'FINNEAS': 'Indie', 'Jack Harlow': 'Hip Hop',
+    'Sabrina Carpenter': 'Pop', 'Tate McRae': 'Pop', 'Chappell Roan': 'Pop', 'Ice Spice': 'Hip Hop', '21 Savage': 'Hip Hop',
+    'Future': 'Hip Hop', 'Metro Boomin': 'Hip Hop', 'Morgan Wallen': 'Country', 'Luke Combs': 'Country', 'Zach Bryan': 'Country',
+    'Peso Pluma': 'Latin', 'Karol G': 'Latin', 'Shakira': 'Latin', 'Rauw Alejandro': 'Latin', 'Anitta': 'Latin',
+    'Latto': 'Hip Hop', 'GloRilla': 'Hip Hop', 'Sexyy Red': 'Hip Hop', 'Coi Leray': 'Hip Hop', 'Flo Milli': 'Hip Hop',
+    'BTS': 'K-Pop', 'BLACKPINK': 'K-Pop', 'NewJeans': 'K-Pop', 'Stray Kids': 'K-Pop', 'TWICE': 'K-Pop', 'SEVENTEEN': 'K-Pop', 'LE SSERAFIM': 'K-Pop', '(G)I-DLE': 'K-Pop', 'Jungkook': 'K-Pop', 'Jennie': 'K-Pop', 'Lisa': 'K-Pop', 'aespa': 'K-Pop',
+    'J Balvin': 'Latin', 'Maluma': 'Latin', 'Rosalía': 'Latin', 'Feid': 'Latin', 'Myke Towers': 'Latin', 'Young Miko': 'Latin', 'Ozuna': 'Latin', 'Bizarrap': 'Latin',
+    'Calvin Harris': 'Electronic', 'David Guetta': 'Electronic', 'Skrillex': 'Electronic', 'Diplo': 'Electronic', 'Zedd': 'Electronic', 'Martin Garrix': 'Electronic',
+    'Bob Marley': 'Reggae', 'Sean Paul': 'Reggae', 'Koffee': 'Reggae', 'Shaggy': 'Reggae', 'Popcaan': 'Reggae',
+    'Burna Boy': 'Afrobeats', 'Wizkid': 'Afrobeats', 'Davido': 'Afrobeats', 'Rema': 'Afrobeats', 'Tems': 'Afrobeats', 'Asake': 'Afrobeats', 'Omah Lay': 'Afrobeats',
+    'Huda Mustafa': 'Indie', 'TRIM': 'Indie', 'Sunshine Benzi': 'Indie', 'Stunna Sandy': 'Indie'
+};
 export const NPC_SONG_ADJECTIVES = ['Golden', 'Ordinary', 'What I', 'Your', 'Midnight', 'Electric', 'Fading', 'Broken', 'Summer', 'Winter', 'Lost', 'Found', 'Starlight', 'City', 'Velvet', 'Crystal', 'Silent', 'Cosmic', 'Wild', 'Sweet', 'Bitter'];
 export const NPC_SONG_NOUNS = ['Idol', 'Want', 'Dreams', 'Rain', 'Lights', 'Hearts', 'Echoes', 'Sky', 'Moon', 'Sun', 'Stars', 'Ocean', 'River', 'Memories', 'Secrets', 'Lies', 'Truth', 'Flames', 'Sparks', 'Ghosts'];
 export const NPC_COVER_ART = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2NjY2NjYztzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTk5OTk5O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9InVybCgjZykiIC8+CiAgPHRleHQgeD0iNTAlIiB5PSI1NCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzAwMCI+YmlsbGJvYXJkPC90ZXh0Pgo8L3N2Zz4=';

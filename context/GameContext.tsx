@@ -4,7 +4,7 @@ import { db, getActiveSaveId } from '../db/db';
 import { useFirebase } from './FirebaseContext';
 import { loadGameFromCloud, saveGameToCloud } from '../firebase';
 import type { GameState, GameAction, Email, NpcSong, ChartEntry, ChartHistory, ArtistData, Artist, Group, Song, LabelSubmission, Contract, Release, XUser, XPost, XTrend, XChat, CustomLabel, PopBaseOffer, NpcAlbum, AlbumChartEntry, RedMicProState, GrammyCategory, GrammyAward, GrammyContender, OscarCategory, OscarAward, OscarContender, OnlyFansProfile, OnlyFansPost, XSuspensionStatus, SoundtrackAlbum, SoundtrackTrack, Manager, SecurityTeam, Label, VoguePhotoshoot, FeatureOffer } from '../types';
-import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_ARTIST_IMAGES, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
+import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VIEW_INCOME_MULTIPLIER, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, NPC_SONG_ADJECTIVES, NPC_SONG_NOUNS, NPC_ARTIST_IMAGES, LABELS, PLAYLIST_PITCH_COST, PLAYLIST_PITCH_SUCCESS_RATE, PLAYLIST_BOOST_MULTIPLIER, PLAYLIST_BOOST_WEEKS, GENRES, MANAGERS, SECURITY_TEAMS, GIGS } from '../constants';
 import { generateWeeklyXContent } from '../utils/xContentGenerator';
 import { REAL_WORLD_DISCOGRAPHIES } from '../realWorldDiscographies';
 import { ActiveEncounter, EncounterChoice } from '../types';
@@ -147,11 +147,23 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: R
         let combo = "";
         let attempts = 0;
 
+        let baseArtist = "";
         do {
-            artist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+            baseArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+            let displayArtist = baseArtist;
+
+            if (Math.random() < 0.05) { // 5% chance
+                let collabArtist = baseArtist;
+                while (collabArtist === baseArtist) {
+                    collabArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                }
+                displayArtist = `${baseArtist}, ${collabArtist}`;
+            }
+            
+            artist = displayArtist;
             
             // Try to get a real song
-            const realDisco = REAL_WORLD_DISCOGRAPHIES[artist];
+            const realDisco = REAL_WORLD_DISCOGRAPHIES[baseArtist];
             if (realDisco && realDisco.songs.length > 0 && Math.random() < 0.8) { // 80% chance to pick a real song if available
                 // Filter out songs already used by this artist
                 const availableSongs = realDisco.songs.filter(s => !usedNames.has(`${s}-${artist}`));
@@ -185,9 +197,9 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: R
             uniqueId: `npc_${combo.replace(/[^a-zA-Z0-9]/g, '')}`,
             title,
             artist,
-            genre: GENRES[Math.floor(Math.random() * GENRES.length)],
+            genre: NPC_ARTIST_GENRES[baseArtist] || GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
-            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(artist)}&background=random&color=fff&size=250`,
+            coverArt: NPC_ARTIST_IMAGES?.[baseArtist] || npcImages?.[baseArtist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(baseArtist)}&background=random&color=fff&size=250`,
         });
     }
     return npcs;
@@ -203,10 +215,22 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Rec
         let combo = "";
         let attempts = 0;
 
+        let baseArtist = "";
         do {
-            artist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+            baseArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+            let displayArtist = baseArtist;
+
+            if (Math.random() < 0.05) { // 5% chance
+                let collabArtist = baseArtist;
+                while (collabArtist === baseArtist) {
+                    collabArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                }
+                displayArtist = `${baseArtist}, ${collabArtist}`;
+            }
+
+            artist = displayArtist;
             
-            const realDisco = REAL_WORLD_DISCOGRAPHIES[artist];
+            const realDisco = REAL_WORLD_DISCOGRAPHIES[baseArtist];
             if (realDisco && realDisco.songs.length > 0 && Math.random() < 0.8) {
                 const availableSongs = realDisco.songs.filter(s => !usedNames.has(`${s}-${artist}`));
                 if (availableSongs.length > 0) {
@@ -237,9 +261,9 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Rec
             uniqueId: `npc_${combo.replace(/[^a-zA-Z0-9]/g, '')}`,
             title,
             artist,
-            genre: GENRES[Math.floor(Math.random() * GENRES.length)],
+            genre: NPC_ARTIST_GENRES[baseArtist] || GENRES[Math.floor(Math.random() * GENRES.length)],
             basePopularity,
-            coverArt: NPC_ARTIST_IMAGES?.[artist] || npcImages?.[artist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(artist)}&background=random&color=fff&size=250`,
+            coverArt: NPC_ARTIST_IMAGES?.[baseArtist] || npcImages?.[baseArtist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(baseArtist)}&background=random&color=fff&size=250`,
         });
     }
     return hits;
@@ -1287,7 +1311,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     artistData.weeksUntilNextFeatureOffer = Math.floor(Math.random() * (8 - 2 + 1)) + 2;
                     
                     // Check conditions
-                    if (artistData.popularity > 30 && Math.random() < 0.5) { // 50% chance if eligible
+                    const isEligibleForFeature = artistProfileForEmail.genre === 'Indie' ? artistData.popularity >= 5 : artistData.popularity > 30;
+                    if (isEligibleForFeature && Math.random() < 0.5) { // 50% chance if eligible
                         const emailId = crypto.randomUUID();
                         const payout = Math.floor(50000 + (artistData.popularity * 2000 * (Math.random() * 1.5 + 0.5)));
                         const songQuality = Math.floor(40 + (artistData.popularity / 2.5) + (Math.random() * 10));
@@ -2876,8 +2901,23 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     totalWeeklyStreams += remix.lastWeekStreams;
                 });
 
+                let displayTitle = baseSong.title;
+                let displayArtist = artist?.name || 'Unknown';
+                
+                const escapeRegExp = (string: string) => {
+                  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                };
+
+                if (baseSong.collaboration) {
+                    displayArtist = `${displayArtist}, ${baseSong.collaboration.artistName}`;
+                    displayTitle = displayTitle.replace(new RegExp(`\\s*\\(feat\\.\\s*${escapeRegExp(baseSong.collaboration.artistName)}\\)`, 'i'), '');
+                } else if (baseSong.isFeatureToNpc && baseSong.npcArtistName) {
+                    displayArtist = `${baseSong.npcArtistName}, ${artist?.name}`;
+                    displayTitle = displayTitle.replace(new RegExp(`\\s*\\(feat\\.\\s*${escapeRegExp(artist?.name || '')}\\)`, 'i'), '');
+                }
+
                 return {
-                    uniqueId: baseSong.id, title: baseSong.title, artist: artist?.name || 'Unknown',
+                    uniqueId: baseSong.id, title: displayTitle, artist: displayArtist,
                     weeklyStreams: totalWeeklyStreams, isPlayerSong: true, coverArt: baseSong.coverArt, songId: baseSong.id,
                     genre: baseSong.genre,
                     itunesPrice: baseSong.itunesPrice
@@ -7520,7 +7560,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const newFeatureSong: Song = {
                 id: crypto.randomUUID(),
                 title: `${songTitle} (feat. ${activeArtist.name})`,
-                genre: GENRES[Math.floor(Math.random() * GENRES.length)],
+                genre: NPC_ARTIST_GENRES[npcArtistName] || GENRES[Math.floor(Math.random() * GENRES.length)],
                 quality: songQuality, // songQuality is up to 100
                 coverArt: coverArt,
                 isReleased: false,
