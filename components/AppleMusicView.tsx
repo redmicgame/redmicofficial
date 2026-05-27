@@ -10,6 +10,7 @@ import ChevronRightIcon from './icons/ChevronRightIcon';
 import { Song, Release, Video, GameDate } from '../types';
 import PlusIcon from './icons/PlusIcon';
 import LosslessIcon from './icons/LosslessIcon';
+import ArrowUpOnBoxIcon from './icons/ArrowUpOnBoxIcon';
 
 const formatDateApple = (gameDate: GameDate) => {
     const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
@@ -90,43 +91,94 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                 </div>
             )}
 
-            <div className="bg-black text-white min-h-screen">
-                <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex justify-between items-center">
-                    <button onClick={onBack}><ChevronLeftIcon className="w-7 h-7" /></button>
-                    <h1 className="font-bold text-center truncate">{releaseTitle}</h1>
-                    <div className="flex items-center gap-4">
-                        <button><PlusIcon className="w-6 h-6" /></button>
-                        <button><DotsHorizontalIcon className="w-6 h-6" /></button>
-                    </div>
-                </header>
-                <main className="p-4 space-y-8">
-                    <section className="text-center">
-                        <img src={release.coverArt} className="w-56 h-56 rounded-lg object-cover mx-auto shadow-2xl shadow-black" />
-                        <h2 className="text-2xl font-bold mt-4">{releaseTitle}</h2>
-                        <p className="text-xl text-rose-400 font-semibold">{artistDisplay}</p>
-                        <p className="text-sm text-zinc-400 uppercase mt-1 flex items-center justify-center gap-2">
-                            <span>{releaseSongs[0]?.genre}</span>
-                            <span>•</span>
-                            <span>{release.releaseDate.year}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                                <LosslessIcon className="w-5 h-5" /> Lossless
-                            </span>
-                        </p>
-                        <div className="flex gap-3 mt-4">
-                            <button className="bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-xl flex-1 py-2.5 flex items-center justify-center gap-2">
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-rose-500"><path d="M7 6v12l10-6z" /></svg>
-                                <span className="font-semibold text-white">Play</span>
-                            </button>
-                            <button className="bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-xl flex-1 py-2.5 flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 3l4 4m0 0l-4 4m4-4H4m12 14l4-4m0 0l-4-4m4 4H4" />
-                                </svg>
-                                <span className="font-semibold text-white">Shuffle</span>
-                            </button>
+            <div className="bg-black text-white min-h-screen pb-16">
+                {(release.isAppleMusicExpandedCover && !isSingle) ? (
+                    <div className="relative w-full aspect-square md:aspect-[4/3] group">
+                        <img src={release.coverArt} alt={releaseTitle} className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
+                        <header className="absolute top-0 left-0 right-0 z-10 p-4 mt-8 flex justify-between items-center bg-transparent">
+                            <button onClick={onBack} className="bg-black/30 p-1.5 rounded-full backdrop-blur-md"><ChevronLeftIcon className="w-6 h-6 text-white drop-shadow-md" /></button>
+                            <div className="flex items-center gap-3">
+                                <button className="bg-black/30 p-1.5 rounded-full backdrop-blur-md">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                </button>
+                                <button className="bg-black/30 p-1.5 rounded-full backdrop-blur-md"><DotsHorizontalIcon className="w-5 h-5 text-white drop-shadow-md" /></button>
+                            </div>
+                        </header>
+                        
+                        <div className="absolute bottom-0 left-0 right-0 p-4 text-center pb-6">
+                            <h2 className="text-3xl font-black drop-shadow-lg tracking-tight px-2">{releaseTitle}</h2>
+                            <p className="text-xl font-medium mt-1 drop-shadow-md">{artistDisplay}</p>
+                            <p className="text-xs text-white/80 uppercase mt-2 flex items-center justify-center gap-2 drop-shadow-md font-medium">
+                                <span>{releaseSongs[0]?.genre || 'Pop'}</span>
+                                <span>•</span>
+                                <span>{release.releaseDate.year}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                    <LosslessIcon className="w-4 h-4 fill-white" /> Lossless
+                                </span>
+                            </p>
+                            
+                            <div className="flex gap-4 mt-6 justify-center items-center px-4">
+                                <button className="bg-zinc-800/80 backdrop-blur-md hover:bg-zinc-700 transition-colors rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 3l4 4m0 0l-4 4m4-4H4m12 14l4-4m0 0l-4-4m4 4H4" />
+                                    </svg>
+                                </button>
+                                <button className="bg-white hover:bg-zinc-200 transition-colors rounded-full flex-1 max-w-[200px] py-3 flex items-center justify-center gap-2 shadow-lg">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-black"><path d="M7 6v12l10-6z" /></svg>
+                                    <span className="font-bold text-black text-lg pb-0.5">Play</span>
+                                </button>
+                                <button className="bg-zinc-800/80 backdrop-blur-md hover:bg-zinc-700 transition-colors rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center">
+                                    <PlusIcon className="w-6 h-6 text-zinc-300" />
+                                </button>
+                            </div>
                         </div>
-                    </section>
+                    </div>
+                ) : (
+                    <>
+                        <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 mt-8 flex justify-between items-center">
+                            <button onClick={onBack}><ChevronLeftIcon className="w-7 h-7" /></button>
+                            <h1 className="font-bold text-center truncate">{releaseTitle}</h1>
+                            <div className="flex items-center gap-4">
+                                <button><PlusIcon className="w-6 h-6" /></button>
+                                <button><DotsHorizontalIcon className="w-6 h-6" /></button>
+                            </div>
+                        </header>
+                        <section className="text-center p-4">
+                            <img src={release.coverArt} className="w-56 h-56 rounded-lg object-cover mx-auto shadow-2xl shadow-black" />
+                            <h2 className="text-2xl font-bold mt-4">{releaseTitle}</h2>
+                            <p className="text-xl text-rose-400 font-semibold">{artistDisplay}</p>
+                            <p className="text-sm text-zinc-400 uppercase mt-1 flex items-center justify-center gap-2">
+                                <span>{releaseSongs[0]?.genre || 'Pop'}</span>
+                                <span>•</span>
+                                <span>{release.releaseDate.year}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                    <LosslessIcon className="w-5 h-5" /> Lossless
+                                </span>
+                            </p>
+                            <div className="flex gap-4 mt-6 justify-center items-center px-4">
+                                <button className="bg-zinc-800/80 backdrop-blur-md hover:bg-zinc-700 transition-colors rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 3l4 4m0 0l-4 4m4-4H4m12 14l4-4m0 0l-4-4m4 4H4" />
+                                    </svg>
+                                </button>
+                                <button className="bg-white hover:bg-zinc-200 transition-colors rounded-full flex-1 max-w-[200px] py-3 flex items-center justify-center gap-2 shadow-lg">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-black"><path d="M7 6v12l10-6z" /></svg>
+                                    <span className="font-bold text-black text-lg pb-0.5">Play</span>
+                                </button>
+                                <button className="bg-zinc-800/80 backdrop-blur-md hover:bg-zinc-700 transition-colors rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center">
+                                    <PlusIcon className="w-6 h-6 text-zinc-300" />
+                                </button>
+                            </div>
+                        </section>
+                    </>
+                )}
 
+                <main className="p-4 space-y-8">
                     {(release.review || release.wikipediaSummary) && (
                         <section>
                             <p className="text-zinc-300 leading-snug line-clamp-3">
@@ -270,6 +322,8 @@ const AppleMusicView: React.FC = () => {
 
     const singlesAndEps = availableReleases.filter(r => r.type === 'Single' || r.type === 'EP').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
 
+    const essentialAlbums = albums.filter(r => r.isAppleMusicEssential);
+
     return (
         <div className="bg-black text-white min-h-screen">
             <div className="relative h-[45vh] min-h-[340px]">
@@ -340,6 +394,32 @@ const AppleMusicView: React.FC = () => {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </section>
+                )}
+
+                {essentialAlbums.length > 0 && (
+                    <section>
+                        <h2 className="text-2xl font-bold mb-4">Essential Albums</h2>
+                        <div className="space-y-6">
+                            {essentialAlbums.map(ea => {
+                                const hasExplicit = ea.songIds.some(id => songs.find(s => s.id === id)?.explicit);
+                                return (
+                                <div key={ea.id} onClick={() => handleSelectRelease(ea.id)} className="cursor-pointer">
+                                    <div className="w-full aspect-square rounded-xl overflow-hidden relative">
+                                        <img src={ea.coverArt} className="w-full h-full object-cover" alt={ea.title} />
+                                    </div>
+                                    <div className="mt-3">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-lg">{ea.title}</h3>
+                                            {hasExplicit && <span className="text-xs w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
+                                        </div>
+                                        <p className="text-zinc-400 text-sm mt-1 leading-snug line-clamp-2">
+                                            {ea.appleMusicEssentialReview || `${activeArtist.name}'s defining album.`}
+                                        </p>
+                                    </div>
+                                </div>
+                            )})}
                         </div>
                     </section>
                 )}

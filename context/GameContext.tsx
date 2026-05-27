@@ -4722,6 +4722,34 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'TOGGLE_APPLE_MUSIC_EXPANDED_COVER': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        releases: activeData.releases.map(r => r.id === action.payload.releaseId ? { ...r, isAppleMusicExpandedCover: action.payload.enabled } : r)
+                    }
+                }
+            };
+        }
+        case 'MARK_APPLE_MUSIC_ESSENTIAL': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        releases: activeData.releases.map(r => r.id === action.payload.releaseId ? { ...r, isAppleMusicEssential: true, appleMusicEssentialReview: action.payload.reviewText } : { ...r, isAppleMusicEssential: false, appleMusicEssentialReview: undefined })
+                    }
+                }
+            };
+        }
         case 'TAKE_DOWN_RELEASE': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];

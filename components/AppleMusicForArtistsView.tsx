@@ -15,6 +15,8 @@ const AppleMusicForArtistsView: React.FC = () => {
     
     // Found upcoming releases
     const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.status === 'scheduled');
+    const albums = activeArtistData.releases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.isTakenDown);
+    const hasEnoughAlbumsForEssential = albums.length >= 3;
 
     const handleBack = () => {
         if (selectedSong) {
@@ -86,6 +88,63 @@ const AppleMusicForArtistsView: React.FC = () => {
                         </div>
                     ))}
                     {songs.length === 0 && <p className="text-zinc-500 text-sm">No released songs yet.</p>}
+                </div>
+
+                <div className="mt-8">
+                    <h2 className="text-2xl font-bold mb-4">Your Albums</h2>
+                    {albums.length === 0 && <p className="text-zinc-500 text-sm">No albums released yet.</p>}
+                    <div className="space-y-4">
+                        {albums.map(album => (
+                            <div key={album.id} className="bg-zinc-100 p-4 rounded-lg flex flex-col gap-3">
+                                <div className="flex items-center gap-4">
+                                    <img src={album.coverArt} alt={album.title} className="w-16 h-16 rounded-md object-cover shadow-sm" />
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold truncate text-lg">{album.title}</h3>
+                                        <p className="text-zinc-500 text-sm">{album.releaseDate.year}</p>
+                                    </div>
+                                </div>
+                                <div className="border-t border-zinc-200 pt-3 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Expanded Cover View</span>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={album.isAppleMusicExpandedCover || false} 
+                                            onChange={(e) => dispatch({ type: 'TOGGLE_APPLE_MUSIC_EXPANDED_COVER', payload: { releaseId: album.id, enabled: e.target.checked } })}
+                                            className="w-5 h-5 accent-[#fa243c]"
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className={`text-sm font-medium ${!hasEnoughAlbumsForEssential ? 'text-zinc-400' : ''}`}>Essential Album {hasEnoughAlbumsForEssential ? '' : '(Needs 3+ Albums)'}</span>
+                                        <input 
+                                            type="checkbox" 
+                                            disabled={!hasEnoughAlbumsForEssential}
+                                            checked={album.isAppleMusicEssential || false} 
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    const reviewText = `${activeArtist.name}'s standout hit, a defining moment for the artist.`;
+                                                    dispatch({ type: 'MARK_APPLE_MUSIC_ESSENTIAL', payload: { releaseId: album.id, reviewText } });
+                                                } else {
+                                                    dispatch({ type: 'MARK_APPLE_MUSIC_ESSENTIAL', payload: { releaseId: album.id, reviewText: '' } });
+                                                }
+                                            }}
+                                            className="w-5 h-5 accent-[#fa243c]"
+                                        />
+                                    </div>
+                                    {album.isAppleMusicEssential && (
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            <label className="text-xs text-zinc-500">Essential Album Review snippet:</label>
+                                            <input 
+                                                type="text" 
+                                                value={album.appleMusicEssentialReview || ''}
+                                                onChange={(e) => dispatch({ type: 'MARK_APPLE_MUSIC_ESSENTIAL', payload: { releaseId: album.id, reviewText: e.target.value } })}
+                                                className="bg-zinc-200 text-sm px-2 py-1 rounded w-full border border-zinc-300"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

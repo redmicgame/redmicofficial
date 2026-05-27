@@ -86,6 +86,9 @@ export interface Release {
     artistId: string;
     countdownVideoUrl?: string; // For upcoming albums
     standardEditionId?: string;
+    isAppleMusicExpandedCover?: boolean;
+    isAppleMusicEssential?: boolean;
+    appleMusicEssentialReview?: string;
     releasingLabel?: {
         name: string;
         dealWithMajor?: string;
@@ -1053,6 +1056,8 @@ export type GameAction =
     | { type: 'MARK_INBOX_READ' }
     | { type: 'TAKE_DOWN_SONG'; payload: { songId: string } }
     | { type: 'TAKE_DOWN_RELEASE'; payload: { releaseId: string } }
+    | { type: 'TOGGLE_APPLE_MUSIC_EXPANDED_COVER'; payload: { releaseId: string; enabled: boolean } }
+    | { type: 'MARK_APPLE_MUSIC_ESSENTIAL'; payload: { releaseId: string; reviewText: string } }
     | { type: 'UPDATE_ITUNES_PRICE'; payload: { songId: string; newPriceStr: string } }
     | { type: 'BUY_BACK_SONG'; payload: { songId: string, cost: number } }
     | { type: 'BUY_BACK_RELEASE'; payload: { releaseId: string, cost: number } }
