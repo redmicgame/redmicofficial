@@ -1310,11 +1310,22 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     // Reset counter
                     artistData.weeksUntilNextFeatureOffer = Math.floor(Math.random() * (8 - 2 + 1)) + 2;
                     
+                    let npcArtistName = '';
+                    do {
+                        npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                    } while (npcArtistName === artistProfileForEmail.name);
+
+                    const npcGenre = NPC_ARTIST_GENRES[npcArtistName];
+                    const isEligibleForFeature = npcGenre === 'Indie' ? artistData.popularity >= 5 : artistData.popularity > 30;
+
                     // Check conditions
-                    const isEligibleForFeature = artistProfileForEmail.genre === 'Indie' ? artistData.popularity >= 5 : artistData.popularity > 30;
                     if (isEligibleForFeature && Math.random() < 0.5) { // 50% chance if eligible
                         const emailId = crypto.randomUUID();
-                        const payout = Math.floor(50000 + (artistData.popularity * 2000 * (Math.random() * 1.5 + 0.5)));
+                        let payout = Math.floor(50000 + (artistData.popularity * 2000 * (Math.random() * 1.5 + 0.5)));
+                        if (npcGenre === 'Indie') {
+                            payout = Math.floor(Math.random() * (25000 - 5000 + 1)) + 5000;
+                        }
+                        
                         const songQuality = Math.floor(40 + (artistData.popularity / 2.5) + (Math.random() * 10));
                         
                         let promotion: FeatureOffer['promotion'] | undefined = undefined;
@@ -1324,12 +1335,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                 durationWeeks: Math.floor(Math.random() * 3) + 2 // 2-4 weeks
                             };
                         }
-
-                        let npcArtistName;
-                        do {
-                            npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
-                        } while (npcArtistName === artistProfileForEmail.name)
-                        
 
                         const offer: FeatureOffer = {
                             type: 'featureOffer',

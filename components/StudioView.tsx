@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { GENRES, STUDIOS, NPC_ARTIST_NAMES } from '../constants';
+import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES } from '../constants';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -85,6 +85,12 @@ const StudioView: React.FC = () => {
         if (allPlayerArtists.some(a => a.name === artistName && a.id !== activeArtist.id)) {
             return 0; // Other playable characters (including kids) are free to feature
         }
+        
+        const genre = NPC_ARTIST_GENRES[artistName];
+        if (genre === 'Indie') {
+            return Math.floor(Math.random() * (25000 - 5000 + 1)) + 5000;
+        }
+
         return Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
     };
 
