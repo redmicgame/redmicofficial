@@ -1729,7 +1729,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             myGross -= generatedGross * (song.rightsSoldPercent / 100);
                         }
                         
-                        const generatedNet = myGross * playerCut;
+                        let generatedNet = myGross * playerCut;
+                        
+                        // Deduct producer/songwriter/engineer/anr cuts
+                        if (song.contributorCutsTotal && song.contributorCutsTotal > 0) {
+                            generatedNet = generatedNet * Math.max(0, (1 - (song.contributorCutsTotal / 100)));
+                        }
+
                         artistStreamIncome += generatedNet;
 
                         return { 
@@ -2117,6 +2123,41 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             singlesReadyToRelease.forEach(single => {
                                 const songToRelease = artistData.songs.find(s => s.id === single.songId);
                                 if (songToRelease) {
+                                    if (songToRelease.controversialContributors && songToRelease.controversialContributors.length > 0) {
+                        const badName = songToRelease.controversialContributors[0];
+                        artistData.publicImage = Math.max(0, (artistData.publicImage || 80) - 20);
+                        
+                        const controversialTmzPost: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: 'tmz',
+                            content: `${artistProfile?.name || 'Artist'} has worked with controversial producer ${badName} on their new song "${songToRelease.title}". Are they desperate for a hit? Yikes. 😬`,
+                            image: artistData.paparazziPhotos.length > 0 ? artistData.paparazziPhotos[Math.floor(Math.random() * artistData.paparazziPhotos.length)].url : undefined,
+                            likes: Math.floor(Math.random() * 60000) + 20000,
+                            retweets: Math.floor(Math.random() * 15000) + 5000,
+                            views: Math.floor(Math.random() * 2000000) + 800000,
+                            date: newDate
+                        };
+                        const controversialFanPost1: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: `hater_${Math.floor(Math.random() * 1000)}`,
+                            content: `Ew why is ${artistProfile?.name || 'Artist'} working with ${badName}?? Cancelled.`,
+                            likes: Math.floor(Math.random() * 5000) + 1000,
+                            retweets: Math.floor(Math.random() * 1000) + 100,
+                            views: Math.floor(Math.random() * 100000) + 10000,
+                            date: newDate
+                        };
+                        const controversialFanPost2: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: `hater_${Math.floor(Math.random() * 1000)}`,
+                            content: `I'm actually shocked ${artistProfile?.name || 'Artist'} would sink this low. The new song is tainted.`,
+                            likes: Math.floor(Math.random() * 8000) + 2000,
+                            retweets: Math.floor(Math.random() * 2000) + 200,
+                            views: Math.floor(Math.random() * 150000) + 20000,
+                            date: newDate
+                        };
+                        artistData.xPosts = [controversialTmzPost, controversialFanPost1, controversialFanPost2, ...artistData.xPosts];
+                    }
+
                                     const singleRelease: Release = {
                                         id: crypto.randomUUID(),
                                         title: songToRelease.title,
@@ -4439,6 +4480,44 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if (releaseWithLabel.type === 'Single') {
                 const song = activeData.songs.find(s => s.id === releaseWithLabel.songIds[0]);
                 if (song) {
+                    if (song.controversialContributors && song.controversialContributors.length > 0) {
+                        const badName = song.controversialContributors[0];
+                        activeData.publicImage = Math.max(0, (activeData.publicImage || 80) - 20);
+                        
+                        const controversialTmzPost: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: 'tmz',
+                            content: `${artistName} has worked with controversial producer ${badName} on their new song "${song.title}". Are they desperate for a hit? Yikes. 😬`,
+                            image: activeData.paparazziPhotos.length > 0 ? activeData.paparazziPhotos[Math.floor(Math.random() * activeData.paparazziPhotos.length)].url : undefined,
+                            likes: Math.floor(Math.random() * 60000) + 20000,
+                            retweets: Math.floor(Math.random() * 15000) + 5000,
+                            views: Math.floor(Math.random() * 2000000) + 800000,
+                            date: state.date
+                        };
+                        const controversialFanPost1: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: `hater_${Math.floor(Math.random() * 1000)}`,
+                            content: `Ew why is ${artistName} working with ${badName}?? Cancelled.`,
+                            likes: Math.floor(Math.random() * 5000) + 1000,
+                            retweets: Math.floor(Math.random() * 1000) + 100,
+                            views: Math.floor(Math.random() * 100000) + 10000,
+                            date: state.date
+                        };
+                        const controversialFanPost2: XPost = {
+                            id: crypto.randomUUID(),
+                            authorId: `hater_${Math.floor(Math.random() * 1000)}`,
+                            content: `I'm actually shocked ${artistName} would sink this low. The new song is tainted.`,
+                            likes: Math.floor(Math.random() * 8000) + 2000,
+                            retweets: Math.floor(Math.random() * 2000) + 200,
+                            views: Math.floor(Math.random() * 150000) + 20000,
+                            date: state.date
+                        };
+                        activeData.xPosts = [controversialTmzPost, controversialFanPost1, controversialFanPost2, ...activeData.xPosts];
+                        
+                        // Spawn a 4-week backlash buff
+                        // Let's just drop public image, the game already uses public image to reduce fans growth and stream growth
+                    }
+
                     const emailIdGenius = crypto.randomUUID();
                     newEmails.push({
                         id: emailIdGenius,
@@ -6281,6 +6360,44 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     [state.activeArtistId]: {
                         ...activeData,
                         releases: updatedReleases,
+                    }
+                }
+            };
+        }
+        case 'UPDATE_ABOUT_SONG_TEXT': {
+            if (!state.activeArtistId) return state;
+            const { songId, text } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+
+            const song = activeData.songs.find(s => s.id === songId);
+
+            const updatedSongs = activeData.songs.map(s => 
+                s.id === songId ? { ...s, aboutText: text } : s
+            );
+            
+            let updatedXPosts = activeData.xPosts;
+            if (song && text && text.trim() !== '' && song.aboutText !== text) {
+                const popBasePost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: 'popbase',
+                    content: `${activeData.name || 'Artist'} reveals the meaning of the song "${song.title}":\n\n"${text}"`,
+                    image: activeData.image,
+                    likes: Math.floor(Math.random() * 40000) + 10000,
+                    retweets: Math.floor(Math.random() * 10000) + 2000,
+                    views: Math.floor(Math.random() * 1000000) + 200000,
+                    date: state.date
+                };
+                updatedXPosts = [popBasePost, ...activeData.xPosts];
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs,
+                        xPosts: updatedXPosts,
                     }
                 }
             };

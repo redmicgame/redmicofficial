@@ -66,6 +66,19 @@ export interface Song {
     itunesPrice?: string;
     canvasVideo?: string;
     canvasHashtags?: string[];
+    producers?: string[];
+    songwriters?: string[];
+    engineers?: string[];
+    anr?: string[];
+    contributorCutsTotal?: number;
+    controversialContributors?: string[];
+    aboutText?: string;
+    samples?: {
+        songTitle: string;
+        artistName: string;
+        type: 'Sample' | 'Interpolation';
+        coverArt: string;
+    }[];
 }
 
 export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)' | 'Compilation';
@@ -1120,6 +1133,7 @@ export type GameAction =
     | { type: 'SET_MONEY'; payload: { newAmount: number; } }
     | { type: 'TOGGLE_GOLD_THEME'; payload: { enabled: boolean; } }
     | { type: 'SET_SALES_BOOST'; payload: { newBoost: number; } }
+    | { type: 'UPDATE_ABOUT_SONG_TEXT'; payload: { songId: string; text: string; } }
     | { type: 'UPDATE_WIKIPEDIA_SUMMARY'; payload: { releaseId: string; summary: string; } }
     | { type: 'TOGGLE_OFFLINE_MODE' }
     | { type: 'PRO_SIGN_LABEL'; payload: { labelId: Label['id']; } }

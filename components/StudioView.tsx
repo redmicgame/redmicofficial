@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES } from '../constants';
+import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES } from '../constants';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -21,6 +21,12 @@ const StudioView: React.FC = () => {
     const [isRemix, setIsRemix] = useState(false);
     const [remixOfSongId, setRemixOfSongId] = useState<string>('');
     const [error, setError] = useState('');
+
+    const [producers, setProducers] = useState<string[]>([]);
+    const [songwriters, setSongwriters] = useState<string[]>([]);
+    const [engineers, setEngineers] = useState<string[]>([]);
+    const [anr, setAnr] = useState<string[]>([]);
+    const [samples, setSamples] = useState<{ songTitle: string; artistName: string; type: 'Sample' | 'Interpolation'; coverArt: string }[]>([]);
 
     // Auto Remix Pack Maker state
     const [remixPackTargetId, setRemixPackTargetId] = useState<string>('');
@@ -69,6 +75,19 @@ const StudioView: React.FC = () => {
             .sort();
         return [...otherPlayerArtists, ...npcs];
     }, [allPlayerArtists, activeArtist]);
+
+    const potentialProducers = useMemo(() => {
+        return ["Metro Boomin", "Mike Dean", "Rick Rubin", "Pharrell Williams", "Max Martin", "Timbaland", "Benny Blanco", "Mustard", "London on da Track", "Murda Beatz", "Jack Antonoff", "Wheezy", "Boi-1da", "Tay Keith", "Southside", "Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"].sort();
+    }, []);
+
+    const generateRandomNames = (count: number) => {
+        const FIRST_NAMES = ["James", "Michael", "Robert", "John", "David", "William", "Richard", "Joseph", "Thomas", "Charles", "Christopher", "Daniel", "Matthew", "Anthony", "Mark", "Donald", "Steven", "Paul", "Andrew", "Joshua", "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen"];
+        const LAST_NAMES = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"];
+        return Array.from({length: count}).map(() => `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`);
+    };
+
+    const potentialEngineers = useMemo(() => generateRandomNames(15).sort(), []);
+    const potentialAnR = useMemo(() => generateRandomNames(15).sort(), []);
 
     const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -163,6 +182,20 @@ const StudioView: React.FC = () => {
         
         const songTitle = collaboration ? `${title.trim()} (feat. ${collaboration.artistName})` : title.trim();
 
+        const CONTROVERSIAL_PRODUCERS = ["Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"];
+        const controversialContributors = [
+            ...producers,
+            ...songwriters,
+            ...engineers,
+            ...anr
+        ].filter(name => CONTROVERSIAL_PRODUCERS.includes(name));
+
+        const generateCut = () => Math.floor(Math.random() * 10) + 1;
+        const totalCuts = producers.reduce((sum) => sum + generateCut(), 0) +
+                          songwriters.reduce((sum) => sum + generateCut(), 0) +
+                          engineers.reduce((sum) => sum + generateCut(), 0) +
+                          anr.reduce((sum) => sum + generateCut(), 0);
+
         const newSong: Song = {
             id: crypto.randomUUID(),
             title: songTitle,
@@ -181,6 +214,13 @@ const StudioView: React.FC = () => {
             collaboration: collaboration ? { ...collaboration, qualityBoost } : undefined,
             remixOfSongId: isRemix ? remixOfSongId : undefined,
             dailyStreams: [],
+            producers,
+            songwriters,
+            engineers,
+            anr,
+            samples,
+            controversialContributors,
+            contributorCutsTotal: totalCuts,
         };
 
         dispatch({ type: 'RECORD_SONG', payload: { song: newSong, cost: totalCost } });
@@ -229,6 +269,20 @@ const StudioView: React.FC = () => {
         
         const newSongs: Song[] = [];
 
+        const CONTROVERSIAL_PRODUCERS = ["Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"];
+        const controversialContributors = [
+            ...producers,
+            ...songwriters,
+            ...engineers,
+            ...anr
+        ].filter(name => CONTROVERSIAL_PRODUCERS.includes(name));
+
+        const generateCut = () => Math.floor(Math.random() * 10) + 1;
+        const totalCuts = producers.reduce((sum) => sum + generateCut(), 0) +
+                          songwriters.reduce((sum) => sum + generateCut(), 0) +
+                          engineers.reduce((sum) => sum + generateCut(), 0) +
+                          anr.reduce((sum) => sum + generateCut(), 0);
+
         Array.from(selectedRemixTypes).forEach(type => {
             let typeName = type;
             let currentFeature = null;
@@ -259,6 +313,13 @@ const StudioView: React.FC = () => {
                 collaboration: currentFeature ? { ...currentFeature, qualityBoost } : undefined,
                 remixOfSongId: targetSong.id,
                 soundtrackTitle: undefined,
+                producers,
+                songwriters,
+                engineers,
+                anr,
+                samples,
+                controversialContributors,
+                contributorCutsTotal: totalCuts,
             });
         });
 
@@ -272,6 +333,48 @@ const StudioView: React.FC = () => {
     if (selectedRemixTypes.has('Feature 1') && feature1) packFeatureCost += feature1.cost;
     if (selectedRemixTypes.has('Feature 2') && feature2) packFeatureCost += feature2.cost;
     const packTotalCost = (selectedStudio.cost * selectedRemixTypes.size) + packFeatureCost;
+
+    const renderMultiSelect = (label: string, state: string[], setState: React.Dispatch<React.SetStateAction<string[]>>, options: string[]) => (
+        <div className="mt-4">
+            <label className="block text-sm font-medium text-zinc-300">{label}</label>
+            <div className="flex flex-wrap gap-2 mt-2">
+                {state.map(item => (
+                    <span key={item} className="bg-zinc-600 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                        {item}
+                        <button onClick={() => setState(s => s.filter(i => i !== item))} className="hover:text-red-400">×</button>
+                    </span>
+                ))}
+            </div>
+            {state.length < 20 && (
+                <select 
+                    value="" 
+                    onChange={e => {
+                        if (e.target.value && !state.includes(e.target.value)) {
+                            setState(s => [...s, e.target.value]);
+                        }
+                    }} 
+                    className="mt-2 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                >
+                    <option value="">Add {label}...</option>
+                    {options.filter(c => !state.includes(c)).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                    ))}
+                </select>
+            )}
+        </div>
+    );
+
+    const handleAddSample = (artistName: string, type: 'Sample' | 'Interpolation') => {
+        const dummyTitles = ["Greatest Hit", "Classic Vibe", "Love Song", "Summer Night", "The Anthem", "Heartbreak", "Memories"];
+        const songTitle = dummyTitles[Math.floor(Math.random() * dummyTitles.length)];
+        
+        let coverArt = `https://ui-avatars.com/api/?name=${encodeURIComponent(artistName)}&background=random&color=fff`;
+        const p = allPlayerArtists.find(a => a.name === artistName);
+        if (p) coverArt = p.image;
+        else if (NPC_ARTIST_IMAGES[artistName]) coverArt = NPC_ARTIST_IMAGES[artistName];
+
+        setSamples(s => [...s, { songTitle: `${songTitle}`, artistName, type, coverArt }]);
+    };
 
     return (
          <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
@@ -336,6 +439,46 @@ const StudioView: React.FC = () => {
                             </select>
                         </div>
                         
+                        <div className="pt-4 border-t border-zinc-700/50 mt-4 space-y-2">
+                            <h3 className="text-lg font-bold">Contributors (SongDNA)</h3>
+                            <p className="text-xs text-zinc-400">Add up to 20 for each category.</p>
+                            {renderMultiSelect('Producers', producers, setProducers, potentialProducers)}
+                            {renderMultiSelect('Songwriters', songwriters, setSongwriters, potentialCollaborators)}
+                            {renderMultiSelect('Mix & Mastering Engineers', engineers, setEngineers, potentialEngineers)}
+                            {renderMultiSelect('A&R', anr, setAnr, potentialAnR)}
+
+                            <div className="mt-6 border-t border-zinc-700/50 pt-4">
+                                <label className="block text-sm font-medium text-zinc-300 mb-2">Samples & Interpolations</label>
+                                <div className="space-y-2 mb-2">
+                                    {samples.map((s, i) => (
+                                        <div key={i} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
+                                            <div>
+                                                <p className="text-sm font-bold">{s.songTitle}</p>
+                                                <p className="text-xs text-zinc-400">{s.artistName} • {s.type}</p>
+                                            </div>
+                                            <button onClick={() => setSamples(arr => arr.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-300 text-sm">Remove</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                                    <select id="sampleArtist" className="flex-1 bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                        <option value="">Select Artist to Sample...</option>
+                                        {potentialCollaborators.map(name => <option key={name} value={name}>{name}</option>)}
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => {
+                                            const select = document.getElementById('sampleArtist') as HTMLSelectElement;
+                                            if(select.value) { handleAddSample(select.value, 'Sample'); select.value = ''; }
+                                        }} className="bg-zinc-600 px-3 py-2 rounded-md text-sm hover:bg-zinc-500 font-bold whitespace-nowrap">Sample</button>
+                                        <button onClick={() => {
+                                            const select = document.getElementById('sampleArtist') as HTMLSelectElement;
+                                            if(select.value) { handleAddSample(select.value, 'Interpolation'); select.value = ''; }
+                                        }} className="bg-zinc-600 px-3 py-2 rounded-md text-sm hover:bg-zinc-500 font-bold whitespace-nowrap">Interpolate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="flex items-center">
                             <input
                                 id="explicit-checkbox"

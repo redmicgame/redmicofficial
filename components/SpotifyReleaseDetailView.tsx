@@ -10,6 +10,7 @@ import CameraIcon from './icons/CameraIcon';
 import TrianglePlayIcon from './icons/TrianglePlayIcon';
 import SpotifySnapshotView from './SpotifySnapshotView';
 import SpotifyNowPlayingView from './SpotifyNowPlayingView';
+import { SpotifySongDNAView } from './SpotifySongDNAView';
 
 const getDominantColor = (imageUrl: string, onColorReady: (color: string) => void) => {
     const img = new Image();
@@ -67,11 +68,16 @@ const formatTotalDuration = (totalSeconds: number) => {
 
 
 const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void; }> = ({ releaseId, onBack }) => {
-    const { activeArtist, activeArtistData } = useGame();
+    const { activeArtist, activeArtistData, dispatch } = useGame();
     const [bgColor, setBgColor] = useState('#121212');
     const [showSnapshot, setShowSnapshot] = useState(false);
     const [showStatsModalForSong, setShowStatsModalForSong] = useState<Song | null>(null);
+    const [showSongDNAFor, setShowSongDNAFor] = useState<Song | null>(null);
     const [nowPlayingSong, setNowPlayingSong] = useState<Song | null>(null);
+    
+    // About the song edit state
+    const [isEditingAboutSong, setIsEditingAboutSong] = useState(false);
+    const [editAboutSongText, setEditAboutSongText] = useState('');
 
     const { releases, songs } = activeArtistData!;
 
@@ -126,6 +132,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
 
     return (
         <>
+            {showSongDNAFor && <SpotifySongDNAView song={showSongDNAFor} onBack={() => setShowSongDNAFor(null)} />}
             {showSnapshot && <SpotifySnapshotView release={release} onBack={() => setShowSnapshot(false)} />}
             {showStatsModalForSong && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowStatsModalForSong(null)}>
@@ -211,6 +218,72 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                         </div>
                     )}
 
+                    {release.type === 'Single' && releaseSongs.length === 1 && (
+                        <>
+                        <div className="mt-6 rounded-xl p-4 shadow-2xl pb-4 relative overflow-hidden" style={{ background: 'linear-gradient(145deg, #442a20 0%, #281711 100%)' }}>
+                            <div className="flex items-center gap-1.5 mb-4 relative z-10">
+                                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M11.996 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12 12 12 0 0 0-12-12zm5.772 17.27a.754.754 0 0 1-1.037.248c-2.842-1.735-6.42-2.127-10.638-1.164a.755.755 0 0 1-.341-1.47c4.61-1.054 8.56-.607 11.768 1.35.372.227.491.716.248 1.036zm1.471-3.284a.94.94 0 0 1-1.294.305c-3.242-1.991-8.225-2.584-12.029-1.428a.941.941 0 0 1-.555-1.802c4.341-1.317 9.873-.655 13.573 1.62.43.264.566.837.305 1.295l-.001.01zm.105-3.41c-3.921-2.327-10.37-2.54-14.122-1.405a1.127 1.127 0 1 1-.652-2.155c4.321-1.31 11.455-1.055 16.023 1.656a1.127 1.127 0 1 1-1.25 1.904z"/></svg>
+                                <span className="font-bold text-[15px] leading-none tracking-tight">SongDNA</span>
+                                <span className="bg-[#1ed760] text-black text-[9px] px-1.5 py-0.5 rounded leading-none font-bold uppercase tracking-wide">Beta</span>
+                            </div>
+                            
+                            <div className="flex items-start justify-center gap-4 mb-4 relative z-10 w-full">
+                                <div className="text-center flex flex-col items-center flex-1 max-w-[120px]">
+                                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/5 shadow-xl overflow-hidden bg-black mb-2">
+                                        <img src={activeArtist.image} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                    <p className="font-bold text-[13px] truncate w-full px-1">{activeArtist.name}</p>
+                                    <p className="text-[11px] text-zinc-300 mt-0.5">Main Artist {(() => {
+                                        const c = releaseSongs[0].collaboration;
+                                        return c ? `+ ${1} more` : '';
+                                    })()}</p>
+                                </div>
+                                {releaseSongs[0].samples && releaseSongs[0].samples.length > 0 && (
+                                    <div className="text-center flex flex-col items-center flex-1 max-w-[120px]">
+                                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl shadow-xl overflow-hidden bg-black mb-2 border border-white/5">
+                                            <img src={releaseSongs[0].samples[0].coverArt} className="w-full h-full object-cover" alt="" />
+                                        </div>
+                                        <p className="font-bold text-[13px] truncate w-full px-1">{releaseSongs[0].samples[0].songTitle}</p>
+                                        <p className="text-[11px] text-zinc-300 mt-0.5">Sample</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex justify-between items-end mb-2 relative z-10">
+                                <div className="pr-2">
+                                    <h3 className="font-bold text-xl mb-0.5 tracking-tight truncate max-w-[160px] sm:max-w-xs">{releaseSongs[0].title}</h3>
+                                    <p className="text-[12px] text-zinc-300">
+                                        {Array.from(new Set([
+                                            activeArtist.name,
+                                            ...(releaseSongs[0].collaboration ? [releaseSongs[0].collaboration.artistName] : []),
+                                            ...(releaseSongs[0].isFeatureToNpc && releaseSongs[0].npcArtistName ? [releaseSongs[0].npcArtistName] : []),
+                                            ...(releaseSongs[0].producers || []),
+                                            ...(releaseSongs[0].songwriters || []),
+                                            ...(releaseSongs[0].engineers || []),
+                                            ...(releaseSongs[0].anr || [])
+                                        ])).length} contributors • {releaseSongs[0].samples ? releaseSongs[0].samples.length : 0} sample{releaseSongs[0].samples && releaseSongs[0].samples.length === 1 ? '' : 's'}
+                                    </p>
+                                </div>
+                                <button className="border border-white/70 hover:border-white transition-colors rounded-full px-3 py-1 font-bold text-[12px] bg-transparent text-white" onClick={() => setShowSongDNAFor(releaseSongs[0])}>Explore</button>
+                            </div>
+                            <p className="text-[12px] text-white/70 relative z-10 mt-1 truncate pr-4">Discover the people -- and the samples -- behind the so...</p>
+                        </div>
+
+                        <div className="mt-3 rounded-lg p-3 bg-[#242424] cursor-pointer hover:bg-[#2a2a2a] transition-colors" onClick={() => {
+                            setEditAboutSongText(releaseSongs[0].aboutText || '');
+                            setIsEditingAboutSong(true);
+                        }}>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className="font-bold text-[14px] tracking-tight">About the song</span>
+                                <span className="bg-[#1ed760] text-black text-[9px] px-1.5 py-0.5 rounded leading-none font-bold uppercase tracking-wide">Beta</span>
+                            </div>
+                            <p className="text-[12px] text-zinc-300 leading-snug line-clamp-3">
+                                {releaseSongs[0].aboutText || "This song has no description yet. Tap to edit."}
+                            </p>
+                        </div>
+                        </>
+                    )}
+
                     <div className="mt-6 text-sm text-zinc-400 space-y-4">
                         <p>{formatGameDate(release.releaseDate)}</p>
                         <p>{releaseSongs.length} song{releaseSongs.length > 1 ? 's' : ''} • {formatTotalDuration(totalDuration)}</p>
@@ -226,6 +299,27 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
 
                 </div>
             </div>
+
+            {isEditingAboutSong && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setIsEditingAboutSong(false)}>
+                    <div className="bg-zinc-800 rounded-lg p-5 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        <h2 className="font-bold text-lg mb-4">Edit "About the song"</h2>
+                        <textarea 
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded p-3 min-h-[150px] mb-4 text-white resize-none"
+                            placeholder="Enter the meaning of the song..."
+                            value={editAboutSongText}
+                            onChange={e => setEditAboutSongText(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button className="px-4 py-2 font-bold text-zinc-400 hover:text-white transition-colors" onClick={() => setIsEditingAboutSong(false)}>Cancel</button>
+                            <button className="px-4 py-2 font-bold bg-[#1ed760] text-black rounded-full hover:bg-[#1fdf64] transition-colors" onClick={() => {
+                                dispatch({ type: 'UPDATE_ABOUT_SONG_TEXT', payload: { songId: releaseSongs[0].id, text: editAboutSongText } });
+                                setIsEditingAboutSong(false);
+                            }}>Save & Publish</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
