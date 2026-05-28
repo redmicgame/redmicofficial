@@ -5126,6 +5126,28 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'UPLOAD_CANVAS': {
+            if (!state.activeArtistId) return state;
+            const updatedArtistsData = { ...state.artistsData };
+            const activeData = { ...updatedArtistsData[state.activeArtistId] };
+            
+            const songIndex = activeData.songs.findIndex(s => s.id === action.payload.songId);
+            if (songIndex >= 0) {
+                const updatedSongs = [...activeData.songs];
+                updatedSongs[songIndex] = {
+                    ...updatedSongs[songIndex],
+                    canvasVideo: action.payload.videoUrl,
+                    canvasHashtags: action.payload.hashtags
+                };
+                activeData.songs = updatedSongs;
+                updatedArtistsData[state.activeArtistId] = activeData;
+            }
+            
+            return {
+                ...state,
+                artistsData: updatedArtistsData
+            };
+        }
         case 'CREATE_TIKTOK': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];

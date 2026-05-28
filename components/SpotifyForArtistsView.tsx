@@ -73,6 +73,10 @@ const S4AUpcomingReleaseDetailView: React.FC<{ submissionId: string; onBack: () 
 // --- SONG DETAIL VIEW ---
 const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song, onBack }) => {
     const { activeArtistData, gameState, dispatch } = useGame();
+    const [isCanvasModalOpen, setIsCanvasModalOpen] = useState(false);
+    const [canvasVideoUrl, setCanvasVideoUrl] = useState('');
+    const [canvasHashtags, setCanvasHashtags] = useState('');
+
     if (!activeArtistData) return null;
     const { releases } = activeArtistData;
     const release = releases.find(r => r.id === song.releaseId);
@@ -98,6 +102,25 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song,
         onBack();
     };
 
+    const handleUploadCanvas = () => {
+        const hashtags = canvasHashtags.split(',').map(h => h.trim().startsWith('#') ? h.trim() : `#${h.trim()}`).filter(h => h.length > 1).slice(0, 3);
+        dispatch({ type: 'UPLOAD_CANVAS', payload: { songId: song.id, videoUrl: canvasVideoUrl, hashtags } });
+        setIsCanvasModalOpen(false);
+        setCanvasVideoUrl('');
+        setCanvasHashtags('');
+    };
+
+    const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCanvasVideoUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white min-h-full p-4 flex flex-col">
             <header className="flex justify-between items-center flex-shrink-0">
@@ -108,7 +131,7 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song,
                     <DotsHorizontalIcon className="w-6 h-6" />
                 </button>
             </header>
-            <main className="flex-grow flex flex-col items-center justify-start text-center space-y-4 pt-4">
+            <main className="flex-grow flex flex-col items-center justify-start text-center space-y-4 pt-4 pb-20">
                 <img src={song.coverArt} alt={song.title} className="w-48 h-48 sm:w-64 sm:h-64 rounded-lg shadow-2xl shadow-black/50" />
                 <div>
                     <h1 className="text-3xl font-black tracking-tight">{song.title}</h1>
@@ -121,7 +144,7 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song,
                         <span className="text-sm text-zinc-400 self-end mb-1">streams</span>
                     </div>
 
-                    <div className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-700/50 text-left space-y-3">
+                    <div className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-700/50 text-left space-y-3 mb-6">
                         <h3 className="font-bold text-lg border-b border-zinc-700 pb-2 mb-2">Monetization Breakdown</h3>
                         
                         <div className="flex justify-between items-center">
@@ -140,16 +163,65 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({ song,
                         </div>
                     </div>
 
+                    <button
+                        onClick={() => setIsCanvasModalOpen(true)}
+                        className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 px-4 rounded-full flex items-center justify-center gap-2 transition-colors mb-4 border border-zinc-700"
+                    >
+                        <span>{song.canvasVideo ? 'Edit Canvas Studio' : 'Add Canvas Video'}</span>
+                    </button>
+
                     {hasCombineableRemixes && (
                         <button
                             onClick={handleCombineRemixes}
-                            className="mt-6 w-full bg-blue-500 text-white font-bold p-4 rounded-lg flex justify-center"
+                            className="w-full bg-blue-500 text-white font-bold p-4 rounded-lg flex justify-center mb-4"
                         >
                             Combine Remixes to Original
                         </button>
                     )}
                 </div>
             </main>
+
+            {isCanvasModalOpen && (
+                <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 w-full max-w-md">
+                        <h2 className="text-2xl font-black mb-4">Canvas Studio</h2>
+                        <p className="text-sm text-zinc-400 mb-6">Upload a short 3-8 second looping video (MP4) and add up to 3 hashtags.</p>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Canvas Video (optional)</label>
+                                <input 
+                                    type="file" 
+                                    accept="video/mp4,video/quicktime,image/gif"
+                                    onChange={handleVideoFileChange}
+                                    className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700"
+                                />
+                                {canvasVideoUrl && (
+                                    <div className="mt-2">
+                                        <video className="w-24 h-40 object-cover rounded shadow" src={canvasVideoUrl} autoPlay loop muted playsInline />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Hashtags (comma separated)</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. baddie, pop, girly"
+                                    value={canvasHashtags}
+                                    onChange={(e) => setCanvasHashtags(e.target.value)}
+                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex gap-3">
+                            <button onClick={() => setIsCanvasModalOpen(false)} className="flex-1 bg-zinc-800 font-bold py-3 rounded-full hover:bg-zinc-700 transition">Cancel</button>
+                            <button onClick={handleUploadCanvas} className="flex-1 bg-white text-black font-bold py-3 rounded-full hover:bg-gray-200 transition">Save Canvas</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

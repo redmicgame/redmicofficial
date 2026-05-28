@@ -64,6 +64,8 @@ export interface Song {
     rightsSoldPercent?: number;
     rightsOwnerLabelId?: string;
     itunesPrice?: string;
+    canvasVideo?: string;
+    canvasHashtags?: string[];
 }
 
 export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)' | 'Compilation';
@@ -537,6 +539,7 @@ export interface XPost {
     authorId: string;
     content: string;
     image?: string;
+    video?: string;
     poll?: {
         options: XPollOption[];
         totalVotes: number;
@@ -1196,4 +1199,6 @@ export type GameAction =
     | { type: 'START_KID_CAREER'; payload: { kidId: string } }
     | { type: 'MARK_EMAIL_OFFER_ANSWERED'; payload: { emailId: string } }
     | { type: 'RESPOND_TO_CHEATING'; payload: { response: 'break_up' | 'forgive' | 'ignore', relationshipId: string } }
-    | { type: 'CREATE_TIKTOK'; payload: { content: string; songId?: string; thumbnail?: string } };
+    | { type: 'CREATE_TIKTOK'; payload: { content: string; songId?: string; thumbnail?: string } }
+    | { type: 'UPLOAD_CANVAS'; payload: { songId: string, videoUrl: string, hashtags: string[] } }
+    ;

@@ -410,7 +410,11 @@ export const generateWeeklyXContent = (
         });
         
         let image: string | undefined = undefined;
-        if (artistImages.length > 0 && Math.random() > 0.3) {
+        let video: string | undefined = undefined;
+        
+        if (topSongsForPost[0] && topSongsForPost[0].canvasVideo) {
+            video = topSongsForPost[0].canvasVideo;
+        } else if (artistImages.length > 0 && Math.random() > 0.3) {
             image = pickRandom(artistImages);
         }
 
@@ -419,6 +423,7 @@ export const generateWeeklyXContent = (
             authorId: statsAccount.id,
             content: postContent.trim(),
             image: image,
+            video: video,
             likes: Math.floor(Math.random() * 20000) + 5000,
             retweets: Math.floor(Math.random() * 5000) + 1000,
             views: Math.floor(Math.random() * 300000) + 80000,

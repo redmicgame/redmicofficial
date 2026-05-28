@@ -28,7 +28,11 @@ const Post: React.FC<{ post: XPost; author: XUser; onQuote?: (post: XPost) => vo
                     <span className="text-zinc-500">{timeAgo(post.date)}</span>
                 </div>
                 <p className="text-white whitespace-pre-wrap">{post.content}</p>
-                {post.image && !post.image.startsWith('chart:') && <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />}
+                {post.video ? (
+                    <video src={post.video} className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto w-full object-cover" autoPlay loop muted playsInline />
+                ) : post.image && !post.image.startsWith('chart:') && (
+                    <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />
+                )}
                 
                 {post.quoteOf && (
                     <div className="mt-2 border border-zinc-700 rounded-xl p-3">
@@ -39,9 +43,11 @@ const Post: React.FC<{ post: XPost; author: XUser; onQuote?: (post: XPost) => vo
                             <span className="text-zinc-500 flex-shrink-0">{timeAgo(post.quoteOf.date)}</span>
                         </div>
                         <p className="text-sm text-white whitespace-pre-wrap">{post.quoteOf.content}</p>
-                        {post.quoteOf.image && !post.quoteOf.image.startsWith('chart:') && (
+                        {post.quoteOf.video ? (
+                            <video src={post.quoteOf.video} className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 w-full object-cover" autoPlay loop muted playsInline />
+                        ) : post.quoteOf.image && !post.quoteOf.image.startsWith('chart:') ? (
                             <img src={post.quoteOf.image} alt="Quoted image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 object-cover" />
-                        )}
+                        ) : null}
                     </div>
                 )}
 
