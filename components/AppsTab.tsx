@@ -20,6 +20,7 @@ import AppleMusicIcon from './icons/AppleMusicIcon';
 import OscarAwardIcon from './icons/OscarAwardIcon';
 import GoogleIcon from './icons/GoogleIcon';
 import TikTokIcon from './icons/TikTokIcon';
+import RiaaIcon from './icons/RiaaIcon';
 
 interface AppInfo {
     name: string;
@@ -80,6 +81,7 @@ const appCategories: AppCategory[] = [
             { name: 'Oscars', description: 'Your film awards history', icon: <OscarAwardIcon className="w-8 h-8" />, view: 'oscars', bgColor: '#c7a34a' },
             { name: 'Achievements', description: 'View career milestones', icon: <TrophyIcon className="w-8 h-8"/>, view: 'achievements', bgColor: '#ca8a04' },
             { name: 'Chart History', description: 'Your all-time chart stats', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartHistory', bgColor: '#0ea5e9' },
+            { name: 'RIAA', description: 'Gold & Platinum Awards', icon: <RiaaIcon className="w-8 h-8"/>, view: 'riaa', bgColor: '#333333', iconColor: '#E5E4E2' },
         ]
     }
 ];

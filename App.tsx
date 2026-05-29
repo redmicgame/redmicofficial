@@ -87,6 +87,7 @@ import GoogleView from './components/GoogleView';
 import TikTokView from './components/TikTokView';
 import InstagramView from './components/InstagramView';
 import TmzArticleView from './components/TmzArticleView';
+import RiaaView from './components/RiaaView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -261,6 +262,8 @@ const AppContent: React.FC = () => {
                 return <CreateVogueFeatureView />;
             case 'tmzArticle':
                 return <TmzArticleView />;
+            case 'riaa':
+                return <RiaaView />;
             case 'game':
             default:
                 return <GameUI />;
