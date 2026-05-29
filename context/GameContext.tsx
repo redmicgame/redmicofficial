@@ -1111,11 +1111,21 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
 
                 // --- PROMOTION PAYMENT LOGIC ---
-                const totalWeeklyPromoCost = artistData.promotions.reduce((sum, p) => sum + p.weeklyCost, 0);
+                let totalWeeklyPromoCost = artistData.promotions.reduce((sum, p) => sum + p.weeklyCost, 0);
 
                 if (totalWeeklyPromoCost > 0) {
-                    if (artistData.money < totalWeeklyPromoCost) {
-                        // Can't afford, cancel all promotions
+                    let costToArtist = totalWeeklyPromoCost;
+                    let coveredByBudget = 0;
+
+                    if (artistData.contract && artistData.contract.marketingBudget && artistData.contract.marketingBudget > 0) {
+                        const amountToCover = Math.min(artistData.contract.marketingBudget, costToArtist);
+                        artistData.contract.marketingBudget -= amountToCover;
+                        coveredByBudget = amountToCover;
+                        costToArtist -= amountToCover;
+                    }
+
+                    if (costToArtist > 0 && artistData.money < costToArtist) {
+                        // Can't afford the remaining cost, cancel all promotions
                         artistData.promotions = [];
                         if (artistProfileForEmail) {
                             newEmails.push({
@@ -1130,15 +1140,30 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                     } else {
                         // Can afford, deduct cost and send invoice
-                        artistData.money -= totalWeeklyPromoCost;
+                        if (costToArtist > 0) {
+                            artistData.money -= costToArtist;
+                        }
+                        
                         if (artistProfileForEmail) {
-                            let invoiceBody = `Hi ${artistProfileForEmail.name},\n\nThis is your invoice for this week's promotions. A total of $${formatNumber(totalWeeklyPromoCost)} has been deducted from your account.\n\nBreakdown:\n`;
+                            let invoiceBody = `Hi ${artistProfileForEmail.name},\n\nThis is your invoice for this week's promotions.`;
+                            
+                            if (coveredByBudget > 0) {
+                                invoiceBody += `\nYour label's marketing budget covered $${formatNumber(coveredByBudget)}.\n`;
+                            }
+                            
+                            if (costToArtist > 0) {
+                                invoiceBody += `\nA total of $${formatNumber(costToArtist)} has been deducted from your personal account.\n\nBreakdown:\n`;
+                            } else {
+                                invoiceBody += `\nThe entire cost was covered by your marketing budget.\n\nBreakdown:\n`;
+                            }
+                            
                             artistData.promotions.forEach(p => {
                                 const item = p.itemType === 'video' 
                                     ? artistData.videos.find(v => v.id === p.itemId) 
                                     : artistData.songs.find(s => s.id === p.itemId);
                                 invoiceBody += `• ${p.promoType} for "${item?.title || 'Item'}": $${formatNumber(p.weeklyCost)}\n`;
                             });
+                            
                             invoiceBody += `\nPromotions will automatically renew next week. You can cancel them at any time in the 'Promote' menu.\n\n- The Red Mic Team`;
 
                             newEmails.push({
@@ -2113,6 +2138,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                     }
 
+                    let rightsSoldPercent = 0;
+                    let rightsOwnerLabelId = undefined;
+                    if (artistData.contract) {
+                        rightsOwnerLabelId = artistData.contract.labelId;
+                        if (artistData.contract.mastersOwnership === 'Label') {
+                            rightsSoldPercent = 100;
+                        } else if (artistData.contract.mastersOwnership === 'Split') {
+                            rightsSoldPercent = 100 - artistData.contract.mastersSplitPercent;
+                        } else {
+                            rightsSoldPercent = 0;
+                            rightsOwnerLabelId = undefined;
+                        }
+                    }
+
                     scheduledSubmissions.forEach(sub => {
                         let subModified = false;
                         // Check for single releases
@@ -2168,9 +2207,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                         releaseDate: newDate,
                                         artistId: songToRelease.artistId,
                                         releasingLabel: releasingLabelInfo,
+                                        rightsSoldPercent: rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
+                                        rightsOwnerLabelId: rightsOwnerLabelId
                                     };
                                     artistData.releases.push(singleRelease);
-                                    artistData.songs = artistData.songs.map(s => s.id === single.songId ? { ...s, isReleased: true, releaseId: singleRelease.id, isPreReleaseSingle: true, coverArt: sub.release.coverArt } : s);
+                                    artistData.songs = artistData.songs.map(s => s.id === single.songId ? { ...s, isReleased: true, releaseId: singleRelease.id, isPreReleaseSingle: true, coverArt: sub.release.coverArt, rightsSoldPercent: rightsSoldPercent > 0 ? rightsSoldPercent : undefined, rightsOwnerLabelId: rightsOwnerLabelId } : s);
                                     artistData.hype = Math.min(getHypeCap(artistData), artistData.hype + 15);
 
                                     if (!single.isAnnounced) {
@@ -2230,13 +2271,26 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         // Check for main project release
                         if (sub.projectReleaseDate && sub.projectReleaseDate.week === newDate.week && sub.projectReleaseDate.year === newDate.year) {
                             const release = sub.release;
-                            artistData.releases.push({ ...release, releaseDate: newDate, releasingLabel: releasingLabelInfo, preorderSales: sub.preorderSales || 0 });
+                            artistData.releases.push({ 
+                                ...release, 
+                                releaseDate: newDate, 
+                                releasingLabel: releasingLabelInfo, 
+                                preorderSales: sub.preorderSales || 0,
+                                rightsSoldPercent: rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
+                                rightsOwnerLabelId: rightsOwnerLabelId
+                            });
 
                             artistData.merch = artistData.merch.map(m => m.releaseId === release.id ? { ...m, isPreorder: false } : m);
 
                             artistData.songs = artistData.songs.map(s => {
                                 if (release.songIds.includes(s.id)) {
-                                    return { ...s, isReleased: true, releaseId: release.id };
+                                    return { 
+                                        ...s, 
+                                        isReleased: true, 
+                                        releaseId: release.id,
+                                        rightsSoldPercent: rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
+                                        rightsOwnerLabelId: rightsOwnerLabelId 
+                                    };
                                 }
                                 return s;
                             });
@@ -4314,9 +4368,26 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         case 'RECORD_SONG': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
+            
+            let rightsSoldPercent = 0;
+            let rightsOwnerLabelId = undefined;
+            if (activeData.contract) {
+                rightsOwnerLabelId = activeData.contract.labelId;
+                if (activeData.contract.mastersOwnership === 'Label') {
+                    rightsSoldPercent = 100;
+                } else if (activeData.contract.mastersOwnership === 'Split') {
+                    rightsSoldPercent = 100 - activeData.contract.mastersSplitPercent;
+                } else {
+                    rightsSoldPercent = 0;
+                    rightsOwnerLabelId = undefined;
+                }
+            }
+
             const newSong: Song = {
                 ...action.payload.song,
                 dailyStreams: [],
+                rightsSoldPercent: rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
+                rightsOwnerLabelId: rightsOwnerLabelId
             };
             const updatedData = {
                 ...activeData,

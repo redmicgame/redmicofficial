@@ -17,16 +17,30 @@ const PromotionModal: React.FC<{
     onClose: () => void;
     onSelectPackage: (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => void;
     money: number;
+    marketingBudget?: number;
     selectedCount?: number;
-}> = ({ title, packages, onClose, onSelectPackage, money, selectedCount = 1 }) => {
+}> = ({ title, packages, onClose, onSelectPackage, money, marketingBudget = 0, selectedCount = 1 }) => {
     const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('low');
 
     const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
+    const totalFunds = money + marketingBudget;
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="w-full max-w-lg bg-zinc-800 rounded-2xl shadow-lg border border-red-500/30 p-6 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
+                
+                {marketingBudget > 0 && (
+                    <div className="mb-4 bg-zinc-700/50 rounded-lg p-3 border border-blue-500/30">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-semibold text-blue-400">Marketing Budget Available</span>
+                            <span className="font-mono text-sm">${formatNumber(marketingBudget)}</span>
+                        </div>
+                        <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                            <div className="bg-blue-500 h-1.5 rounded-full" style={{width: '100%'}}></div>
+                        </div>
+                    </div>
+                )}
                 
                 <div className="mb-6 bg-zinc-900 rounded-lg p-1 flex">
                     <button 
@@ -52,7 +66,8 @@ const PromotionModal: React.FC<{
                 <div className="overflow-y-auto space-y-4 pr-2">
                     {packages.map(pkg => {
                         const totalCost = pkg.weeklyCost * selectedCount * qualityMultiplier;
-                        const canAfford = money >= totalCost;
+                        const canAfford = totalFunds >= totalCost;
+                        const usedBudget = Math.min(marketingBudget, totalCost);
                         return (
                             <button
                                 key={pkg.name}
@@ -64,6 +79,7 @@ const PromotionModal: React.FC<{
                                     <div>
                                         <h3 className="font-bold text-lg">{pkg.name}</h3>
                                         <p className="text-sm text-zinc-400">{pkg.description}</p>
+                                        {usedBudget > 0 && <span className="inline-block mt-1 bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded border border-blue-500/30 font-semibold">Uses Budget</span>}
                                     </div>
                                     <div className="text-right flex-shrink-0 ml-4">
                                         <p className={`font-bold ${canAfford ? 'text-green-400' : 'text-red-500'}`}>
@@ -173,7 +189,8 @@ const PromoteView: React.FC = () => {
     const handleSelectPackageForSongs = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
         const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
         const totalCost = pkg.weeklyCost * selectedSongIds.size * qualityMultiplier;
-        if (money < totalCost) return;
+        const totalFunds = money + (contract?.marketingBudget || 0);
+        if (totalFunds < totalCost) return;
 
         for (const songId of selectedSongIds) {
             const song = promotableSongs.find(s => s.id === songId);
@@ -197,7 +214,9 @@ const PromoteView: React.FC = () => {
     
     const handleSelectPackageForSingleItem = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
         const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
-        if (!selectedSingleItem || money < pkg.weeklyCost * qualityMultiplier) return;
+        const totalCost = pkg.weeklyCost * qualityMultiplier;
+        const totalFunds = money + (contract?.marketingBudget || 0);
+        if (!selectedSingleItem || totalFunds < totalCost) return;
 
         const newPromotion: Promotion = {
             id: crypto.randomUUID(),
@@ -297,6 +316,7 @@ const PromoteView: React.FC = () => {
                     onClose={() => setIsSongModalOpen(false)}
                     onSelectPackage={handleSelectPackageForSongs}
                     money={money}
+                    marketingBudget={contract?.marketingBudget}
                     selectedCount={selectedSongIds.size}
                 />
             )}
@@ -307,6 +327,7 @@ const PromoteView: React.FC = () => {
                     onClose={() => setSelectedSingleItem(null)}
                     onSelectPackage={handleSelectPackageForSingleItem}
                     money={money}
+                    marketingBudget={contract?.marketingBudget}
                 />
             )}
              <ConfirmationModal

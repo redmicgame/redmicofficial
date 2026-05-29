@@ -160,7 +160,7 @@ const SignedView: React.FC<{ contract: Contract }> = ({ contract }) => {
                                     <span className="text-zinc-400">{weeksRemaining} weeks (~{yearsRemaining} years)</span>
                                 </div>
                                 <div className="w-full bg-zinc-700 rounded-full h-2.5">
-                                    <div className="bg-red-600 h-2.5 rounded-full" style={{width: `${(weeksRemaining / contract.durationWeeks) * 100}%`}}></div>
+                                    <div className="bg-red-600 h-2.5 rounded-full" style={{width: `${Math.max(0, Math.min(100, (weeksRemaining / contract.durationWeeks) * 100))}%`}}></div>
                                 </div>
                             </div>
                             <div>
@@ -173,6 +173,40 @@ const SignedView: React.FC<{ contract: Contract }> = ({ contract }) => {
                                 </div>
                             </div>
                         </>
+                    )}
+                    
+                    {!isPetty && (
+                        <div className="bg-zinc-700/30 p-4 rounded-xl space-y-3 text-sm text-zinc-300 mt-4">
+                            <h4 className="font-bold text-white mb-2 uppercase text-xs tracking-widest text-zinc-400">Contract Terms</h4>
+                            <div className="flex justify-between border-b border-zinc-700/50 pb-2">
+                                <span>Advance:</span>
+                                <span className="font-mono text-green-400">${formatNumber(contract.advance || 0)}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/50 pb-2">
+                                <span>Royalty Split:</span>
+                                <span className="font-mono">{contract.royaltyPercent || 15}% Artist</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/50 pb-2">
+                                <span>Masters Ownership:</span>
+                                <span className="font-mono">
+                                    {contract.mastersOwnership === 'Label' ? '0% Artist' 
+                                    : contract.mastersOwnership === 'Artist' ? '100% Artist' 
+                                    : `${contract.mastersSplitPercent || 0}% Artist`}
+                                </span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/50 pb-2">
+                                <span>Marketing Budget:</span>
+                                <span className="font-mono text-blue-400">${formatNumber(contract.marketingBudget || 0)} <span className="text-xs text-zinc-500">(Available for Promo)</span></span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/50 pb-2">
+                                <span>Tour Support:</span>
+                                <span className="font-mono text-blue-400">${formatNumber(contract.tourSupport || 0)}</span>
+                            </div>
+                            <div className="flex justify-between pb-2">
+                                <span>Recoupment:</span>
+                                <span className="font-mono">{contract.recoupmentTerms || '100%'}</span>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
