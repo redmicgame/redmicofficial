@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { LABELS } from '../constants';
+import { createDefaultContract } from '../utils/contractUtils';
 import type { Contract, Label, CustomLabel, LabelSubmission } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ConfirmationModal from './ConfirmationModal';
+
+import { ContractNegotiationModal } from './ContractNegotiationModal';
 
 const getLabelAdvance = (label: Label) => {
     if (label.contractType === 'petty') return 1000000;
@@ -229,8 +232,13 @@ const SignedView: React.FC<{ contract: Contract }> = ({ contract }) => {
 
 const UnsignedView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
+    // offerModalLabel is used to start the name check process
     const [offerModalLabel, setOfferModalLabel] = useState<Label | null>(null);
     const [confirmPettyJoin, setConfirmPettyJoin] = useState<Label | null>(null);
+    
+    // negotiationLabel is used to show the negotiation UI after name check
+    const [negotiationLabel, setNegotiationLabel] = useState<Label | null>(null);
+    
     const [nameChangeReq, setNameChangeReq] = useState<{
         label: Label;
         type: 'petty' | 'small';
@@ -266,29 +274,24 @@ const UnsignedView: React.FC = () => {
         }
 
         if (isPetty) handleSignPetty(label);
-        else handleSign(label.id);
+        else {
+            setOfferModalLabel(null);
+            setNegotiationLabel(label); // Open negotiation
+        }
     };
 
-    const handleSign = (labelId: Label['id']) => {
-        const newContract: Contract = {
-            labelId,
-            artistId: activeArtist!.id,
-            startDate: gameState.date,
-            durationWeeks: 104, // 2 years
-            albumQuota: 2,
-            albumsReleased: 0
-        };
-        dispatch({ type: 'SIGN_CONTRACT', payload: { contract: newContract }});
-        setOfferModalLabel(null);
+    const handleSignNegotiatedContract = (contract: Contract) => {
+        dispatch({ type: 'SIGN_CONTRACT', payload: { contract } });
+        setNegotiationLabel(null);
     };
 
      const handleSignPetty = (label: Label) => {
-        const newContract: Contract = {
+        const newContract: Contract = createDefaultContract({
             labelId: label.id,
             artistId: activeArtist!.id,
             startDate: gameState.date,
             albumsReleased: 0
-        };
+        });
         dispatch({ type: 'SIGN_CONTRACT', payload: { contract: newContract } });
         setConfirmPettyJoin(null);
     };
@@ -309,21 +312,29 @@ const UnsignedView: React.FC = () => {
         }
 
         if (isPetty) handleSignPetty(nameChangeReq.label);
-        else handleSign(nameChangeReq.label.id);
+        else setNegotiationLabel(nameChangeReq.label);
         
         setNameChangeReq(null);
     };
     
     return (
         <>
+            {negotiationLabel && (
+                <ContractNegotiationModal
+                    label={negotiationLabel}
+                    careerStreams={careerStreams}
+                    onClose={() => setNegotiationLabel(null)}
+                    onSign={handleSignNegotiatedContract}
+                />
+            )}
             {offerModalLabel && (
                 <ConfirmationModal
                     isOpen={!!offerModalLabel}
                     onClose={() => setOfferModalLabel(null)}
                     onConfirm={() => handleSignWithCheck(offerModalLabel)}
                     title="Contract Offer"
-                    message={`Sign a 2-year, 2-album deal with ${offerModalLabel.name}?`}
-                    confirmText="Sign Contract"
+                    message={`Begin negotiations with ${offerModalLabel.name}?`}
+                    confirmText="Negotiate"
                 />
             )}
             {confirmPettyJoin && (

@@ -483,9 +483,51 @@ export interface Contract {
     isCustom?: boolean;
     artistId: string;
     startDate: GameDate;
-    durationWeeks?: number;
-    albumQuota?: number;
     albumsReleased: number;
+    
+    // Core terms
+    durationWeeks: number;
+    albumQuota: number;
+    advance: number;
+    royaltyPercent: number;
+    
+    // Ownership & Rights
+    mastersOwnership: 'Label' | 'Artist' | 'Split';
+    mastersSplitPercent: number; // Artist's share if Split
+    publishingRights: 'Label' | 'Artist' | 'Split';
+    publishingSplitPercent: number; // Artist's share if Split
+    reversionClause: boolean; // Ownership reverts to artist after contract
+    
+    // Financials
+    tourSupport: number;
+    marketingBudget: number;
+    merchPercent: number; // Artist's share
+    streamingSplitArtist: number;
+    sponsorshipSplitArtist: number;
+    recoupmentTerms: string; // '100%', '50%', 'None'
+    successBonus: number;
+    chartIncentives: string; // e.g. '$10K per #1'
+    revenueAuditRights: boolean;
+    producerSplitsLabelPaid: boolean;
+    
+    // Operations & Control
+    creativeControl: 'High' | 'Medium' | 'Low';
+    releaseDeadlines: boolean;
+    exclusivity: boolean;
+    collabPermissions: 'Any' | 'Label Approval' | 'Strict';
+    socialMediaObligations: 'None' | 'Moderate' | 'Heavy';
+    brandingApproval: 'Artist' | 'Label';
+    performanceRequirements: string;
+    independentRestrictions: boolean;
+    distributionRegions: string; // 'Worldwide', 'US Only', 'North America'
+    licensingRights: 'Label' | 'Artist' | 'Split';
+    
+    // Legal
+    renewalOptions: boolean;
+    earlyTermination: boolean;
+    penaltyAmount: number;
+    nda: boolean;
+    disputeTerms: string;
 }
 
 export interface LabelSubmission {

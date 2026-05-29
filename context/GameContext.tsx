@@ -8,6 +8,7 @@ import { INITIAL_MONEY, STREAM_INCOME_MULTIPLIER, SUBSCRIBER_THRESHOLD_STORE, VI
 import { generateWeeklyXContent } from '../utils/xContentGenerator';
 import { REAL_WORLD_DISCOGRAPHIES } from '../realWorldDiscographies';
 import { ActiveEncounter, EncounterChoice } from '../types';
+import { createDefaultContract } from '../utils/contractUtils';
 
 export const getPossibleEncounters = (artist: Artist | Group, artistData: ArtistData): ActiveEncounter[] => {
     const isGroup = artist.type === 'group';
@@ -6296,14 +6297,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const { labelId } = action.payload;
             const activeData = state.artistsData[state.activeArtistId];
             
-            const newContract: Contract = {
+            const newContract: Contract = createDefaultContract({
                 labelId,
                 artistId: state.activeArtistId,
                 startDate: state.date,
                 durationWeeks: 156, // 3 years
                 albumQuota: 3,
                 albumsReleased: 0,
-            };
+            });
 
             const artist = allPlayerArtistsAndGroups.find(a => a.id === state.activeArtistId);
             const label = LABELS.find(l => l.id === labelId);
@@ -7098,7 +7099,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const artistData = state.artistsData[artistId];
             if (!artistData) return state;
     
-            const newContract: Contract = {
+            const newContract: Contract = createDefaultContract({
                 labelId,
                 isCustom,
                 artistId,
@@ -7106,7 +7107,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 durationWeeks: 104, // 2 years
                 albumQuota: 2, // A standard renewal deal
                 albumsReleased: 0,
-            };
+            });
     
             const updatedData = { ...artistData, contract: newContract };
     
