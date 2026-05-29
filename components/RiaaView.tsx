@@ -34,28 +34,6 @@ const getCertLevel = (units: number) => {
     return null;
 };
 
-const getCertHistory = (units: number, currentDate: GameDate, releaseDate: GameDate | undefined) => {
-    const history = [];
-    const certDateStr = estimateCertDate(currentDate, releaseDate, units >= 10 ? 10 : units >= 2 ? Math.floor(units) : units >= 1 ? 1 : 0.5, units);
-
-    if (units >= 10) {
-        history.push(`Diamond | ${certDateStr}`);
-        history.push(`Multi Platinum | ${estimateCertDate(currentDate, releaseDate, 2, units)}`);
-        history.push(`Platinum | ${estimateCertDate(currentDate, releaseDate, 1, units)}`);
-        history.push(`Gold | ${estimateCertDate(currentDate, releaseDate, 0.5, units)}`);
-    } else if (units >= 2) {
-        history.push(`${Math.floor(units)}x Platinum | ${certDateStr}`);
-        history.push(`Platinum | ${estimateCertDate(currentDate, releaseDate, 1, units)}`);
-        history.push(`Gold | ${estimateCertDate(currentDate, releaseDate, 0.5, units)}`);
-    } else if (units >= 1) {
-        history.push(`Platinum | ${certDateStr}`);
-        history.push(`Gold | ${estimateCertDate(currentDate, releaseDate, 0.5, units)}`);
-    } else if (units >= 0.5) {
-        history.push(`Gold | ${certDateStr}`);
-    }
-    return history;
-}
-
 const formatGameDate = (date?: GameDate) => {
     if (!date) return 'Unknown';
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -64,20 +42,71 @@ const formatGameDate = (date?: GameDate) => {
     return `${month} ${day}, ${date.year}`;
 }
 
-const estimateCertDate = (currentDate: GameDate, releaseDate: GameDate | undefined, requiredUnits: number, currentUnits: number) => {
-    if (!releaseDate) return formatGameDate(currentDate);
+const getDeterministicCertDate = (releaseDate: GameDate | undefined, requiredUnits: number, seedString: string) => {
+    if (!releaseDate) return 'Unknown';
+    // Use title/artist string to get a deterministic offset
+    let hash = 0;
+    for (let i = 0; i < seedString.length; i++) {
+        hash = seedString.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const pseudoRand = Math.abs(hash) % 100 / 100; // 0.0 to 1.0
+
     const releaseWeeks = releaseDate.year * 52 + releaseDate.week;
-    const currentWeeks = currentDate.year * 52 + currentDate.week;
-    const weeksPassed = Math.max(1, currentWeeks - releaseWeeks);
     
-    let fraction = requiredUnits / currentUnits;
-    if (fraction > 1) fraction = 1;
-    
-    // Non-linear projection to simulate front-loaded streams
-    const weeksToThreshold = weeksPassed * Math.pow(fraction, 1.5); 
-    const thresholdWeeks = releaseWeeks + weeksToThreshold;
-    
+    // Determine how many weeks it "took" based on requirement
+    let weeksTaken = 4;
+    if (requiredUnits >= 10) weeksTaken = 104 + (pseudoRand * 104);
+    else if (requiredUnits >= 2) weeksTaken = 52 + (pseudoRand * 52);
+    else if (requiredUnits >= 1) weeksTaken = 26 + (pseudoRand * 26);
+    else weeksTaken = 8 + (pseudoRand * 8);
+
+    const thresholdWeeks = releaseWeeks + weeksTaken;
     return formatGameDate({ year: Math.floor(thresholdWeeks / 52), week: Math.floor(thresholdWeeks % 52) });
+}
+
+const getCertHistory = (
+    units: number, 
+    releaseDate: GameDate | undefined, 
+    seedString: string,
+    certifications?: { level: string; date: GameDate }[]
+) => {
+    if (certifications && certifications.length > 0) {
+        return [...certifications].reverse().map(c => `${c.level} | ${formatGameDate(c.date)}`);
+    }
+
+    const history = [];
+    const maxUnitsToFake = units >= 10 ? 10 : units >= 2 ? Math.floor(units) : units >= 1 ? 1 : 0.5;
+    const certDateStr = getDeterministicCertDate(releaseDate, maxUnitsToFake, seedString);
+
+    if (units >= 10) {
+        history.push(`Diamond | ${certDateStr}`);
+        history.push(`Multi Platinum | ${getDeterministicCertDate(releaseDate, 2, seedString)}`);
+        history.push(`Platinum | ${getDeterministicCertDate(releaseDate, 1, seedString)}`);
+        history.push(`Gold | ${getDeterministicCertDate(releaseDate, 0.5, seedString)}`);
+    } else if (units >= 2) {
+        history.push(`${Math.floor(units)}x Platinum | ${certDateStr}`);
+        history.push(`Platinum | ${getDeterministicCertDate(releaseDate, 1, seedString)}`);
+        history.push(`Gold | ${getDeterministicCertDate(releaseDate, 0.5, seedString)}`);
+    } else if (units >= 1) {
+        history.push(`Platinum | ${certDateStr}`);
+        history.push(`Gold | ${getDeterministicCertDate(releaseDate, 0.5, seedString)}`);
+    } else if (units >= 0.5) {
+        history.push(`Gold | ${certDateStr}`);
+    }
+    return history;
+}
+
+const getLatestCertDate = (
+    units: number, 
+    releaseDate: GameDate | undefined, 
+    seedString: string,
+    certifications?: { level: string; date: GameDate }[]
+) => {
+    if (certifications && certifications.length > 0) {
+        return formatGameDate(certifications[certifications.length - 1].date);
+    }
+    const maxUnitsToFake = units >= 10 ? 10 : units >= 2 ? Math.floor(units) : units >= 1 ? 1 : 0.5;
+    return getDeterministicCertDate(releaseDate, maxUnitsToFake, seedString);
 }
 
 const CertItem: React.FC<{ cert: CertDetails }> = ({ cert }) => {
@@ -166,12 +195,7 @@ const RiaaView: React.FC = () => {
                 const units = song.streams / 150 / 1000000;
                 const level = getCertLevel(units);
                 if (level) {
-                     let requiredUnitsForLevel = 0.5;
-                     if (units >= 10) requiredUnitsForLevel = 10;
-                     else if (units >= 2) requiredUnitsForLevel = Math.floor(units);
-                     else if (units >= 1) requiredUnitsForLevel = 1;
-
-                     const certDateStr = estimateCertDate(date, song.releaseDate, requiredUnitsForLevel, units);
+                     const certDateStr = getLatestCertDate(units, song.releaseDate, song.id, song.certifications);
                      const releaseDateStr = formatGameDate(song.releaseDate);
 
                      let labelStr = playerLabelStr;
@@ -188,7 +212,7 @@ const RiaaView: React.FC = () => {
                         date: certDateStr,
                         releaseDate: releaseDateStr,
                         genre: song.genre || 'POP',
-                        history: getCertHistory(units, date, song.releaseDate)
+                        history: getCertHistory(units, song.releaseDate, song.id, song.certifications)
                     });
                 }
             });
@@ -203,12 +227,7 @@ const RiaaView: React.FC = () => {
                 const units = totalStreams / 1500 / 1000000; 
                 const level = getCertLevel(units);
                 if (level) {
-                     let requiredUnitsForLevel = 0.5;
-                     if (units >= 10) requiredUnitsForLevel = 10;
-                     else if (units >= 2) requiredUnitsForLevel = Math.floor(units);
-                     else if (units >= 1) requiredUnitsForLevel = 1;
-
-                     const certDateStr = estimateCertDate(date, release.releaseDate, requiredUnitsForLevel, units);
+                     const certDateStr = getLatestCertDate(units, release.releaseDate, release.id, release.certifications);
                      const releaseDateStr = formatGameDate(release.releaseDate);
 
                      let labelStr = playerLabelStr;
@@ -230,7 +249,7 @@ const RiaaView: React.FC = () => {
                         date: certDateStr,
                         releaseDate: releaseDateStr,
                         genre: 'POP',
-                        history: getCertHistory(units, date, release.releaseDate)
+                        history: getCertHistory(units, release.releaseDate, release.id, release.certifications)
                     });
                 }
             });
@@ -250,13 +269,8 @@ const RiaaView: React.FC = () => {
                  const units = mockStreams / 150 / 1000000;
                  const level = getCertLevel(units);
                  if (level) {
-                     let requiredUnitsForLevel = 0.5;
-                     if (units >= 10) requiredUnitsForLevel = 10;
-                     else if (units >= 2) requiredUnitsForLevel = Math.floor(units);
-                     else if (units >= 1) requiredUnitsForLevel = 1;
-
                      const mockReleaseDate = npc.releaseDate || { year: Math.max(2020, date.year - 2 - Math.floor(pseudoRand * 3)), week: 1 };
-                     const certDateStr = estimateCertDate(date, mockReleaseDate, requiredUnitsForLevel, units);
+                     const certDateStr = getLatestCertDate(units, mockReleaseDate, npc.uniqueId);
                      const releaseDateStr = formatGameDate(mockReleaseDate);
                      
                      const npcLabels = ['UMG', 'Republic', 'RCA', 'Island', 'Atlantic', 'Warner', 'Columbia'];
@@ -274,7 +288,7 @@ const RiaaView: React.FC = () => {
                         date: certDateStr,
                         releaseDate: releaseDateStr,
                         genre: npc.genre || 'POP',
-                        history: getCertHistory(units, date, mockReleaseDate)
+                        history: getCertHistory(units, mockReleaseDate, npc.uniqueId)
                     });
                  }
             }
@@ -293,17 +307,13 @@ const RiaaView: React.FC = () => {
                  const units = mockStreams / 1500 / 1000000;
                  const level = getCertLevel(units);
                  if (level) {
-                     let requiredUnitsForLevel = 0.5;
-                     if (units >= 10) requiredUnitsForLevel = 10;
-                     else if (units >= 2) requiredUnitsForLevel = Math.floor(units);
-                     else if (units >= 1) requiredUnitsForLevel = 1;
-
                      const mockReleaseDate = { year: Math.max(2020, date.year - 2 - Math.floor(pseudoRand * 3)), week: 10 };
-                     const certDateStr = estimateCertDate(date, mockReleaseDate, requiredUnitsForLevel, units);
+                     const idString = album.coverArt + index;
+                     const certDateStr = getLatestCertDate(units, mockReleaseDate, idString);
                      const releaseDateStr = formatGameDate(mockReleaseDate);
 
                      certs.push({
-                        id: album.coverArt + index, 
+                        id: idString, 
                         artist: album.artist,
                         title: album.title,
                         format: 'ALBUM',
@@ -314,7 +324,7 @@ const RiaaView: React.FC = () => {
                         date: certDateStr,
                         releaseDate: releaseDateStr,
                         genre: 'POP',
-                        history: getCertHistory(units, date, mockReleaseDate)
+                        history: getCertHistory(units, mockReleaseDate, idString)
                     });
                  }
             }

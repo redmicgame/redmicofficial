@@ -53,6 +53,7 @@ export interface Song {
         qualityBoost: number;
     };
     lastCertification?: string;
+    certifications?: { level: string; date: GameDate }[];
     isTakenDown?: boolean;
     isFeatureToNpc?: boolean;
     npcArtistName?: string;
@@ -114,6 +115,7 @@ export interface Release {
     isFeatureToNpc?: boolean;
     npcArtistName?: string;
     lastCertification?: string;
+    certifications?: { level: string; date: GameDate }[];
     isTakenDown?: boolean;
     rightsSoldOriginalValue?: number;
     rightsSoldPercent?: number;

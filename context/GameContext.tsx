@@ -2532,7 +2532,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                 date: newDate,
                             });
             
-                            return { ...song, lastCertification: currentCertString };
+                            const newCertRecords = [...(song.certifications || [])];
+                            newCertRecords.push({ level: currentCertString, date: newDate });
+                            return { ...song, lastCertification: currentCertString, certifications: newCertRecords };
                         }
                         return song;
                     });
@@ -2565,7 +2567,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                 date: newDate,
                             });
             
-                            return { ...release, lastCertification: currentCertString };
+                            const newCertRecords = [...(release.certifications || [])];
+                            newCertRecords.push({ level: currentCertString, date: newDate });
+                            return { ...release, lastCertification: currentCertString, certifications: newCertRecords };
                         }
                         return release;
                     });
