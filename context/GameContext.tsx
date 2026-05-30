@@ -138,7 +138,18 @@ const formatCertification = (cert: { level: string; multiplier: number } | null)
     return cert.level;
 };
 
-const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: Record<string, string>): NpcSong[] => {
+const getRandomNpcName = (excludedNames: string[] = []): string => {
+    let name = "";
+    let attempts = 0;
+    const lowerExcluded = excludedNames.map(n => n.toLowerCase());
+    do {
+        name = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+        attempts++;
+    } while (lowerExcluded.includes(name.toLowerCase()) && attempts < 50);
+    return name;
+};
+
+const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: Record<string, string>, excludedNames: string[] = []): NpcSong[] => {
     const npcs: NpcSong[] = [];
     const usedNames = new Set<string>(existingNpcs.map(npc => `${npc.title}-${npc.artist}`));
 
@@ -150,13 +161,13 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: R
 
         let baseArtist = "";
         do {
-            baseArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+            baseArtist = getRandomNpcName(excludedNames);
             let displayArtist = baseArtist;
 
             if (Math.random() < 0.05) { // 5% chance
                 let collabArtist = baseArtist;
                 while (collabArtist === baseArtist) {
-                    collabArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                    collabArtist = getRandomNpcName(excludedNames);
                 }
                 displayArtist = `${baseArtist}, ${collabArtist}`;
             }
@@ -206,7 +217,7 @@ const generateNpcs = (count: number, existingNpcs: NpcSong[] = [], npcImages?: R
     return npcs;
 };
 
-const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Record<string, string>): NpcSong[] => {
+const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Record<string, string>, excludedNames: string[] = []): NpcSong[] => {
     const hits: NpcSong[] = [];
     const usedNames = new Set<string>(existingNpcs.map(npc => `${npc.title}-${npc.artist}`));
 
@@ -218,13 +229,13 @@ const generateNewHits = (count: number, existingNpcs: NpcSong[], npcImages?: Rec
 
         let baseArtist = "";
         do {
-            baseArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+            baseArtist = getRandomNpcName(excludedNames);
             let displayArtist = baseArtist;
 
             if (Math.random() < 0.05) { // 5% chance
                 let collabArtist = baseArtist;
                 while (collabArtist === baseArtist) {
-                    collabArtist = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                    collabArtist = getRandomNpcName(excludedNames);
                 }
                 displayArtist = `${baseArtist}, ${collabArtist}`;
             }
@@ -706,7 +717,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 followers: Math.floor(initialSubs / 5),
             };
             // Increase songs and albums for more realistic charts
-            const npcs = generateNpcs(600);
+            const npcs = generateNpcs(600, [], undefined, [action.payload.artist.name]);
             const npcAlbums = generateNpcAlbums(60, npcs);
 
             return {
@@ -839,7 +850,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             });
 
             // Increase songs and albums for more realistic charts
-            const npcs = generateNpcs(600);
+            const npcs = generateNpcs(600, [], undefined, [action.payload.group.name]);
             const npcAlbums = generateNpcAlbums(60, npcs);
 
              return {
@@ -920,7 +931,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             }
            
             // Generate 100 new NPCs, avoiding name collisions
-            const newlyGeneratedNpcs = generateNewHits(CHURN_COUNT, newNpcsList, state.npcImages);
+            const allPlayerNamesForNpcs = [...(state.allPlayerArtists?.map(a => a.name) || []), state.soloArtist?.name, state.group?.name].filter((n): n is string => !!n);
+            const newlyGeneratedNpcs = generateNewHits(CHURN_COUNT, newNpcsList, state.npcImages, allPlayerNamesForNpcs);
 
             // Add them back to the list
             newNpcsList.push(...newlyGeneratedNpcs);
@@ -1354,7 +1366,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         });
                     } else if (newDate.week === 5 && Math.random() < 0.3) {
                         const emailId = crypto.randomUUID();
-                        const npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                        const allPlayerNames = [...(state.allPlayerArtists?.map(a => a.name) || []), state.soloArtist?.name, state.group?.name].filter((n): n is string => !!n);
+                        const npcArtistName = getRandomNpcName(allPlayerNames);
                         newEmails.push({
                             id: emailId,
                             sender: npcArtistName,
@@ -1367,7 +1380,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         });
                     } else if (newDate.week === 10 && Math.random() < 0.3) {
                         const emailId = crypto.randomUUID();
-                        const npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                        const allPlayerNames = [...(state.allPlayerArtists?.map(a => a.name) || []), state.soloArtist?.name, state.group?.name].filter((n): n is string => !!n);
+                        const npcArtistName = getRandomNpcName(allPlayerNames);
                         newEmails.push({
                             id: emailId,
                             sender: npcArtistName,
@@ -1380,7 +1394,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         });
                     } else if (newDate.week === 46 && Math.random() < 0.3) {
                          const emailId = crypto.randomUUID();
-                        const npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                         const allPlayerNames = [...(state.allPlayerArtists?.map(a => a.name) || []), state.soloArtist?.name, state.group?.name].filter((n): n is string => !!n);
+                        const npcArtistName = getRandomNpcName(allPlayerNames);
                         newEmails.push({
                             id: emailId,
                             sender: npcArtistName,
@@ -1426,8 +1441,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     artistData.weeksUntilNextFeatureOffer = Math.floor(Math.random() * (8 - 2 + 1)) + 2;
                     
                     let npcArtistName = '';
+                    const allPlayerNames = [...(state.allPlayerArtists?.map(a => a.name) || []), state.soloArtist?.name, state.group?.name].filter((n): n is string => !!n);
                     do {
-                        npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                        npcArtistName = getRandomNpcName(allPlayerNames);
                     } while (npcArtistName === artistProfileForEmail.name);
 
                     const npcGenre = NPC_ARTIST_GENRES[npcArtistName];
@@ -3623,6 +3639,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                 if (nominees.length > 0) {
                     newOscarNominations = [{ name: categoryName, nominees, winner: nominees[0] }];
+                    finalState.oscarCurrentYearNominations = newOscarNominations;
                     
                     const playerNominee = nominees.find(n => n.isPlayer);
                     if (playerNominee) {
@@ -3905,6 +3922,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
                 
                 newAmaNominations = newNominations;
+                finalState.amaCurrentYearNominations = newNominations;
 
                 for (const artistId in updatedArtistsData) {
                     const artistData = updatedArtistsData[artistId];
@@ -4110,6 +4128,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
                 
                 newGrammyNominations = newNominations;
+                finalState.grammyCurrentYearNominations = newNominations;
 
                 const majorCatsForPosts: GrammyAward['category'][] = ['Album of the Year', 'Record of the Year', 'Song of the Year', 'Best New Artist'];
                 const nominationPosts: XPost[] = [];
@@ -4411,9 +4430,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     spotifyNewEntries: newEntriesCount,
                     npcs: newNpcsWithReleases,
                     npcAlbums: newNpcAlbums,
-                    amaCurrentYearNominations: newAmaNominations,
-                    grammyCurrentYearNominations: newGrammyNominations,
-                    oscarCurrentYearNominations: newOscarNominations,
                     contractRenewalOffer: contractRenewalForActivePlayer,
                     currentView: 'contractRenewal'
                 };
@@ -4453,9 +4469,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 spotifyNewEntries: newEntriesCount,
                 npcs: newNpcsWithReleases,
                 npcAlbums: newNpcAlbums,
-                amaCurrentYearNominations: newAmaNominations,
-                grammyCurrentYearNominations: newGrammyNominations,
-                oscarCurrentYearNominations: newOscarNominations,
             };
         }
         case 'RECORD_SONG': {
