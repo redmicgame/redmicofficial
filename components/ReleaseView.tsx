@@ -43,7 +43,7 @@ const ReleaseView: React.FC = () => {
         });
 
         if (releaseType === 'Album (Deluxe)') {
-            return songs.filter(s => !s.isReleased && s.isDeluxeTrack);
+            return songs.filter(s => !s.isReleased);
         }
 
         if (releaseType === 'Compilation') {
@@ -101,7 +101,8 @@ const ReleaseView: React.FC = () => {
         if (releaseType === 'Album (Deluxe)') {
             if (!baseAlbumForDeluxe) { setError('Please select a standard album to create a deluxe version of.'); return; }
             if (!coverArt) { setError('A cover art is required for a deluxe album.'); return; }
-            if (selectedSongIds.size < 1) { setError('A deluxe album must have at least one new deluxe track.'); return; }
+            if (selectedSongIds.size < 1) { setError('A deluxe album must have at least one new track.'); return; }
+            finalReleaseType = 'Album';
         } else {
             const selectedSongsArr = Array.from(selectedSongIds).map(id => activeArtistData.songs.find(s => s.id === id)).filter((s): s is Song => !!s);
             const allRemixes = selectedSongsArr.length > 0 && selectedSongsArr.every(s => s.remixOfSongId);
@@ -273,7 +274,7 @@ const ReleaseView: React.FC = () => {
                                             <p className="font-semibold">{song.title}</p>
                                         </button>
                                     ))}
-                                    {availableSongs.length === 0 && <p className="text-xs text-zinc-500 p-2">No unreleased deluxe tracks available. Record some in the studio!</p>}
+                                    {availableSongs.length === 0 && <p className="text-xs text-zinc-500 p-2">No unreleased tracks available. Record some in the studio!</p>}
                                 </div>
                             </div>
                             </>

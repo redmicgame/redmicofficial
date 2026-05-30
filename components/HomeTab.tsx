@@ -57,7 +57,7 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({ submission 
             <img src={submission.release.coverArt} alt={submission.release.title} className="w-16 h-16 rounded-md object-cover"/>
             <div className="flex-grow">
                 <p className="font-bold">{submission.release.title}</p>
-                <p className="text-sm text-zinc-400">{submission.release.type}</p>
+                <p className="text-sm text-zinc-400">{submission.release.type.replace(" (Deluxe)", "")}</p>
                 {submission.status === 'scheduled' && submission.projectReleaseDate && (
                     <p className="text-xs text-green-300">Releasing W{submission.projectReleaseDate.week}, {submission.projectReleaseDate.year}</p>
                 )}

@@ -226,6 +226,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             case 'soundtrackOffer':
                 setShowSoundtrackConfirm(true);
                 break;
+            case 'eventInvitation':
+                dispatch({ type: 'ACCEPT_EVENT_INVITATION', payload: { emailId: email.id, eventName: email.offer.eventName, hostName: email.offer.hostName, associatedSoundtrack: email.offer.associatedSoundtrack, eventType: email.offer.eventType }});
+                break;
             case 'vogueOffer':
                 dispatch({ type: 'ACCEPT_VOGUE_OFFER', payload: { magazine: email.offer.magazine, emailId: email.id }});
                 break;
@@ -422,6 +425,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 buttonText = `Contribute to "${email.offer.albumTitle}"`;
                 buttonClass = "bg-purple-500 hover:bg-purple-600 text-white shadow-purple-500/20";
                 acceptedText = "Soundtrack Contribution Accepted";
+                isAccepted = email.offer.isAccepted;
+                break;
+            case 'eventInvitation':
+                buttonText = `Attend ${email.offer.eventName}`;
+                buttonClass = "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20";
+                acceptedText = "Attending Event";
                 isAccepted = email.offer.isAccepted;
                 break;
             case 'vogueOffer':

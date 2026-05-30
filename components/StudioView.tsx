@@ -15,7 +15,6 @@ const StudioView: React.FC = () => {
     const [genre, setGenre] = useState(GENRES[0]);
     const [studioIndex, setStudioIndex] = useState(0);
     const [isExplicit, setIsExplicit] = useState(false);
-    const [isDeluxeTrack, setIsDeluxeTrack] = useState(false);
     const [coverArt, setCoverArt] = useState<string | null>(null);
     const [collaboration, setCollaboration] = useState<{ artistName: string; cost: number } | null>(null);
     const [isRemix, setIsRemix] = useState(false);
@@ -209,7 +208,6 @@ const StudioView: React.FC = () => {
             duration: Math.floor(Math.random() * (240 - 120 + 1)) + 120, // 2 to 4 minutes
             explicit: isExplicit,
             artistId: activeArtist.id,
-            isDeluxeTrack,
             removedStreams: 0,
             collaboration: collaboration ? { ...collaboration, qualityBoost } : undefined,
             remixOfSongId: isRemix ? remixOfSongId : undefined,
@@ -489,20 +487,6 @@ const StudioView: React.FC = () => {
                             />
                             <label htmlFor="explicit-checkbox" className="ml-2 block text-sm text-zinc-300">
                                 Explicit Content <span className="text-xs text-zinc-400">(more hype on release)</span>
-                            </label>
-                        </div>
-
-                        <div className="flex items-center">
-                            <input
-                                id="deluxe-checkbox"
-                                type="checkbox"
-                                checked={isDeluxeTrack}
-                                onChange={(e) => setIsDeluxeTrack(e.target.checked)}
-                                disabled={!hasReleasedAlbum}
-                                className="h-4 w-4 rounded border-zinc-500 bg-zinc-700 text-red-600 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <label htmlFor="deluxe-checkbox" className="ml-2 block text-sm text-zinc-300">
-                                Deluxe Track <span className="text-xs text-zinc-400">(for deluxe albums)</span>
                             </label>
                         </div>
 

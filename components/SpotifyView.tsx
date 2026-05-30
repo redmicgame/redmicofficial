@@ -41,7 +41,7 @@ const PopularReleaseItem: React.FC<{ release: Release; isLatest: boolean; onClic
             <div className="flex-grow">
                 <p className="font-semibold text-white text-lg">{release.title}</p>
                 <p className="text-sm text-zinc-400">
-                    {isLatest ? 'Latest release' : release.releaseDate.year} • {release.type}
+                    {isLatest ? 'Latest release' : release.releaseDate.year} • {release.type.replace(" (Deluxe)", "")}
                 </p>
             </div>
         </button>

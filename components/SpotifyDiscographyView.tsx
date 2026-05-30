@@ -29,7 +29,7 @@ const ReleaseItem: React.FC<{ release: Release, large?: boolean, onClick: () => 
     const featureArtistName = release.npcArtistName || featureSong?.npcArtistName;
 
     const subText = isFeature 
-        ? `${release.type} • ${featureArtistName}`
+        ? `${release.type.replace(" (Deluxe)", "")} • ${featureArtistName}`
         : `${release.releaseDate.year} • ${labelName}`;
 
     return (

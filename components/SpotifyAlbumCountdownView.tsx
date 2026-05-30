@@ -101,7 +101,7 @@ const SpotifyAlbumCountdownView: React.FC = () => {
                         <div className="w-5 h-5 bg-black rounded-full border-2 border-zinc-800"></div>
                         <p className="font-semibold">{activeArtist.name}</p>
                     </div>
-                    <p className="text-zinc-400 text-sm mt-1">{release.type} • Releases on {formatReleaseDateString(submission.projectReleaseDate)}</p>
+                    <p className="text-zinc-400 text-sm mt-1">{release.type.replace(" (Deluxe)", "")} • Releases on {formatReleaseDateString(submission.projectReleaseDate)}</p>
                 </div>
 
                 <div className="flex justify-between items-center px-1">

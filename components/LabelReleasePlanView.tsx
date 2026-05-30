@@ -150,7 +150,7 @@ const LabelReleasePlanView: React.FC = () => {
                  <div>
                     <h2 className="text-lg font-bold">3. Schedule Project Release</h2>
                      <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4 mt-2">
-                        <p className="font-semibold flex-grow">{submission.release.title} ({submission.release.type})</p>
+                        <p className="font-semibold flex-grow">{submission.release.title} ({submission.release.type.replace(" (Deluxe)", "")})</p>
                         <div className="flex items-center gap-2">
                             <label className="text-sm text-zinc-400">W:</label>
                             <input type="number" value={projectDate.week} onChange={e => handleProjectDateChange('week', parseInt(e.target.value))} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />

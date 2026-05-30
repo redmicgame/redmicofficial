@@ -578,7 +578,7 @@ const S4AMusic: React.FC<{ onSelectSong: (song: Song) => void; onSelectUpcomingR
                                             <img src={release.coverArt} className="w-12 h-12 object-cover rounded-md" />
                                             <div>
                                                 <p className="font-bold text-black">{release.title}</p>
-                                                <p className="text-sm text-zinc-500">{release.type}</p>
+                                                <p className="text-sm text-zinc-500">{release.type.replace(" (Deluxe)", "")}</p>
                                             </div>
                                         </div>
                                         <p className="font-bold text-lg text-black">{release.releaseDate.year}</p>

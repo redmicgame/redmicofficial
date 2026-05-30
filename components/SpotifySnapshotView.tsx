@@ -31,7 +31,7 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                 <div className="bg-[#c83b37] p-6 text-white flex gap-6 items-center">
                     <img src={release.coverArt} className="w-36 h-36 rounded-lg shadow-lg flex-shrink-0" alt={release.title} />
                     <div className="flex flex-col justify-end">
-                        <p className="font-semibold text-sm uppercase">{release.type}</p>
+                        <p className="font-semibold text-sm uppercase">{release.type.replace(" (Deluxe)", "")}</p>
                         <h1 className="text-4xl font-black leading-tight tracking-tighter">{release.title}</h1>
                         <div className="flex items-center gap-2 mt-2">
                            <img src={activeArtist.image} className="w-6 h-6 rounded-full object-cover" alt={activeArtist.name}/>

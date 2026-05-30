@@ -456,6 +456,7 @@ const initialState: GameState = {
     activeGeniusOffer: null,
     activeOnTheRadarOffer: null,
     activeTrshdOffer: null,
+    activeEventInvitation: null,
     activeFallonOffer: null,
     activeSoundtrackOffer: null,
     activeFeatureOffer: null,
@@ -1264,12 +1265,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     // Time for an offer, reset for next time.
                     artistData.weeksUntilNextSoundtrackOffer = Math.floor(Math.random() * 13) + 12;
 
-                    if (artistData.soundtrackOfferCount < 3 && artistProfileForEmail) {
-                        const allSoundtracks: Array<'F1 The Album' | 'Wicked' | 'Breaking Bad'> = ['F1 The Album', 'Wicked', 'Breaking Bad'];
-                        const availableSoundtracks = allSoundtracks.filter(title => !artistData.offeredSoundtracks.includes(title));
+                    if (artistData.offeredSoundtracks.length < 13 && artistProfileForEmail) {
+                        const allSoundtracks: Array<keyof typeof Object | string> = ['F1 The Album', 'Wicked', 'Breaking Bad', 'Dune: Part Two', 'Deadpool & Wolverine', 'Barbie', 'Spider-Man: Beyond the Spider-Verse', 'James Bond', 'The Hunger Games', 'Pitch Perfect', 'The Great Gatsby', 'Mamma Mia', 'Twilight'];
+                        const availableSoundtracks = allSoundtracks.filter(title => !artistData.offeredSoundtracks.includes(title as any));
                 
                         if (availableSoundtracks.length > 0) {
-                            const chosenSoundtrack = availableSoundtracks[Math.floor(Math.random() * availableSoundtracks.length)];
+                            const chosenSoundtrack = availableSoundtracks[Math.floor(Math.random() * availableSoundtracks.length)] as 'F1 The Album' | 'Wicked' | 'Breaking Bad' | 'Dune: Part Two' | 'Deadpool & Wolverine' | 'Barbie' | 'Spider-Man: Beyond the Spider-Verse' | 'James Bond' | 'The Hunger Games' | 'Pitch Perfect' | 'The Great Gatsby' | 'Mamma Mia' | 'Twilight';
                             
                             const emailId = crypto.randomUUID();
                             newEmails.push({
@@ -1323,6 +1324,94 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                     });
                     artistData.lastVogueOfferYear = newDate.year;
+                }
+
+                // --- EVENTS ---
+                if (artistProfileForEmail && artistData.popularity > 20) {
+                    if (newDate.week === 17 && Math.random() < 0.5) {
+                        const emailId = crypto.randomUUID();
+                        newEmails.push({
+                            id: emailId,
+                            sender: 'Anna Wintour',
+                            senderIcon: 'event',
+                            subject: `Invitation: The Met Gala ${newDate.year}`,
+                            body: `Dear ${artistProfileForEmail.name},\n\nWe cordially invite you to attend The ${newDate.year} Met Gala.\n\nPlease RSVP by responding to this invitation.\n\nYours sincerely,\nAnna Wintour`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'eventInvitation', eventName: 'The Met Gala', eventType: 'metGala', emailId }
+                        });
+                    } else if ((newDate.week === 6 || newDate.week === 36) && Math.random() < 0.5) {
+                        const emailId = crypto.randomUUID();
+                        newEmails.push({
+                            id: emailId,
+                            sender: 'NYFW Council',
+                            senderIcon: 'event',
+                            subject: `Invitation: New York Fashion Week`,
+                            body: `Hi ${artistProfileForEmail.name},\n\nYou're invited to sit front row at New York Fashion Week.\n\nPlease let us know if you can attend.`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'eventInvitation', eventName: 'New York Fashion Week', eventType: 'nyfw', emailId }
+                        });
+                    } else if (newDate.week === 5 && Math.random() < 0.3) {
+                        const emailId = crypto.randomUUID();
+                        const npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                        newEmails.push({
+                            id: emailId,
+                            sender: npcArtistName,
+                            senderIcon: 'event',
+                            subject: `Invitation: Grammy After Party`,
+                            body: `Hey ${artistProfileForEmail.name},\n\nI'm throwing a huge Grammy after party tonight. You should come thru.\n\n- ${npcArtistName}`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'eventInvitation', eventName: 'Grammy After Party', eventType: 'afterParty', hostName: npcArtistName, emailId }
+                        });
+                    } else if (newDate.week === 10 && Math.random() < 0.3) {
+                        const emailId = crypto.randomUUID();
+                        const npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                        newEmails.push({
+                            id: emailId,
+                            sender: npcArtistName,
+                            senderIcon: 'event',
+                            subject: `Invitation: Oscar After Party`,
+                            body: `Hey ${artistProfileForEmail.name},\n\nI'm throwing an Oscars after party this weekend. Grab a drink with us.\n\n- ${npcArtistName}`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'eventInvitation', eventName: 'Oscar After Party', eventType: 'afterParty', hostName: npcArtistName, emailId }
+                        });
+                    } else if (newDate.week === 46 && Math.random() < 0.3) {
+                         const emailId = crypto.randomUUID();
+                        const npcArtistName = NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+                        newEmails.push({
+                            id: emailId,
+                            sender: npcArtistName,
+                            senderIcon: 'event',
+                            subject: `Invitation: AMA After Party`,
+                            body: `Hey ${artistProfileForEmail.name},\n\nHosting a post-AMA bash. Would love to see you there.\n\n- ${npcArtistName}`,
+                            date: newDate,
+                            isRead: false,
+                            offer: { type: 'eventInvitation', eventName: 'AMA After Party', eventType: 'afterParty', hostName: npcArtistName, emailId }
+                        });
+                    }
+                }
+
+                // Soundtrack Premieres check
+                if (artistProfileForEmail) {
+                    state.soundtrackAlbums.forEach(st => {
+                       // if replacing the same week, we need player to be the artistId
+                       if (st.artistId === artistId && st.releaseDate.year === newDate.year && st.releaseDate.week === newDate.week && !st.isReleased) {
+                             const emailId = crypto.randomUUID();
+                            newEmails.push({
+                                id: emailId,
+                                sender: 'Studio Exec',
+                                senderIcon: 'event',
+                                subject: `Invitation: ${st.title} Red Carpet Premiere`,
+                                body: `Hi ${artistProfileForEmail?.name},\n\nThe red carpet premiere for ${st.title} is happening this week. Since you are on the soundtrack, we'd love for you to walk the red carpet.\n\nStudio Exec`,
+                                date: newDate,
+                                isRead: false,
+                                offer: { type: 'eventInvitation', eventName: `${st.title} Premiere`, eventType: 'soundtrackPremiere', associatedSoundtrack: st.title, emailId }
+                            });
+                       }
+                    });
                 }
 
                 // --- FEATURE OFFER LOGIC ---
@@ -8021,6 +8110,86 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             return {
                 ...state,
                 artistsData: updatedArtistsData,
+            };
+        }
+        case 'ACCEPT_EVENT_INVITATION': {
+            if (!state.activeArtistId) return state;
+            const { emailId, eventName, hostName, associatedSoundtrack, eventType } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === emailId && email.offer?.type === 'eventInvitation') {
+                    return { ...email, offer: { ...email.offer, isAccepted: true } };
+                }
+                return email;
+            });
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {  ...activeData, inbox: updatedInbox }
+                },
+                activeEventInvitation: { emailId, eventName, hostName, associatedSoundtrack, eventType },
+                currentView: 'attendEvent'
+            };
+        }
+        case 'CONFIRM_EVENT_ATTENDANCE': {
+            if (!state.activeArtistId || !state.activeEventInvitation) return state;
+            const { imageUrl } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+            const eventInfo = state.activeEventInvitation;
+            const artistName = activeData.profile?.name || '';
+            const newPosts = [...state.xPosts];
+            let postContent = '';
+            
+            if (eventInfo.eventType === 'metGala' || eventInfo.eventType === 'nyfw') {
+                postContent = `${artistName} was spotted looking incredible at ${eventInfo.eventName}! 📸✨`;
+            } else if (eventInfo.eventType === 'afterParty') {
+                postContent = `${artistName} arrived at ${eventInfo.hostName}'s ${eventInfo.eventName} last night! 🥂✨`;
+            } else if (eventInfo.eventType === 'soundtrackPremiere') {
+                postContent = `${artistName} stunned on the red carpet for the premiere of ${eventInfo.associatedSoundtrack}! 🎬⭐️`;
+            } else {
+                postContent = `${artistName} attended ${eventInfo.eventName} today!`;
+            }
+            
+            newPosts.push({
+                id: crypto.randomUUID(),
+                author: 'Pop Base',
+                handle: '@PopBase',
+                content: postContent,
+                imageUrl: imageUrl,
+                likes: Math.floor(Math.random() * 200000) + 50000,
+                retweets: Math.floor(Math.random() * 20000) + 5000,
+                views: Math.floor(Math.random() * 1000000) + 500000,
+                date: state.date,
+                isPopBasePost: true
+            });
+
+            return {
+                ...state,
+                xPosts: newPosts,
+                activeEventInvitation: null,
+                currentView: 'game',
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: { 
+                        ...activeData, 
+                        hype: Math.min(100, activeData.hype + 10),
+                        publicImage: Math.min(1000, activeData.publicImage + 15)
+                    },
+                },
+            };
+        }
+        case 'DECLINE_EVENT_INVITATION': {
+            if (!state.activeArtistId) return state;
+            const { emailId } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedInbox = activeData.inbox.filter(email => email.id !== emailId);
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
+                },
             };
         }
         case 'ACCEPT_VOGUE_OFFER': {

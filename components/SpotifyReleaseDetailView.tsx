@@ -169,7 +169,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                                 <img src={activeArtist.image} alt={activeArtist.name} className="w-6 h-6 rounded-full object-cover" />
                                 <span className="font-semibold">{activeArtist.name}</span>
                             </div>
-                            <p className="text-sm text-zinc-400 mt-1">{release.type} • {release.releaseDate.year}</p>
+                            <p className="text-sm text-zinc-400 mt-1">{release.type.replace(" (Deluxe)", "")} • {release.releaseDate.year}</p>
                         </div>
                     </div>
 

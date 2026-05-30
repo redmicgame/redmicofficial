@@ -88,6 +88,7 @@ import TikTokView from './components/TikTokView';
 import InstagramView from './components/InstagramView';
 import TmzArticleView from './components/TmzArticleView';
 import RiaaView from './components/RiaaView';
+import AttendEventView from './components/AttendEventView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -100,6 +101,8 @@ const AppContent: React.FC = () => {
 
     const renderView = () => {
         switch (currentView) {
+            case 'attendEvent':
+                return <AttendEventView />;
             case 'instagram':
                 return <InstagramView />;
             case 'tiktok':
