@@ -11,12 +11,13 @@ import { formatNumber } from '../context/GameContext';
 import CommentIcon from './icons/CommentIcon';
 import RetweetIcon from './icons/RetweetIcon';
 import HeartIcon from './icons/HeartIcon';
-import CheckCircleIcon from './icons/CheckCircleIcon';
+import UserVerifiedBadge from './icons/UserVerifiedBadge';
 import ChartBarIcon from './icons/ChartBarIcon';
 import UserGroupIcon from './icons/UserGroupIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ImageIcon from './icons/ImageIcon';
 import ConfirmationModal from './ConfirmationModal';
+import XPremiumModal from './XPremiumModal';
 
 // Sub-component for the Year End Chart visualization
 const YearEndChart: React.FC<{ dataString: string }> = ({ dataString }) => {
@@ -175,21 +176,44 @@ const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({ dataString }) =
 
 const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: XPost) => void }> = ({ post, author, onQuote }) => {
     const { dispatch, activeArtistData } = useGame();
+    const [showComments, setShowComments] = useState(false);
+    const [commentText, setCommentText] = useState('');
+    const [commentImage, setCommentImage] = useState<string | null>(null);
+
     if (!author) return null;
 
     const isSuspended = activeArtistData!.xSuspensionStatus?.isSuspended && activeArtistData!.xSuspensionStatus.accountId === (activeArtistData!.selectedPlayerXUserId || activeArtistData!.xUsers.find(u => u.isPlayer)?.id);
 
     const timeAgo = (postDate: { week: number, year: number }) => {
-        // Simplified time ago logic for demonstration
         return `${postDate.week}w`;
     }
 
     const handleViewProfile = () => {
-        // Haters and media don't have profiles
-        if (author.isPlayer || !author.id.startsWith('hater_') && !['popbase', 'chartdata', 'spotifysnapshot'].includes(author.id)) {
+        if (author.isPlayer || (!author.id.startsWith('hater_') && !['popbase', 'chartdata', 'spotifysnapshot'].includes(author.id))) {
             dispatch({ type: 'VIEW_X_PROFILE', payload: author.id });
         }
     }
+
+    const handleReply = () => {
+        if (!commentText && !commentImage) return;
+        const playerUser = activeArtistData?.selectedPlayerXUserId ? activeArtistData.xUsers.find(u => u.id === activeArtistData.selectedPlayerXUserId) : activeArtistData?.xUsers.find(u => u.isPlayer);
+        if (!playerUser) return;
+
+        dispatch({ type: 'POST_ON_X', payload: { 
+            content: commentText, 
+            image: commentImage || undefined,
+            postType: 'normal',
+            targetId: post.id // Using quote functionality but maybe better logic later
+        }});
+        // Note: For a true reply, we would add to post.comments instead. 
+        // We'll update GameContext to handle `targetId` as a comment reply if needed, 
+        // or just let 'POST_ON_X' update it. Let's do a direct comment push for now to make it instant:
+        if (activeArtistData) {
+            dispatch({ type: 'REPLY_TO_X_POST', payload: { postId: post.id, content: commentText, image: commentImage || undefined, authorId: playerUser.id } });
+            setCommentText('');
+            setCommentImage(null);
+        }
+    };
 
     const isChartPost = post.image && post.image.startsWith('chart:');
     const isSnapshotPost = post.image && post.image.startsWith('snapshot:');
@@ -203,12 +227,40 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
             <div className="w-full min-w-0"> {/* min-w-0 ensures flex child shrinks properly */}
                 <div className="flex items-center gap-1 text-sm">
                     <button onClick={handleViewProfile} className="font-bold hover:underline cursor-pointer truncate">{author.name}</button>
-                    {author.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />}
+                    <UserVerifiedBadge isVerified={author.isVerified} className="w-4 h-4 flex-shrink-0" />
                     <span className="text-zinc-500 truncate">@{author.username}</span>
                     <span className="text-zinc-500 flex-shrink-0">·</span>
                     <span className="text-zinc-500 hover:underline cursor-pointer flex-shrink-0">{timeAgo(post.date)}</span>
                 </div>
                 <p className="text-white whitespace-pre-wrap break-words">{post.content}</p>
+
+                {post.isSpace && (
+                    <div className="mt-2 bg-[#7F56D9]/10 border border-[#7F56D9]/30 rounded-xl p-4 cursor-pointer hover:bg-[#7F56D9]/20 transition-colors" onClick={() => !post.spaceInfo?.isEnded && dispatch({ type: 'CHANGE_VIEW', payload: 'xActiveSpace' })}>
+                        {post.spaceInfo?.isEnded ? (
+                            <div className="flex items-center gap-2 mb-2 opacity-50">
+                                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5.88 4.12L13.76 12l-7.88 7.88L8 22l10-10L8 2 5.88 4.12z"/></svg>
+                                <span className="text-zinc-500 font-bold text-xs">Ended</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2 h-2 bg-[#7F56D9] rounded-full animate-pulse"></div>
+                                <span className="text-[#7F56D9] font-bold text-xs">LIVE</span>
+                            </div>
+                        )}
+                        <h4 className={`font-bold text-lg mb-1 ${post.spaceInfo?.isEnded ? 'opacity-50' : ''}`}>{post.content.replace('Listening to ', '')}</h4>
+                        <div className={`flex items-center justify-between text-sm ${post.spaceInfo?.isEnded ? 'opacity-50' : ''}`}>
+                            <div className="flex -space-x-2">
+                                <img src={author.avatar} className="w-6 h-6 rounded-full border border-black" />
+                                <div className="w-6 h-6 rounded-full bg-zinc-800 border border-black flex items-center justify-center text-[10px]">+{post.spaceInfo?.listeners || 15}</div>
+                            </div>
+                            {post.spaceInfo?.isEnded ? (
+                                <button className="bg-transparent border border-zinc-700 text-white px-3 py-1 rounded-full font-bold text-xs">Ended</button>
+                            ) : (
+                                <button className="bg-[#7F56D9] text-white px-3 py-1 rounded-full font-bold text-xs">Join</button>
+                            )}
+                        </div>
+                    </div>
+                )}
                 
                 {isChartPost ? (
                     <YearEndChart dataString={post.image!} />
@@ -278,8 +330,8 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
 
                 <div className="flex justify-between items-center mt-3 text-zinc-500 max-w-sm">
                     <div className="flex items-center gap-1 group">
-                        <button disabled={isSuspended} className="p-1.5 group-hover:bg-blue-500/10 rounded-full disabled:cursor-not-allowed"><CommentIcon className="w-5 h-5 group-hover:text-blue-500" /></button>
-                        <span className="text-xs group-hover:text-blue-500">0</span>
+                        <button disabled={isSuspended} onClick={() => setShowComments(!showComments)} className="p-1.5 group-hover:bg-blue-500/10 rounded-full disabled:cursor-not-allowed"><CommentIcon className="w-5 h-5 group-hover:text-blue-500" /></button>
+                        <span className="text-xs group-hover:text-blue-500">{post.comments?.length || Math.floor(post.likes * 0.05 + 1)}</span>
                     </div>
                      <div className="flex items-center gap-1 group">
                         <button disabled={isSuspended} onClick={() => onQuote && onQuote(post)} className="p-1.5 group-hover:bg-green-500/10 rounded-full disabled:cursor-not-allowed"><RetweetIcon className="w-5 h-5 group-hover:text-green-500" /></button>
@@ -294,6 +346,64 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
                         <span className="text-xs">{formatNumber(post.views)}</span>
                     </div>
                 </div>
+
+                {showComments && (
+                    <div className="mt-4 pt-3 border-t border-zinc-700/50">
+                        {/* Reply Input */}
+                        <div className="flex gap-2 mb-4">
+                            <img src={activeArtistData?.xUsers.find(u => u.id === (activeArtistData?.selectedPlayerXUserId || activeArtistData?.xUsers.find(p => p.isPlayer)?.id))?.avatar || ''} className="w-8 h-8 rounded-full" />
+                            <div className="flex-1">
+                                <input 
+                                    type="text" 
+                                    value={commentText}
+                                    onChange={e => setCommentText(e.target.value)}
+                                    placeholder="Post your reply"
+                                    className="w-full bg-transparent border-b border-zinc-700 pb-1 text-sm outline-none focus:border-blue-500 transition-colors"
+                                    disabled={isSuspended}
+                                />
+                                {commentImage && (
+                                     <div className="relative mt-2 hover:opacity-90">
+                                         <img src={commentImage} className="rounded-xl w-32 h-32 object-cover" />
+                                         <button onClick={() => setCommentImage(null)} className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 text-xs font-bold leading-none w-5 h-5 flex items-center justify-center">&times;</button>
+                                     </div>
+                                )}
+                                <div className="flex justify-between mt-2 items-center">
+                                    <div className="flex gap-2">
+                                        <button disabled={isSuspended} onClick={() => setCommentImage('https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=200&h=200&fit=crop')} className="text-blue-500 disabled:opacity-50"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></button>
+                                        <button disabled={isSuspended} onClick={() => setCommentImage('https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif')} className="text-blue-500 font-bold text-[10px] border border-blue-500 rounded px-1 disabled:opacity-50 leading-none py-[1px] mt-0.5">GIF</button>
+                                    </div>
+                                    <button 
+                                        disabled={(!commentText && !commentImage) || isSuspended} 
+                                        onClick={handleReply}
+                                        className="bg-blue-500 text-white px-3 py-1 text-xs font-bold rounded-full disabled:opacity-50"
+                                    >Reply</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* List of comments */}
+                        <div className="space-y-4">
+                            {post.comments?.map(comment => {
+                                const commentAuthor = activeArtistData?.xUsers.find(u => u.id === comment.authorId);
+                                if (!commentAuthor) return null;
+                                return (
+                                    <div key={comment.id} className="flex gap-2 text-sm mt-3 border-t border-zinc-800 pt-3">
+                                        <img src={commentAuthor.avatar} className="w-8 h-8 rounded-full" />
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-1">
+                                                <span className="font-bold">{commentAuthor.name}</span>
+                                                <UserVerifiedBadge isVerified={commentAuthor.isVerified} className="w-3 h-3 flex-shrink-0" />
+                                                <span className="text-zinc-500">@{commentAuthor.username}</span>
+                                            </div>
+                                            <p className="mt-0.5">{comment.content}</p>
+                                            {comment.image && <img src={comment.image} className="mt-2 rounded-lg w-full max-w-sm max-h-48 object-cover" />}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -362,6 +472,12 @@ const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote })
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<{users: XUser[], posts: XPost[]}>({users: [], posts: []});
 
+    // Find latest posts from PopBase/TMZ for news
+    const newsPosts = [...xPosts]
+        .filter(p => ['popbase', 'tmz', 'chartdata', 'spotifysnapshot'].includes(p.authorId))
+        .slice(0, 3);
+
+
     const SYSTEM_USERS_FALLBACK: Record<string, XUser> = {
         'spotifysnapshot': {
             id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
@@ -407,7 +523,7 @@ const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote })
                                     <div>
                                         <div className="flex gap-1 items-center">
                                             <span className="font-bold truncate">{u.name}</span>
-                                            {u.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />}
+                                            <UserVerifiedBadge isVerified={u.isVerified} className="w-4 h-4 flex-shrink-0" />
                                         </div>
                                         <div className="text-sm text-zinc-500">@{u.username}</div>
                                     </div>
@@ -429,6 +545,24 @@ const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote })
                 </div>
             ) : (
                 <div className="p-3">
+                    <h2 className="text-xl font-black mb-4 px-1">Today's top news</h2>
+                    <div className="mb-6 space-y-4">
+                        {newsPosts.length > 0 ? newsPosts.map((post, index) => {
+                            const author = xUsers.find(u => u.id === post.authorId);
+                            return (
+                                <div key={post.id} className="flex gap-3 items-center hover:bg-zinc-900 cursor-pointer p-2 rounded-xl" onClick={() => onQuote && onQuote(post)}>
+                                    <img src={post.image || author?.avatar || "https://images.unsplash.com/photo-1540039155733-d7696d4eb98e?auto=format&fit=crop&q=80&w=150"} className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-zinc-800" />
+                                    <div>
+                                        <p className="text-xs text-zinc-400 mb-0.5">{author?.name} · Today</p>
+                                        <p className="font-bold text-sm leading-snug line-clamp-2">{post.content}</p>
+                                    </div>
+                                </div>
+                            )
+                        }) : (
+                            <p className="text-zinc-500 text-sm px-1">No major news today.</p>
+                        )}
+                    </div>
+
                     <h2 className="text-xl font-black mb-4 px-1">Trends for you</h2>
                     <div className="space-y-0">
                         {xTrends.map((trend, i) => (
@@ -562,7 +696,7 @@ const AccountsView: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex-grow min-w-0">
-                                <h3 className="font-bold flex items-center gap-1 truncate">{account.name} {account.isVerified && <CheckCircleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />}</h3>
+                                <h3 className="font-bold flex items-center gap-1 truncate">{account.name} <UserVerifiedBadge isVerified={account.isVerified} className="w-4 h-4 flex-shrink-0" /></h3>
                                 <p className="text-zinc-500 text-sm truncate">@{account.username}</p>
                             </div>
                         </div>
@@ -853,6 +987,7 @@ const XView: React.FC = () => {
     const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
     const [quotePostTarget, setQuotePostTarget] = useState<XPost | null>(null);
     const [showAppealConfirm, setShowAppealConfirm] = useState(false);
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
     
     if (!activeArtistData) return null;
     const { xUsers, xSuspensionStatus, selectedPlayerXUserId } = activeArtistData;
@@ -876,6 +1011,8 @@ const XView: React.FC = () => {
         setIsComposeModalOpen(true);
     };
 
+    const isAlreadyPremium = playerUser?.isVerified === true || playerUser?.isVerified === 'blue' || playerUser?.isVerified === 'gold';
+
     const renderContent = () => {
         switch (activeTab) {
             case 'For you':
@@ -893,6 +1030,7 @@ const XView: React.FC = () => {
 
     return (
         <div className="bg-black text-white min-h-screen flex flex-col">
+            {showPremiumModal && <XPremiumModal onClose={() => setShowPremiumModal(false)} />}
             {isComposeModalOpen && playerUser && (
                 <ComposeXPostModal 
                     user={playerUser}
@@ -928,7 +1066,13 @@ const XView: React.FC = () => {
                 <div className="w-1/3 flex justify-center">
                     <XIcon className="w-7 h-7" />
                 </div>
-                <div className="w-1/3"></div>
+                <div className="w-1/3 flex justify-end">
+                    {!isAlreadyPremium && !isActiveUserSuspended && playerUser && (
+                        <button onClick={() => setShowPremiumModal(true)} className="h-8 text-xs font-bold text-black bg-white rounded-full px-3 flex items-center justify-center hover:bg-zinc-200 transition-colors">
+                            Premium
+                        </button>
+                    )}
+                </div>
             </header>
 
             <main className="flex-grow overflow-hidden h-full pb-20">
@@ -947,7 +1091,10 @@ const XView: React.FC = () => {
                 {renderContent()}
             </main>
 
-            <div className="fixed bottom-20 right-4 z-30">
+            <div className="fixed bottom-20 right-4 z-30 flex flex-col gap-3">
+                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'xCreateSpace' })} disabled={isActiveUserSuspended || !playerUser} className="w-14 h-14 bg-[#7F56D9] rounded-full flex items-center justify-center shadow-lg hover:bg-[#6c48bd] transition-colors disabled:bg-zinc-600 disabled:cursor-not-allowed">
+                     <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                </button>
                 <button onClick={() => setIsComposeModalOpen(true)} disabled={isActiveUserSuspended || !playerUser} className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors disabled:bg-zinc-600 disabled:cursor-not-allowed">
                     <PlusIcon className="w-7 h-7"/>
                 </button>

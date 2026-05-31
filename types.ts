@@ -379,7 +379,8 @@ export interface Email {
     sender: string;
     senderIcon?: 'spotify' | 'youtube' | 'default' | 'label' | 'genius' | 'fallon' | 'popbase' | 'grammys' | 'x' | 'onlyfans' | 'soundtrack' | 'touringdata' | 'business' | 'vogue' | 'feature' | 'ontheradar' | 'trshd' | 'oscars' | 'coachella' | 'amas' | 'event';
     subject: string;
-    body: string;
+    body?: string;
+    content?: string;
     date: GameDate;
     isRead: boolean;
     offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer | NpcContractRenewalOffer;
@@ -588,7 +589,9 @@ export interface XUser {
     name: string;
     username: string;
     avatar: string;
-    isVerified: boolean;
+    isVerified: boolean | 'blue' | 'gold';
+    verifiedSince?: number; // year
+    country?: string;
     isPlayer?: boolean;
     bio?: string;
     followersCount: number;
@@ -622,6 +625,16 @@ export interface InstagramPost {
     date: GameDate;
 }
 
+export interface XComment {
+    id: string;
+    authorId: string;
+    content?: string;
+    image?: string;
+    gif?: string;
+    likes: number;
+    date: GameDate;
+}
+
 export interface XPost {
     id: string;
     authorId: string;
@@ -637,6 +650,13 @@ export interface XPost {
     views: number;
     quoteOf?: XPost;
     date: GameDate;
+    comments?: XComment[];
+    isSpace?: boolean;
+    spaceInfo?: {
+        listeners: number;
+        songIdPromoted?: string;
+        isEnded?: boolean;
+    };
 }
 
 export interface XMessage {
@@ -746,7 +766,7 @@ export interface OscarCategory {
     winner?: OscarContender;
 }
 
-export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent';
+export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'xCreateSpace' | 'xActiveSpace' | 'xAnalytics' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent';
 
 export type Tab = 'Home' | 'Apps' | 'Charts' | 'Misc' | 'Business';
 
@@ -1187,8 +1207,13 @@ export type GameAction =
     | { type: 'COMBINE_REMIXES'; payload: { originalSongId: string } }
     | { type: 'CHANGE_STAGE_NAME'; payload: { newName: string; cost?: number; contractId?: string } }
     | { type: 'POST_ON_X'; payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push' | 'announce'; targetId?: string; songId?: string; quoteOf?: XPost; announceItem?: { type: 'project' | 'single', submissionId: string, songId?: string } } }
+    | { type: 'REPLY_TO_X_POST'; payload: { postId: string; content: string; image?: string; authorId: string; } }
     | { type: 'VIEW_X_PROFILE'; payload: string }
     | { type: 'CREATE_X_ACCOUNT'; payload: { username: string; name: string; avatar: string; bio?: string } }
+    | { type: 'BUY_X_VERIFICATION'; payload: { accountId: string, tier: 'blue' | 'gold', cost: number } }
+    | { type: 'START_X_SPACE'; payload: { topic: string; recordSpace: boolean; enableVideo: boolean; } }
+    | { type: 'END_X_SPACE'; payload: undefined }
+    | { type: 'PROMOTE_SONG_ON_X_SPACE'; payload: { songId: string; listeners: number; } }
     | { type: 'DELETE_X_ACCOUNT'; payload: { accountId: string } }
     | { type: 'SELECT_X_ACCOUNT'; payload: { accountId: string } }
     | { type: 'VIEW_X_CHAT'; payload: string }

@@ -26,6 +26,9 @@ import CreateGeniusInterviewView from './components/CreateGeniusInterviewView';
 import XView from './components/XView';
 import XProfileView from './components/XProfileView';
 import XChatView from './components/XChatView';
+import XCreateSpaceView from './components/XCreateSpaceView';
+import XActiveSpaceView from './components/XActiveSpaceView';
+import XAnalyticsView from './components/XAnalyticsView';
 import SpotifyForArtistsView from './components/SpotifyForArtistsView';
 import AppleMusicForArtistsView from './components/AppleMusicForArtistsView';
 import './utils/xContentGenerator';
@@ -202,6 +205,12 @@ const AppContent: React.FC = () => {
                 return <XView />;
             case 'xProfile':
                 return <XProfileView />;
+            case 'xCreateSpace':
+                return <XCreateSpaceView />;
+            case 'xActiveSpace':
+                return <XActiveSpaceView />;
+            case 'xAnalytics':
+                return <XAnalyticsView />;
             case 'xChatDetail':
                 return <XChatView />;
             case 'redMicProUnlock':

@@ -127,19 +127,21 @@ const SenderAvatar: React.FC<{ email: Email }> = ({ email }) => {
     }
 
 
+    const safeSender = sender || 'Unknown';
     const colors = ['bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-teal-500'];
-    const color = colors[sender.charCodeAt(0) % colors.length];
+    const color = colors[safeSender.charCodeAt(0) % colors.length];
 
     return (
         <div className={`w-10 h-10 rounded-full ${color} flex items-center justify-center`}>
-            <span className="text-white font-bold text-xl">{sender.charAt(0)}</span>
+            <span className="text-white font-bold text-xl">{safeSender.charAt(0)}</span>
         </div>
     );
 }
 
 const EmailItem: React.FC<{ email: Email; onClick: () => void }> = ({ email, onClick }) => {
     const formattedDate = useMemo(() => {
-        const date = new Date(email.date.year, 0, (email.date.week - 1) * 7 + 1);
+        if (!email.date) return 'Unknown Date';
+        const date = new Date(email.date.year || 2024, 0, ((email.date.week || 1) - 1) * 7 + 1);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }, [email.date]);
 
@@ -149,7 +151,7 @@ const EmailItem: React.FC<{ email: Email; onClick: () => void }> = ({ email, onC
             <div className="flex-grow overflow-hidden">
                 <p className={`font-semibold truncate ${!email.isRead ? 'text-white' : 'text-zinc-400'}`}>{email.sender}</p>
                 <p className={`font-semibold truncate ${!email.isRead ? 'text-white' : 'text-zinc-400'}`}>{email.subject}</p>
-                <p className="text-zinc-500 truncate">{email.body.replace(/\n/g, ' ')}</p>
+                <p className="text-zinc-500 truncate">{(email.body || email.content || '').replace(/\n/g, ' ')}</p>
             </div>
             <div className="flex flex-col items-end gap-2 text-zinc-500 flex-shrink-0">
                 <span className="text-xs font-semibold">{formattedDate}</span>
@@ -165,7 +167,8 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
     const [showSoundtrackConfirm, setShowSoundtrackConfirm] = useState(false);
 
     const formattedDate = useMemo(() => {
-        const date = new Date(email.date.year, 0, (email.date.week - 1) * 7 + 1);
+        if (!email.date) return 'Unknown Date';
+        const date = new Date(email.date.year || 2024, 0, ((email.date.week || 1) - 1) * 7 + 1);
         return date.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
     }, [email.date]);
 
@@ -516,7 +519,7 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                     <p className="text-xs text-zinc-500 text-right">{formattedDate}</p>
                 </div>
                 <div className="whitespace-pre-wrap text-zinc-300 leading-relaxed pt-4 border-t border-zinc-700 mt-4">
-                    {email.body}
+                    {email.body || email.content}
                 </div>
                 {renderOffer()}
             </main>
@@ -539,7 +542,11 @@ const InboxView: React.FC = () => {
     }, [dispatch, selectedEmail]);
 
     const sortedInbox = useMemo(() => {
-        return [...inbox].sort((a, b) => (b.date.year * 52 + b.date.week) - (a.date.year * 52 + a.date.week));
+        return [...inbox].filter(e => e != null).sort((a, b) => {
+            const dateA = a.date || { year: 1, week: 1 };
+            const dateB = b.date || { year: 1, week: 1 };
+            return (dateB.year * 52 + dateB.week) - (dateA.year * 52 + dateA.week);
+        });
     }, [inbox]);
 
     if (selectedEmail) {

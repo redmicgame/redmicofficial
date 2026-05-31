@@ -2123,7 +2123,28 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     });
                 }
 
-                const totalIncome = finalStreamIncome + viewIncome + merchIncome + onlyfansIncome + npcLabelIncome;
+                let xVerifiedMonthlyCost = 0;
+                if (newDate.week % 4 === 0) {
+                    artistData.xUsers.forEach(u => {
+                        if (u.isPlayer) {
+                            if (u.isVerified === 'blue') xVerifiedMonthlyCost += 25000;
+                            if (u.isVerified === 'gold') xVerifiedMonthlyCost += 250000;
+                        }
+                    });
+                    
+                    if (xVerifiedMonthlyCost > 0) {
+                        artistData.inbox.unshift({
+                            id: crypto.randomUUID(),
+                            sender: 'X Accounts & Billing',
+                            subject: 'X Premium Receipt',
+                            body: `Your X Premium subscription renewed this month.\n\nTotal charged: $${formatNumber(xVerifiedMonthlyCost)}\n\nThank you for trusting X.`,
+                            date: state.date,
+                            isRead: false
+                        });
+                    }
+                }
+
+                const totalIncome = finalStreamIncome + viewIncome + merchIncome + onlyfansIncome + npcLabelIncome - xVerifiedMonthlyCost;
 
                 const newStreamsThisMonth = artistData.streamsThisMonth + totalWeeklyStreams;
                 const newViewsThisQuarter = artistData.viewsThisQuarter + totalWeeklyViews;
@@ -6106,6 +6127,41 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData },
             };
         }
+        case 'REPLY_TO_X_POST': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const { postId, content, image, authorId } = action.payload;
+
+            const newComment: XComment = {
+                id: crypto.randomUUID(),
+                authorId,
+                content,
+                image,
+                date: state.date,
+                likes: 0
+            };
+
+            const updatedPosts = activeData.xPosts.map(post => {
+                if (post.id === postId) {
+                    return {
+                        ...post,
+                        comments: [...(post.comments || []), newComment]
+                    };
+                }
+                return post;
+            });
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xPosts: updatedPosts
+                    }
+                }
+            };
+        }
         case 'SELECT_X_ACCOUNT': {
             if (!state.activeArtistId) return state;
             return {
@@ -6115,6 +6171,131 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     [state.activeArtistId]: {
                         ...state.artistsData[state.activeArtistId],
                         selectedPlayerXUserId: action.payload.accountId,
+                    }
+                }
+            };
+        }
+        case 'BUY_X_VERIFICATION': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (activeData.money < action.payload.cost) return state;
+
+            const updatedUsers = activeData.xUsers.map(u => {
+                if (u.id === action.payload.accountId) {
+                    return {
+                        ...u,
+                        isVerified: action.payload.tier,
+                        verifiedSince: state.date.year,
+                    };
+                }
+                return u;
+            });
+
+            const newEmail: Email = {
+                id: crypto.randomUUID(),
+                sender: 'X Accounts & Billing',
+                subject: 'Welcome to X Premium',
+                body: `You have successfully subscribed to X Premium (${action.payload.tier === 'gold' ? 'Gold' : 'Blue'}).\n\nYou were charged $${formatNumber(action.payload.cost)} for your first month. Your subscription will renew automatically every month.\n\nThank you for trusting X.`,
+                date: state.date,
+                isRead: false
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xUsers: updatedUsers,
+                        money: activeData.money - action.payload.cost,
+                        inbox: [newEmail, ...activeData.inbox]
+                    }
+                }
+            };
+        }
+        case 'START_X_SPACE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
+            if (!playerUser) return state;
+
+            const newPost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: playerUser.id,
+                content: `Listening to ${action.payload.topic}`,
+                likes: Math.floor(Math.random() * 5000),
+                retweets: Math.floor(Math.random() * 500),
+                views: Math.floor(Math.random() * 50000),
+                date: state.date,
+                isSpace: true,
+                spaceInfo: {
+                    listeners: Math.floor(Math.random() * 5000) + 1000
+                }
+            };
+            
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xPosts: [newPost, ...activeData.xPosts]
+                    }
+                }
+            };
+        }
+        case 'PROMOTE_SONG_ON_X_SPACE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const { songId, listeners } = action.payload;
+            const addedStreams = Math.floor(listeners * (Math.random() * 50 + 50));
+            const addedSells = Math.floor(listeners * (Math.random() * 0.5 + 0.1));
+            
+            const updatedSongs = activeData.songs.map(song => 
+                song.id === songId ? {
+                    ...song,
+                    streams: song.streams + addedStreams,
+                    itunesSalesWeek: (song.itunesSalesWeek || 0) + addedSells
+                } : song
+            );
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs
+                    }
+                }
+            };
+        }
+        case 'END_X_SPACE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const playerUser = activeData.selectedPlayerXUserId ? activeData.xUsers.find(u => u.id === activeData.selectedPlayerXUserId) : activeData.xUsers.find(u => u.isPlayer);
+            if (!playerUser) return state;
+
+            // Find the most recent space post by user and mark it ended
+            const postIndex = activeData.xPosts.findIndex(p => p.authorId === playerUser.id && p.isSpace && (!p.spaceInfo?.isEnded));
+            if (postIndex === -1) return state;
+
+            const updatedPosts = [...activeData.xPosts];
+            updatedPosts[postIndex] = {
+                ...updatedPosts[postIndex],
+                spaceInfo: {
+                    ...updatedPosts[postIndex].spaceInfo!,
+                    isEnded: true
+                }
+            };
+            
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xPosts: updatedPosts
                     }
                 }
             };
