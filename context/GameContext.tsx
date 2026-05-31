@@ -2079,7 +2079,51 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
                 
                 let finalStreamIncome = artistStreamIncome;
-                const totalIncome = finalStreamIncome + viewIncome + merchIncome + onlyfansIncome;
+                
+                let npcLabelIncome = 0;
+                if (artistData.customLabels && artistData.customLabels.length > 0) {
+                    artistData.customLabels = artistData.customLabels.map(label => {
+                        if (!label.signedNpcs || label.signedNpcs.length === 0) return label;
+                        const updatedSignedNpcs = label.signedNpcs.map(signedNpc => {
+                            if (signedNpc.status !== 'active') return signedNpc;
+                            
+                            const weeksPassed = (newDate.year * 52 + newDate.week) - (signedNpc.contract.startDate.year * 52 + signedNpc.contract.startDate.week);
+                            let newStatus = signedNpc.status;
+
+                            if (weeksPassed >= signedNpc.contract.durationWeeks) {
+                                newStatus = 'expired';
+                                newEmails.push({
+                                    id: crypto.randomUUID(),
+                                    sender: signedNpc.name,
+                                    senderIcon: 'label',
+                                    subject: 'Contract Expired! Renegotiate?',
+                                    body: `My contract with your label has officially expired. I'd love to stay, but we need to negotiate a new advance. Open the Manage Label view to see my demands.`,
+                                    date: newDate,
+                                    isRead: false,
+                                    offer: { type: 'npcContractRenewal', npcName: signedNpc.name, isAccepted: false, emailId: '' }
+                                });
+                            }
+
+                            const npcProfile = newNpcsList.find(n => n.artist === signedNpc.name);
+                            if (npcProfile) {
+                                const weeklyStreams = Math.floor(npcProfile.basePopularity * (Math.random() * 0.4 + 0.8));
+                                const grossRevenue = weeklyStreams * 0.003;
+                                // Label keeps (100 - artist royaltyRate) % of revenue
+                                const labelCut = grossRevenue * ((100 - signedNpc.contract.royaltyRate) / 100);
+                                npcLabelIncome += labelCut;
+                                return {
+                                    ...signedNpc,
+                                    revenueGenerated: signedNpc.revenueGenerated + grossRevenue,
+                                    status: newStatus
+                                };
+                            }
+                            return { ...signedNpc, status: newStatus };
+                        });
+                        return { ...label, signedNpcs: updatedSignedNpcs };
+                    });
+                }
+
+                const totalIncome = finalStreamIncome + viewIncome + merchIncome + onlyfansIncome + npcLabelIncome;
 
                 const newStreamsThisMonth = artistData.streamsThisMonth + totalWeeklyStreams;
                 const newViewsThisQuarter = artistData.viewsThisQuarter + totalWeeklyViews;
@@ -5242,6 +5286,95 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistsData: {
                     ...state.artistsData,
                     [state.activeArtistId]: updatedData
+                }
+            };
+        }
+        case 'SIGN_NPC_TO_LABEL': {
+            if (!state.activeArtistId) return state;
+            const activeData = { ...state.artistsData[state.activeArtistId] };
+            if (!activeData.customLabels || activeData.customLabels.length === 0) return state;
+
+            const { npcName, advance, royaltyRate, durationWeeks } = action.payload;
+
+            // Find custom label
+            const labelIndex = 0; // assuming single label owner
+            const customLabel = { ...activeData.customLabels[labelIndex] };
+            const signedNpcs = [...(customLabel.signedNpcs || [])];
+
+            const existingIndex = signedNpcs.findIndex(n => n.name === npcName);
+            if (existingIndex >= 0) {
+                // Renegotiating
+                signedNpcs[existingIndex] = {
+                    ...signedNpcs[existingIndex],
+                    status: 'active',
+                    contract: {
+                        advance,
+                        royaltyRate,
+                        durationWeeks,
+                        startDate: state.date,
+                    }
+                };
+            } else {
+                signedNpcs.push({
+                    id: crypto.randomUUID(),
+                    name: npcName,
+                    contract: {
+                        advance,
+                        royaltyRate,
+                        durationWeeks,
+                        startDate: state.date,
+                    },
+                    revenueGenerated: 0,
+                    expenses: advance,
+                    status: 'active',
+                });
+            }
+
+            customLabel.signedNpcs = signedNpcs;
+            const updatedLabels = [...activeData.customLabels];
+            updatedLabels[labelIndex] = customLabel;
+
+            const updatedData = {
+                ...activeData,
+                money: activeData.money - advance,
+                customLabels: updatedLabels
+            };
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: updatedData
+                }
+            };
+        }
+        case 'RELEASE_NPC_FROM_LABEL': {
+            if (!state.activeArtistId) return state;
+            const activeData = { ...state.artistsData[state.activeArtistId] };
+            if (!activeData.customLabels || activeData.customLabels.length === 0) return state;
+
+            const { npcName } = action.payload;
+
+            const labelIndex = 0;
+            const customLabel = { ...activeData.customLabels[labelIndex] };
+            const signedNpcs = [...(customLabel.signedNpcs || [])].map(npc => {
+                if (npc.name === npcName) {
+                    return { ...npc, status: 'dropped' as const };
+                }
+                return npc;
+            });
+
+            customLabel.signedNpcs = signedNpcs;
+            const updatedLabels = [...activeData.customLabels];
+            updatedLabels[labelIndex] = customLabel;
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        customLabels: updatedLabels
+                    }
                 }
             };
         }

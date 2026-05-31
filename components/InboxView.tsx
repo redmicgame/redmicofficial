@@ -232,6 +232,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             case 'vogueOffer':
                 dispatch({ type: 'ACCEPT_VOGUE_OFFER', payload: { magazine: email.offer.magazine, emailId: email.id }});
                 break;
+            case 'npcContractRenewal':
+                dispatch({ type: 'CHANGE_VIEW', payload: 'manageLabel'});
+                break;
             case 'featureOffer':
                 dispatch({ type: 'ACCEPT_FEATURE_OFFER', payload: email.offer });
                 break;
@@ -438,6 +441,13 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 buttonClass = "bg-zinc-200 hover:bg-zinc-300 text-black";
                 acceptedText = "Vogue Offer Accepted";
                 isAccepted = email.offer.isAccepted;
+                break;
+            case 'npcContractRenewal':
+                buttonText = `Manage Label Roster`;
+                buttonClass = "bg-red-600 hover:bg-red-500 text-white shadow-red-500/20";
+                acceptedText = "";
+                isAccepted = false; // Always jump to ManageLabel
+                canAfford = true;
                 break;
             case 'featureOffer':
                 buttonText = `Accept Feature`;

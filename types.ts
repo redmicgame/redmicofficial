@@ -367,6 +367,13 @@ export interface GiveBirthEmail {
     isAnswered?: boolean;
 }
 
+export interface NpcContractRenewalOffer {
+    type: 'npcContractRenewal';
+    npcName: string;
+    isAccepted: boolean;
+    emailId: string;
+}
+
 export interface Email {
     id: string;
     sender: string;
@@ -375,7 +382,7 @@ export interface Email {
     body: string;
     date: GameDate;
     isRead: boolean;
-    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer;
+    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer | NpcContractRenewalOffer;
 }
 
 export interface GameDate {
@@ -479,6 +486,20 @@ export interface Label {
     contractType?: 'standard' | 'petty';
 }
 
+export interface SignedNpc {
+    id: string;
+    name: string;
+    contract: {
+        advance: number;
+        royaltyRate: number;
+        durationWeeks: number;
+        startDate: { week: number; year: number; };
+    };
+    revenueGenerated: number;
+    expenses: number;
+    status: 'active' | 'negotiating' | 'expired';
+}
+
 export interface CustomLabel {
     id: string;
     name: string;
@@ -487,6 +508,7 @@ export interface CustomLabel {
     dealWithMajorId?: Label['id'];
     tier: 'Indie' | 'Mid' | 'High';
     promotionMultiplier: number;
+    signedNpcs?: SignedNpc[];
 }
 
 export interface Contract {
@@ -724,7 +746,7 @@ export interface OscarCategory {
     winner?: OscarContender;
 }
 
-export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent';
+export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent';
 
 export type Tab = 'Home' | 'Apps' | 'Charts' | 'Misc' | 'Business';
 
@@ -1140,6 +1162,8 @@ export type GameAction =
     | { type: 'PERFORM_GIG'; payload: { cash: number; hype: number } }
     | { type: 'SIGN_CONTRACT'; payload: { contract: Contract } }
     | { type: 'END_CONTRACT' }
+    | { type: 'SIGN_NPC_TO_LABEL'; payload: { npcName: string; advance: number; royaltyRate: number; durationWeeks: number; } }
+    | { type: 'RELEASE_NPC_FROM_LABEL'; payload: { npcName: string; } }
     | { type: 'SUBMIT_TO_LABEL'; payload: { submission: LabelSubmission } }
     | { type: 'EDIT_SUBMISSION_DATE'; payload: { submissionId: string; newDate: GameDate } }
     | { type: 'GO_TO_LABEL_PLAN'; payload: { submissionId: string } }

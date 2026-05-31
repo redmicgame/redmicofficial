@@ -119,6 +119,9 @@ const SignedView: React.FC<{ contract: Contract }> = ({ contract }) => {
                         ) : (
                             <p className="text-zinc-400 mt-2">You can seek a major label distribution deal to improve your promotional power.</p>
                         )}
+                        <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'manageLabel'})} className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors text-base">
+                            Manage Artists & Roster
+                        </button>
                     </div>
                 </div>
                  <button onClick={() => dispatch({type: 'END_CONTRACT'})} className="w-full text-center text-sm text-zinc-500 hover:text-red-500">

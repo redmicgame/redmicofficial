@@ -33,6 +33,7 @@ import CreateFallonPerformanceView from './components/CreateFallonPerformanceVie
 import CreateFallonInterviewView from './components/CreateFallonInterviewView';
 import SpotifyAlbumCountdownView from './components/SpotifyAlbumCountdownView';
 import CreateLabelView from './components/CreateLabelView';
+import ManageLabelView from './components/ManageLabelView';
 import AlbumPromoView from './components/AlbumPromoView';
 import AchievementsView from './components/AchievementsView';
 import RedMicProUnlockView from './components/RedMicProUnlockView';
@@ -173,6 +174,8 @@ const AppContent: React.FC = () => {
                 return <LabelReleasePlanView />;
             case 'createLabel':
                 return <CreateLabelView />;
+            case 'manageLabel':
+                return <ManageLabelView />;
             case 'albumPromo':
                 return <AlbumPromoView />;
             case 'achievements':
