@@ -589,7 +589,9 @@ const CatalogView: React.FC = () => {
                                         <div className="space-y-2 border-t border-zinc-700 pt-4">
                                             <h3 className="font-bold text-white">Buy Back Rights</h3>
                                             {!isIndependent && ownerLabel?.id !== activeLabel?.id ? (
-                                                <p className="text-xs text-red-400">You must be an independent artist, or signed to the label that owns this record, in order to buy back its rights.</p>
+                                                <p className="text-xs text-red-400">You must be an independent artist to buy back the rights from another label.</p>
+                                            ) : ownerLabel?.id === activeLabel?.id ? (
+                                                <p className="text-xs text-red-400">{ownerLabel?.name} refuses to sell your masters back to you until your contract with them expires.</p>
                                             ) : (
                                                 <div className="flex gap-2">
                                                     {[25, 50, 100].map(pctToBuy => {

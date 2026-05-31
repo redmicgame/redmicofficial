@@ -135,7 +135,7 @@ const ManageLabelView: React.FC = () => {
                         {uniqueAvailableNpcs.map(npc => (
                             <div key={npc.uniqueId} className="bg-zinc-800 p-3 rounded-xl flex items-center justify-between border border-zinc-700">
                                 <div className="flex items-center gap-3 w-[60%]">
-                                    <img src={npc.coverArt} className="w-12 h-12 rounded-full object-cover" />
+                                    <img src={npc.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(npc.artist)}&background=random&color=fff&size=250`} className="w-12 h-12 rounded-full object-cover" alt={npc.artist} />
                                     <div className="truncate shrink">
                                         <h3 className="font-bold truncate">{npc.artist}</h3>
                                         <p className="text-xs text-zinc-400 truncate">Top pop: {formatNumber(npc.basePopularity)}</p>

@@ -9,7 +9,7 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 const StudioView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, group, allPlayerArtists } = useGame();
     
-    const [mode, setMode] = useState<'single' | 'remixPack'>('single');
+    const [mode, setMode] = useState<'single' | 'remixPack' | 'rerecord'>('single');
 
     const [title, setTitle] = useState('');
     const [genre, setGenre] = useState(GENRES[0]);
@@ -29,6 +29,8 @@ const StudioView: React.FC = () => {
 
     // Auto Remix Pack Maker state
     const [remixPackTargetId, setRemixPackTargetId] = useState<string>('');
+    const [reRecordTargetId, setReRecordTargetId] = useState<string>('');
+    const [reRecordTitle, setReRecordTitle] = useState<string>('');
     const [selectedRemixTypes, setSelectedRemixTypes] = useState<Set<string>>(new Set());
     const [feature1, setFeature1] = useState<{ artistName: string; cost: number } | null>(null);
     const [feature2, setFeature2] = useState<{ artistName: string; cost: number } | null>(null);
@@ -55,6 +57,10 @@ const StudioView: React.FC = () => {
 
     const potentialRemixTargets = useMemo(() => {
         return songs.filter(s => !s.remixOfSongId);
+    }, [songs]);
+
+    const potentialReRecordTargets = useMemo(() => {
+        return songs.filter(s => s.isTakenDown);
     }, [songs]);
 
     const handleRemixToggle = (checked: boolean) => {
@@ -225,6 +231,82 @@ const StudioView: React.FC = () => {
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
 
+    const handleReRecord = () => {
+        setError('');
+        if (!reRecordTargetId) {
+            setError('You must select a song to re-record.');
+            return;
+        }
+        if (!reRecordTitle.trim() || !coverArt) {
+            setError('Song title and cover art are required.');
+            return;
+        }
+        
+        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0);
+        if (money < totalCost) {
+            setError("You don't have enough money for this session.");
+            return;
+        }
+
+        const targetSong = songs.find(s => s.id === reRecordTargetId);
+        if (!targetSong) return;
+
+        // Base quality determined by studio, plus some variance and skill boost
+        let baseQuality = 50 + (studioIndex * 15) + (Math.random() * 20 - 10) + (activeArtistData.skill * 0.2);
+        
+        // Boost quality for re-recorded songs to make them viable replacements
+        baseQuality += 10;
+        
+        const qualityBoost = collaboration ? 15 : 0; 
+        const finalQuality = Math.min(100, Math.max(1, Math.floor(baseQuality + qualityBoost)));
+
+        // Fixed contributors for re-recording (same cost applies)
+        let producersCut = 0;
+        let songwritersCut = 0;
+        let engineersCut = 0;
+        let anrCut = 0;
+
+        const producersList = Array.from({length: Math.floor(Math.random() * 3) + 1}).map(() => potentialProducers[Math.floor(Math.random() * potentialProducers.length)]);
+        const songwritersList = Array.from({length: Math.floor(Math.random() * 4) + 1}).map(() => potentialCollaborators[Math.floor(Math.random() * potentialCollaborators.length)]);
+        const engineersList = Array.from({length: Math.floor(Math.random() * 2) + 1}).map(() => potentialEngineers[Math.floor(Math.random() * potentialEngineers.length)]);
+        
+        if (producersList.length > 0) producersCut = producersList.length * 5;
+        if (songwritersList.length > 0) songwritersCut = songwritersList.length * 5;
+        if (engineersList.length > 0) engineersCut = engineersList.length * 1;
+        anrCut = 2; // Fixed A&R cut
+
+        const totalCuts = producersCut + songwritersCut + engineersCut + anrCut;
+
+        const newSong: Song = {
+            id: crypto.randomUUID(),
+            title: reRecordTitle,
+            genre,
+            quality: finalQuality,
+            coverArt,
+            isReleased: false,
+            streams: 0,
+            lastWeekStreams: 0,
+            prevWeekStreams: 0,
+            duration: targetSong.duration,
+            explicit: isExplicit,
+            artistId: activeArtist.id,
+            removedStreams: 0,
+            collaboration: collaboration ? { ...collaboration, qualityBoost } : undefined,
+            remixOfSongId: undefined, // Re-recordings are standalone versions
+            dailyStreams: [],
+            producers: producersList,
+            songwriters: songwritersList,
+            engineers: engineersList,
+            anr: [potentialAnR[Math.floor(Math.random() * potentialAnR.length)]],
+            samples: [],
+            controversialContributors: [],
+            contributorCutsTotal: totalCuts,
+        };
+
+        dispatch({ type: 'RECORD_SONG', payload: { song: newSong, cost: totalCost } });
+        dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
+    };
+
     const handleCreateRemixPack = () => {
         setError('');
         if (!remixPackTargetId) {
@@ -382,24 +464,30 @@ const StudioView: React.FC = () => {
                 </button>
                 <h1 className="text-2xl font-bold flex-1">Studio Session</h1>
                 
-                <div className="flex bg-zinc-800 rounded-lg p-1">
+                <div className="flex bg-zinc-800 rounded-lg p-1 overflow-x-auto">
                     <button
                         onClick={() => { setMode('single'); setError(''); }}
-                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors ${mode === 'single' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors shrink-0 ${mode === 'single' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
                     >
                         Single Track
                     </button>
                     <button
                         onClick={() => { setMode('remixPack'); setError(''); }}
-                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors ${mode === 'remixPack' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors shrink-0 ${mode === 'remixPack' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
                     >
                         Auto Remix Pack
+                    </button>
+                    <button
+                        onClick={() => { setMode('rerecord'); setError(''); }}
+                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors shrink-0 ${mode === 'rerecord' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                        Re-record Song
                     </button>
                 </div>
             </header>
             
             <div className="p-4 space-y-6">
-                {mode === 'single' ? (
+                {mode === 'single' && (
                     <>
                         <div className="flex justify-center">
                             <label htmlFor="cover-art" className="cursor-pointer">
@@ -540,7 +628,8 @@ const StudioView: React.FC = () => {
                             Record Song (-${totalCost.toLocaleString()})
                         </button>
                     </>
-                ) : (
+                )}
+                {mode === 'remixPack' && (
                     <>
                         <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-xl">
                             <h2 className="text-lg font-bold mb-4">Auto Remix Pack Maker</h2>
@@ -652,6 +741,73 @@ const StudioView: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    </>
+                )}
+                {mode === 'rerecord' && (
+                    <>
+                        <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-xl space-y-6">
+                            <h2 className="text-lg font-bold mb-4">Re-Record Taken Down Song</h2>
+                            <p className="text-sm text-zinc-400 mb-6">Reclaiming your masters by re-recording taken down material. Re-recording restores streaming to a new master recording.</p>
+                            
+                            <div>
+                                <label htmlFor="rerecord-target" className="block text-sm font-medium text-zinc-300">Select Taken Down Song</label>
+                                <select 
+                                    id="rerecord-target" 
+                                    value={reRecordTargetId} 
+                                    onChange={e => { 
+                                        const song = songs.find(s => s.id === e.target.value);
+                                        setReRecordTargetId(e.target.value); 
+                                        if (song) setReRecordTitle(`${song.title} (Your Version)`);
+                                    }} 
+                                    className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                                >
+                                    <option value="">Select a song</option>
+                                    {potentialReRecordTargets.map(song => (
+                                        <option key={song.id} value={song.id}>{song.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            {reRecordTargetId && (
+                                <>
+                                    <div className="flex justify-center mt-6">
+                                        <label htmlFor="rerecord-cover-art" className="cursor-pointer">
+                                            <div className="w-48 h-48 rounded-lg bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center hover:border-red-500 transition-colors">
+                                                {coverArt ? (
+                                                    <img src={coverArt} alt="Cover Art" className="w-full h-full rounded-lg object-cover" />
+                                                ) : (
+                                                    <span className="text-zinc-400 text-sm text-center">Upload Cover Art</span>
+                                                )}
+                                            </div>
+                                        </label>
+                                        <input id="rerecord-cover-art" type="file" accept="image/*" className="hidden" onChange={handleCoverArtUpload} />
+                                    </div>
+                                    
+                                    <div>
+                                        <label htmlFor="rerecord-title" className="block text-sm font-medium text-zinc-300">New Song Title</label>
+                                        <input type="text" id="rerecord-title" value={reRecordTitle} onChange={e => setReRecordTitle(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {STUDIOS.map((studio, index) => (
+                                                <button key={studio.name} onClick={() => setStudioIndex(index)} className={`p-4 rounded-lg text-left transition-all border-2 ${studioIndex === index ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
+                                                    <p className="font-bold">{studio.name}</p>
+                                                    <p className="text-sm text-green-400">-${studio.cost.toLocaleString()}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                                    
+                                    <button onClick={handleReRecord} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none" disabled={money < selectedStudio.cost}>
+                                        Re-record Song (-${selectedStudio.cost.toLocaleString()})
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </>
                 )}
