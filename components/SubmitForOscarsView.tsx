@@ -14,9 +14,9 @@ const SubmitForOscarsView: React.FC = () => {
     if (!activeArtistData || !activeArtist) return null;
 
     const eligibleSongs = useMemo(() => {
-        const thisYearReleases = activeArtistData.releases.filter(r => r.releaseDate.year === date.year);
-        const songIdsFromThisYear = new Set(thisYearReleases.flatMap(r => r.songIds));
-        return activeArtistData.songs.filter(s => songIdsFromThisYear.has(s.id) && s.soundtrackTitle);
+        const previousYearReleases = activeArtistData.releases.filter(r => r.releaseDate.year === date.year - 1);
+        const songIdsFromPreviousYear = new Set(previousYearReleases.flatMap(r => r.songIds));
+        return activeArtistData.songs.filter(s => songIdsFromPreviousYear.has(s.id) && s.soundtrackTitle);
     }, [activeArtistData.releases, activeArtistData.songs, date.year]);
 
     const handleSubmit = () => {
@@ -51,7 +51,7 @@ const SubmitForOscarsView: React.FC = () => {
                     <label htmlFor="best-original-song" className="block text-lg font-bold text-zinc-300">Best Original Song</label>
                     <p className="text-sm text-zinc-400 mb-2">Only songs written for a film soundtrack are eligible.</p>
                     {eligibleSongs.length === 0 ? (
-                        <div className="mt-1 text-sm text-zinc-500 bg-zinc-800 p-3 rounded-md">No eligible soundtrack songs from this year.</div>
+                        <div className="mt-1 text-sm text-zinc-500 bg-zinc-800 p-3 rounded-md">No eligible soundtrack songs from the previous year.</div>
                     ) : (
                         <select 
                             id="best-original-song"

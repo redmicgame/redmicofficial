@@ -8465,7 +8465,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const activeData = state.artistsData[state.activeArtistId];
             const eventInfo = state.activeEventInvitation;
             const artistName = activeData.profile?.name || '';
-            const newPosts = [...state.xPosts];
+            const newPosts = [...activeData.xPosts];
             let postContent = '';
             
             if (eventInfo.eventType === 'metGala' || eventInfo.eventType === 'nyfw') {
@@ -8480,26 +8480,24 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             
             newPosts.push({
                 id: crypto.randomUUID(),
-                author: 'Pop Base',
-                handle: '@PopBase',
+                authorId: 'popbase',
                 content: postContent,
-                imageUrl: imageUrl,
+                image: imageUrl,
                 likes: Math.floor(Math.random() * 200000) + 50000,
                 retweets: Math.floor(Math.random() * 20000) + 5000,
                 views: Math.floor(Math.random() * 1000000) + 500000,
-                date: state.date,
-                isPopBasePost: true
+                date: state.date
             });
 
             return {
                 ...state,
-                xPosts: newPosts,
                 activeEventInvitation: null,
                 currentView: 'game',
                 artistsData: {
                     ...state.artistsData,
                     [state.activeArtistId]: { 
-                        ...activeData, 
+                        ...activeData,
+                        xPosts: newPosts,
                         hype: Math.min(100, activeData.hype + 10),
                         publicImage: Math.min(1000, activeData.publicImage + 15)
                     },
