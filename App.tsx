@@ -39,6 +39,7 @@ import CreateLabelView from './components/CreateLabelView';
 import ManageLabelView from './components/ManageLabelView';
 import AlbumPromoView from './components/AlbumPromoView';
 import RadioDashView from './components/RadioDashView';
+import PromoInterviewView from './components/PromoInterviewView';
 import AchievementsView from './components/AchievementsView';
 import RedMicProUnlockView from './components/RedMicProUnlockView';
 import RedMicProDashboardView from './components/RedMicProDashboardView';
@@ -190,6 +191,8 @@ const AppContent: React.FC = () => {
                 return <AlbumSalesChartView />;
             case 'radioDash':
                 return <RadioDashView />;
+            case 'promoInterview':
+                return <PromoInterviewView />;
             case 'createGeniusInterview':
                 return <CreateGeniusInterviewView />;
             case 'createOnTheRadarPerformance':

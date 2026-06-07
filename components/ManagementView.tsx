@@ -66,6 +66,19 @@ const ManagementView: React.FC = () => {
                                     Fire Manager
                                 </button>
                             </div>
+                            <div className="mt-6 pt-4 border-t border-zinc-700">
+                                <h3 className="font-bold mb-2">Manager Actions</h3>
+                                <button
+                                    onClick={() => dispatch({type: 'REQUEST_PROMO_INTERVIEW'})}
+                                    disabled={activeArtistData.requestedPromoInterview}
+                                    className="w-full bg-blue-600 font-bold p-2 text-sm rounded-lg hover:bg-blue-500 disabled:bg-zinc-600 disabled:text-zinc-400"
+                                >
+                                    {activeArtistData.requestedPromoInterview ? 'Promo Interview Requested' : 'Ask manager to find promo interview/show'}
+                                </button>
+                                {activeArtistData.requestedPromoInterview && (
+                                    <p className="text-xs text-zinc-400 mt-2 text-center">Your manager is looking for opportunities. Check your inbox next week.</p>
+                                )}
+                            </div>
                         </div>
                     ) : (
                          <div>

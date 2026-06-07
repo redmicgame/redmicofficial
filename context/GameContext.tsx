@@ -1762,6 +1762,36 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }
                 }
 
+                // --- PROMO INTERVIEW LOGIC ---
+                if (artistData.requestedPromoInterview) {
+                    if (artistData.manager) {
+                        artistData.requestedPromoInterview = false; // Reset the flag
+                        const SHOW_OPTIONS: PromoInterviewSource[] = [
+                            'Call Her Daddy', 'Apple Music', 'Snack Wars', 'Rolling Stone', 'Etalk', 'Therapuss', 'KISS FM'
+                        ];
+                        const randomShow = SHOW_OPTIONS[Math.floor(Math.random() * SHOW_OPTIONS.length)];
+                        
+                        if (artistProfileForEmail) {
+                            newEmails.push({
+                                id: crypto.randomUUID(),
+                                sender: artistData.manager.id === 'manager-1' ? 'Scooter' : (artistData.manager.id === 'manager-2' ? 'Kris' : 'Manager'),
+                                senderIcon: 'business',
+                                subject: 'Promo Opportunity Secured!',
+                                body: `Hey ${artistProfileForEmail.name},\n\nI reached out to my contacts and managed to get you a slot on ${randomShow}! This is a great opportunity to promote your music.\n\nPlease submit a thumbnail, pick some topics, and choose the song we are promoting. It'll get a nice streaming boost for the next 4 weeks.\n\nLet me know!`,
+                                date: newDate,
+                                isRead: false,
+                                offer: {
+                                    type: 'promoInterview',
+                                    source: randomShow
+                                }
+                            });
+                        }
+                    } else {
+                        // User fired manager before week advanced
+                        artistData.requestedPromoInterview = false;
+                    }
+                }
+
                 // --- PREGNANCY LOGIC ---
                 if (artistData.pregnancy) {
                     const conceptionWeeks = artistData.pregnancy.conceptionDate.year * 52 + artistData.pregnancy.conceptionDate.week;
@@ -1891,6 +1921,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             weeklyStreams = Math.floor(weeklyStreams * songPromo.boostMultiplier);
                         }
                         
+                        let newPromoBoostWeeks = song.promoBoostWeeks;
+                        if (typeof song.promoBoostWeeks === 'number' && song.promoBoostWeeks > 0) {
+                            weeklyStreams = Math.floor(weeklyStreams * 1.10);
+                            newPromoBoostWeeks = song.promoBoostWeeks - 1;
+                        }
+
                         // Generate daily streams for the week
                         const daily = new Array(7).fill(0);
                         if (weeklyStreams > 0) {
@@ -1938,6 +1974,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             lastWeekStreams: weeklyStreams,
                             ...firstWeekStreamsData,
                             playlistBoostWeeks: newPlaylistBoostWeeks,
+                            promoBoostWeeks: newPromoBoostWeeks,
                             dailyStreams: newDailyStreams,
                             revenue: (song.revenue || (song.streams || 0) * STREAM_INCOME_MULTIPLIER) + generatedGross,
                             netRevenue: (song.netRevenue || (song.streams || 0) * STREAM_INCOME_MULTIPLIER * playerCut) + generatedNet,
@@ -6924,6 +6961,105 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     [state.activeArtistId]: {
                         ...activeData,
                         labelSubmissions: updatedSubmissions,
+                    }
+                }
+            };
+        }
+        case 'REQUEST_PROMO_INTERVIEW': {
+            if (!state.activeArtistId) return state;
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...state.artistsData[state.activeArtistId],
+                        requestedPromoInterview: true,
+                    }
+                }
+            };
+        }
+        case 'ACCEPT_PROMO_INTERVIEW': {
+            if (!state.activeArtistId) return state;
+            const updatedInbox = state.artistsData[state.activeArtistId].inbox.map(e => 
+                e.id === action.payload.emailId ? { ...e, isAccepted: true } : e
+            );
+            return {
+                ...state,
+                activePromoInterviewOffer: { emailId: action.payload.emailId, source: action.payload.source },
+                currentView: 'promoInterview',
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...state.artistsData[state.activeArtistId],
+                        inbox: updatedInbox
+                    }
+                }
+            };
+        }
+        case 'DECLINE_PROMO_INTERVIEW': {
+            if (!state.activeArtistId) return state;
+            const updatedInbox = state.artistsData[state.activeArtistId].inbox.map(e => 
+                e.id === action.payload.emailId ? { ...e, isAccepted: false } : e
+            );
+            return {
+                ...state,
+                activePromoInterviewOffer: null,
+                currentView: 'inbox',
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...state.artistsData[state.activeArtistId],
+                        inbox: updatedInbox
+                    }
+                }
+            };
+        }
+        case 'SUBMIT_PROMO_INTERVIEW': {
+            if (!state.activeArtistId || !state.activePromoInterviewOffer) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            // Apply boost to the specific song
+            const updatedSongs = activeData.songs.map(song => {
+                if (song.id === action.payload.songId) {
+                    return {
+                        ...song,
+                        promoBoostWeeks: 4
+                    };
+                }
+                return song;
+            });
+
+            const updatedInbox = activeData.inbox.map(e => 
+                e.id === state.activePromoInterviewOffer!.emailId ? { ...e, isAccepted: true } : e
+            );
+
+            // Give some hype or followers
+            const hypeBoost = Math.floor(Math.random() * 200000) + 100000;
+            const moneyReward = 0; // typically promo views don't instantly give cash, just streams later
+
+            return {
+                ...state,
+                activePromoInterviewOffer: null,
+                currentView: 'game',
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs,
+                        inbox: updatedInbox,
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
+                        videos: [
+                            {
+                                id: crypto.randomUUID(),
+                                songId: action.payload.songId,
+                                title: `${state.activePromoInterviewOffer.source} Interview - ${state.soloArtist?.name || state.group?.name || 'Artist'}`,
+                                type: 'Interview',
+                                views: 0,
+                                thumbnail: action.payload.thumbnail,
+                                releaseDate: state.date,
+                            },
+                            ...activeData.videos
+                        ]
                     }
                 }
             };

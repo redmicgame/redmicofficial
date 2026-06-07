@@ -38,6 +38,7 @@ export interface Song {
     removedStreams?: number;
     playlistBoostWeeks?: number;
     tourBoostWeeks?: number;
+    promoBoostWeeks?: number;
     peakWeeklyStreams?: number;
     remixOfSongId?: string;
     leakInfo?: {
@@ -380,6 +381,13 @@ export interface NpcContractRenewalOffer {
     emailId: string;
 }
 
+export type PromoInterviewSource = 'Call Her Daddy' | 'Apple Music' | 'Snack Wars' | 'Rolling Stone' | 'Etalk' | 'Therapuss' | 'KISS FM';
+
+export interface PromoInterviewOffer {
+    type: 'promoInterview';
+    source: PromoInterviewSource;
+}
+
 export interface Email {
     id: string;
     sender: string;
@@ -389,7 +397,7 @@ export interface Email {
     content?: string;
     date: GameDate;
     isRead: boolean;
-    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer | NpcContractRenewalOffer;
+    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer | NpcContractRenewalOffer | PromoInterviewOffer;
 }
 
 export interface GameDate {
@@ -781,7 +789,7 @@ export interface OscarCategory {
     winner?: OscarContender;
 }
 
-export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'xCreateSpace' | 'xActiveSpace' | 'xAnalytics' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent' | 'radioDash' | 'radioCharts';
+export type GameView = 'game' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'xCreateSpace' | 'xActiveSpace' | 'xAnalytics' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent' | 'radioDash' | 'radioCharts' | 'promoInterview';
 
 export type Tab = 'Home' | 'Apps' | 'Charts' | 'Misc' | 'Business';
 
@@ -995,6 +1003,7 @@ export interface ArtistData {
     pastRedCarpetLooks: RedCarpetLook[];
     streamsRemovedThisWeek?: number;
     manager: { id: string; contractEndDate: GameDate } | null;
+    requestedPromoInterview?: boolean;
     lastPushToItunesWeek?: number;
     lastPushedSongId?: string;
     securityTeamId: string | null;
@@ -1136,6 +1145,7 @@ export interface GameState {
     amaCurrentYearNominations: AmaCategory[] | null;
     activeAmaPerformanceOffer: { emailId: string } | null;
     activeAmaRedCarpetOffer: { emailId: string } | null;
+    activePromoInterviewOffer: { emailId: string; source: PromoInterviewSource } | null;
     // GRAMMYs
     grammySubmissions: { artistId: string, category: GrammyAward['category'], itemId: string, itemName: string }[];
     grammyCurrentYearNominations: GrammyCategory[] | null;
@@ -1338,6 +1348,10 @@ export type GameAction =
     | { type: 'REVEAL_PREGNANCY' }
     | { type: 'GIVE_BIRTH'; payload: { childName: string } }
     | { type: 'START_KID_CAREER'; payload: { kidId: string } }
+    | { type: 'REQUEST_PROMO_INTERVIEW' }
+    | { type: 'ACCEPT_PROMO_INTERVIEW'; payload: { emailId: string; source: PromoInterviewSource } }
+    | { type: 'DECLINE_PROMO_INTERVIEW'; payload: { emailId: string } }
+    | { type: 'SUBMIT_PROMO_INTERVIEW'; payload: { songId: string; thumbnail: string; topics: string[] } }
     | { type: 'MARK_EMAIL_OFFER_ANSWERED'; payload: { emailId: string } }
     | { type: 'RESPOND_TO_CHEATING'; payload: { response: 'break_up' | 'forgive' | 'ignore', relationshipId: string } }
     | { type: 'CREATE_TIKTOK'; payload: { content: string; songId?: string; thumbnail?: string } }
