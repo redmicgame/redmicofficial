@@ -875,6 +875,52 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 ...state,
                 activeTab: action.payload,
             };
+        case 'SUBMIT_TO_RADIO': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const songIndex = activeData.songs.findIndex(s => s.id === action.payload.songId);
+            if (songIndex === -1) return state;
+            const updatedSongs = [...activeData.songs];
+            updatedSongs[songIndex] = {
+                ...updatedSongs[songIndex],
+                isOnRadio: true,
+                radioFormat: action.payload.format,
+                weeksOnRadio: 0,
+                radioPlays: 0,
+                radioImpressions: 0
+            };
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs
+                    }
+                }
+            };
+        }
+        case 'WITHDRAW_FROM_RADIO': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const songIndex = activeData.songs.findIndex(s => s.id === action.payload.songId);
+            if (songIndex === -1) return state;
+            const updatedSongs = [...activeData.songs];
+            updatedSongs[songIndex] = {
+                ...updatedSongs[songIndex],
+                isOnRadio: false
+            };
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs
+                    }
+                }
+            };
+        }
         case 'SWITCH_YOUTUBE_CHANNEL':
             return {
                 ...state,
@@ -3206,8 +3252,116 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 genre: npc.genre
             }));
             
-            const allContenders = [...playerChartContenders, ...npcChartContenders];
-            allContenders.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
+            const allContendersRaw = [...playerChartContenders, ...npcChartContenders];
+            allContendersRaw.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
+
+            const isFormatCompatible = (genre: string, format: string) => {
+                const g = genre.toLowerCase();
+                const f = format.toLowerCase();
+                if (f === 'pop') {
+                    if (g.includes('hip hop') || g.includes('rap')) return 0.2;
+                    if (g.includes('country')) return 0.05;
+                    if (g.includes('r&b')) return 0.4;
+                    return 1.0;
+                }
+                if (f === 'urban') {
+                    if (g.includes('hip hop') || g.includes('r&b') || g.includes('rap')) return 1.0;
+                    return 0.05;
+                }
+                if (f === 'rhythmic') {
+                    if (g.includes('hip hop') || g.includes('r&b') || g.includes('rap') || g.includes('pop') || g.includes('dance')) return 1.0;
+                    return 0.1;
+                }
+                return 1.0; // fallback
+            };
+
+            const allContenders = allContendersRaw.map((song, index) => {
+                let rPlays = 0;
+                let rImpressions = 0;
+                let isOnRadio = false;
+                let rFormat = 'pop';
+                
+                const maxPlaysForRank = Math.max(0, Math.floor(15000 * Math.pow(0.95, index)));
+
+                if (song.isPlayerSong && song.songId) {
+                    const artistId = Object.keys(updatedArtistsData).find(id => updatedArtistsData[id].songs.some(s => s.id === song.songId));
+                    if (artistId) {
+                        const s = updatedArtistsData[artistId].songs.find(x => x.id === song.songId);
+                        if (s && s.isOnRadio) {
+                            isOnRadio = true;
+                            rFormat = s.radioFormat || 'pop';
+                            const qualityBoost = (s.quality || 50) + (updatedArtistsData[artistId].popularity || 0);
+                            let labelBoost = 1.0;
+                            const labelId = updatedArtistsData[artistId].contract?.labelId;
+                            if (labelId === 'umg' || labelId === 'republic') labelBoost = 1.5;
+                            else if (labelId === 'rca' || labelId === 'columbia') labelBoost = 1.3;
+                            else if (labelId === 'island' || labelId === 'atlantic') labelBoost = 1.1;
+
+                            const weeksOn = s.weeksOnRadio || 0;
+                            s.weeksOnRadio = weeksOn + 1;
+                            
+                            const formatMultiplier = isFormatCompatible(song.genre, rFormat);
+                            
+                            let targetPlays = Math.floor((song.weeklyStreams * 0.005) * (qualityBoost / 100) * labelBoost * formatMultiplier);
+                            if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
+                            
+                            const previousPlays = s.radioPlays || 0;
+                            rPlays = previousPlays + Math.max(-1000, Math.floor((targetPlays - previousPlays) * 0.3));
+                            if (rPlays < 0) rPlays = 0;
+                            if (rPlays > maxPlaysForRank) rPlays = maxPlaysForRank;
+
+                            // Handle radio removal
+                            let removedReason = null;
+                            if (s.weeksOnRadio >= 30) {
+                                removedReason = `it reached the maximum 30-week run`;
+                            } else if (s.weeksOnRadio >= 2 && rPlays < 50 && formatMultiplier < 0.5) {
+                                removedReason = `it was submitted to the wrong format (${rFormat.toUpperCase()}) and received very little airplay`;
+                            } else if (s.weeksOnRadio >= 6 && rPlays < 100) {
+                                removedReason = `it failed to gain traction`;
+                            }
+
+                            if (removedReason) {
+                                isOnRadio = false;
+                                s.isOnRadio = false;
+                                updatedArtistsData[artistId].inbox.push({
+                                    id: Math.random().toString(36).substr(2, 9),
+                                    sender: 'Radio Department',
+                                    subject: `Radio Removed: ${song.title}`,
+                                    body: `Your song "${song.title}" has been removed from ${rFormat.toUpperCase()} radio because ${removedReason}.`,
+                                    date: newDate,
+                                    isRead: false
+                                });
+                            }
+
+                            s.lastWeekRadioPlays = previousPlays;
+                            s.radioPlays = rPlays;
+                            rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
+                            s.radioImpressions = rImpressions;
+                        }
+                    }
+                } else {
+                    if (song.weeklyStreams > 1000000) {
+                        isOnRadio = true;
+                        
+                        // Decide format for NPC based on genre
+                        const g = song.genre.toLowerCase();
+                        if (g.includes('hip hop') || g.includes('rap') || g.includes('r&b')) {
+                            rFormat = Math.random() > 0.5 ? 'urban' : 'rhythmic';
+                        } else if (g.includes('dance') || g.includes('electronic')) {
+                            rFormat = Math.random() > 0.5 ? 'rhythmic' : 'pop';
+                        } else {
+                            rFormat = 'pop';
+                        }
+
+                        let targetPlays = Math.floor(song.weeklyStreams * 0.005);
+                        if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
+                        rPlays = targetPlays; 
+                        rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
+                    }
+                }
+
+                return { ...song, isOnRadio, radioPlays: rPlays, radioImpressions: rImpressions, radioFormat: rFormat };
+            });
 
             const newChartHistory: ChartHistory = { ...state.chartHistory };
 
@@ -3239,9 +3393,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
                 const sales = Math.floor(song.weeklyStreams / divisor) * boost;
                 
-                const points = (song.weeklyStreams * 0.5) + (sales * 150 * 0.5);
+                // 50% streams, 30% radio, 20% digital sales
+                const streamPoints = song.weeklyStreams * 0.5;
+                const salesPoints = sales * 150 * 0.2;
+                const radioPoints = (song.radioPlays || 0) * 80 * 0.3; // 80 points per play scaling
+                const points = streamPoints + salesPoints + radioPoints;
                 
-                return { ...song, hot100Points: points };
+                return { ...song, hot100Points: points, digitalSales: sales, radioPlays: song.radioPlays, radioImpressions: song.radioImpressions };
             });
             hot100Contenders.sort((a, b) => b.hot100Points - a.hot100Points);
 
@@ -3278,6 +3436,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     weeksOnChart: newChartHistory[song.uniqueId].weeksOnChart, title: song.title, artist: song.artist,
                     coverArt: song.coverArt, isPlayerSong: song.isPlayerSong, songId: song.songId,
                     uniqueId: song.uniqueId, weeklyStreams: song.weeklyStreams,
+                    digitalSales: song.digitalSales, radioPlays: song.radioPlays, radioImpressions: song.radioImpressions
                 });
             });
 
@@ -3332,6 +3491,23 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const { newChart: newCountryChart, newHistory: newCountryChartHistory } = calculateGenreChart(
                 allContenders, ['Country'], state.countryChart, state.countryChartHistory
             );
+
+            // --- RADIO CHART CALCULATION ---
+            const radioEligible = allContenders.filter(c => (c.radioPlays || 0) > 0);
+            radioEligible.sort((a, b) => (b.radioPlays || 0) - (a.radioPlays || 0));
+            
+            const radioOverallChart = radioEligible.slice(0, 50).map((c, i) => ({
+                ...c, rank: i + 1, lastWeek: state.radioOverallChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
+            }));
+            const radioPopChart = radioEligible.filter(c => c.radioFormat === 'pop').slice(0, 40).map((c, i) => ({
+                ...c, rank: i + 1, lastWeek: state.radioPopChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
+            }));
+            const radioUrbanChart = radioEligible.filter(c => c.radioFormat === 'urban').slice(0, 40).map((c, i) => ({
+                ...c, rank: i + 1, lastWeek: state.radioUrbanChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
+            }));
+            const radioRhythmicChart = radioEligible.filter(c => c.radioFormat === 'rhythmic').slice(0, 40).map((c, i) => ({
+                ...c, rank: i + 1, lastWeek: state.radioRhythmicChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
+            }));
 
             // --- ALBUM CHART CALCULATION ---
             const releaseRawStreams = new Map<string, number>();
@@ -4484,6 +4660,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     chartHistory: newChartHistory,
                     albumChartHistory: newAlbumChartHistory,
                     spotifyGlobal: newSpotifyGlobal,
+                    radioOverallChart,
+                    radioUrbanChart,
+                    radioPopChart,
+                    radioRhythmicChart,
                     hotPopSongs: newHotPopSongs,
                     hotRapRnb: newHotRapRnb,
                     electronicChart: newElectronicChart,
@@ -4523,6 +4703,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 chartHistory: newChartHistory,
                 albumChartHistory: newAlbumChartHistory,
                 spotifyGlobal: newSpotifyGlobal,
+                radioOverallChart,
+                radioUrbanChart,
+                radioPopChart,
+                radioRhythmicChart,
                 hotPopSongs: newHotPopSongs,
                 hotRapRnb: newHotRapRnb,
                 electronicChart: newElectronicChart,

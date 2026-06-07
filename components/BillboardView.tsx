@@ -104,18 +104,18 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
             <div className={`overflow-hidden transition-all duration-300 ease-in-out bg-[#f4f4f4] ${expanded ? 'max-h-40 opacity-100 py-3' : 'max-h-0 opacity-0'}`}>
                 <div className="flex px-4 items-center justify-around">
                     <div className="text-center">
-                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">DIGITAL SALES</p>
+                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">SALES</p>
                         <p className="text-lg font-black text-black">{digitalSales > 0 ? formatNumber(Math.floor(digitalSales)) : 'N/A'}</p>
+                    </div>
+                    <div className="w-px h-8 bg-zinc-300"></div>
+                    <div className="text-center">
+                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
+                        <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
                     </div>
                     <div className="w-px h-8 bg-zinc-300"></div>
                     <div className="text-center">
                         <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMS</p>
                         <p className="text-lg font-black text-black">{formatNumber(weeklyStreams || 0)}</p>
-                    </div>
-                    <div className="w-px h-8 bg-zinc-300"></div>
-                     <div className="text-center">
-                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">WEEKS AT #1</p>
-                        <p className="text-lg font-black text-black">{entry.peak === 1 ? '1' : 'N/A'}</p>
                     </div>
                 </div>
             </div>
@@ -156,7 +156,7 @@ const BillboardView: React.FC = () => {
                 <div className="flex items-center justify-between p-4 border-b-4 border-black relative">
                     <button 
                         onClick={() => {
-                            dispatch({type: 'CHANGE_TAB', payload: 'Home'});
+                            dispatch({type: 'CHANGE_TAB', payload: 'Charts'});
                             dispatch({type: 'CHANGE_VIEW', payload: 'game'});
                         }}
                         className="text-black p-1 hover:bg-zinc-100 rounded flex gap-1 items-center font-bold text-xs"

@@ -38,6 +38,7 @@ import SpotifyAlbumCountdownView from './components/SpotifyAlbumCountdownView';
 import CreateLabelView from './components/CreateLabelView';
 import ManageLabelView from './components/ManageLabelView';
 import AlbumPromoView from './components/AlbumPromoView';
+import RadioDashView from './components/RadioDashView';
 import AchievementsView from './components/AchievementsView';
 import RedMicProUnlockView from './components/RedMicProUnlockView';
 import RedMicProDashboardView from './components/RedMicProDashboardView';
@@ -187,6 +188,8 @@ const AppContent: React.FC = () => {
                 return <ChartHistoryView />;
             case 'albumSalesChart':
                 return <AlbumSalesChartView />;
+            case 'radioDash':
+                return <RadioDashView />;
             case 'createGeniusInterview':
                 return <CreateGeniusInterviewView />;
             case 'createOnTheRadarPerformance':

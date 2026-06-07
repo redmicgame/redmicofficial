@@ -63,6 +63,7 @@ const appCategories: AppCategory[] = [
     {
         title: 'Business & Promotion',
         apps: [
+            { name: 'Hits Radio', description: 'Manage radio airplay', icon: <span className="font-black italic text-xl pr-1">HITS</span>, view: 'radioDash', bgColor: '#000000' },
             { name: 'Labels', description: 'Sign a record deal', icon: <BuildingOfficeIcon className="w-8 h-8"/>, view: 'labels', bgColor: '#4b5563' },
             { name: 'Ticketmaster', description: 'Plan and manage your tours', icon: <TicketIcon className="w-8 h-8"/>, view: 'tours', bgColor: '#026cdf' },
             { name: 'Payola', description: 'Influence the industry', icon: <MegaphoneIcon className="w-8 h-8"/>, view: 'promote', bgColor: '#ef4444' },
