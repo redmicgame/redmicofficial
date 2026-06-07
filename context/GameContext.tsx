@@ -455,6 +455,12 @@ const initialState: GameState = {
     hotRapRnb: [],
     electronicChart: [],
     countryChart: [],
+    radioOverallChart: [],
+    radioUrbanChart: [],
+    radioPopChart: [],
+    radioRhythmicChart: [],
+    radioCountryChart: [],
+    radioChristmasChart: [],
     hotPopSongsHistory: {},
     hotRapRnbHistory: {},
     electronicChartHistory: {},
@@ -605,6 +611,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzcyOGRmYSIvPjxwYXRoIGQ9Ik0zMiA0MC4yNTdMMjEuMjUgNDRsMy43NS0zLjc0M3ptMTQtOC41MTVMNDIgMjhsLTMuNzUgMy43NDN6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTMwLjUgMzMuNUw0MCAyNGw0IDQgTDM0LjUgMzcuNSA1IDU3bDctN3oiIGZpbGw9IiNmZmYiLz48L3N2Zz4=',
                 isVerified: true, bio: 'all things pop culture', followersCount: 1800000, followingCount: 50
             };
+            const radioUpdaterUser: XUser = {
+                id: 'usradio', name: 'U.S. Radio Updater', username: 'USRadioUpdater',
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzIyMiIvPjxwYXRoIGQ9Ik00MCAzMmwtMTAgNXYxMGgxMHptLTItNkgxNnY3aDIyem0tMTIgMEg4djEwaDE4eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==',
+                isVerified: true, bio: 'Radio stats.', followersCount: 540000, followingCount: 1,
+            };
             const chartDataUser: XUser = {
                 id: 'chartdata', name: 'chart data', username: 'chartdata',
                 avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+',
@@ -665,7 +676,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 followingCount: Math.floor(Math.random() * (500 - 50 + 1)) + 50,
             }));
 
-            const initialXUsers: XUser[] = [playerXUser, popBaseUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers];
+            const initialXUsers: XUser[] = [playerXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers];
             
             const initialXPosts: XPost[] = [{
                 id: crypto.randomUUID(), authorId: 'popbase', content: `Welcome to the industry, ${artist.name}! All eyes are on you.`,
@@ -760,6 +771,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzcyOGRmYSIvPjxwYXRoIGQ9Ik0zMiA0MC4yNTdMMjEuMjUgNDRsMy43NS0zLjc0M3ptMTQtOC41MTVMNDIgMjhsLTMuNzUgMy43NDN6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTMwLjUgMzMuNUw0MCAyNGw0IDQgTDM0LjUgMzcuNSA1IDU3bDctN3oiIGZpbGw9IiNmZmYiLz48L3N2Zz4=',
                 isVerified: true, bio: 'all things pop culture', followersCount: 1800000, followingCount: 50,
             };
+            const radioUpdaterUser: XUser = {
+                id: 'usradio', name: 'U.S. Radio Updater', username: 'USRadioUpdater',
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzIyMiIvPjxwYXRoIGQ9Ik00MCAzMmwtMTAgNXYxMGgxMHptLTItNkgxNnY3aDIyem0tMTIgMEg4djEwaDE4eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==',
+                isVerified: true, bio: 'Radio stats.', followersCount: 540000, followingCount: 1,
+            };
             const chartDataUser: XUser = {
                 id: 'chartdata', name: 'chart data', username: 'chartdata',
                 avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+',
@@ -800,7 +816,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 followersCount: Math.floor(Math.random() * 100000) + 40000,
                 followingCount: 1,
             };
-            const initialXUsers: XUser[] = [playerXUser, popBaseUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser];
+            const initialXUsers: XUser[] = [playerXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser];
             const initialXPosts: XPost[] = [{
                 id: crypto.randomUUID(), authorId: 'popbase', content: `The industry is buzzing about the debut of ${group.name}!`,
                 likes: 2500, retweets: 800, views: 52000, date: startDate,
@@ -841,7 +857,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     tiktokFollowers: Math.floor(Math.random() * 4000) + 1000,
                     instagramFollowers: Math.floor(Math.random() * 5000) + 1000,
                     inbox: [createWelcomeEmail(member.name)],
-                    xUsers: [memberXUser, popBaseUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser],
+                    xUsers: [memberXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser],
                     xPosts: initialXPosts,
                     xTrends: initialTrends,
                     xFollowingIds: [],
@@ -3262,6 +3278,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (g.includes('hip hop') || g.includes('rap')) return 0.2;
                     if (g.includes('country')) return 0.05;
                     if (g.includes('r&b')) return 0.4;
+                    if (g.includes('k-pop') || g.includes('kpop') || g.includes('electronic') || g.includes('dance')) return 1.0;
                     return 1.0;
                 }
                 if (f === 'urban') {
@@ -3269,8 +3286,16 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     return 0.05;
                 }
                 if (f === 'rhythmic') {
-                    if (g.includes('hip hop') || g.includes('r&b') || g.includes('rap') || g.includes('pop') || g.includes('dance')) return 1.0;
+                    if (g.includes('hip hop') || g.includes('r&b') || g.includes('rap') || g.includes('pop') || g.includes('dance') || g.includes('k-pop') || g.includes('kpop') || g.includes('electronic')) return 1.0;
                     return 0.1;
+                }
+                if (f === 'country') {
+                    if (g.includes('country')) return 1.0;
+                    return 0.05;
+                }
+                if (f === 'christmas') {
+                    if (g.includes('holiday') || g.includes('christmas')) return 1.0;
+                    return 0.01;
                 }
                 return 1.0; // fallback
             };
@@ -3314,6 +3339,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             let removedReason = null;
                             if (s.weeksOnRadio >= 30) {
                                 removedReason = `it reached the maximum 30-week run`;
+                            } else if (rFormat === 'christmas' && newDate.week > 2 && newDate.week < 40) {
+                                removedReason = `the holiday season has ended`;
                             } else if (s.weeksOnRadio >= 2 && rPlays < 50 && formatMultiplier < 0.5) {
                                 removedReason = `it was submitted to the wrong format (${rFormat.toUpperCase()}) and received very little airplay`;
                             } else if (s.weeksOnRadio >= 6 && rPlays < 100) {
@@ -3345,8 +3372,18 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         
                         // Decide format for NPC based on genre
                         const g = song.genre.toLowerCase();
-                        if (g.includes('hip hop') || g.includes('rap') || g.includes('r&b')) {
+                        if (g.includes('holiday') || g.includes('christmas')) {
+                            if (newDate.week > 2 && newDate.week < 40) {
+                                rPlays = 0; isOnRadio = false; rImpressions = 0;
+                            } else {
+                                rFormat = 'christmas';
+                            }
+                        } else if (g.includes('country')) {
+                            rFormat = 'country';
+                        } else if (g.includes('hip hop') || g.includes('rap') || g.includes('r&b')) {
                             rFormat = Math.random() > 0.5 ? 'urban' : 'rhythmic';
+                        } else if (g.includes('k-pop') || g.includes('kpop')) {
+                            rFormat = 'pop';
                         } else if (g.includes('dance') || g.includes('electronic')) {
                             rFormat = Math.random() > 0.5 ? 'rhythmic' : 'pop';
                         } else {
@@ -3355,8 +3392,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                         let targetPlays = Math.floor(song.weeklyStreams * 0.005);
                         if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
-                        rPlays = targetPlays; 
-                        rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
+                        if (isOnRadio) {
+                            rPlays = targetPlays; 
+                            rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
+                        }
                     }
                 }
 
@@ -3508,6 +3547,55 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const radioRhythmicChart = radioEligible.filter(c => c.radioFormat === 'rhythmic').slice(0, 40).map((c, i) => ({
                 ...c, rank: i + 1, lastWeek: state.radioRhythmicChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
             }));
+            const radioCountryChart = radioEligible.filter(c => c.radioFormat === 'country').slice(0, 40).map((c, i) => ({
+                ...c, rank: i + 1, lastWeek: state.radioCountryChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
+            }));
+            const radioChristmasChart = radioEligible.filter(c => c.radioFormat === 'christmas').slice(0, 40).map((c, i) => ({
+                ...c, rank: i + 1, lastWeek: state.radioChristmasChart?.find(x => x.uniqueId === c.uniqueId)?.rank || null
+            }));
+
+            // --- RADIO UPDATER POSTS ---
+            const newRadioPosts: XPost[] = [];
+            const checkRadioNews = (chart: ChartEntry[], formatName: string) => {
+                if (chart.length === 0) return;
+                const numberOne = chart[0];
+                if (numberOne.rank === 1 && numberOne.lastWeek !== 1) {
+                    if (numberOne.lastWeek === null) {
+                        newRadioPosts.push({
+                            id: crypto.randomUUID(), authorId: 'usradio', date: newDate,
+                            content: `"${numberOne.title}" by ${numberOne.artist} debuts at #1 on the ${formatName} radio chart with ${Math.floor(numberOne.radioPlays || 0).toLocaleString()} plays!`,
+                            likes: Math.floor(Math.random() * 20000) + 5000, retweets: Math.floor(Math.random() * 5000) + 1000, views: Math.floor(Math.random() * 300000) + 50000
+                        });
+                    } else {
+                         newRadioPosts.push({
+                            id: crypto.randomUUID(), authorId: 'usradio', date: newDate,
+                            content: `"${numberOne.title}" by ${numberOne.artist} rises to #1 on the ${formatName} radio chart (+${(numberOne.lastWeek || 2) - 1})!`,
+                            likes: Math.floor(Math.random() * 20000) + 5000, retweets: Math.floor(Math.random() * 5000) + 1000, views: Math.floor(Math.random() * 300000) + 50000
+                        });
+                    }
+                } else if (numberOne.rank === 1 && numberOne.lastWeek === 1) {
+                    // retaining condition
+                    if (Math.random() < 0.25) { // 25% chance so it doesn't spam every week
+                        newRadioPosts.push({
+                            id: crypto.randomUUID(), authorId: 'usradio', date: newDate,
+                            content: `"${numberOne.title}" by ${numberOne.artist} retains #1 on the ${formatName} radio chart for another week with ${Math.floor(numberOne.radioPlays || 0).toLocaleString()} plays!`,
+                            likes: Math.floor(Math.random() * 20000) + 5000, retweets: Math.floor(Math.random() * 5000) + 1000, views: Math.floor(Math.random() * 300000) + 50000
+                        });
+                    }
+                }
+            };
+            checkRadioNews(radioOverallChart, 'US Overall');
+            checkRadioNews(radioPopChart, 'US Pop');
+            checkRadioNews(radioUrbanChart, 'US Urban');
+            checkRadioNews(radioRhythmicChart, 'US Rhythmic');
+            checkRadioNews(radioCountryChart, 'US Country');
+            if (newDate.week > 40 || newDate.week < 2) checkRadioNews(radioChristmasChart, 'US Holiday');
+
+            if (newRadioPosts.length > 0) {
+                for (const artistId in updatedArtistsData) {
+                    updatedArtistsData[artistId].xPosts.unshift(...newRadioPosts);
+                }
+            }
 
             // --- ALBUM CHART CALCULATION ---
             const releaseRawStreams = new Map<string, number>();
@@ -4664,6 +4752,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     radioUrbanChart,
                     radioPopChart,
                     radioRhythmicChart,
+                    radioCountryChart,
+                    radioChristmasChart,
                     hotPopSongs: newHotPopSongs,
                     hotRapRnb: newHotRapRnb,
                     electronicChart: newElectronicChart,
@@ -4707,6 +4797,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 radioUrbanChart,
                 radioPopChart,
                 radioRhythmicChart,
+                radioCountryChart,
+                radioChristmasChart,
                 hotPopSongs: newHotPopSongs,
                 hotRapRnb: newHotRapRnb,
                 electronicChart: newElectronicChart,

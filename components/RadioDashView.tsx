@@ -4,7 +4,7 @@ import { useGame, formatNumber } from '../context/GameContext';
 const RadioDashView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const [selectedTab, setSelectedTab] = useState<'manage' | 'charts'>('manage');
-    const [selectedChart, setSelectedChart] = useState<'overall' | 'pop' | 'urban' | 'rhythmic'>('overall');
+    const [selectedChart, setSelectedChart] = useState<'overall' | 'pop' | 'urban' | 'rhythmic' | 'country' | 'christmas'>('overall');
 
     const activeArtistData = gameState.activeArtistId ? gameState.artistsData[gameState.activeArtistId] : null;
 
@@ -89,6 +89,10 @@ const RadioDashView: React.FC = () => {
                                 <button onClick={() => handleSubmit(song.id, 'pop')} className="bg-blue-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Pop</button>
                                 <button onClick={() => handleSubmit(song.id, 'urban')} className="bg-orange-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Urban</button>
                                 <button onClick={() => handleSubmit(song.id, 'rhythmic')} className="bg-purple-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Rhythm</button>
+                                <button onClick={() => handleSubmit(song.id, 'country')} className="bg-green-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Country</button>
+                                {(gameState.date.week > 40 || gameState.date.week < 2) && (
+                                    <button onClick={() => handleSubmit(song.id, 'christmas')} className="bg-red-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Holiday</button>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -103,11 +107,15 @@ const RadioDashView: React.FC = () => {
         if (selectedChart === 'pop') { title = "POP RADIO"; chartData = gameState.radioPopChart || []; }
         if (selectedChart === 'urban') { title = "URBAN AC & HIP HOP"; chartData = gameState.radioUrbanChart || []; }
         if (selectedChart === 'rhythmic') { title = "RHYTHMIC"; chartData = gameState.radioRhythmicChart || []; }
+        if (selectedChart === 'country') { title = "COUNTRY"; chartData = gameState.radioCountryChart || []; }
+        if (selectedChart === 'christmas') { title = "HOLIDAY / CHRISTMAS"; chartData = gameState.radioChristmasChart || []; }
+
+        const isInChristmasSeason = gameState.date.week > 40 || gameState.date.week < 2;
 
         return (
             <div className="p-0">
                 <div className="flex overflow-x-auto p-4 gap-2 border-b border-zinc-200 bg-white items-center hide-scrollbar">
-                    {['overall', 'pop', 'urban', 'rhythmic'].map(c => (
+                    {['overall', 'pop', 'urban', 'rhythmic', 'country', isInChristmasSeason ? 'christmas' : null].filter(Boolean).map(c => (
                         <button key={c} onClick={() => setSelectedChart(c as any)} 
                                 className={`px-3 py-1.5 whitespace-nowrap rounded font-bold text-xs uppercase ${selectedChart === c ? 'bg-black text-white' : 'bg-transparent text-zinc-500 border border-zinc-300'}`}>
                             {c}

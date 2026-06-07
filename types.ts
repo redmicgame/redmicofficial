@@ -1092,6 +1092,8 @@ export interface GameState {
     radioUrbanChart?: ChartEntry[];
     radioPopChart?: ChartEntry[];
     radioRhythmicChart?: ChartEntry[];
+    radioCountryChart?: ChartEntry[];
+    radioChristmasChart?: ChartEntry[];
     spotifyNewEntries: number;
     selectedVideoId: string | null;
     selectedReleaseId: string | null;
