@@ -3318,9 +3318,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             const qualityBoost = (s.quality || 50) + (updatedArtistsData[artistId].popularity || 0);
                             let labelBoost = 1.0;
                             const labelId = updatedArtistsData[artistId].contract?.labelId;
-                            if (labelId === 'umg' || labelId === 'republic') labelBoost = 1.5;
-                            else if (labelId === 'rca' || labelId === 'columbia') labelBoost = 1.3;
-                            else if (labelId === 'island' || labelId === 'atlantic') labelBoost = 1.1;
+                            if (labelId === 'umg' || labelId === 'republic' || labelId === 'epic') labelBoost = 1.5;
+                            else if (labelId === 'rca' || labelId === 'columbia' || labelId === 'interscope' || labelId === 'roc_nation') labelBoost = 1.3;
+                            else if (labelId === 'island' || labelId === 'atlantic' || labelId === 'quality_control') labelBoost = 1.1;
 
                             const weeksOn = s.weeksOnRadio || 0;
                             s.weeksOnRadio = weeksOn + 1;

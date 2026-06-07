@@ -14,13 +14,14 @@ const RadioDashView: React.FC = () => {
     };
 
     const getMaxRadioSongs = (labelId: string | null) => {
-        if (labelId === 'island' || labelId === 'atlantic') return 1;
-        if (labelId === 'rca' || labelId === 'columbia') return 2;
-        if (labelId === 'umg' || labelId === 'republic' || labelId === 'interscope') return 3;
+        if (!labelId) return 0;
+        if (labelId === 'island' || labelId === 'atlantic' || labelId === 'tde') return 1;
+        if (labelId === 'rca' || labelId === 'columbia' || labelId === 'quality_control') return 2;
+        if (labelId === 'umg' || labelId === 'republic' || labelId === 'interscope' || labelId === 'epic' || labelId === 'roc_nation') return 3;
         // Assume petty labels handle up to 5 songs? Wait, the user said "petty labels can do up to 5 songs at a time".
         // But what defines a petty label? In GameContext, it's contractType === 'petty' or tier === 'Low'.
-        if (labelId && labelId.includes('custom_')) return 5; 
-        return 0; // independent
+        if (labelId.includes('custom_')) return 5; 
+        return 3; // fallback for any other standard label
     };
 
     const labelId = getActiveLabel();
