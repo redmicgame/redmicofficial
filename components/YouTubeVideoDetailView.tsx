@@ -13,6 +13,13 @@ import { Video, Song, Release } from '../types';
 import ShoppingBagIcon from './icons/ShoppingBagIcon';
 import { LABELS, SUBSCRIBER_THRESHOLD_VERIFIED, VIEWS_THRESHOLD_VERIFIED } from '../constants';
 
+const CancelIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+);
+
 const ActionButton: React.FC<{
     icon: React.ReactNode;
     label: string;
@@ -127,10 +134,160 @@ const DescriptionOverlay: React.FC<{ video: Video; onClose: () => void }> = ({ v
 };
 
 
+const CommentsOverlay: React.FC<{ video: Video; onClose: () => void; likes: number }> = ({ video, onClose, likes }) => {
+    const commentsCount = Math.floor(video.views * 0.005);
+    
+    const comments = [
+        {
+            user: "@alessiobertarelli",
+            avatar: "https://i.pravatar.cc/150?u=1",
+            text: "VIDEO OF THE YEAR",
+            likes: "11K",
+            time: "7d ago",
+            replies: 125
+        },
+        {
+            user: "@evolvinali",
+            avatar: "https://i.pravatar.cc/150?u=2",
+            text: "A music video? Nah, a short film full of art, emotion, expression, symbolism and music. This is great",
+            likes: "37K",
+            time: "6d ago",
+            replies: 92,
+            verified: true
+        },
+        {
+            user: "@mansi-j2b",
+            avatar: "https://i.pravatar.cc/150?u=3",
+            text: "I love it when singers are actual ACTORS 😭",
+            likes: "15K",
+            time: "6d ago",
+            replies: 45
+        },
+        {
+            user: "@positionswt6395",
+            avatar: "https://i.pravatar.cc/150?u=4",
+            text: "❤️",
+            likes: "2",
+            time: "40s ago",
+            replies: 0
+        },
+        {
+            user: "@lararodriguez.mp3",
+            avatar: "https://i.pravatar.cc/150?u=5",
+            text: "this is sooooo good love it",
+            likes: "450",
+            time: "4 min ago",
+            replies: 1
+        },
+        {
+            user: "@Jayden_mlbb",
+            avatar: "https://i.pravatar.cc/150?u=6",
+            text: "Love it. 😭 😭 🩷",
+            likes: "12",
+            time: "9 min ago",
+            replies: 0
+        }
+    ];
+
+    const aiTopics = [
+        { title: "Fans anticipate the release", comment: "TEAM HERE BEFORE RELEASE 👇" },
+        { title: "Viewers praise artistic depth", comment: "i love how they used their lower register for this song. its completes the melancholy, cinematic..." },
+        { title: "Viewers admire her attire", comment: "The visual contrast of the bright yellow dress against the dark, gritty, raining background is a..." },
+        { title: "Fans praise her artistry", comment: "Deep vocals, powerful belts, insane lyrics," }
+    ];
+
+    return (
+        <div className="flex flex-col h-full bg-[#0f0f0f] rounded-t-2xl text-white">
+            <div className="p-4 border-b border-zinc-800 flex justify-between items-center shrink-0">
+                <h2 className="text-lg font-bold">Comments <span className="font-normal text-zinc-400 text-sm ml-2">{formatNumber(commentsCount)}</span></h2>
+                <div className="flex gap-4 items-center">
+                    <button className="p-1"><DotsHorizontalIcon className="w-5 h-5 text-white" /></button>
+                    <button onClick={onClose} className="text-white"><CancelIcon className="w-6 h-6" /></button>
+                </div>
+            </div>
+            
+            <div className="overflow-y-auto flex-grow pb-10">
+                <div className="px-4 py-3 flex gap-2 overflow-x-auto hide-scrollbar border-b border-zinc-800">
+                    <button className="bg-white text-black px-4 py-1.5 rounded-lg text-sm font-semibold shrink-0">Top</button>
+                    <button className="bg-zinc-800 text-white px-4 py-1.5 rounded-lg text-sm font-semibold shrink-0 flex items-center gap-1">
+                        ✨ Topics
+                    </button>
+                    <button className="bg-zinc-800 text-white px-4 py-1.5 rounded-lg text-sm font-semibold shrink-0">Timed</button>
+                    <button className="bg-zinc-800 text-white px-4 py-1.5 rounded-lg text-sm font-semibold shrink-0">Newest</button>
+                </div>
+
+                <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
+                    <div className="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 className="font-semibold text-sm">Summarized by AI</h3>
+                            <p className="text-xs text-zinc-400">Quality and accuracy may vary ⓘ</p>
+                        </div>
+                        <DotsHorizontalIcon className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="space-y-2">
+                        {aiTopics.map((topic, i) => (
+                            <div key={i} className="bg-zinc-800 rounded-lg p-3 flex justify-between items-center">
+                                <div>
+                                    <h4 className="font-bold text-sm text-white mb-1">{topic.title}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full bg-pink-500 shrink-0"></div>
+                                        <p className="text-xs text-zinc-400 truncate w-64">{topic.comment}</p>
+                                    </div>
+                                </div>
+                                <span className="text-zinc-500 font-bold">&rsaquo;</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-4 space-y-6">
+                    {comments.map((comment, i) => (
+                        <div key={i} className="flex gap-3">
+                            <img src={comment.avatar} alt="user" className="w-8 h-8 rounded-full object-cover mt-1 shrink-0 bg-zinc-800" />
+                            <div className="flex-grow">
+                                <p className="text-xs text-zinc-400 mb-1">
+                                    {comment.user} {comment.verified && <span className="bg-zinc-400 text-black text-[8px] font-bold px-1 rounded-full ml-1">✓</span>} • {comment.time}
+                                </p>
+                                <p className="text-sm mb-2">{comment.text}</p>
+                                <div className="flex items-center gap-4 text-xs">
+                                    <button className="flex items-center gap-1">
+                                        <ThumbUpIcon className="w-4 h-4" /> {comment.likes}
+                                    </button>
+                                    <button>
+                                        <ThumbDownIcon className="w-4 h-4" />
+                                    </button>
+                                    <button>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.38-.445 1.488-1.42 2.723-2.613 3.493a.75.75 0 00.414 1.347c2.193.181 4.31-.383 5.922-1.464a9.664 9.664 0 003.004.544z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                {comment.replies > 0 && (
+                                    <button className="text-blue-400 font-bold text-sm mt-2 flex items-center gap-1">
+                                        {comment.replies} replies <span className="text-xl leading-none">&rsaquo;</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="p-3 border-t border-zinc-800 shrink-0 bg-[#0f0f0f]">
+                <div className="flex items-center gap-3">
+                    <img src="https://i.pravatar.cc/150?u=player" alt="you" className="w-8 h-8 rounded-full bg-zinc-800" />
+                    <input type="text" placeholder="Add a comment..." className="bg-zinc-800 text-white text-sm rounded-full px-4 py-2 flex-grow focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const YouTubeVideoDetailView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const { selectedVideoId, date } = gameState;
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const [isCommentsExpanded, setIsCommentsExpanded] = useState(false);
 
     if (!activeArtist || !activeArtistData) return null;
     const { videos, youtubeSubscribers } = activeArtistData;
@@ -235,14 +392,14 @@ const YouTubeVideoDetailView: React.FC = () => {
                     <ActionButton icon={<SaveIcon className="w-5 h-5"/>} label="Save" />
                 </div>
 
-                <div className="bg-zinc-800 rounded-lg p-3">
+                <div className="bg-zinc-800 rounded-lg p-3 cursor-pointer" onClick={() => setIsCommentsExpanded(true)}>
                     <div className="flex justify-between items-center">
-                        <h2 className="font-bold">Comments <span className="text-zinc-400 font-normal">55K</span></h2>
+                        <h2 className="font-bold">Comments <span className="text-zinc-400 font-normal">{formatNumber(Math.floor((video.views) * 0.005))}</span></h2>
                         <DotsHorizontalIcon className="w-5 h-5 text-zinc-400" />
                     </div>
-                    <div className="flex items-center gap-3 mt-3">
-                        <img src="https://yt3.ggpht.com/ytc/AIdro_k-3so1DbSCxCHB4enrEu2aZwe7fN0iUTaUKdCa0w=s48-c-k-c0x00ffffff-no-rj" alt="Rosanna Pansino" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                        <p className="text-sm">This video feels like no one was allowed to say no to a single idea... and I love it.</p>
+                    <div className="flex items-center gap-3 mt-3 overflow-hidden">
+                        <img src="https://i.pravatar.cc/150?u=2" alt="user" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                        <p className="text-sm truncate">A music video? Nah, a short film full of art, emotion, expression, symbolism and music. This is great</p>
                     </div>
                 </div>
             </main>
@@ -253,6 +410,15 @@ const YouTubeVideoDetailView: React.FC = () => {
                     onClick={e => e.stopPropagation()}
                 >
                     {isDescriptionExpanded && <DescriptionOverlay video={video} onClose={() => setIsDescriptionExpanded(false)} />}
+                </div>
+            </div>
+
+            <div className={`fixed inset-0 bg-black/80 z-40 transition-opacity duration-300 ${isCommentsExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsCommentsExpanded(false)}>
+                <div 
+                    className={`absolute bottom-0 left-0 right-0 bg-[#0f0f0f] rounded-t-2xl h-[85vh] transition-transform duration-300 ease-in-out ${isCommentsExpanded ? 'translate-y-0' : 'translate-y-full'}`}
+                    onClick={e => e.stopPropagation()}
+                >
+                    {isCommentsExpanded && <CommentsOverlay video={video} likes={likes} onClose={() => setIsCommentsExpanded(false)} />}
                 </div>
             </div>
         </div>
