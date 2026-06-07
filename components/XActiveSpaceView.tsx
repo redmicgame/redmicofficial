@@ -79,7 +79,7 @@ const XActiveSpaceView: React.FC = () => {
                 LIVE · {formatNumber(listeners)} listening
             </div>
 
-            <h1 className="font-bold text-2xl mt-4">{[...xPosts].reverse().find(p => p.isSpace && !p.spaceInfo?.isEnded)?.content.replace('Listening to ', '') || 'Space'}</h1>
+            <h1 className="font-bold text-2xl mt-4">{xPosts.find(p => p.isSpace && !p.spaceInfo?.isEnded)?.content.replace('Listening to ', '') || 'Space'}</h1>
             {promotedSong && <p className="text-sm text-green-400 mt-1">Promoting: {songs.find(s => s.id === promotedSong)?.title}</p>}
 
             <div className="flex-1 overflow-y-auto mt-6">

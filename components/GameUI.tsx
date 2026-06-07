@@ -4,7 +4,6 @@ import React from 'react';
 import { useGame } from '../context/GameContext';
 import HomeTab from './HomeTab';
 import AppsTab from './AppsTab';
-import ChartsTab from './ChartsTab';
 import MiscTab from './MiscTab';
 import BusinessTab from './BusinessTab';
 import BottomNav from './BottomNav';
@@ -20,7 +19,7 @@ const GameUI: React.FC = () => {
             case 'Apps':
                 return <AppsTab />;
             case 'Charts':
-                return <ChartsTab />;
+                return <HomeTab />;
             case 'Business':
                 return <BusinessTab />;
             case 'Misc':

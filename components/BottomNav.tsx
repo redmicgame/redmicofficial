@@ -10,7 +10,7 @@ import CogIcon from './icons/CogIcon';
 import BriefcaseIcon from './icons/BriefcaseIcon';
 
 const NavItem: React.FC<{
-    label: Tab;
+    label: string;
     icon: React.ReactNode;
     isActive: boolean;
     onClick: () => void;
@@ -50,10 +50,13 @@ const BottomNav: React.FC = () => {
                 onClick={() => handleTabChange('Apps')}
             />
             <NavItem
-                label="Charts"
+                label="Billboard"
                 icon={<ChartBarIcon className="h-6 w-6" />}
                 isActive={activeTab === 'Charts'}
-                onClick={() => handleTabChange('Charts')}
+                onClick={() => {
+                    dispatch({ type: 'CHANGE_TAB', payload: 'Charts' });
+                    dispatch({ type: 'CHANGE_VIEW', payload: 'billboard' });
+                }}
             />
             <NavItem
                 label="Business"

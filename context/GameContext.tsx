@@ -8465,7 +8465,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const activeData = state.artistsData[state.activeArtistId];
             const eventInfo = state.activeEventInvitation;
             const artistName = activeData.profile?.name || '';
-            const newPosts = [...activeData.xPosts];
             let postContent = '';
             
             if (eventInfo.eventType === 'metGala' || eventInfo.eventType === 'nyfw') {
@@ -8478,7 +8477,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 postContent = `${artistName} attended ${eventInfo.eventName} today!`;
             }
             
-            newPosts.push({
+            const newPost: XPost = {
                 id: crypto.randomUUID(),
                 authorId: 'popbase',
                 content: postContent,
@@ -8487,7 +8486,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 retweets: Math.floor(Math.random() * 20000) + 5000,
                 views: Math.floor(Math.random() * 1000000) + 500000,
                 date: state.date
-            });
+            };
 
             return {
                 ...state,
@@ -8497,9 +8496,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     ...state.artistsData,
                     [state.activeArtistId]: { 
                         ...activeData,
-                        xPosts: newPosts,
-                        hype: Math.min(100, activeData.hype + 10),
-                        publicImage: Math.min(1000, activeData.publicImage + 15)
+                        xPosts: [newPost, ...activeData.xPosts],
+                        hype: Math.min(100, (activeData.hype || 50) + 10),
+                        publicImage: Math.min(100, (activeData.publicImage || 50) + 15)
                     },
                 },
             };
