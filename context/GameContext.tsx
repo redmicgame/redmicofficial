@@ -1820,6 +1820,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         const label = allCustomLabels.find(l => l.id === artistData.contract!.labelId);
                         if (label) {
                             labelMultiplier = label.promotionMultiplier;
+                            if (label.exclusiveLicenseId) {
+                                const exclusiveLabel = LABELS.find(l => l.id === label.exclusiveLicenseId);
+                                if (exclusiveLabel) {
+                                    labelMultiplier = Math.max(labelMultiplier, exclusiveLabel.promotionMultiplier);
+                                }
+                            }
                             playerCut = 1.0; // Custom label owners keep 100%
                         }
                     } else {
@@ -2403,6 +2409,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             const major = LABELS.find(l => l.id === contractLabel.dealWithMajorId);
                             if (major) {
                                 releasingLabelInfo.dealWithMajor = major.name;
+                            }
+                        }
+                        if ('exclusiveLicenseId' in contractLabel && contractLabel.exclusiveLicenseId) {
+                            const exclusive = LABELS.find(l => l.id === contractLabel.exclusiveLicenseId);
+                            if (exclusive) {
+                                releasingLabelInfo.exclusiveLicenseTo = exclusive.name;
                             }
                         }
                     }
@@ -3354,10 +3366,33 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             rFormat = s.radioFormat || 'pop';
                             const qualityBoost = (s.quality || 50) + (updatedArtistsData[artistId].popularity || 0);
                             let labelBoost = 1.0;
-                            const labelId = updatedArtistsData[artistId].contract?.labelId;
-                            if (labelId === 'umg' || labelId === 'republic' || labelId === 'epic') labelBoost = 1.5;
-                            else if (labelId === 'rca' || labelId === 'columbia' || labelId === 'interscope' || labelId === 'roc_nation') labelBoost = 1.3;
-                            else if (labelId === 'island' || labelId === 'atlantic' || labelId === 'quality_control') labelBoost = 1.1;
+                            const contract = updatedArtistsData[artistId].contract;
+                            if (contract) {
+                                if (contract.isCustom) {
+                                    const customLabel = allCustomLabels.find(l => l.id === contract.labelId);
+                                    if (customLabel) {
+                                        // Default custom label boost
+                                        labelBoost = customLabel.promotionMultiplier;
+                                        if (customLabel.exclusiveLicenseId) {
+                                            const exclusiveLabel = LABELS.find(l => l.id === customLabel.exclusiveLicenseId);
+                                            if (exclusiveLabel) {
+                                                labelBoost = Math.max(labelBoost, exclusiveLabel.promotionMultiplier);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    const majorLabel = LABELS.find(l => l.id === contract.labelId);
+                                    if (majorLabel) {
+                                        labelBoost = majorLabel.promotionMultiplier;
+                                    } else {
+                                        // Fallback legacy calculation
+                                        const labelId = contract.labelId;
+                                        if (labelId === 'umg' || labelId === 'republic' || labelId === 'epic') labelBoost = 1.5;
+                                        else if (labelId === 'rca' || labelId === 'columbia' || labelId === 'interscope' || labelId === 'roc_nation') labelBoost = 1.3;
+                                        else if (labelId === 'island' || labelId === 'atlantic' || labelId === 'quality_control') labelBoost = 1.1;
+                                    }
+                                }
+                            }
 
                             const weeksOn = s.weeksOnRadio || 0;
                             s.weeksOnRadio = weeksOn + 1;
@@ -5771,14 +5806,22 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             }
 
             if (activeData.contract) {
-                let label: { promotionMultiplier: number } | undefined;
                 if (activeData.contract.isCustom) {
-                    label = allCustomLabels.find(l => l.id === activeData.contract!.labelId);
+                    const customLabelInfo = allCustomLabels.find(l => l.id === activeData.contract!.labelId);
+                    if (customLabelInfo) {
+                        labelMultiplier = customLabelInfo.promotionMultiplier;
+                        if (customLabelInfo.exclusiveLicenseId) {
+                            const exclusiveLabel = LABELS.find(l => l.id === customLabelInfo.exclusiveLicenseId);
+                            if (exclusiveLabel) {
+                                labelMultiplier = Math.max(labelMultiplier, exclusiveLabel.promotionMultiplier);
+                            }
+                        }
+                    }
                 } else {
-                    label = LABELS.find(l => l.id === activeData.contract!.labelId);
-                }
-                if (label) {
-                    labelMultiplier = label.promotionMultiplier;
+                    const label = LABELS.find(l => l.id === activeData.contract!.labelId);
+                    if (label) {
+                        labelMultiplier = label.promotionMultiplier;
+                    }
                 }
             }
 
@@ -6783,6 +6826,24 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         ...activeData,
                         money: activeData.money - PLAYLIST_PITCH_COST,
                         songs: updatedSongs,
+                    }
+                }
+            };
+        }
+        case 'SET_EXCLUSIVE_LICENSE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        customLabels: activeData.customLabels.map(l => 
+                            l.id === action.payload.customLabelId 
+                                ? { ...l, exclusiveLicenseId: action.payload.exclusiveLicenseId } 
+                                : l
+                        )
                     }
                 }
             };

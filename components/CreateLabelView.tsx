@@ -12,6 +12,7 @@ const CreateLabelView: React.FC = () => {
     const [name, setName] = useState('');
     const [logo, setLogo] = useState<string | null>(null);
     const [dealWith, setDealWith] = useState<Label['id'] | 'none'>('none');
+    const [exclusiveLicenseWith, setExclusiveLicenseWith] = useState<Label['id'] | 'none'>('none');
     const [customLabelTier, setCustomLabelTier] = useState<'Indie' | 'Mid' | 'High'>('Indie');
     const [membersToSign, setMembersToSign] = useState<Set<string>>(new Set());
     const [error, setError] = useState('');
@@ -80,10 +81,11 @@ const CreateLabelView: React.FC = () => {
             logo,
             artistOwnerId: activeArtist.id,
             dealWithMajorId: isMajorDeal ? dealWith : undefined,
+            exclusiveLicenseId: exclusiveLicenseWith !== 'none' ? exclusiveLicenseWith : undefined,
             tier: isMajorDeal ? 'High' : customLabelTier,
             promotionMultiplier: isMajorDeal
-                ? LABELS.find(l => l.id === dealWith)!.promotionMultiplier
-                : CUSTOM_LABEL_TIERS[customLabelTier].promotionMultiplier,
+                ? Math.max(LABELS.find(l => l.id === dealWith)!.promotionMultiplier, exclusiveLicenseWith !== 'none' ? LABELS.find(l => l.id === exclusiveLicenseWith)!.promotionMultiplier : 0)
+                : Math.max(CUSTOM_LABEL_TIERS[customLabelTier].promotionMultiplier, exclusiveLicenseWith !== 'none' ? LABELS.find(l => l.id === exclusiveLicenseWith)!.promotionMultiplier : 0),
         };
 
         dispatch({ type: 'CREATE_CUSTOM_LABEL', payload: { label: newLabel, cost: totalCost, membersToSign: Array.from(membersToSign) } });
@@ -161,6 +163,29 @@ const CreateLabelView: React.FC = () => {
                          </div>
                     </div>
                 )}
+
+                <div>
+                    <h3 className="block text-sm font-medium text-zinc-300 mb-2">Exclusive License To (Optional)</h3>
+                     <p className="text-sm text-zinc-400 mb-2">Grant an exclusive license to a major label. This unlocks their promo multiplier and lists them in your credits.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                        <button onClick={() => setExclusiveLicenseWith('none')} className={`p-3 rounded-lg text-left transition-all border-2 ${exclusiveLicenseWith === 'none' ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
+                            <p className="font-bold">None (Fully Independent)</p>
+                        </button>
+                        {LABELS.map(deal => (
+                             <button key={deal.id} onClick={() => setExclusiveLicenseWith(deal.id)} className={`p-3 rounded-lg text-left transition-all border-2 ${exclusiveLicenseWith === deal.id ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-white rounded flex items-center justify-center p-1 shrink-0">
+                                        <img src={deal.logo} alt={deal.name} className="w-full h-full object-contain" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold">{deal.name}</p>
+                                        <p className="text-xs text-zinc-400">Promo: {deal.promotionMultiplier}x</p>
+                                    </div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 
                 {groupMembers.length > 0 && (
                     <div>

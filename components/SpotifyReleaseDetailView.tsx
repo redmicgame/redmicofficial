@@ -112,23 +112,39 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
         );
     }
     
-    let labelText: string;
+    let labelOwnerText: string;
+    let underExclusiveLicenseText: string | undefined;
+    let divisionText: string | undefined;
+    let headerText: string | undefined;
     
     if (release.rightsOwnerLabelId && release.rightsSoldPercent && release.rightsSoldPercent > 50) {
         const ownerLabel = LABELS.find(l => l.id === release.rightsOwnerLabelId);
-        labelText = ownerLabel ? ownerLabel.name : 'Unknown Label';
+        labelOwnerText = ownerLabel ? ownerLabel.name : 'Unknown Label';
     } else if (release.releasingLabel) {
-        labelText = release.releasingLabel.name;
+        labelOwnerText = release.releasingLabel.name;
+        
+        let divisionString = '';
         if (release.releasingLabel.dealWithMajor) {
-            labelText += `, a division of ${release.releasingLabel.dealWithMajor}`;
+            const isUmgOrWarner = release.releasingLabel.dealWithMajor === 'UMG' || release.releasingLabel.dealWithMajor === 'Warner Music Group';
+            divisionString = `, a division of ${release.releasingLabel.dealWithMajor}${isUmgOrWarner ? ' Recordings, Inc.' : ''}`;
+            divisionText = divisionString;
+            headerText = `A ${release.releasingLabel.dealWithMajor} Release`;
+        }
+        
+        if (release.releasingLabel.exclusiveLicenseTo) {
+            underExclusiveLicenseText = `, under exclusive license to ${release.releasingLabel.exclusiveLicenseTo}`;
+            headerText = `A ${release.releasingLabel.exclusiveLicenseTo} Release`;
+            // the division correctly appends to the end of the exclusive license or labelOwner.
         }
     } else {
         const hash = Array.from(release.id).reduce((acc, char) => acc + char.charCodeAt(0), 0);
         const dkNumber = (hash * 1234567 % 9000000) + 1000000;
-        labelText = `${Math.abs(dkNumber)} Records DK`;
+        labelOwnerText = `${Math.abs(dkNumber)} Records DK`;
     }
-    const copyrightText = `© ${release.releaseDate.year} ${labelText}`;
-    const phonogramText = `℗ ${release.releaseDate.year} ${labelText}`;
+
+    const fullLabelText = `${labelOwnerText}${underExclusiveLicenseText || ''}${divisionText || ''}`;
+    const copyrightText = `© ${release.releaseDate.year} ${fullLabelText}`;
+    const phonogramText = `℗ ${release.releaseDate.year} ${fullLabelText}`;
 
     return (
         <>
@@ -293,6 +309,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                         </div>
                     </div>
                     <div className="mt-8 py-4 text-center text-zinc-400 text-xs">
+                        {headerText && <p className="mb-1 text-zinc-300 font-medium">{headerText}</p>}
                         <p>{copyrightText}</p>
                         <p>{phonogramText}</p>
                     </div>

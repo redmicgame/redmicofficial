@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
-import type { SignedNpc } from '../types';
+import type { SignedNpc, Label } from '../types';
+import { LABELS } from '../constants';
 
 const ManageLabelView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
     const customLabel = activeArtistData?.customLabels?.[0];
 
-    const [activeTab, setActiveTab] = useState<'roster' | 'discover'>('roster');
+    const [activeTab, setActiveTab] = useState<'roster' | 'discover' | 'deals'>('roster');
     const [selectedNpcToSign, setSelectedNpcToSign] = useState<any | null>(null);
     const [selectedNpcToRenew, setSelectedNpcToRenew] = useState<any | null>(null);
 
@@ -84,6 +85,12 @@ const ManageLabelView: React.FC = () => {
                     >
                         A&R / Discovery
                     </button>
+                    <button 
+                         className={`flex-1 py-2 font-bold rounded-lg ${activeTab === 'deals' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                         onClick={() => setActiveTab('deals')}
+                    >
+                        Corporate Deals
+                    </button>
                 </div>
                 
                 {activeTab === 'roster' && (
@@ -146,6 +153,44 @@ const ManageLabelView: React.FC = () => {
                                 </button>
                             </div>
                         ))}
+                    </div>
+                )}
+                
+                {activeTab === 'deals' && (
+                    <div className="space-y-6 pb-12">
+                        <div className="bg-zinc-800 p-5 rounded-xl border border-zinc-700">
+                            <h3 className="font-bold text-lg mb-2">Exclusive License</h3>
+                            <p className="text-sm text-zinc-400 mb-4">
+                                Grant an exclusive license to a major label. This unlocks their promotional multiplier and stacks to your label's radio promotion. It will appear on your release credits as "Under exclusive license to [Label]".
+                            </p>
+                            
+                            <div className="space-y-3">
+                                <div 
+                                    className={`p-3 rounded-lg border ${!customLabel.exclusiveLicenseId ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-900'} cursor-pointer transition-colors`}
+                                    onClick={() => dispatch({ type: 'SET_EXCLUSIVE_LICENSE', payload: { customLabelId: customLabel.id, exclusiveLicenseId: undefined } })}
+                                >
+                                    <h4 className="font-bold text-white">None (Fully Independent)</h4>
+                                </div>
+                                {LABELS.map(l => (
+                                    <div 
+                                        key={l.id} 
+                                        className={`p-3 rounded-lg border ${customLabel.exclusiveLicenseId === l.id ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-900'} cursor-pointer flex items-center justify-between transition-colors hover:border-zinc-500`}
+                                        onClick={() => dispatch({ type: 'SET_EXCLUSIVE_LICENSE', payload: { customLabelId: customLabel.id, exclusiveLicenseId: l.id } })}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded flex flex-shrink-0 items-center justify-center p-1">
+                                                <img src={l.logo} alt={l.name} className="max-w-full max-h-full object-contain" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white">{l.name}</h4>
+                                                <p className="text-xs text-zinc-400">Promo Value: {l.promotionMultiplier}x</p>
+                                            </div>
+                                        </div>
+                                        {customLabel.exclusiveLicenseId === l.id && <span className="text-red-500 font-bold text-xl">✓</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
