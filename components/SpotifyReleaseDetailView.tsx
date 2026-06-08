@@ -124,17 +124,53 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
         labelOwnerText = release.releasingLabel.name;
         
         let divisionString = '';
+        
+        const parentMapping: Record<string, string> = {
+            'Republic Records': 'UMG Recordings, Inc.',
+            'Interscope Records': 'UMG Recordings, Inc.',
+            'Island Records': 'UMG Recordings, Inc.',
+            'Def Jam Recordings': 'UMG Recordings, Inc.',
+            'Quality Control': 'UMG Recordings, Inc.',
+            'Epic Records': 'Sony Music Entertainment',
+            'Columbia Records': 'Sony Music Entertainment',
+            'RCA Records': 'Sony Music Entertainment',
+            'Atlantic Records': 'Warner Music Group',
+            'Warner Records': 'Warner Music Group',
+            'Roc Nation': 'UMG Recordings, Inc.'
+        };
+        
         if (release.releasingLabel.dealWithMajor) {
-            const isUmgOrWarner = release.releasingLabel.dealWithMajor === 'UMG' || release.releasingLabel.dealWithMajor === 'Warner Music Group';
-            divisionString = `, a division of ${release.releasingLabel.dealWithMajor}${isUmgOrWarner ? ' Recordings, Inc.' : ''}`;
+            const majorName = release.releasingLabel.dealWithMajor;
+            const isUmgOrWarner = majorName === 'UMG' || majorName === 'Warner Music Group';
+            const parent = parentMapping[majorName];
+            
+            if (parent) {
+                divisionString = `, a division of ${parent}`;
+            } else if (isUmgOrWarner) {
+                divisionString = `, a division of ${majorName}${majorName === 'UMG' ? ' Recordings, Inc.' : ''}`;
+            } else {
+                divisionString = `, distributed by ${majorName}`;
+            }
+            
             divisionText = divisionString;
-            headerText = `A ${release.releasingLabel.dealWithMajor} Release`;
+            headerText = `A ${majorName} Release`;
         }
         
         if (release.releasingLabel.exclusiveLicenseTo) {
-            underExclusiveLicenseText = `, under exclusive license to ${release.releasingLabel.exclusiveLicenseTo}`;
-            headerText = `A ${release.releasingLabel.exclusiveLicenseTo} Release`;
-            // the division correctly appends to the end of the exclusive license or labelOwner.
+            const exclusiveName = release.releasingLabel.exclusiveLicenseTo;
+            underExclusiveLicenseText = `, under exclusive license to ${exclusiveName}`;
+            headerText = `A ${exclusiveName} Release`;
+            
+            const parent = parentMapping[exclusiveName];
+            if (parent) {
+                divisionText = `, a division of ${parent}`;
+            } else if (exclusiveName === 'UMG') {
+                divisionText = `, a division of UMG Recordings, Inc.`;
+            } else if (exclusiveName === 'Warner Music Group') {
+                divisionText = `, a division of Warner Music Group`;
+            } else {
+                divisionText = ``; // No division text if it's independent or no parent
+            }
         }
     } else {
         const hash = Array.from(release.id).reduce((acc, char) => acc + char.charCodeAt(0), 0);

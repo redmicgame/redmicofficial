@@ -195,5 +195,181 @@ export const REAL_WORLD_DISCOGRAPHIES: { [key: string]: { songs: string[], album
     "Shakira": {
         songs: ["Hips Don't Lie", "Waka Waka", "Bzrp Music Sessions, Vol. 53", "TQG", "Whenever, Wherever", "La Tortura", "Chantaje", "Puntería", "Te Felicito", "Ojos Así"],
         albums: ["Las Mujeres Ya No Lloran", "El Dorado", "Sale el Sol", "She Wolf", "Fijación Oral, Vol. 1", "Laundry Service"]
+    },
+    "TRIM": {
+        songs: ["BOAT", "Coconut Water", "Vending Machine", "Road Rage", "Notice", "Different Coat"],
+        albums: ["1-800", "Crisis", "The Outlook"]
+    },
+    "Huda Mustafa": {
+        songs: ["Habibi", "Lost in the City", "Late Night Drive", "Cairo Fades", "Desert Rose", "Mirage"],
+        albums: ["Midnight Mirage", "Reflections", "Oasis"]
+    },
+    "Sunshine Benzi": {
+        songs: ["Summer Fling", "Ray of Light", "Drop Top", "Sunny Side Up", "Cruising", "High Beams"],
+        albums: ["Golden Hour", "Vitamin D", "Joyride"]
+    },
+    "Stunna Sandy": {
+        songs: ["Big Bucks", "Stuntin'", "Diamond Rings", "Money Talks", "Sandy's Way", "Beach Bum"],
+        albums: ["The Come Up", "Top Tier", "Summer Fling"]
+    },
+    "Latto": {
+        songs: ["Hostage (feat. 21 Savage)","Okayyy (feat. Doja Cat)","GOMF (feat. GloRilla)","Death Row","Chrome Heart Diaper Bag","Onnat","Get Money Girl"],
+        albums: ["Hostage (feat. 21 Savage) (Album)","The Best of Latto"]
+    },
+    "GloRilla": {
+        songs: ["Sticky (feat. GloRilla, Sexyy Red & Lil Wayne)","WHATCHU KNO ABOUT ME","Wanna Be (Remix)","Yeah Glo!","TGIF","Typa","GOMF (feat. GloRilla)"],
+        albums: ["Sticky (feat. GloRilla, Sexyy Red & Lil Wayne) (Album)","The Best of GloRilla"]
+    },
+    "Sexyy Red": {
+        songs: ["Sticky (feat. GloRilla, Sexyy Red & Lil Wayne)","WHATCHU KNO ABOUT ME","Hurrr Nor Thurrr","Get It Sexyy","Cheetah Print","Hang Wit a Bad Bitch","Fat Juicy & Wet"],
+        albums: ["Sticky (feat. GloRilla, Sexyy Red & Lil Wayne) (Album)","The Best of Sexyy Red"]
+    },
+    "Coi Leray": {
+        songs: ["Better Than Yours (feat. Youngboy Never Broke Again)","Self Love (Spider-Man: Across the Spider-Verse)","Players","Pink Money (feat. G Herbo)","No More Parties","Blick Blick","Not In The Store"],
+        albums: ["Better Than Yours (feat. Youngboy Never Broke Again) (Album)","The Best of Coi Leray"]
+    },
+    "Flo Milli": {
+        songs: ["Flo Jackson","Never Lose Me","Conceited","Never Lose Me (feat. SZA & Cardi B)","Never Lose Me (feat. Lil Yachty)","In The Party","Beef FloMix"],
+        albums: ["Flo Jackson (Album)","The Best of Flo Milli"]
+    },
+    "NewJeans": {
+        songs: ["Super Shy","How Sweet","Supernatural","OMG","ETA","GODS","Ditto"],
+        albums: ["Super Shy (Album)","The Best of NewJeans"]
+    },
+    "Stray Kids": {
+        songs: ["Chk Chk Boom","Do It","LALALALA","God’s Menu","MANIAC","CEREMONY","S-Class"],
+        albums: ["Chk Chk Boom (Album)","The Best of Stray Kids"]
+    },
+    "TWICE": {
+        songs: ["TAKEDOWN (JEONGYEON, JIHYO, CHAEYOUNG)","SIGNAL","Strategy","THIS IS FOR","Strategy (feat. Megan Thee Stallion)","The Feels","I CAN'T STOP ME"],
+        albums: ["TAKEDOWN (JEONGYEON, JIHYO, CHAEYOUNG) (Album)","The Best of TWICE"]
+    },
+    "SEVENTEEN": {
+        songs: ["THUNDER","Don't Wanna Cry","MAESTRO","Super","Shadow","Left & Right","VERY NICE"],
+        albums: ["THUNDER (Album)","The Best of SEVENTEEN"]
+    },
+    "LE SSERAFIM": {
+        songs: ["BOOMPALA","SPAGHETTI","CRAZY","Come Over","Perfect Night","Sonder","FEARLESS"],
+        albums: ["BOOMPALA (Album)","The Best of LE SSERAFIM"]
+    },
+    "(G)I-DLE": {
+        songs: ["POP/STARS","Nxde","MORE","Queencard","Mono (feat. skaiwater)","Good Thing","Super Lady"],
+        albums: ["POP/STARS (Album)","The Best of (G)I-DLE"]
+    },
+    "Jungkook": {
+        songs: ["Seven (feat. Latto)","Standing Next to You","Closer to You (feat. Major Lazer)","3D (feat. Jack Harlow)","Dreamers [Music from the FIFA World Cup Qatar 2022 Official Soundtrack]","Yes or No","Still With You"],
+        albums: ["Seven (feat. Latto) (Album)","The Best of Jungkook"]
+    },
+    "Jennie": {
+        songs: ["Dracula (JENNIE Remix)","One Of The Girls","like JENNIE","ExtraL","Mantra","Handlebars","Dracula (JENNIE Remix - Boys Noize Disko Version)"],
+        albums: ["Dracula (JENNIE Remix) (Album)","The Best of Jennie"]
+    },
+    "Lisa": {
+        songs: ["Born Again (feat. Doja Cat & RAYE)","Rockstar","Goals","New Woman (feat. ROSALÍA)","MONEY","Bad Angel","FXCK UP THE WORLD (Vixi Solo Version)"],
+        albums: ["Born Again (feat. Doja Cat & RAYE) (Album)","The Best of Lisa"]
+    },
+    "aespa": {
+        songs: ["LEMONADE","Whiplash","LEMONADE (feat. Becky G)","Camouflage","Switchblade (feat. Ty Dolla $ign)","Armageddon","Bite"],
+        albums: ["LEMONADE (Album)","The Best of aespa"]
+    },
+    "J Balvin": {
+        songs: ["I Like It","LA CANCIÓN","Pal Agua","Azul","Tonto","Mi Gente","UN DIA (ONE DAY)"],
+        albums: ["I Like It (Album)","The Best of J Balvin"]
+    },
+    "Maluma": {
+        songs: ["Te Entiendo (Remix)","Hawái","Según Quién","Borro Cassette","De bar en bar","Felices los 4","Clandestino"],
+        albums: ["Te Entiendo (Remix) (Album)","The Best of Maluma"]
+    },
+    "Rosalía": {
+        songs: ["La Perla","LA NOCHE DE ANOCHE","BESO","DESPECHÁ","LA FAMA","Berghain","Reliquia"],
+        albums: ["La Perla (Album)","The Best of Rosalía"]
+    },
+    "Feid": {
+        songs: ["Verano Rosa","CLASSY 101","PERRO NEGRO","Noche Without You","Te Entiendo (Remix)","LUNA","offline"],
+        albums: ["Verano Rosa (Album)","The Best of Feid"]
+    },
+    "Myke Towers": {
+        songs: ["LALA","Caramelo (Remix)","UNA NA MAS","La Jeepeta (Remix)","El Cielo","La Curiosidad","LA FALDA"],
+        albums: ["LALA (Album)","The Best of Myke Towers"]
+    },
+    "Young Miko": {
+        songs: ["Aquel diciembre","BIAF <3","WASSUP","CLASSY 101","BnB","offline","Chulo pt.2"],
+        albums: ["Aquel diciembre (Album)","The Best of Young Miko"]
+    },
+    "Ozuna": {
+        songs: ["Mi Yo De Antes","Diles","Criminal","Caramelo (Remix)","Te Robaré","Dile Que Tu Me Quieres","Una Aventura"],
+        albums: ["Mi Yo De Antes (Album)","The Best of Ozuna"]
+    },
+    "Calvin Harris": {
+        songs: ["We Found Love (Album Version)","This Is What You Came For","One Kiss","Outside (feat. Ellie Goulding)","Summer","Feels (feat. Pharrell Williams, Katy Perry & Big Sean)","Feel So Close (Radio Edit)"],
+        albums: ["We Found Love (Album Version) (Album)","The Best of Calvin Harris"]
+    },
+    "David Guetta": {
+        songs: ["Save Me Tonight","Titanium (feat. Sia)","Memories (feat. Kid Cudi)","Gone Gone Gone","Run Run River (Angels Above Me)","Sad Girls","Sexy Bitch (feat. Akon)"],
+        albums: ["Save Me Tonight (Album)","The Best of David Guetta"]
+    },
+    "Skrillex": {
+        songs: ["Soma","Noche Without You","Thistle","Tranki","Scut 2","Cheeni","Smoke"],
+        albums: ["Soma (Album)","The Best of Skrillex"]
+    },
+    "Diplo": {
+        songs: ["Heartless (feat. Morgan Wallen)","Ashes","Wish (feat. Trippie Redd) (Trippie Mix)","Wish (Audiomack Trap Symphony Version)","Where Are Ü Now (with Justin Bieber)","Heartless (feat. Morgan Wallen) (Wallen Album Mix)","Would U Still Love Me (feat. Cameron Whitcomb)"],
+        albums: ["Heartless (feat. Morgan Wallen) (Album)","The Best of Diplo"]
+    },
+    "Zedd": {
+        songs: ["Clarity","Stay The Night (Featuring Hayley Williams Of Paramore)","Stay","The Middle","Beautiful Now","Happy Now","I Want You To Know"],
+        albums: ["Clarity (Album)","The Best of Zedd"]
+    },
+    "Martin Garrix": {
+        songs: ["Repeat It","In the Name of Love","Scared to Be Lonely","Animals","Ocean (feat. Khalid)","Summer Days (feat. Macklemore & Patrick Stump of Fall Out Boy)","Don't Look Down (feat. Usher)"],
+        albums: ["Repeat It (Album)","The Best of Martin Garrix"]
+    },
+    "Bob Marley": {
+        songs: ["Could You Be Loved","Three Little Birds","Jamming","Is This Love","One Love / People Get Ready","Waiting In Vain","Buffalo Soldier"],
+        albums: ["Could You Be Loved (Album)","The Best of Bob Marley"]
+    },
+    "Sean Paul": {
+        songs: ["Temperature","(When You Gonna) Give It Up to Me (Radio Version)","Hold My Hand (feat. Zaho)","Get Busy","Ba Ba Bad Remix","I'm Still In Love With You","No Lie"],
+        albums: ["Temperature (Album)","The Best of Sean Paul"]
+    },
+    "Koffee": {
+        songs: ["Toast","KOFFEE","W","Lockdown","Gimme","Vroom - The FaNaTiX, Idris Elba, Lil Tjay, Davido, Koffee, Moelogo| PS5, PS4 (from GRAN TURISMO 7)","Raggamuffin"],
+        albums: ["Toast (Album)","The Best of Koffee"]
+    },
+    "Shaggy": {
+        songs: ["It Wasn't Me","Angel","Boombastic","Hey Sexy Lady","Til A Mawnin (feat. Sting)","Looking Lovely (feat. Robin Thicke)","In The Summertime"],
+        albums: ["It Wasn't Me (Album)","The Best of Shaggy"]
+    },
+    "Popcaan": {
+        songs: ["Amazing Shape","Junction","Silence","LIFESTYLE","Feel Good","GYALIS (Remix)","Only Man She Want"],
+        albums: ["Amazing Shape (Album)","The Best of Popcaan"]
+    },
+    "Burna Boy": {
+        songs: ["Dai Dai","Only You","23","Ye","Tested, Approved & Trusted","WE PRAY","Location"],
+        albums: ["Dai Dai (Album)","The Best of Burna Boy"]
+    },
+    "Wizkid": {
+        songs: ["Nights In The Sun (feat. Wizkid)","Essence (feat. Justin Bieber & Tems)","Essence (feat. Tems)","Stay For The Night","PONGO","Jogodo","Gimme Dat"],
+        albums: ["Nights In The Sun (feat. Wizkid) (Album)","The Best of Wizkid"]
+    },
+    "Davido": {
+        songs: ["With You (feat. Omah Lay)","Sensational (feat. Davido & Lojay)","KANTE (feat. Fave)","UNAVAILABLE (feat. Musa Keys)","Fall","Nakupenda","OVER DEM"],
+        albums: ["With You (feat. Omah Lay) (Album)","The Best of Davido"]
+    },
+    "Rema": {
+        songs: ["Calm Down","Baby (Is it a Crime)","Goals","Fi Kan We Kan","Soweto","Who’s Dat Girl","BUBALU"],
+        albums: ["Calm Down (Album)","The Best of Rema"]
+    },
+    "Tems": {
+        songs: ["Raindance","What You Need","WAIT FOR U (feat. Drake & Tems)","Free Mind","Me & U","Essence (feat. Justin Bieber & Tems)","Bunce Road Blues"],
+        albums: ["Raindance (Album)","The Best of Tems"]
+    },
+    "Asake": {
+        songs: ["Forgiveness","Oba","Gratitude","Skilful","Wa","MCBH","Jogodo"],
+        albums: ["Forgiveness (Album)","The Best of Asake"]
+    },
+    "Omah Lay": {
+        songs: ["I AM","With You (feat. Omah Lay)","CANADA BREEZE","Isaka II (6am) [with Tems, Omah Lay, Thukuthela, JAZZWRLD, Lekaa Beats]","WATER SPIRIT","JAH JAH KNOWS","COPING MECHANISM"],
+        albums: ["I AM (Album)","The Best of Omah Lay"]
     }
 };
