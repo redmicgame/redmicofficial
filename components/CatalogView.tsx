@@ -72,18 +72,7 @@ const StatPill: React.FC<{ label: string; value: string | number | null }> = ({ 
     );
 };
 
-interface TrackItemProps {
-    song: Song;
-    chartInfo: { peak: number | null; current: number | null };
-    isExpanded: boolean;
-    onToggleExpand: () => void;
-    grammyWin?: string;
-    canTakeDown: boolean;
-    onTakeDown: () => void;
-    onBuyBack: () => void;
-}
-
-const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack }) => {
+const ItunesVersionManager: React.FC<{ song: Song }> = ({ song }) => {
     const { dispatch } = useGame();
     const [itunesTitle, setItunesTitle] = useState(`${song.title} (Acoustic Version)`);
     const [itunesCover, setItunesCover] = useState(song.coverArt);
@@ -103,6 +92,96 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
             reader.readAsDataURL(file);
         }
     };
+
+    return (
+        <div className="col-span-2 mt-4 space-y-2 border-t border-zinc-700/50 pt-2">
+            <p className="font-bold text-xs text-zinc-400 uppercase tracking-wider">Release iTunes Version</p>
+            <p className="text-[10px] text-zinc-500 leading-tight">These chart exclusively on iTunes & boost original Hot 100 standing (Max 10).</p>
+            {(!song.itunesVersions || song.itunesVersions.length < 10) ? (
+                <div className="space-y-2 bg-zinc-900 p-2 rounded">
+                    <div>
+                        <label className="text-[10px] text-zinc-400 block mb-1">Title</label>
+                        <input type="text" className="w-full bg-zinc-800 text-white rounded p-1 text-xs" value={itunesTitle} onChange={(e) => setItunesTitle(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] text-zinc-400 block mb-1">Cover Art</label>
+                            <label className="w-full bg-zinc-800 text-white rounded p-1 text-xs cursor-pointer block text-center hover:bg-zinc-700">
+                                Upload Image
+                                <input type="file" className="hidden" accept="image/*" onChange={handleItunesCoverUpload} />
+                            </label>
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-zinc-400 block mb-1">Price</label>
+                            <select 
+                                className="w-full bg-zinc-800 text-white rounded p-1 text-xs" 
+                                value={itunesPrice} 
+                                onChange={(e) => setItunesPrice(Number(e.target.value))}
+                            >
+                                <option value={0.69}>$0.69</option>
+                                <option value={0.99}>$0.99</option>
+                                <option value={1.29}>$1.29</option>
+                            </select>
+                        </div>
+                    </div>
+                    {itunesCover && itunesCover !== song.coverArt && (
+                        <p className="text-[10px] text-green-400 text-right">Custom cover selected</p>
+                    )}
+                    <button onClick={handleReleaseItunes} className="w-full bg-rose-600/30 text-rose-400 hover:bg-rose-600 hover:text-white py-1 rounded text-xs font-bold transition-colors">
+                        Release Version
+                    </button>
+                </div>
+            ) : (
+                <p className="text-xs text-rose-400">Max iTunes versions reached (10).</p>
+            )}
+            {(song.itunesVersions?.length || 0) > 0 && (
+                <div className="space-y-1 mt-2">
+                    <p className="text-[10px] text-zinc-400 font-bold mb-1 border-b border-zinc-800 pb-1">Released iTunes Versions:</p>
+                    {song.itunesVersions?.map(iv => (
+                        <div key={iv.id} className="flex gap-2 items-center text-[10px] bg-zinc-900/50 p-1.5 rounded pr-2">
+                            <img src={iv.coverArt} className="w-6 h-6 object-cover rounded-sm border border-zinc-700" />
+                            <div className="flex-1 min-w-0">
+                                <p className="truncate font-semibold">{iv.title}</p>
+                                <p className="text-zinc-500">{formatNumber(iv.sales)} sales</p>
+                            </div>
+                            <div className="flex gap-1 items-center">
+                                <select 
+                                    className="bg-zinc-800 border-none text-[10px] p-1 rounded" 
+                                    value={iv.price} 
+                                    onChange={(e) => dispatch({ type: 'EDIT_ITUNES_VERSION', payload: { songId: song.id, versionId: iv.id, price: Number(e.target.value) } })}
+                                >
+                                    <option value={0.69}>$0.69</option>
+                                    <option value={0.99}>$0.99</option>
+                                    <option value={1.29}>$1.29</option>
+                                </select>
+                                <button 
+                                    onClick={() => dispatch({ type: 'REMOVE_ITUNES_VERSION', payload: { songId: song.id, versionId: iv.id } })}
+                                    className="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 px-1 py-1 rounded"
+                                    title="Take Down"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+interface TrackItemProps {
+    song: Song;
+    chartInfo: { peak: number | null; current: number | null };
+    isExpanded: boolean;
+    onToggleExpand: () => void;
+    grammyWin?: string;
+    canTakeDown: boolean;
+    onTakeDown: () => void;
+    onBuyBack: () => void;
+}
+
+const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack }) => {
 
     return (
         <div className={`bg-zinc-800/50 p-2 rounded-lg ${song.isTakenDown ? 'opacity-60' : ''}`}>
@@ -130,79 +209,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                      <p className="font-semibold text-zinc-400">Peak Position:</p>
                      <p className="font-bold text-right">#{chartInfo.peak ?? 'N/A'}</p>
                      
-                     <div className="col-span-2 mt-4 space-y-2 border-t border-zinc-700/50 pt-2">
-                        <p className="font-bold text-xs text-zinc-400 uppercase tracking-wider">Release iTunes Version</p>
-                        <p className="text-[10px] text-zinc-500 leading-tight">These chart exclusively on iTunes & boost original Hot 100 standing (Max 10).</p>
-                        {(!song.itunesVersions || song.itunesVersions.length < 10) ? (
-                            <div className="space-y-2 bg-zinc-900 p-2 rounded">
-                                <div>
-                                    <label className="text-[10px] text-zinc-400 block mb-1">Title</label>
-                                    <input type="text" className="w-full bg-zinc-800 text-white rounded p-1 text-xs" value={itunesTitle} onChange={(e) => setItunesTitle(e.target.value)} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-[10px] text-zinc-400 block mb-1">Cover Art</label>
-                                        <label className="w-full bg-zinc-800 text-white rounded p-1 text-xs cursor-pointer block text-center hover:bg-zinc-700">
-                                            Upload Image
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleItunesCoverUpload} />
-                                        </label>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] text-zinc-400 block mb-1">Price</label>
-                                        <select 
-                                            className="w-full bg-zinc-800 text-white rounded p-1 text-xs" 
-                                            value={itunesPrice} 
-                                            onChange={(e) => setItunesPrice(Number(e.target.value))}
-                                        >
-                                            <option value={0.69}>$0.69</option>
-                                            <option value={0.99}>$0.99</option>
-                                            <option value={1.29}>$1.29</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                {itunesCover && itunesCover !== song.coverArt && (
-                                    <p className="text-[10px] text-green-400 text-right">Custom cover selected</p>
-                                )}
-                                <button onClick={handleReleaseItunes} className="w-full bg-rose-600/30 text-rose-400 hover:bg-rose-600 hover:text-white py-1 rounded text-xs font-bold transition-colors">
-                                    Release Version
-                                </button>
-                            </div>
-                        ) : (
-                            <p className="text-xs text-rose-400">Max iTunes versions reached (10).</p>
-                        )}
-                        {(song.itunesVersions?.length || 0) > 0 && (
-                            <div className="space-y-1 mt-2">
-                                <p className="text-[10px] text-zinc-400 font-bold mb-1 border-b border-zinc-800 pb-1">Released iTunes Versions:</p>
-                                {song.itunesVersions?.map(iv => (
-                                    <div key={iv.id} className="flex gap-2 items-center text-[10px] bg-zinc-900/50 p-1.5 rounded pr-2">
-                                        <img src={iv.coverArt} className="w-6 h-6 object-cover rounded-sm border border-zinc-700" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="truncate font-semibold">{iv.title}</p>
-                                            <p className="text-zinc-500">{formatNumber(iv.sales)} sales</p>
-                                        </div>
-                                        <div className="flex gap-1 items-center">
-                                            <select 
-                                                className="bg-zinc-800 border-none text-[10px] p-1 rounded" 
-                                                value={iv.price} 
-                                                onChange={(e) => dispatch({ type: 'EDIT_ITUNES_VERSION', payload: { songId: song.id, versionId: iv.id, price: Number(e.target.value) } })}
-                                            >
-                                                <option value={0.69}>$0.69</option>
-                                                <option value={0.99}>$0.99</option>
-                                                <option value={1.29}>$1.29</option>
-                                            </select>
-                                            <button 
-                                                onClick={() => dispatch({ type: 'REMOVE_ITUNES_VERSION', payload: { songId: song.id, versionId: iv.id } })}
-                                                className="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 px-1 py-1 rounded"
-                                                title="Take Down"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                     </div>
+                     <ItunesVersionManager song={song} />
 
                      {canTakeDown && !song.isTakenDown && (
                          <div className="col-span-2 mt-2">
@@ -230,6 +237,7 @@ const CatalogView: React.FC = () => {
     const { billboardHot100, chartHistory, billboardTopAlbums, albumChartHistory } = gameState;
     const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
     const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
+    const [expandedSingleId, setExpandedSingleId] = useState<string | null>(null);
     const [takeDownTarget, setTakeDownTarget] = useState<{ type: 'song' | 'release', id: string, title: string } | null>(null);
     const [rightsTarget, setRightsTarget] = useState<{ type: 'song' | 'release', item: Song | Release } | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ action: () => void, message: string, title: string, confirmText: string } | null>(null);
@@ -474,66 +482,80 @@ const CatalogView: React.FC = () => {
                                 const grammyWin = findGrammyWin(song.id, 'song');
                                 const isTakenDown = song.isTakenDown;
                                 return (
-                                    <div key={song.id} className={`bg-zinc-800 p-3 rounded-lg flex items-center gap-4 relative ${isTakenDown ? 'opacity-50' : ''}`}>
+                                    <div key={song.id} className={`bg-zinc-800 p-3 rounded-lg relative ${isTakenDown ? 'opacity-50' : ''}`}>
                                         {isTakenDown && <div className="absolute top-2 right-2 text-xs font-bold bg-red-900/80 text-red-400 px-2 py-1 rounded-full z-10">TAKEN DOWN</div>}
-                                        <label htmlFor={`cover-upload-${song.releaseId}`} className="cursor-pointer group relative flex-shrink-0">
-                                            <img src={song.coverArt} alt={song.title} className="w-20 h-20 rounded-md object-cover"/>
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
-                                                <span className="text-white text-xs font-bold">Change</span>
-                                            </div>
-                                            <input
-                                                type="file"
-                                                id={`cover-upload-${song.releaseId}`}
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={(e) => handleCoverArtChange(e, song.releaseId!)}
-                                            />
-                                        </label>
-                                        <div className="flex-grow">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-bold text-lg">{song.title}</p>
-                                                {grammyWin && <GrammyAwardIcon className="w-5 h-5 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
-                                                <SongCertificationBadge streams={song.streams} />
-                                            </div>
-                                            <p className="text-sm text-zinc-400">{formatNumber(song.streams)} streams</p>
-                                            <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
-                                                <StatPill label="Current" value={chartInfo.current} />
-                                                <StatPill label="Peak" value={chartInfo.peak} />
-                                            </div>
-                                            {canTakeDown && !isTakenDown && (
-                                                <div className="mt-3 flex items-center gap-2">
-                                                    <button onClick={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })} className="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1 rounded-md text-xs font-bold transition-colors">
-                                                        Take Down
-                                                    </button>
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-4">
+                                                <label htmlFor={`cover-upload-${song.releaseId}`} className="cursor-pointer group relative flex-shrink-0">
+                                                    <img src={song.coverArt} alt={song.title} className="w-20 h-20 rounded-md object-cover"/>
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
+                                                        <span className="text-white text-xs font-bold">Change</span>
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        id={`cover-upload-${song.releaseId}`}
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                        onChange={(e) => handleCoverArtChange(e, song.releaseId!)}
+                                                    />
+                                                </label>
+                                                <div className="flex-grow">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="font-bold text-lg">{song.title}</p>
+                                                            {grammyWin && <GrammyAwardIcon className="w-5 h-5 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
+                                                            <SongCertificationBadge streams={song.streams} />
+                                                        </div>
+                                                        <button onClick={() => setExpandedSingleId(prev => prev === song.id ? null : song.id)} className="p-2 self-start text-zinc-400 hover:text-white">
+                                                            <ChevronDownIcon className={`w-6 h-6 transition-transform ${expandedSingleId === song.id ? 'rotate-180' : ''}`} />
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-sm text-zinc-400">{formatNumber(song.streams)} streams</p>
+                                                    <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
+                                                        <StatPill label="Current" value={chartInfo.current} />
+                                                        <StatPill label="Peak" value={chartInfo.peak} />
+                                                    </div>
+                                                    {canTakeDown && !isTakenDown && (
+                                                        <div className="mt-3 flex items-center gap-2">
+                                                            <button onClick={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })} className="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1 rounded-md text-xs font-bold transition-colors">
+                                                                Take Down
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {isTakenDown && (
+                                                        <div className="mt-3 flex items-center gap-2">
+                                                            <button 
+                                                                onClick={() => {
+                                                                    const totalRev = song.revenue || 0;
+                                                                    const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+                                                                    setConfirmAction({
+                                                                        title: 'Buy Back Song',
+                                                                        message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+                                                                        confirmText: 'Buy Back',
+                                                                        action: () => {
+                                                                            dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
+                                                                        }
+                                                                    });
+                                                                }} 
+                                                                className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-1 rounded-md text-xs font-bold transition-colors"
+                                                            >
+                                                                Buy Back & Own 100%
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {!isTakenDown && (
+                                                        <div className="mt-2">
+                                                            <button onClick={() => setRightsTarget({ type: 'song', item: song })} className="bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded-md text-xs font-bold transition-colors flex items-center gap-1">
+                                                                <BanknotesIcon className="w-3 h-3" />
+                                                                Manage Rights
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {isTakenDown && (
-                                                <div className="mt-3 flex items-center gap-2">
-                                                    <button 
-                                                        onClick={() => {
-                                                            const totalRev = song.revenue || 0;
-                                                            const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
-                                                            setConfirmAction({
-                                                                title: 'Buy Back Song',
-                                                                message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
-                                                                confirmText: 'Buy Back',
-                                                                action: () => {
-                                                                    dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
-                                                                }
-                                                            });
-                                                        }} 
-                                                        className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-1 rounded-md text-xs font-bold transition-colors"
-                                                    >
-                                                        Buy Back & Own 100%
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {!isTakenDown && (
-                                                <div className="mt-2">
-                                                    <button onClick={() => setRightsTarget({ type: 'song', item: song })} className="bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded-md text-xs font-bold transition-colors flex items-center gap-1">
-                                                        <BanknotesIcon className="w-3 h-3" />
-                                                        Manage Rights
-                                                    </button>
+                                            </div>
+                                            {expandedSingleId === song.id && (
+                                                <div className="pl-24 mt-2">
+                                                    <ItunesVersionManager song={song} />
                                                 </div>
                                             )}
                                         </div>
