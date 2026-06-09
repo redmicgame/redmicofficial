@@ -70,64 +70,117 @@ const SpotifyAlbumCountdownView: React.FC = () => {
         return null;
     }
 
-    const tracklistPreview = releaseSongs.slice(0, 5);
+    const tracklist = releaseSongs;
+
+    let distroString = "";
+    if (release.releasingLabel) {
+        const customLabel = activeArtistData.customLabels.find(l => l.id === release.releasingLabel!.id);
+        if (customLabel) {
+             if (customLabel.exclusiveLicenseId) {
+                  const major = LABELS.find(l => l.id === customLabel.exclusiveLicenseId);
+                  if (major) distroString = `Exclusive License to ${major.name}`;
+             } else if (customLabel.dealWithMajorId) {
+                  const major = LABELS.find(l => l.id === customLabel.dealWithMajorId);
+                  if (major) distroString = `A ${major.name} Release`;
+             }
+        }
+    }
 
     return (
-        <div className="h-screen w-full bg-black text-white overflow-y-auto">
-            <header className="p-4 sticky top-0 bg-black/80 backdrop-blur-sm z-10">
-                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotify' })} className="p-2 -m-2">
-                    <ChevronLeftIcon className="w-7 h-7" />
+        <div className="h-screen w-full bg-black text-white overflow-y-auto pb-20">
+            <header className="px-4 py-3 sticky top-0 bg-black/80 backdrop-blur-md z-10 flex items-center gap-4 border-b border-zinc-900 shadow-xl">
+                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotify' })} className="p-2 -m-2 opacity-80 hover:opacity-100">
+                    <ChevronLeftIcon className="w-6 h-6" />
                 </button>
+                <div className="font-bold tracking-tight text-lg truncate">
+                    Countdown
+                </div>
             </header>
-            <main className="p-4 space-y-6">
-                <img src={release.coverArt} alt={release.title} className="w-full aspect-square rounded-lg shadow-2xl shadow-black/50" />
+            <main className="p-4 space-y-8">
+                <img src={release.countdownImageUrl || release.coverArt} alt={release.title} className="w-full aspect-square object-cover rounded-xl shadow-2xl shadow-black/80 ring-1 ring-white/10" />
                 
-                <div className="flex items-center gap-3 bg-[#121212] p-3 rounded-lg">
-                    <img src={release.coverArt} alt={release.title} className="w-12 h-12 rounded-md object-cover" />
+                <div className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl backdrop-blur-sm shadow-xl">
+                    <img src={release.coverArt} alt={release.title} className="w-14 h-14 rounded-md object-cover shadow-md" />
                     <div className="flex-grow flex justify-around items-center">
                         <CountdownUnit value={timeLeft.days} label="Days" />
                         <div className="border-l border-zinc-700 h-8"></div>
-                        <CountdownUnit value={timeLeft.hours} label="Hours" />
+                        <CountdownUnit value={timeLeft.hours} label="Hrs" />
                         <div className="border-l border-zinc-700 h-8"></div>
-                        <CountdownUnit value={timeLeft.minutes} label="Minutes" />
+                        <CountdownUnit value={timeLeft.minutes} label="Mins" />
                         <div className="border-l border-zinc-700 h-8"></div>
-                        <CountdownUnit value={timeLeft.seconds} label="Seconds" />
+                        <CountdownUnit value={timeLeft.seconds} label="Secs" />
                     </div>
                 </div>
 
-                <div className="px-1">
-                    <h1 className="text-2xl font-bold">{release.title}</h1>
+                <div className="px-1 space-y-1">
+                    {distroString && <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">{distroString}</p>}
+                    <h1 className="text-3xl font-black tracking-tighter truncate">{release.title}</h1>
                     <div className="flex items-center gap-2 mt-2">
-                        <div className="w-5 h-5 bg-black rounded-full border-2 border-zinc-800"></div>
-                        <p className="font-semibold">{activeArtist.name}</p>
+                        <img src={activeArtist.image} className="w-6 h-6 rounded-full object-cover shadow-sm bg-zinc-800" />
+                        <p className="font-bold text-lg">{activeArtist.name}</p>
                     </div>
-                    <p className="text-zinc-400 text-sm mt-1">{release.type.replace(" (Deluxe)", "")} • Releases on {formatReleaseDateString(submission.projectReleaseDate)}</p>
+                    <p className="text-zinc-400 text-sm font-medium pt-1">Album • Releases on {formatReleaseDateString(submission.projectReleaseDate!)}</p>
                 </div>
 
                 <div className="flex justify-between items-center px-1">
                     <div className="flex items-center gap-6 text-zinc-400">
-                        <button><ArrowUpTrayIcon className="w-6 h-6 hover:text-white" /></button>
-                        <button><DotsHorizontalIcon className="w-6 h-6 hover:text-white" /></button>
+                        <button className="hover:text-white hover:scale-110 active:scale-95 transition-transform"><PlusIcon className="w-7 h-7" /></button>
+                        <button className="hover:text-white hover:scale-110 active:scale-95 transition-transform"><ArrowUpTrayIcon className="w-7 h-7" /></button>
+                        <button className="hover:text-white hover:scale-110 active:scale-95 transition-transform"><DotsHorizontalIcon className="w-7 h-7" /></button>
                     </div>
-                    <button className="flex items-center gap-2 bg-[#1DB954] text-black font-bold px-5 py-2 rounded-full">
+                    <button className="flex items-center justify-center gap-2 bg-[#1DB954] hover:bg-[#1ed760] active:scale-95 transition-all text-black font-extrabold px-8 py-3 rounded-full text-sm tracking-wide">
                         Pre-save
-                        <PlusIcon className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-800 px-1">
-                    <h2 className="font-bold text-lg mb-3">Tracklist preview</h2>
-                    <div className="space-y-4">
-                        {tracklistPreview.map(song => (
-                            <div key={song.id}>
-                                <p className="font-bold text-lg">{song.title.replace(/\s*\(feat\..*\)/, '')}</p>
-                                <div className="flex items-center gap-2 text-zinc-400">
-                                    {song.explicit && <span className="w-4 h-4 bg-zinc-600 text-zinc-300 text-xs font-bold rounded-sm flex items-center justify-center">E</span>}
-                                    <p>{activeArtist.name}</p>
+                <div className="pt-6 border-t border-zinc-800 px-1">
+                    <h2 className="font-bold text-xl mb-4 text-white/90">Tracklist</h2>
+                    
+                    {release.isTracklistRevealed && release.tracklistImageUrl && (
+                        <img src={release.tracklistImageUrl} className="w-full rounded-xl mb-6 shadow-xl border border-zinc-800" />
+                    )}
+
+                    <div className="space-y-1">
+                        {tracklist.map((song, idx) => {
+                            const isRevealed = release.isTracklistRevealed || (submission.singlesToRelease?.some(s => s.songId === song.id));
+                            const title = isRevealed ? song.title.replace(/\s*\(feat\..*\)/, '') : `Track ${idx + 1}`;
+                            return (
+                                <div key={song.id} className="flex justify-between items-center py-2 px-2 hover:bg-zinc-800/50 rounded-lg group transition-colors">
+                                    <div className="flex gap-4 items-center overflow-hidden">
+                                        <p className="text-zinc-500 font-bold w-4 text-right tabular-nums">{idx + 1}</p>
+                                        <div className="truncate">
+                                            <p className={`font-bold text-base truncate ${!isRevealed ? 'text-zinc-500' : 'text-white'}`}>{title}</p>
+                                            <div className="flex items-center gap-2 text-zinc-400 text-sm mt-0.5">
+                                                {isRevealed && song.explicit && <span className="w-4 h-4 bg-zinc-600 text-zinc-300 text-[10px] font-bold rounded-sm flex items-center justify-center -translate-y-[1px]">E</span>}
+                                                {isRevealed && <p className="truncate">{activeArtist.name}</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <DotsHorizontalIcon className="w-5 h-5 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="pt-8 px-2 space-y-4">
+                    <h2 className="font-bold text-xl text-white/90">Merch</h2>
+                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="flex-shrink-0 w-40 snap-start">
+                                <div className="w-40 h-40 bg-zinc-900 rounded-lg mb-2 flex items-center justify-center p-2 border border-zinc-800 object-cover shadow-md">
+                                    <img src={release.coverArt} className="w-24 h-24 shadow-sm" />
+                                </div>
+                                <p className="font-bold text-sm truncate">{release.title} {i === 1 ? 'Vinyl' : 'CD'}</p>
+                                <p className="text-zinc-400 text-sm">${i === 1 ? '34.99' : '14.99'}</p>
                             </div>
                         ))}
                     </div>
+                </div>
+
+                <div className="px-2 pb-6 space-y-1">
+                    <p className="text-zinc-500 text-[11px] font-medium tracking-tight">© {submission.projectReleaseDate?.year} {activeArtist.name} under exclusive license to Fake Records</p>
+                    <p className="text-zinc-500 text-[11px] font-medium tracking-tight">℗ {submission.projectReleaseDate?.year} {activeArtist.name} under exclusive license to Fake Records</p>
                 </div>
             </main>
         </div>

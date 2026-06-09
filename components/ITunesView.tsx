@@ -54,28 +54,53 @@ const useItunesData = () => {
         for (const artistId in artistsData) {
             const aData = artistsData[artistId];
             const artist = allPlayerArtists.find(a => a.id === artistId);
-            aData.songs.filter(s => s.isReleased && !billboardSongIds.has(s.id)).forEach(song => {
-                entries.push({
-                    rank: 101,
-                    lastWeek: null,
-                    peak: 101,
-                    weeksOnChart: 1,
-                    title: song.title,
-                    artist: artist?.name || 'Unknown',
-                    coverArt: song.coverArt,
-                    isPlayerSong: true,
-                    songId: song.id,
-                    uniqueId: song.id,
-                    weeklyStreams: song.lastWeekStreams || 0,
-                });
+            aData.songs.filter(s => s.isReleased).forEach(song => {
+                if (!billboardSongIds.has(song.id)) {
+                    entries.push({
+                        rank: 101,
+                        lastWeek: null,
+                        peak: 101,
+                        weeksOnChart: 1,
+                        title: song.title,
+                        artist: artist?.name || 'Unknown',
+                        coverArt: song.coverArt,
+                        isPlayerSong: true,
+                        songId: song.id,
+                        uniqueId: song.id,
+                        weeklyStreams: song.lastWeekStreams || 0,
+                    });
+                }
+
+                if (song.itunesVersions) {
+                    song.itunesVersions.forEach(iv => {
+                        entries.push({
+                            rank: 101,
+                            lastWeek: null,
+                            peak: 101,
+                            weeksOnChart: 1,
+                            title: iv.title,
+                            artist: artist?.name || 'Unknown',
+                            coverArt: iv.coverArt,
+                            isPlayerSong: true,
+                            songId: song.id,
+                            uniqueId: iv.id,
+                            weeklyStreams: 0,
+                            isItunesVersion: true,
+                            itunesSales: iv.weeklySales || 0,
+                            itunesPriceString: `$${iv.price}`,
+                            itunesDuration: song.duration,
+                            itunesExplicit: song.explicit,
+                        } as any);
+                    });
+                }
             });
         }
 
         return entries.map(entry => {
-            let duration = 180 + Math.floor(Math.random() * 60);
-            let explicit = false;
+            let duration = entry.isItunesVersion ? entry.itunesDuration : 180 + Math.floor(Math.random() * 60);
+            let explicit = entry.isItunesVersion ? entry.itunesExplicit : false;
             let boost = 1;
-            if (entry.isPlayerSong && entry.songId) {
+            if (entry.isPlayerSong && entry.songId && !entry.isItunesVersion) {
                 for (const artistId in artistsData) {
                     const song = artistsData[artistId].songs.find(s => s.id === entry.songId);
                     if (song) {
@@ -95,11 +120,11 @@ const useItunesData = () => {
             }
             const hash = entry.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const divisor = 750 + (hash % 250);
-            const sales = Math.floor((entry.weeklyStreams || 0) / divisor) * boost;
+            const sales = entry.isItunesVersion ? entry.itunesSales : Math.floor((entry.weeklyStreams || 0) / divisor) * boost;
 
             return {
                 ...entry,
-                price: getPrice(entry.uniqueId, 'song', 0, entry.itunesPrice),
+                price: entry.isItunesVersion ? entry.itunesPriceString : getPrice(entry.uniqueId, 'song', 0, entry.itunesPrice),
                 duration,
                 explicit,
                 sales,
@@ -147,6 +172,24 @@ const useItunesData = () => {
                     weeklySales: 0
                 });
             });
+
+            aData.labelSubmissions.filter(s => s.hasCountdownPage && s.status === 'scheduled').forEach(sub => {
+                const release = sub.release;
+                entries.push({
+                    rank: 201,
+                    lastWeek: null,
+                    peak: 201,
+                    weeksOnChart: 1,
+                    title: release.title,
+                    artist: artist?.name || 'Unknown',
+                    coverArt: release.coverArt,
+                    isPlayerAlbum: true,
+                    albumId: sub.id, // Using submission ID as proxy to fetch correctly later if needed
+                    uniqueId: sub.id,
+                    weeklyActivity: 50 * (aData.followers / 10000), // pre-orders simulated
+                    weeklySales: 0
+                });
+            });
         }
 
         return entries.map(entry => {
@@ -157,6 +200,7 @@ const useItunesData = () => {
             let releaseDate = gameState.date;
             
             if (entry.isPlayerAlbum && entry.albumId) {
+                let found = false;
                 for (const artistId in artistsData) {
                     const artistData = artistsData[artistId];
                     const release = artistData.releases.find(r => r.id === entry.albumId);
@@ -175,6 +219,17 @@ const useItunesData = () => {
                         if (submission?.projectReleaseDate) {
                             isPreorder = (submission.projectReleaseDate.year * 52 + submission.projectReleaseDate.week) > (gameState.date.year * 52 + gameState.date.week);
                         }
+                        found = true;
+                        break;
+                    }
+                    const upcomingSubmission = artistData.labelSubmissions.find(s => s.id === entry.albumId);
+                    if (upcomingSubmission && upcomingSubmission.status === 'scheduled') {
+                        rating = 0; // Upcoming, no ratings yet
+                        reviewCount = 0;
+                        songCount = upcomingSubmission.release.songIds.length;
+                        releaseDate = upcomingSubmission.projectReleaseDate || gameState.date;
+                        isPreorder = true;
+                        found = true;
                         break;
                     }
                 }
@@ -231,10 +286,11 @@ const useItunesData = () => {
             for (const artistId in artistsData) {
                 const artistData = artistsData[artistId];
                 const release = artistData.releases.find(r => r.id === albumId);
-                if (release) {
-                    const submission = artistData.labelSubmissions.find(s => s.release.id === albumId);
+                const submission = artistData.labelSubmissions.find(s => s.id === albumId || s.release.id === albumId);
+                const actualRelease = release || submission?.release;
+                if (actualRelease) {
                     const releasedSingles = new Set(submission?.singlesToRelease?.map(s => s.songId) || []);
-                    tracks = release.songIds.map(songId => {
+                    tracks = actualRelease.songIds.map(songId => {
                         const song = artistData.songs.find(s => s.id === songId);
                         if (!song) return null;
                         const chartSongData = allSongs.find(s => s.songId === songId);
@@ -254,10 +310,13 @@ const useItunesData = () => {
                             duration: song.duration,
                             explicit: song.explicit
                         };
+                        const isRevealed = actualRelease.isTracklistRevealed || releasedSingles.has(song.id) || song.isPreReleaseSingle;
+                        const finalTitle = album.isPreorder && !isRevealed ? `Track ${actualRelease.songIds.indexOf(songId) + 1}` : song.title;
+
                         return {
                             ...itunesSongData,
-                            title: song.title,
-                            artist: album.artist,
+                            title: finalTitle,
+                            artist: album.isPreorder && !isRevealed ? null : album.artist,
                             coverArt: song.coverArt,
                             isAvailable: album.isPreorder ? (song.isPreReleaseSingle === true || releasedSingles.has(song.id)) : true,
                         };

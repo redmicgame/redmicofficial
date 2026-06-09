@@ -84,6 +84,26 @@ interface TrackItemProps {
 }
 
 const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack }) => {
+    const { dispatch } = useGame();
+    const [itunesTitle, setItunesTitle] = useState(`${song.title} (Acoustic Version)`);
+    const [itunesCover, setItunesCover] = useState(song.coverArt);
+    const [itunesPrice, setItunesPrice] = useState(1.29);
+
+    const handleReleaseItunes = () => {
+        dispatch({ type: 'RELEASE_ITUNES_VERSION', payload: { songId: song.id, title: itunesTitle, coverArt: itunesCover, price: itunesPrice } });
+    };
+
+    const handleItunesCoverUpload = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setItunesCover(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <div className={`bg-zinc-800/50 p-2 rounded-lg ${song.isTakenDown ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-3">
@@ -109,6 +129,81 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                      <p className="font-bold text-right">#{chartInfo.current ?? 'N/A'}</p>
                      <p className="font-semibold text-zinc-400">Peak Position:</p>
                      <p className="font-bold text-right">#{chartInfo.peak ?? 'N/A'}</p>
+                     
+                     <div className="col-span-2 mt-4 space-y-2 border-t border-zinc-700/50 pt-2">
+                        <p className="font-bold text-xs text-zinc-400 uppercase tracking-wider">Release iTunes Version</p>
+                        <p className="text-[10px] text-zinc-500 leading-tight">These chart exclusively on iTunes & boost original Hot 100 standing (Max 10).</p>
+                        {(!song.itunesVersions || song.itunesVersions.length < 10) ? (
+                            <div className="space-y-2 bg-zinc-900 p-2 rounded">
+                                <div>
+                                    <label className="text-[10px] text-zinc-400 block mb-1">Title</label>
+                                    <input type="text" className="w-full bg-zinc-800 text-white rounded p-1 text-xs" value={itunesTitle} onChange={(e) => setItunesTitle(e.target.value)} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-[10px] text-zinc-400 block mb-1">Cover Art</label>
+                                        <label className="w-full bg-zinc-800 text-white rounded p-1 text-xs cursor-pointer block text-center hover:bg-zinc-700">
+                                            Upload Image
+                                            <input type="file" className="hidden" accept="image/*" onChange={handleItunesCoverUpload} />
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-zinc-400 block mb-1">Price</label>
+                                        <select 
+                                            className="w-full bg-zinc-800 text-white rounded p-1 text-xs" 
+                                            value={itunesPrice} 
+                                            onChange={(e) => setItunesPrice(Number(e.target.value))}
+                                        >
+                                            <option value={0.69}>$0.69</option>
+                                            <option value={0.99}>$0.99</option>
+                                            <option value={1.29}>$1.29</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {itunesCover && itunesCover !== song.coverArt && (
+                                    <p className="text-[10px] text-green-400 text-right">Custom cover selected</p>
+                                )}
+                                <button onClick={handleReleaseItunes} className="w-full bg-rose-600/30 text-rose-400 hover:bg-rose-600 hover:text-white py-1 rounded text-xs font-bold transition-colors">
+                                    Release Version
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-rose-400">Max iTunes versions reached (10).</p>
+                        )}
+                        {(song.itunesVersions?.length || 0) > 0 && (
+                            <div className="space-y-1 mt-2">
+                                <p className="text-[10px] text-zinc-400 font-bold mb-1 border-b border-zinc-800 pb-1">Released iTunes Versions:</p>
+                                {song.itunesVersions?.map(iv => (
+                                    <div key={iv.id} className="flex gap-2 items-center text-[10px] bg-zinc-900/50 p-1.5 rounded pr-2">
+                                        <img src={iv.coverArt} className="w-6 h-6 object-cover rounded-sm border border-zinc-700" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="truncate font-semibold">{iv.title}</p>
+                                            <p className="text-zinc-500">{formatNumber(iv.sales)} sales</p>
+                                        </div>
+                                        <div className="flex gap-1 items-center">
+                                            <select 
+                                                className="bg-zinc-800 border-none text-[10px] p-1 rounded" 
+                                                value={iv.price} 
+                                                onChange={(e) => dispatch({ type: 'EDIT_ITUNES_VERSION', payload: { songId: song.id, versionId: iv.id, price: Number(e.target.value) } })}
+                                            >
+                                                <option value={0.69}>$0.69</option>
+                                                <option value={0.99}>$0.99</option>
+                                                <option value={1.29}>$1.29</option>
+                                            </select>
+                                            <button 
+                                                onClick={() => dispatch({ type: 'REMOVE_ITUNES_VERSION', payload: { songId: song.id, versionId: iv.id } })}
+                                                className="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 px-1 py-1 rounded"
+                                                title="Take Down"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                     </div>
+
                      {canTakeDown && !song.isTakenDown && (
                          <div className="col-span-2 mt-2">
                              <button onClick={onTakeDown} className="w-full bg-red-600/20 hover:bg-red-600/40 text-red-400 py-1 rounded-md text-xs font-bold transition-colors">

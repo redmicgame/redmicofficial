@@ -30,8 +30,8 @@ const AlbumPromoView: React.FC = () => {
 
         switch (actionType) {
             case 'countdown':
-                if (submission.promoBudgetSpent! + 100000 <= submission.promoBudget!) {
-                    dispatch({ type: 'LAUNCH_COUNTDOWN_PAGE', payload: { submissionId: submission.id, cost: 100000 } });
+                if (activeArtistData.monthlyListeners >= 10000) {
+                    dispatch({ type: 'LAUNCH_COUNTDOWN_PAGE', payload: { submissionId: submission.id, cost: 0 } });
                 }
                 break;
             case 'genius':
@@ -84,20 +84,20 @@ const AlbumPromoView: React.FC = () => {
                 <div className="space-y-4">
                     <h2 className="text-xl font-bold">Actions</h2>
                      {/* Spotify Countdown */}
-                    <div className={`p-4 rounded-lg border-2 ${submission.hasCountdownPage ? 'border-green-500 bg-green-900/30' : 'border-zinc-700 bg-zinc-800'}`}>
+                     <div className={`p-4 rounded-lg border-2 ${submission.hasCountdownPage ? 'border-green-500 bg-green-900/30' : 'border-zinc-700 bg-zinc-800'}`}>
                         <div className="flex items-center gap-3">
                             <SpotifyIcon className="w-10 h-10 flex-shrink-0" />
                             <div>
                                 <h3 className="font-bold text-lg">Launch Spotify Countdown</h3>
-                                <p className="text-sm text-zinc-400">Create a pre-save page with a live countdown. Generates significant initial hype.</p>
+                                <p className="text-sm text-zinc-400">Create a pre-save page with a live countdown. Needs 10K+ monthly listeners.</p>
                             </div>
                         </div>
                          <button 
                             onClick={() => handleAction('countdown')}
-                            disabled={submission.hasCountdownPage || budget - spent < 100000}
+                            disabled={submission.hasCountdownPage || activeArtistData.monthlyListeners < 10000}
                             className="mt-3 w-full h-10 bg-green-500 text-black font-bold rounded-lg text-sm disabled:bg-zinc-600 disabled:text-zinc-400"
                         >
-                            {submission.hasCountdownPage ? 'Launched' : 'Launch (-$100K)'}
+                            {submission.hasCountdownPage ? 'Launched' : (activeArtistData.monthlyListeners < 10000 ? 'Requires 10K Listeners' : 'Launch (Free)')}
                         </button>
                     </div>
 

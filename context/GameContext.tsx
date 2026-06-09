@@ -942,6 +942,111 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 ...state,
                 activeYoutubeChannel: action.payload,
             };
+        case 'SUBSCRIBE_CHART_PREDICTIONS': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (activeData.money < action.payload.cost) return state;
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money - action.payload.cost,
+                        chartPredictionsSubscription: true
+                    }
+                }
+            };
+        }
+        case 'RELEASE_ITUNES_VERSION': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const songIndex = activeData.songs.findIndex(s => s.id === action.payload.songId);
+            if (songIndex === -1) return state;
+
+            const song = activeData.songs[songIndex];
+            const currentVersions = song.itunesVersions || [];
+            if (currentVersions.length >= 10) return state; // Max 10 versions
+
+            const newVersion = {
+                id: `itunes_ver_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+                title: action.payload.title,
+                coverArt: action.payload.coverArt || song.coverArt,
+                releaseDate: state.date,
+                sales: 0,
+                prevWeekSales: 0,
+                price: action.payload.price ?? 1.29
+            };
+
+            const updatedSongs = [...activeData.songs];
+            updatedSongs[songIndex] = {
+                ...song,
+                itunesVersions: [...currentVersions, newVersion]
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs
+                    }
+                }
+            };
+        }
+        case 'REMOVE_ITUNES_VERSION': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const songIndex = activeData.songs.findIndex(s => s.id === action.payload.songId);
+            if (songIndex === -1) return state;
+            
+            const song = activeData.songs[songIndex];
+            const updatedSongs = [...activeData.songs];
+            updatedSongs[songIndex] = {
+                ...song,
+                itunesVersions: (song.itunesVersions || []).filter(v => v.id !== action.payload.versionId)
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs
+                    }
+                }
+            };
+        }
+        case 'EDIT_ITUNES_VERSION': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const songIndex = activeData.songs.findIndex(s => s.id === action.payload.songId);
+            if (songIndex === -1) return state;
+            
+            const song = activeData.songs[songIndex];
+            const updatedSongs = [...activeData.songs];
+            updatedSongs[songIndex] = {
+                ...song,
+                itunesVersions: (song.itunesVersions || []).map(v => 
+                    v.id === action.payload.versionId 
+                        ? { ...v, price: action.payload.price } 
+                        : v
+                )
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs
+                    }
+                }
+            };
+        }
         case 'CHANGE_STAGE_NAME': {
             if (!state.activeArtistId) return state;
             
@@ -3149,7 +3254,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
 
                 artistData.popularity = Math.max(0, Math.min(100, newPopularity));
-                artistData.money = Math.floor(artistData.money + totalIncome);
+                let finalIncome = totalIncome;
+                if (artistData.chartPredictionsSubscription) {
+                    finalIncome -= 1000;
+                }
+                if (artistData.redMicPro && typeof artistData.redMicPro === 'object' && artistData.redMicPro.tier !== 'free') {
+                    // Just in case red mic pro requires weekly fee, wait it's yearly. So no.
+                }
+                artistData.money = Math.floor(artistData.money + finalIncome);
                 artistData.hype = newHype;
                 artistData.peakHype = Math.max(artistData.peakHype || 0, newHype);
                 artistData.lastFourWeeksStreams = updatedLastFourWeeksStreams;
@@ -3481,6 +3593,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const divisor = 750 + (hash % 250);
                 
                 let boost = 1;
+                let additionalItunesSales = 0;
                 if (song.isPlayerSong && song.songId) {
                     for (const artistId in updatedArtistsData) {
                         const aData = updatedArtistsData[artistId];
@@ -3498,11 +3611,21 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             } else if (s.itunesPrice === '$1.29') {
                                 boost *= 0.9;
                             }
+                            if (s.itunesVersions) {
+                                s.itunesVersions.forEach(iv => {
+                                    const verBoost = boost * (Math.random() * 0.5 + 0.8);
+                                    let vSales = Math.floor((song.weeklyStreams / divisor) * verBoost * 0.8);
+                                    if (vSales === 0 && song.weeklyStreams > 1000) vSales = Math.floor(Math.random() * 50) + 10;
+                                    iv.weeklySales = vSales;
+                                    iv.sales = (iv.sales || 0) + vSales;
+                                    additionalItunesSales += vSales;
+                                });
+                            }
                             break;
                         }
                     }
                 }
-                const sales = Math.floor(song.weeklyStreams / divisor) * boost;
+                const sales = Math.floor(song.weeklyStreams / divisor) * boost + additionalItunesSales;
                 
                 // 50% streams, 30% radio, 20% digital sales
                 const streamPoints = song.weeklyStreams * 0.5;
@@ -6531,6 +6654,90 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
             };
         }
+        case 'REQUEST_SPOTIFY_VERIFICATION': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (activeData.followers < 50000) return state; // Arbitrary hurdle
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        isSpotifyVerified: true
+                    }
+                }
+            };
+        }
+        case 'REVEAL_TRACKLIST': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedSubmissions = activeData.labelSubmissions.map(sub => {
+                if (sub.id === action.payload.submissionId) {
+                    if (action.payload.tracklistImageUrl) {
+                        sub.release.tracklistImageUrl = action.payload.tracklistImageUrl;
+                    }
+                    sub.release.isTracklistRevealed = true;
+                    return sub;
+                }
+                return sub;
+            });
+            // If pop base post is needed, we could add an X post here
+            let newXPosts = activeData.xPosts;
+            if (action.payload.tracklistImageUrl || action.payload.tracklist) {
+                const popBaseUser = activeData.xUsers.find(u => u.id === 'popbase' || u.username === 'PopBase');
+                const submission = activeData.labelSubmissions.find(s => s.id === action.payload.submissionId);
+                if (popBaseUser && submission) {
+                    const postContent = action.payload.tracklistImageUrl 
+                        ? `Tracklist for ${state.artists.find(a=>a.id===state.activeArtistId)?.name}'s new album '${submission.release.title}'\n\nOut Week ${submission.projectReleaseDate?.week || 'Soon'}.`
+                        : `Tracklist for ${state.artists.find(a=>a.id===state.activeArtistId)?.name}'s new album '${submission.release.title}':\n\n` + (action.payload.tracklist?.map((t, i) => `#${i+1}. ${t}`).join('\n') || '') + `\n\nShow more`;
+                    const newPost: XPost = {
+                        id: crypto.randomUUID(),
+                        authorId: popBaseUser.id,
+                        content: postContent,
+                        image: action.payload.tracklistImageUrl,
+                        likes: Math.floor(Math.random() * 50000) + 10000,
+                        retweets: Math.floor(Math.random() * 5000) + 1000,
+                        views: Math.floor(Math.random() * 1000000) + 200000,
+                        date: state.date,
+                    };
+                    newXPosts = [newPost, ...newXPosts];
+                }
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        labelSubmissions: updatedSubmissions,
+                        xPosts: newXPosts
+                    }
+                }
+            };
+        }
+        case 'UPLOAD_COUNTDOWN_IMAGE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedSubmissions = activeData.labelSubmissions.map(sub => {
+                if (sub.id === action.payload.submissionId) {
+                    sub.release.countdownImageUrl = action.payload.imageUrl;
+                    return sub;
+                }
+                return sub;
+            });
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        labelSubmissions: updatedSubmissions
+                    }
+                }
+            };
+        }
         case 'BUY_X_VERIFICATION': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -7170,6 +7377,36 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     newState.artistsData[id].lastFourWeeksViews = newState.artistsData[id].lastFourWeeksViews || [];
                 }
             }
+
+            // Patch NPC Song Titles and Covers
+            if (newState.npcs) {
+                // track used names to avoid dupes across artists if needed, here just locally
+                const trackCounts: Record<string, number> = {};
+                newState.npcs.forEach(npc => {
+                    const realDisco = REAL_WORLD_DISCOGRAPHIES[npc.artist];
+                    if (realDisco && realDisco.songs && realDisco.songs.length > 0) {
+                        const artistSongsList = realDisco.songs;
+                        const count = trackCounts[npc.artist] || 0;
+                        if (count < artistSongsList.length) {
+                             if (!artistSongsList.includes(npc.title)) {
+                                npc.title = artistSongsList[count];
+                             }
+                        }
+                        trackCounts[npc.artist] = count + 1;
+                    }
+                    if (NPC_ARTIST_IMAGES[npc.artist]) {
+                        npc.coverArt = NPC_ARTIST_IMAGES[npc.artist];
+                    }
+                });
+            }
+            if (newState.npcAlbums) {
+                newState.npcAlbums.forEach(album => {
+                    if (NPC_ARTIST_IMAGES[album.artistName]) {
+                        album.coverArt = NPC_ARTIST_IMAGES[album.artistName];
+                    }
+                });
+            }
+
             return newState;
         }
         case 'UNLOCK_RED_MIC_PRO': {

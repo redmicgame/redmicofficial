@@ -22,8 +22,10 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-    const { releases, songs, videos } = activeArtistData!;
-    const release = releases.find(r => r.id === releaseId);
+    const { releases, songs, videos, labelSubmissions } = activeArtistData!;
+    const release = releases.find(r => r.id === releaseId) || labelSubmissions.find(s => s.release.id === releaseId)?.release;
+
+    const isUpcoming = labelSubmissions.some(s => s.release.id === releaseId);
 
     const otherVersions = useMemo(() => {
         if (!release) return [];
@@ -65,6 +67,20 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
     const releaseTitle = (isSingle && singleSong && singleSong.collaboration)
         ? release.title.replace(` (feat. ${singleSong.collaboration.artistName})`, '')
         : release.title;
+
+    let distroString = "";
+    if (release.releasingLabel) {
+        const customLabel = activeArtistData.customLabels.find(l => l.id === release.releasingLabel!.id);
+        if (customLabel) {
+             if (customLabel.exclusiveLicenseId) {
+                  const major = LABELS.find(l => l.id === customLabel.exclusiveLicenseId);
+                  if (major) distroString = `Exclusive License to ${major.name}`;
+             } else if (customLabel.dealWithMajorId) {
+                  const major = LABELS.find(l => l.id === customLabel.dealWithMajorId);
+                  if (major) distroString = `A ${major.name} Release`;
+             }
+        }
+    }
 
     return (
         <>
@@ -109,6 +125,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                         </header>
                         
                         <div className="absolute bottom-0 left-0 right-0 p-4 text-center pb-6">
+                            {distroString && <p className="text-xs font-bold uppercase tracking-widest text-[#d60017] mb-2">{distroString}</p>}
                             <h2 className="text-3xl font-black drop-shadow-lg tracking-tight px-2">{releaseTitle}</h2>
                             <p className="text-xl font-medium mt-1 drop-shadow-md">{artistDisplay}</p>
                             <p className="text-xs text-white/80 uppercase mt-2 flex items-center justify-center gap-2 drop-shadow-md font-medium">
@@ -148,6 +165,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                             </div>
                         </header>
                         <section className="text-center p-4">
+                            {distroString && <p className="text-[10px] font-bold uppercase tracking-widest text-[#d60017] mb-3">{distroString}</p>}
                             <img src={release.coverArt} className="w-56 h-56 rounded-lg object-cover mx-auto shadow-2xl shadow-black" />
                             <h2 className="text-2xl font-bold mt-4">{releaseTitle}</h2>
                             <p className="text-xl text-rose-400 font-semibold">{artistDisplay}</p>
@@ -191,10 +209,11 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
 
                     <section>
                         {releaseSongs.map((song, index) => {
-                            const songTitle = song.title.replace(/\s*\(feat\..*\)/i, '');
-                            const artistForSong = song.collaboration
+                            const isRevealed = release.isTracklistRevealed || (isUpcoming && labelSubmissions.find(s => s.release.id === releaseId)?.singlesToRelease?.some(s => s.songId === song.id));
+                            const songTitle = isUpcoming && !isRevealed ? `Track ${index + 1}` : song.title.replace(/\s*\(feat\..*\)/i, '');
+                            const artistForSong = isUpcoming && !isRevealed ? null : (song.collaboration
                                 ? `${activeArtist.name} & ${song.collaboration.artistName}`
-                                : null;
+                                : null);
 
                             return (
                                 <div key={song.id} className="flex items-start gap-3 py-3 border-b border-zinc-800">
@@ -318,6 +337,8 @@ const AppleMusicView: React.FC = () => {
     
     const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
 
+    const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.hasCountdownPage).map(s => s.release);
+
     const musicVideos = videos.filter(v => v.type === 'Music Video').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
 
     const singlesAndEps = availableReleases.filter(r => r.type === 'Single' || r.type === 'EP').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
@@ -426,6 +447,9 @@ const AppleMusicView: React.FC = () => {
 
                 {albums.length > 0 && (
                     <HorizontalSection title="Albums" items={albums} onSelect={handleSelectRelease} />
+                )}
+                {upcomingReleases.length > 0 && (
+                    <HorizontalSection title="Coming Soon" items={upcomingReleases} onSelect={handleSelectRelease} />
                 )}
                 {musicVideos.length > 0 && (
                      <HorizontalSection title="Music Videos" items={musicVideos} onSelect={() => {}} artistName={activeArtist.name} />

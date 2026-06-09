@@ -17,6 +17,9 @@ type S4ATab = 'Home' | 'Music' | 'Audience' | 'Profile' | 'Monetization';
 // --- NEW UPCOMING RELEASE DETAIL VIEW ---
 const S4AUpcomingReleaseDetailView: React.FC<{ submissionId: string; onBack: () => void; }> = ({ submissionId, onBack }) => {
     const { dispatch, activeArtistData } = useGame();
+    const [tracklistImageUrl, setTracklistImageUrl] = useState('');
+    const [countdownImageUrl, setCountdownImageUrl] = useState('');
+    
     if (!activeArtistData) return null;
 
     const { labelSubmissions, money } = activeArtistData;
@@ -28,13 +31,26 @@ const S4AUpcomingReleaseDetailView: React.FC<{ submissionId: string; onBack: () 
     }
 
     const release = submission.release;
-    const cost = 100000;
-    const canAfford = money >= cost;
     const isLaunched = submission.hasCountdownPage;
+    const hasEnoughListeners = activeArtistData.monthlyListeners >= 10000;
 
     const handleLaunch = () => {
-        if (canAfford && !isLaunched) {
-            dispatch({ type: 'LAUNCH_COUNTDOWN_PAGE', payload: { submissionId: submission.id, cost: cost } });
+        if (hasEnoughListeners && !isLaunched) {
+            dispatch({ type: 'LAUNCH_COUNTDOWN_PAGE', payload: { submissionId: submission.id, cost: 0 } });
+        }
+    };
+
+    const handleRevealTracklist = () => {
+        const tracktitles = submission.singlesToRelease?.map(s => {
+            const song = activeArtistData.songs.find(x => x.id === s.songId);
+            return song?.title || 'Unknown Track';
+        }) || [];
+        dispatch({ type: 'REVEAL_TRACKLIST', payload: { submissionId: submission.id, tracklistImageUrl: tracklistImageUrl || undefined, tracklist: tracktitles } });
+    };
+
+    const handleUploadCountdownImage = () => {
+        if (countdownImageUrl) {
+            dispatch({ type: 'UPLOAD_COUNTDOWN_IMAGE', payload: { submissionId: submission.id, imageUrl: countdownImageUrl } });
         }
     };
 
@@ -54,16 +70,39 @@ const S4AUpcomingReleaseDetailView: React.FC<{ submissionId: string; onBack: () 
                     <h1 className="text-3xl font-black tracking-tight">{release.title}</h1>
                     <p className="text-zinc-400 mt-1">Releasing: W{submission.projectReleaseDate!.week}, {submission.projectReleaseDate!.year}</p>
                 </div>
-                <div className="pt-8 w-full max-w-sm">
+                <div className="pt-8 w-full max-w-sm space-y-4 pb-20">
                     <button 
                         onClick={handleLaunch}
-                        disabled={isLaunched || !canAfford}
+                        disabled={isLaunched || !hasEnoughListeners}
                         className="w-full bg-blue-500 text-white font-bold p-4 rounded-lg disabled:bg-zinc-600 disabled:opacity-70 flex flex-col items-center"
                     >
-                        <span>{isLaunched ? 'Countdown Page Launched' : `Launch Countdown Page`}</span>
-                        {!isLaunched && <span className="text-sm font-normal opacity-80">(-${formatNumber(cost)})</span>}
+                        <span>{isLaunched ? 'Countdown Page Launched' : (hasEnoughListeners ? `Launch Countdown Page` : 'Requires 10K Monthly Listeners')}</span>
+                        {!isLaunched && hasEnoughListeners && <span className="text-sm font-normal opacity-80">(Free)</span>}
                     </button>
-                    {!canAfford && !isLaunched && <p className="text-red-400 text-xs mt-2">Insufficient funds</p>}
+                    {!hasEnoughListeners && !isLaunched && <p className="text-zinc-400 text-xs mt-2">Reach 10K monthly listeners to unlock countdown pages.</p>}
+                    
+                    {isLaunched && (
+                        <div className="space-y-4 pt-4 border-t border-zinc-700 text-left">
+                            <div>
+                                <h3 className="font-bold text-lg mb-2">Countdown Cover Image</h3>
+                                <div className="flex gap-2">
+                                    <input type="text" placeholder="Image URL..." className="flex-1 bg-zinc-800 p-2 rounded text-sm text-white focus:outline-none" value={countdownImageUrl} onChange={e => setCountdownImageUrl(e.target.value)} />
+                                    <button onClick={handleUploadCountdownImage} className="bg-zinc-700 px-4 py-2 rounded font-bold text-sm hover:bg-zinc-600">Set</button>
+                                </div>
+                                {release.countdownImageUrl && <p className="text-xs text-green-400 mt-1">Countdown image set.</p>}
+                            </div>
+                            {!release.isTracklistRevealed ? (
+                                <div>
+                                    <h3 className="font-bold text-lg mb-2">Reveal Tracklist</h3>
+                                    <input type="text" placeholder="Tracklist Image URL (Optional)" className="w-full bg-zinc-800 p-2 rounded mb-2 text-sm text-white focus:outline-none" value={tracklistImageUrl} onChange={e => setTracklistImageUrl(e.target.value)} />
+                                    <button onClick={handleRevealTracklist} className="w-full bg-green-600 font-bold p-2 rounded text-sm hover:bg-green-500">Reveal Tracklist</button>
+                                    <p className="text-xs text-zinc-400 mt-2">Track names will be revealed on your launch page, and Pop Base will post.</p>
+                                </div>
+                            ) : (
+                                <p className="text-green-400 font-bold p-2 bg-green-900/30 rounded border border-green-500/50 text-center">Tracklist Revealed!</p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
@@ -722,6 +761,24 @@ const S4AProfile: React.FC = () => {
                     </>
                 ) : (
                     <p className="text-xs text-zinc-500">You cannot change your stage name while signed to a label unless requested by them.</p>
+                )}
+            </div>
+            
+            <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
+                <h2 className="font-bold flex items-center gap-1">Spotify Verification {activeArtistData.isSpotifyVerified && <span className="text-blue-500 w-4 h-4 rounded-full flex items-center justify-center text-[10px] border border-blue-500">✓</span>}</h2>
+                {activeArtistData.isSpotifyVerified ? (
+                    <p className="text-sm font-semibold text-green-600">You are verified on Spotify.</p>
+                ) : (
+                    <>
+                        <p className="text-sm text-zinc-600">Get the blue checkmark. Requires at least 50k followers.</p>
+                        <button 
+                            onClick={() => dispatch({ type: 'REQUEST_SPOTIFY_VERIFICATION' })} 
+                            disabled={activeArtistData.followers < 50000} 
+                            className="bg-black text-white text-sm font-semibold px-4 py-2 rounded-full disabled:bg-zinc-400"
+                        >
+                            Request Verification
+                        </button>
+                    </>
                 )}
             </div>
             

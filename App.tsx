@@ -96,6 +96,8 @@ import TmzArticleView from './components/TmzArticleView';
 import RiaaView from './components/RiaaView';
 import AttendEventView from './components/AttendEventView';
 
+import { ChartPredictionsView } from './components/ChartPredictionsView';
+
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
     const { careerMode, currentView } = gameState;
@@ -143,6 +145,8 @@ const AppContent: React.FC = () => {
                 return <YouTubeStudioView />;
             case 'inbox':
                 return <InboxView />;
+            case 'chartPredictions':
+                return <ChartPredictionsView />;
             case 'catalog':
                 return <CatalogView />;
             case 'promote':
