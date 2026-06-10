@@ -102,32 +102,51 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
             </div>
 
             <div className={`overflow-hidden transition-all duration-300 ease-in-out bg-[#f4f4f4] ${expanded ? 'max-h-40 opacity-100 py-3' : 'max-h-0 opacity-0'}`}>
-                <div className="flex px-4 items-center justify-around">
-                    <div className="text-center">
-                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">SALES</p>
-                        <p className="text-lg font-black text-black">{digitalSales > 0 ? formatNumber(Math.floor(digitalSales)) : 'N/A'}</p>
+                {isAlbumChart ? (
+                    <div className="flex px-4 items-center justify-around">
+                        <div className="text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">PURE SALES</p>
+                            <p className="text-lg font-black text-black">{entry.weeklyPureSales || entry.weeklySales > 0 ? formatNumber(Math.floor(entry.weeklyPureSales || entry.weeklySales)) : '0'}</p>
+                        </div>
+                        <div className="w-px h-8 bg-zinc-300"></div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMING EQUIVALENT (SES)</p>
+                            <p className="text-lg font-black text-black">{formatNumber(entry.weeklySES || 0)}</p>
+                        </div>
+                        <div className="w-px h-8 bg-zinc-300"></div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">TOTAL SPS</p>
+                            <p className="text-lg font-black text-black">{formatNumber(entry.weeklyActivity || 0)}</p>
+                        </div>
                     </div>
-                    <div className="w-px h-8 bg-zinc-300"></div>
-                    <div className="text-center">
-                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
-                        <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
+                ) : (
+                    <div className="flex px-4 items-center justify-around">
+                        <div className="text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">SALES</p>
+                            <p className="text-lg font-black text-black">{digitalSales > 0 ? formatNumber(Math.floor(digitalSales)) : 'N/A'}</p>
+                        </div>
+                        <div className="w-px h-8 bg-zinc-300"></div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
+                            <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
+                        </div>
+                        <div className="w-px h-8 bg-zinc-300"></div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMS</p>
+                            <p className="text-lg font-black text-black">{formatNumber(weeklyStreams || 0)}</p>
+                        </div>
                     </div>
-                    <div className="w-px h-8 bg-zinc-300"></div>
-                    <div className="text-center">
-                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMS</p>
-                        <p className="text-lg font-black text-black">{formatNumber(weeklyStreams || 0)}</p>
-                    </div>
-                </div>
+                )}
             </div>
         </div>
     );
 };
 
-type SubChart = 'hot100' | 'topAlbums' | 'hotPop' | 'hotRap' | 'electronic' | 'country' | 'spotify';
+type SubChart = 'hot100' | 'bubblingUnder' | 'topAlbums' | 'hotPop' | 'hotRap' | 'electronic' | 'country' | 'spotify';
 
 const BillboardView: React.FC = () => {
     const { gameState, dispatch } = useGame();
-    const { billboardHot100, billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart, spotifyGlobal = [], date } = gameState;
+    const { billboardHot100, billboardBubblingUnder25, billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart, spotifyGlobal = [], date } = gameState;
     const [selectedChart, setSelectedChart] = useState<SubChart>('hot100');
     const [showSelector, setShowSelector] = useState(false);
 
@@ -140,7 +159,8 @@ const BillboardView: React.FC = () => {
 
     const chartsData: Record<SubChart, { title: string, data: ChartEntry[], isAlbum?: boolean }> = {
         hot100: { title: 'BILLBOARD HOT 100™', data: billboardHot100 },
-        topAlbums: { title: 'BILLBOARD 200™', data: billboardTopAlbums, isAlbum: true },
+        bubblingUnder: { title: 'BUBBLING UNDER HOT 100™', data: billboardBubblingUnder25 || [] },
+        topAlbums: { title: 'BILLBOARD 200™', data: billboardTopAlbums as any, isAlbum: true },
         hotPop: { title: 'HOT POP SONGS™', data: hotPopSongs },
         hotRap: { title: 'HOT RAP & R&B SONGS™', data: hotRapRnb },
         electronic: { title: 'HOT DANCE/ELECTRONIC SONGS™', data: electronicChart },

@@ -2189,20 +2189,36 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 
                 let merchIncome = 0;
                 if (artistData.youtubeStoreUnlocked) {
-                    artistData.merch.forEach(item => {
+                    artistData.merch = artistData.merch.map(item => {
                         let weeklySales = Math.floor((artistData.youtubeSubscribers / 50000) * popularityMultiplier * (Math.random() * 5 + 1));
+                        
+                        // Scale demand by price (higher price = lower demand)
+                        const recommendedPrice = item.type === 'Vinyl' ? 39.98 : 12.98;
+                        if (item.price > recommendedPrice) {
+                            weeklySales = Math.floor(weeklySales * (recommendedPrice / item.price));
+                        }
+
                         if (artistData.redMicPro.unlocked && artistData.salesBoost > 0) {
                             weeklySales = Math.floor(weeklySales * (1 + artistData.salesBoost / 100));
                         }
 
+                        // Cap sales to available stock
+                        const actualSales = Math.min(weeklySales, item.stock);
+
                         if (item.isPreorder) {
                             const sub = artistData.labelSubmissions.find(s => s.release.id === item.releaseId);
                             if (sub) {
-                                sub.preorderSales = (sub.preorderSales || 0) + weeklySales;
+                                sub.preorderSales = (sub.preorderSales || 0) + actualSales;
                             }
                         }
 
-                        merchIncome += weeklySales * item.price;
+                        merchIncome += actualSales * item.price;
+                        
+                        return {
+                            ...item,
+                            stock: item.stock - actualSales,
+                            unitsSold: (item.unitsSold || 0) + actualSales
+                        };
                     });
                 }
                 
@@ -3676,6 +3692,32 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             const artistsWithFirstChartEntry = new Set<string>();
 
+            const newBubblingUnderHistory = { ...(state.bubblingUnderHistory || {}) };
+            const newBillboardBubblingUnder25: ChartEntry[] = [];
+            const prevBubblingMap = new Map((state.billboardBubblingUnder25 || []).map(entry => [entry.uniqueId, entry]));
+
+            let bubblingCount = 0;
+            for (let i = 100; i < eligibleBillboardContenders.length && bubblingCount < 25; i++) {
+                const song = eligibleBillboardContenders[i];
+                if (newChartHistory[song.uniqueId]) continue; // Has chart history from Hot 100 before
+
+                const weeksBubbling = (newBubblingUnderHistory[song.uniqueId] || 0) + 1;
+                if (weeksBubbling > 10) continue; // max stay 10 weeks
+                
+                newBubblingUnderHistory[song.uniqueId] = weeksBubbling;
+                const prevEntry = prevBubblingMap.get(song.uniqueId);
+                const rank = bubblingCount + 1;
+
+                newBillboardBubblingUnder25.push({
+                    rank: rank, lastWeek: prevEntry?.rank ?? null, peak: rank, // peak isn't really tracked, we'll just put current rank
+                    weeksOnChart: weeksBubbling, title: song.title, artist: song.artist,
+                    coverArt: song.coverArt, isPlayerSong: song.isPlayerSong, songId: song.songId,
+                    uniqueId: song.uniqueId, weeklyStreams: song.weeklyStreams,
+                    digitalSales: song.digitalSales, radioPlays: song.radioPlays, radioImpressions: song.radioImpressions
+                });
+                bubblingCount++;
+            }
+
             for (const entry of newBillboardHot100) {
                 if (entry.isPlayerSong && entry.songId) {
                     const song = allPlayerSongsFlat.find(s => s.id === entry.songId);
@@ -3854,7 +3896,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         totalWeeklySales += (release.preorderSales || 0);
                     }
 
-                    const weeklyActivity = Math.floor(totalWeeklyStreams / 1500) + totalWeeklySales;
+                    const weeklySES = Math.floor(totalWeeklyStreams / 1500);
+                    const weeklyActivity = weeklySES + totalWeeklySales;
                     const labelName = release.releasingLabel ? release.releasingLabel.name : 'Independent';
 
                     return {
@@ -3867,6 +3910,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         albumId: release.id,
                         weeklyActivity,
                         weeklySales: totalWeeklySales,
+                        weeklySES,
+                        weeklyPureSales: totalWeeklySales,
                     };
                 });
 
@@ -3897,6 +3942,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     albumId: album.uniqueId,
                     weeklyActivity,
                     weeklySales,
+                    weeklySES: streamActivity,
+                    weeklyPureSales: weeklySales,
                 };
             });
 
@@ -3938,6 +3985,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     uniqueId: album.uniqueId,
                     weeklyActivity: album.weeklyActivity,
                     weeklySales: album.weeklySales,
+                    weeklySES: album.weeklySES,
+                    weeklyPureSales: album.weeklyPureSales,
                 });
             });
 
@@ -4939,6 +4988,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     artistsData: updatedArtistsData,
                     spotifyPlaylists: newSpotifyPlaylists,
                     billboardHot100: newBillboardHot100,
+                    billboardBubblingUnder25: newBillboardBubblingUnder25,
+                    bubblingUnderHistory: newBubblingUnderHistory,
                     billboardTopAlbums: newBillboardTopAlbums,
                     chartHistory: newChartHistory,
                     albumChartHistory: newAlbumChartHistory,
@@ -4984,6 +5035,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistsData: updatedArtistsData,
                 spotifyPlaylists: newSpotifyPlaylists,
                 billboardHot100: newBillboardHot100,
+                billboardBubblingUnder25: newBillboardBubblingUnder25,
+                bubblingUnderHistory: newBubblingUnderHistory,
                 billboardTopAlbums: newBillboardTopAlbums,
                 chartHistory: newChartHistory,
                 albumChartHistory: newAlbumChartHistory,
@@ -5423,7 +5476,43 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     ...state.artistsData,
                     [state.activeArtistId]: {
                         ...activeData,
+                        money: activeData.money - (action.payload.cost || 0),
                         merch: [...activeData.merch, action.payload.item]
+                    }
+                }
+            };
+        }
+        case 'RESTOCK_MERCH': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedMerch = activeData.merch.map(m => 
+                m.id === action.payload.id ? { ...m, stock: m.stock + action.payload.amount } : m
+            );
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money - (action.payload.cost || 0),
+                        merch: updatedMerch
+                    }
+                }
+            };
+        }
+        case 'UPDATE_MERCH_PRICE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedMerch = activeData.merch.map(m => 
+                m.id === action.payload.id ? { ...m, price: action.payload.price } : m
+            );
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        merch: updatedMerch
                     }
                 }
             };

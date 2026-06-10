@@ -168,6 +168,8 @@ export interface MerchProduct {
     name: string;
     type: 'Vinyl' | 'CD';
     price: number;
+    stock: number;
+    unitsSold?: number;
     isPreorder?: boolean;
     image: string;
     artistId: string;
@@ -499,6 +501,8 @@ export interface AlbumChartEntry {
     uniqueId: string;
     weeklyActivity: number;
     weeklySales: number;
+    weeklySES?: number;
+    weeklyPureSales?: number;
 }
 
 
@@ -1108,6 +1112,8 @@ export interface GameState {
     npcImages?: Record<string, string>;
     soundtrackAlbums: SoundtrackAlbum[];
     billboardHot100: ChartEntry[];
+    billboardBubblingUnder25?: ChartEntry[];
+    bubblingUnderHistory?: { [uniqueId: string]: number };
     billboardTopAlbums: AlbumChartEntry[];
     albumChartHistory: ChartHistory;
     chartHistory: ChartHistory;
@@ -1216,7 +1222,9 @@ export type GameAction =
     | { type: 'RELEASE_PROJECT'; payload: { release: Release } }
     | { type: 'ADD_REVIEW'; payload: { releaseId: string; review: Review; cost: number; artistId: string; } }
     | { type: 'CREATE_VIDEO'; payload: { video: Video; cost: number } }
-    | { type: 'ADD_MERCH'; payload: { item: MerchProduct } }
+    | { type: 'ADD_MERCH'; payload: { item: MerchProduct, cost?: number } }
+    | { type: 'RESTOCK_MERCH'; payload: { id: string, amount: number, cost?: number } }
+    | { type: 'UPDATE_MERCH_PRICE'; payload: { id: string, price: number } }
     | { type: 'REMOVE_MERCH'; payload: { id: string } }
     | { type: 'UPDATE_MERCH_BANNER'; payload: string }
     | { type: 'UPDATE_GRAMMY_BANNER'; payload: string }
