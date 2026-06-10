@@ -4,6 +4,7 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import type { Song, ChartEntry } from '../types';
+import { LABELS } from '../constants';
 
 export const ChartPredictionsView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, allPlayerArtists } = useGame();
@@ -25,11 +26,99 @@ export const ChartPredictionsView: React.FC = () => {
         for (const artistId in gameState.artistsData) {
             const aData = gameState.artistsData[artistId];
             const artist = allPlayerArtists.find(a => a.id === artistId);
-            aData.songs.filter(s => s.isReleased).forEach(song => {
+            
+            let labelMultiplier = 1;
+            if (aData.contract) {
+                if (aData.contract.isCustom) {
+                    const label = gameState.customLabels?.find(l => l.id === aData.contract!.labelId);
+                    if (label) {
+                        labelMultiplier = label.promotionMultiplier || 1;
+                        if (label.exclusiveLicenseId) {
+                            const exclusiveLabel = LABELS.find(l => l.id === label.exclusiveLicenseId);
+                            if (exclusiveLabel) labelMultiplier = Math.max(labelMultiplier, exclusiveLabel.promotionMultiplier || 1);
+                        }
+                    }
+                } else {
+                    const label = LABELS.find(l => l.id === aData.contract!.labelId);
+                    if (label) labelMultiplier = label.promotionMultiplier || 1;
+                }
+            }
+
+            const hypeMultiplier = Math.max(1, (aData.hype || 0) / 10 + 1);
+            const popularityMultiplier = Math.max(1, (aData.popularity || 0) / 10 + 1);
+            
+            const difficulty = gameState.difficultyMode || 'normal';
+            let diffMultiplier = 1;
+            if (difficulty === 'easy') diffMultiplier = 2.0;
+            else if (difficulty === 'hard') diffMultiplier = 0.6;
+            else if (difficulty === 'extreme') diffMultiplier = 0.3;
+
+            aData.songs.filter(s => s.isReleased && !s.remixOfSongId && !s.isTakenDown).forEach(song => {
+                const simulateStreams = (s: typeof song) => {
+                    const baseStreams = (s.quality ** 2) * 50;
+                    let streams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * diffMultiplier * 1.0);  // avg random
+                    
+                    let releaseDate = s.releaseDate;
+                    if (!releaseDate && s.releaseId) {
+                        const release = aData.releases.find(r => r.id === s.releaseId);
+                        if (release) releaseDate = release.releaseDate;
+                    }
+
+                    if (releaseDate) {
+                        let decayIntensity = 0.15;
+                        if (difficulty === 'easy') decayIntensity = 0;
+                        else if (difficulty === 'hard') decayIntensity = 0.25;
+                        else if (difficulty === 'extreme') decayIntensity = 0.4;
+
+                        if (decayIntensity > 0) {
+                            const ageInWeeks = Math.max(0, (gameState.date.year - releaseDate.year) * 52 + (gameState.date.week - releaseDate.week));
+                            const maxAge = Math.min(ageInWeeks, 156);
+                            const decayFactor = 1 / (1 + decayIntensity * maxAge);
+                            streams = Math.floor(streams * decayFactor);
+                        }
+                    }
+
+                    if (s.genre === 'Christmas') {
+                        const week = gameState.date.week;
+                        if (week >= 50) streams *= 17;
+                        else if (week >= 45) streams *= 10;
+                        else if (week >= 41) streams *= 2;
+                        else streams *= 0.15;
+                    }
+
+                    if (s.pitchforkBoost) streams *= 3;
+                    
+                    let playlistStreams = 0;
+                    const spotifyPlaylists = gameState.spotifyPlaylists || [];
+                    spotifyPlaylists.forEach(playlist => {
+                        const trackIndex = playlist.tracks.findIndex(t => t.songId === s.id);
+                        if (trackIndex !== -1) {
+                            const percentage = Math.max(0.001, 0.03 - (trackIndex * 0.0006));
+                            playlistStreams += Math.floor((playlist.followers || 10000) * percentage);
+                        }
+                    });
+                    streams += playlistStreams;
+
+                    const songPromo = aData.promotions.find(p => p.itemId === s.id && p.itemType === 'song');
+                    if (songPromo) streams = Math.floor(streams * songPromo.boostMultiplier);
+                    
+                    if (typeof s.promoBoostWeeks === 'number' && s.promoBoostWeeks > 0) {
+                        streams = Math.floor(streams * 1.10);
+                    }
+                    return streams;
+                };
+
+                let totalWeeklyStreams = simulateStreams(song);
+                
+                const remixes = aData.songs.filter(r => r.isReleased && r.remixOfSongId === song.id && !r.isTakenDown);
+                remixes.forEach(remix => {
+                    totalWeeklyStreams += simulateStreams(remix);
+                });
+
                 allContenders.push({
                     title: song.title,
                     artist: artist?.name || song.npcArtistName || 'Unknown',
-                    weeklyStreams: song.lastWeekStreams || Math.floor(Math.random() * 100),
+                    weeklyStreams: totalWeeklyStreams,
                     coverArt: song.coverArt,
                     isPlayerSong: true,
                     uniqueId: song.id,
@@ -40,7 +129,7 @@ export const ChartPredictionsView: React.FC = () => {
         // NPCs
         gameState.npcs.forEach(npc => {
             const decay = Math.pow(0.85, npc.weeksSincePeak || 0);
-            const weeklyStreams = Math.floor(npc.basePopularity * decay * (Math.random() * 0.4 + 0.8));
+            const weeklyStreams = Math.floor(npc.basePopularity * decay * 1.0);
             allContenders.push({
                 title: npc.title,
                 artist: npc.artist,
@@ -56,44 +145,52 @@ export const ChartPredictionsView: React.FC = () => {
             const hash = song.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const divisor = 750 + (hash % 250);
             let boost = 1;
+            let additionalItunesSales = 0;
+            let currentRadioPlays = 0;
 
             if (song.isPlayerSong) {
-                // Approximate iTunes versions etc
                 for (const artistId in gameState.artistsData) {
                     const aData = gameState.artistsData[artistId];
                     const s = aData.songs.find(x => x.id === song.uniqueId);
                     if (s) {
+                        currentRadioPlays = s.radioPlays || 0;
                         const currentWeek = gameState.date.year * 52 + gameState.date.week;
                         const pushWeek = aData.lastPushToItunesWeek;
                         if (aData.lastPushedSongId === song.uniqueId && pushWeek && currentWeek - pushWeek <= 1) {
-                            boost += 4;
+                            boost = 7.5; // Prediction avg for 5 + Math.random() * 5
                         }
                         
                         if (s.itunesPrice === '$0.69') boost *= 2.5;
                         else if (s.itunesPrice === '$0.99') boost *= 1.5;
                         else if (s.itunesPrice === '$1.29') boost *= 0.9;
                         
-                        // Promotion
-                        if (s.promoBoostWeeks > 0) boost *= 1.15;
-                        if (s.playlistBoostWeeks > 0) boost *= 1.1;
-
                         if (s.itunesVersions) {
-                            boost *= (1 + s.itunesVersions.length * 0.2); // heuristic proxy for prediction
+                            s.itunesVersions.forEach(iv => {
+                                const verBoost = boost * 1.05; // prediction avg
+                                let vSales = Math.floor((song.weeklyStreams / divisor) * verBoost * 0.8);
+                                if (vSales === 0 && song.weeklyStreams > 1000) vSales = 35; // prediction avg
+                                additionalItunesSales += vSales;
+                            });
                         }
+                        break;
                     }
                 }
+            } else {
+                currentRadioPlays = Math.floor(song.weeklyStreams * 0.005);
             }
 
-            const sales = Math.floor(song.weeklyStreams / divisor) * boost;
+            const sales = Math.floor(song.weeklyStreams / divisor) * boost + additionalItunesSales;
             const streamPoints = song.weeklyStreams * 0.5;
             const salesPoints = sales * 150 * 0.2;
-            const radioPoints = (song.weeklyStreams * 0.005) * 80 * 0.3; 
+            const radioPoints = currentRadioPlays * 80 * 0.3; 
             const points = streamPoints + salesPoints + radioPoints;
             
             return {
                 ...song,
                 points: Math.floor(points),
                 pointsDiff: Math.floor(points * (Math.random() * 0.1 - 0.05)), // small +/- var
+                sales: sales,
+                radioPlays: currentRadioPlays,
             };
         });
 
@@ -154,8 +251,9 @@ export const ChartPredictionsView: React.FC = () => {
                                 <th className="py-3 px-2 text-center w-8">Rank</th>
                                 <th className="py-3 px-2 text-center w-10">+/-</th>
                                 <th className="py-3 px-2 text-left">Song</th>
-                                <th className="py-3 px-2 text-right">Points</th>
-                                <th className="py-3 px-2 text-center">%</th>
+                                <th className="py-3 px-2 text-right">Sales</th>
+                                <th className="py-3 px-2 text-right">Streams</th>
+                                <th className="py-3 px-2 text-right">Radio</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -165,22 +263,25 @@ export const ChartPredictionsView: React.FC = () => {
                                 let diffStr: React.ReactNode = <span className="text-black font-bold">=</span>;
                                 let diffColor = 'bg-transparent';
                                 if (lastRank === null) {
-                                    diffStr = <span className="text-cyan-500 font-bold">NEW</span>;
-                                    diffColor = 'bg-cyan-50';
+                                    diffStr = <span className="text-zinc-500 font-bold">NEW</span>;
+                                    diffColor = 'bg-zinc-100/50';
                                 } else if (rank < lastRank) {
-                                    diffStr = <span className="text-green-600 font-bold">+{lastRank - rank}</span>;
-                                    diffColor = 'bg-green-100';
+                                    const jump = lastRank - rank;
+                                    diffStr = <span className="text-green-600 font-bold">+{jump}</span>;
+                                    if (jump >= 20) diffColor = 'bg-green-400/50';
+                                    else if (jump >= 10) diffColor = 'bg-green-300/40';
+                                    else diffColor = 'bg-green-200/30';
                                 } else if (rank > lastRank) {
-                                    diffStr = <span className="text-red-500 font-bold">-{rank - lastRank}</span>;
-                                    diffColor = 'bg-red-100';
+                                    const drop = rank - lastRank;
+                                    diffStr = <span className="text-red-500 font-bold">-{drop}</span>;
+                                    if (drop >= 20) diffColor = 'bg-red-400/50';
+                                    else if (drop >= 10) diffColor = 'bg-red-300/40';
+                                    else diffColor = 'bg-red-200/30';
                                 }
 
-                                const percentChangeRowBgStr = (p.pointsDiff < -1000) ? 'bg-red-300' : (p.pointsDiff > 1000 ? 'bg-green-100' : 'bg-transparent');
-                                const displayDiffNum = (p.pointsDiff / p.points * 100).toFixed(0);
-
                                 return (
-                                    <tr key={p.uniqueId} className={`border-b border-zinc-200/50 ${diffColor} bg-opacity-30`}>
-                                        <td className="py-2 px-2 text-center font-bold">{rank}</td>
+                                    <tr key={p.uniqueId} className={`border-b border-zinc-200/50 ${diffColor}`}>
+                                        <td className="py-2 px-2 text-center font-bold text-zinc-900">{rank}</td>
                                         <td className="py-2 px-2 text-center text-xs">{diffStr}</td>
                                         <td className="py-2 px-2">
                                             <div className="flex items-center gap-3">
@@ -191,10 +292,9 @@ export const ChartPredictionsView: React.FC = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-2 px-2 text-right font-black">{formatNumber(Math.floor(p.points / 1500))}</td>
-                                        <td className={`py-2 px-2 text-center text-xs w-12 font-bold ${percentChangeRowBgStr}`}>
-                                            {displayDiffNum === '0' ? '--' : `${displayDiffNum}%`}
-                                        </td>
+                                        <td className="py-2 px-2 text-right font-semibold text-zinc-800 bg-yellow-100/40">{formatNumber(Math.floor(p.sales))}</td>
+                                        <td className="py-2 px-2 text-right font-semibold text-zinc-800 bg-green-100/40">{formatNumber(Math.floor(p.weeklyStreams))}</td>
+                                        <td className="py-2 px-2 text-right font-semibold text-zinc-800 bg-blue-100/40">{formatNumber(Math.floor(p.radioPlays))}</td>
                                     </tr>
                                 );
                             })}
