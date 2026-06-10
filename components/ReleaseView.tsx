@@ -42,10 +42,6 @@ const ReleaseView: React.FC = () => {
             }
         });
 
-        if (releaseType === 'Album (Deluxe)') {
-            return songs.filter(s => !s.isReleased);
-        }
-
         if (releaseType === 'Compilation') {
             return songs.filter(s => s.isReleased);
         }
