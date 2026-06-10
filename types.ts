@@ -170,6 +170,7 @@ export interface MerchProduct {
     price: number;
     stock: number;
     unitsSold?: number;
+    _actualWeeklySales?: number;
     isPreorder?: boolean;
     image: string;
     artistId: string;

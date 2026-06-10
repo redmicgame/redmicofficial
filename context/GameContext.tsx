@@ -2217,7 +2217,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         return {
                             ...item,
                             stock: item.stock - actualSales,
-                            unitsSold: (item.unitsSold || 0) + actualSales
+                            unitsSold: (item.unitsSold || 0) + actualSales,
+                            _actualWeeklySales: actualSales
                         };
                     });
                 }
@@ -3887,8 +3888,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                     const albumMerch = artistData.merch.filter(m => m.releaseId === release.id);
                     let totalWeeklySales = albumMerch.reduce((sum, item) => {
-                        const weeklySales = artistData.youtubeStoreUnlocked ? Math.floor((artistData.youtubeSubscribers / 50000) * (Math.random() * 5 + 1)) : 0;
-                        return sum + weeklySales;
+                        return sum + (item._actualWeeklySales || 0);
                     }, 0);
 
                     // Inject accumulated preorder sales on the first charting week
