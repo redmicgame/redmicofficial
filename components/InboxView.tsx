@@ -540,6 +540,7 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
 const InboxView: React.FC = () => {
     const { dispatch, activeArtist, activeArtistData } = useGame();
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     if (!activeArtist || !activeArtistData) return null;
     const { inbox } = activeArtistData;
@@ -550,13 +551,23 @@ const InboxView: React.FC = () => {
         }
     }, [dispatch, selectedEmail]);
 
-    const sortedInbox = useMemo(() => {
-        return [...inbox].filter(e => e != null).sort((a, b) => {
+    const filteredInbox = useMemo(() => {
+        const query = searchQuery.toLowerCase();
+        let list = inbox.filter(e => e != null);
+        if (query) {
+            list = list.filter(e => 
+                e.subject?.toLowerCase().includes(query) || 
+                e.sender?.toLowerCase().includes(query) || 
+                e.body?.toLowerCase().includes(query) ||
+                e.content?.toLowerCase().includes(query)
+            );
+        }
+        return list.sort((a, b) => {
             const dateA = a.date || { year: 1, week: 1 };
             const dateB = b.date || { year: 1, week: 1 };
             return (dateB.year * 52 + dateB.week) - (dateA.year * 52 + dateA.week);
         });
-    }, [inbox]);
+    }, [inbox, searchQuery]);
 
     if (selectedEmail) {
         return <EmailDetailView email={selectedEmail} onBack={() => setSelectedEmail(null)} />;
@@ -570,19 +581,27 @@ const InboxView: React.FC = () => {
                         <MenuIcon className="w-6 h-6" />
                     </button>
                     <div className="flex-grow bg-zinc-700/80 rounded-full h-12 flex items-center px-4">
-                        <span className="text-zinc-400">Search in mail</span>
+                        <input
+                            type="text"
+                            placeholder="Search in mail"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-transparent text-white outline-none w-full placeholder:text-zinc-400"
+                        />
                     </div>
                     <img src={activeArtist.image} alt={activeArtist.name} className="w-10 h-10 rounded-full object-cover" />
                 </div>
             </header>
             <main className="flex-grow overflow-y-auto">
                 <h1 className="px-4 py-2 text-xs font-semibold uppercase text-zinc-400">Primary</h1>
-                {sortedInbox.length > 0 ? (
+                {filteredInbox.length > 0 ? (
                     <div>
-                        {sortedInbox.map(email => <EmailItem key={email.id} email={email} onClick={() => setSelectedEmail(email)} />)}
+                        {filteredInbox.map(email => <EmailItem key={email.id} email={email} onClick={() => setSelectedEmail(email)} />)}
                     </div>
                 ) : (
-                    <p className="text-center text-zinc-500 p-8">Your inbox is empty.</p>
+                    <p className="text-center text-zinc-500 p-8">
+                        {searchQuery ? 'No emails match your search.' : 'Your inbox is empty.'}
+                    </p>
                 )}
             </main>
         </div>
