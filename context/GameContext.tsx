@@ -661,22 +661,34 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             const fanAvatars = [
                 'https://i.imgur.com/3Y3j3jQ.png', 'https://i.imgur.com/O6G2e1E.png', 'https://i.imgur.com/sW12a89.png',
-                'https://i.imgur.com/pBw2r70.png', 'https://i.imgur.com/c2802k5.png', 'https://i.imgur.com/vHqX3ch.png'
+                'https://i.imgur.com/pBw2r70.png', 'https://i.imgur.com/c2802k5.png', 'https://i.imgur.com/vHqX3ch.png',
+                'https://i.imgur.com/0P6UOf3.jpeg', 'https://i.imgur.com/6J7oO1b.jpeg', 'https://i.imgur.com/M6XZ0vS.jpeg', 
+                'https://i.imgur.com/H1G58Qf.jpeg', 'https://i.imgur.com/h5T9hZ8.jpeg', 'https://i.imgur.com/G5qE6sR.jpeg'
             ];
-            const fanUsernames = ['StarlightStan', 'PopCultureGuru', 'MusicLover_99', 'LyricLooker', 'ConcertCraver', 'FanAccount_01'];
 
-            const fanUsers: XUser[] = Array.from({ length: 6 }, (_, i) => ({
+            const fanUsers: XUser[] = Array.from({ length: 25 }, (_, i) => ({
                 id: `fan${i + 1}`,
-                name: fanUsernames[i],
-                username: fanUsernames[i].toLowerCase(),
-                avatar: fanAvatars[i],
+                name: `FanAccount_${i + 1}`,
+                username: `stan_${artist.name.replace(/\s/g, '').toLowerCase()}_${i + 1}`,
+                avatar: fanAvatars[i % fanAvatars.length],
                 isVerified: false,
                 bio: `part of the ${artist.fandomName}!`,
                 followersCount: Math.floor(Math.random() * (1500 - 500 + 1)) + 500,
                 followingCount: Math.floor(Math.random() * (500 - 50 + 1)) + 50,
             }));
 
-            const initialXUsers: XUser[] = [playerXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers];
+            const haterUsers: XUser[] = Array.from({ length: 15 }, (_, i) => ({
+                id: `hater_initial_${i + 1}`,
+                name: `Anon${i + 1}`,
+                username: `hater_anon_${i + 1}`,
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==',
+                isVerified: false,
+                bio: 'just speaking facts',
+                followersCount: Math.floor(Math.random() * 200),
+                followingCount: Math.floor(Math.random() * 20),
+            }));
+
+            const initialXUsers: XUser[] = [playerXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers, ...haterUsers];
             
             const initialXPosts: XPost[] = [{
                 id: crypto.randomUUID(), authorId: 'popbase', content: `Welcome to the industry, ${artist.name}! All eyes are on you.`,
@@ -816,7 +828,37 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 followersCount: Math.floor(Math.random() * 100000) + 40000,
                 followingCount: 1,
             };
-            const initialXUsers: XUser[] = [playerXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser];
+
+            const fanAvatars = [
+                'https://i.imgur.com/3Y3j3jQ.png', 'https://i.imgur.com/O6G2e1E.png', 'https://i.imgur.com/sW12a89.png',
+                'https://i.imgur.com/pBw2r70.png', 'https://i.imgur.com/c2802k5.png', 'https://i.imgur.com/vHqX3ch.png',
+                'https://i.imgur.com/0P6UOf3.jpeg', 'https://i.imgur.com/6J7oO1b.jpeg', 'https://i.imgur.com/M6XZ0vS.jpeg', 
+                'https://i.imgur.com/H1G58Qf.jpeg', 'https://i.imgur.com/h5T9hZ8.jpeg', 'https://i.imgur.com/G5qE6sR.jpeg'
+            ];
+
+            const fanUsers: XUser[] = Array.from({ length: 25 }, (_, i) => ({
+                id: `fan${i + 1}`,
+                name: `FanAccount_${i + 1}`,
+                username: `stan_${group.name.replace(/\s/g, '').toLowerCase()}_${i + 1}`,
+                avatar: fanAvatars[i % fanAvatars.length],
+                isVerified: false,
+                bio: `part of the ${group.fandomName}!`,
+                followersCount: Math.floor(Math.random() * (1500 - 500 + 1)) + 500,
+                followingCount: Math.floor(Math.random() * (500 - 50 + 1)) + 50,
+            }));
+
+            const haterUsers: XUser[] = Array.from({ length: 15 }, (_, i) => ({
+                id: `hater_initial_${i + 1}`,
+                name: `Anon${i + 1}`,
+                username: `hater_anon_${i + 1}`,
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==',
+                isVerified: false,
+                bio: 'just speaking facts',
+                followersCount: Math.floor(Math.random() * 200),
+                followingCount: Math.floor(Math.random() * 20),
+            }));
+
+            const initialXUsers: XUser[] = [playerXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser, statsFanUser, ...fanUsers, ...haterUsers];
             const initialXPosts: XPost[] = [{
                 id: crypto.randomUUID(), authorId: 'popbase', content: `The industry is buzzing about the debut of ${group.name}!`,
                 likes: 2500, retweets: 800, views: 52000, date: startDate,
@@ -9840,23 +9882,54 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 image: activeArtistProfile?.image || 'https://images.unsplash.com/photo-1516280440502-6c2e39194e80',
             };
 
+            const playerXUser: XUser = {
+                id: 'user',
+                name: newKidArtist.name,
+                username: newKidArtist.name.replace(/\s+/g, '').toLowerCase(),
+                avatar: newKidArtist.image,
+                isVerified: false,
+                bio: 'Official account.',
+                followersCount: 0,
+                followingCount: 0,
+                isPlayer: true
+            };
+
+            const fanAvatars = [
+                'https://i.imgur.com/3Y3j3jQ.png', 'https://i.imgur.com/O6G2e1E.png', 'https://i.imgur.com/sW12a89.png',
+                'https://i.imgur.com/pBw2r70.png', 'https://i.imgur.com/c2802k5.png', 'https://i.imgur.com/vHqX3ch.png',
+                'https://i.imgur.com/0P6UOf3.jpeg', 'https://i.imgur.com/6J7oO1b.jpeg', 'https://i.imgur.com/M6XZ0vS.jpeg', 
+                'https://i.imgur.com/H1G58Qf.jpeg', 'https://i.imgur.com/h5T9hZ8.jpeg', 'https://i.imgur.com/G5qE6sR.jpeg'
+            ];
+
+            const fanUsers: XUser[] = Array.from({ length: 25 }, (_, i) => ({
+                id: `fan${i + 1}`,
+                name: `FanAccount_${i + 1}`,
+                username: `stan_${newKidArtist.name.replace(/\s/g, '').toLowerCase()}_${i + 1}`,
+                avatar: fanAvatars[i % fanAvatars.length],
+                isVerified: false,
+                bio: `stan account!`,
+                followersCount: Math.floor(Math.random() * (1500 - 500 + 1)) + 500,
+                followingCount: Math.floor(Math.random() * (500 - 50 + 1)) + 50,
+            }));
+
+            const haterUsers: XUser[] = Array.from({ length: 15 }, (_, i) => ({
+                id: `hater_initial_${i + 1}`,
+                name: `Anon${i + 1}`,
+                username: `hater_anon_${i + 1}`,
+                avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==',
+                isVerified: false,
+                bio: 'just speaking facts',
+                followersCount: Math.floor(Math.random() * 200),
+                followingCount: Math.floor(Math.random() * 20),
+            }));
+
             const newKidArtistData: ArtistData = {
                 ...initialArtistData,
                 id: newKidArtistId,
                 money: 0,
                 hype: 0,
                 popularity: 0,
-                xUsers: [{
-                    id: 'user',
-                    name: newKidArtist.name,
-                    username: newKidArtist.name.replace(/\s+/g, '').toLowerCase(),
-                    avatar: newKidArtist.image,
-                    isVerified: false,
-                    bio: 'Official account.',
-                    followersCount: 0,
-                    followingCount: 0,
-                    isPlayer: true
-                }],
+                xUsers: [playerXUser, ...fanUsers, ...haterUsers],
             };
 
             return {

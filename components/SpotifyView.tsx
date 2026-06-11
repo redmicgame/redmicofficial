@@ -193,18 +193,27 @@ const SpotifyView: React.FC = () => {
         });
 
         const latestRelease = releasesWithStreams.reduce((latest, current) => {
-            const latestDate = latest.releaseDate.year * 52 + latest.releaseDate.week;
-            const currentDate = current.releaseDate.year * 52 + current.releaseDate.week;
+            const latestDate = latest.releaseDate ? latest.releaseDate.year * 52 + latest.releaseDate.week : 0;
+            const currentDate = current.releaseDate ? current.releaseDate.year * 52 + current.releaseDate.week : 0;
             return currentDate > latestDate ? current : latest;
         });
 
-        const otherReleases = releasesWithStreams
-            .filter(r => r.id !== latestRelease.id)
-            .sort((a, b) => b.totalStreams - a.totalStreams);
-        
-        const sortedPopularReleases = [latestRelease, ...otherReleases].slice(0, 4);
+        const toTotalWeeks = (d: GameDate | undefined) => d ? d.year * 52 + d.week : 0;
+        const nowTotalWeeks = toTotalWeeks(date);
+        const latestReleaseWeeks = toTotalWeeks(latestRelease.releaseDate);
+        const isLatestRecent = (nowTotalWeeks - latestReleaseWeeks) <= 26; // 6 months
 
-        return sortedPopularReleases.map(r => ({ ...r, isLatest: r.id === latestRelease.id }));
+        if (isLatestRecent) {
+            const otherReleases = releasesWithStreams
+                .filter(r => r.id !== latestRelease.id)
+                .sort((a, b) => b.totalStreams - a.totalStreams);
+            
+            const sortedPopularReleases = [latestRelease, ...otherReleases].slice(0, 4);
+            return sortedPopularReleases.map(r => ({ ...r, isLatest: r.id === latestRelease.id }));
+        } else {
+            const sortedPopularReleases = [...releasesWithStreams].sort((a, b) => b.totalStreams - a.totalStreams).slice(0, 4);
+            return sortedPopularReleases.map(r => ({ ...r, isLatest: false }));
+        }
     })();
 
     const artistPickItem = useMemo(() => {
@@ -381,22 +390,6 @@ const SpotifyView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Artist Pick */}
-                {artistPickItem && (
-                    <div className="space-y-3">
-                        <h2 className="text-xl font-bold">Artist Pick</h2>
-                        <button onClick={() => handleShowReleaseDetail(artistPick.itemType === 'release' ? artistPick.itemId : (songs.find(s=>s.id === artistPick.itemId)?.releaseId || ''))} className="w-full text-left flex items-center gap-4 p-3 -m-3 rounded-lg hover:bg-white/10">
-                            <img src={artistPickItem.coverArt} alt={artistPickItem.title} className="w-20 h-20 rounded object-cover" />
-                            <div>
-                                <p className="font-semibold text-white">{artistPickItem.title}</p>
-                                <p className="text-sm text-zinc-400">
-                                    {'songIds' in artistPickItem ? artistPickItem.type : 'Single'} • New Release
-                                </p>
-                            </div>
-                        </button>
-                    </div>
-                )}
-
                 {/* Popular Songs */}
                 {topSongs.length > 0 && (
                     <div className="space-y-4">
@@ -416,6 +409,37 @@ const SpotifyView: React.FC = () => {
                                 </button>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Artist Pick (Moved between Popular and Popular Releases) */}
+                {artistPickItem && (
+                    <div className="space-y-3">
+                        <h2 className="text-2xl font-bold">Artist pick</h2>
+                        <button onClick={() => handleShowReleaseDetail(artistPick.itemType === 'release' ? artistPick.itemId : (songs.find(s=>s.id === artistPick.itemId)?.releaseId || ''))} className="w-full text-left flex items-start gap-4 p-3 -m-3 rounded-lg hover:bg-white/10">
+                            <img src={artistPickItem.coverArt} alt={artistPickItem.title} className="w-20 h-20 rounded object-cover" />
+                            <div className="flex-1">
+                                {artistPick.message ? (
+                                    <div className="flex items-center gap-2 mb-1 bg-white inline-flex rounded-full py-1 pr-3 pl-1">
+                                        <img src={activeArtist.image} className="w-5 h-5 rounded-full object-cover" />
+                                        <span className="text-[11px] font-bold text-black pt-0.5" style={{ lineHeight: '14px' }}>
+                                            {artistPick.message}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <img src={activeArtist.image} className="w-5 h-5 rounded-full object-cover" />
+                                        <span className="text-xs font-semibold text-zinc-300 pt-0.5">
+                                            Posted by {activeArtist.name}
+                                        </span>
+                                    </div>
+                                )}
+                                <p className="font-semibold text-white">{artistPickItem.title}</p>
+                                <p className="text-sm text-zinc-400">
+                                    {'songIds' in artistPickItem ? artistPickItem.type : 'Single'}
+                                </p>
+                            </div>
+                        </button>
                     </div>
                 )}
 

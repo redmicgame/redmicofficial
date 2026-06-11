@@ -697,6 +697,8 @@ const S4AAudience: React.FC = () => {
 const S4AProfile: React.FC = () => {
     const { dispatch, activeArtistData, gameState, activeArtist } = useGame();
     const [showArtistPickModal, setShowArtistPickModal] = useState(false);
+    const [selectedPickItem, setSelectedPickItem] = useState<{id: string, type: 'song' | 'release'} | null>(null);
+    const [pickMessage, setPickMessage] = useState('');
     const [showPitchModal, setShowPitchModal] = useState<Song | null>(null);
     const [showNameChangeModal, setShowNameChangeModal] = useState(false);
     const [newNameInput, setNewNameInput] = useState('');
@@ -716,9 +718,17 @@ const S4AProfile: React.FC = () => {
         }
     };
 
-    const handleSetArtistPick = (itemId: string, itemType: 'song' | 'release') => {
-        dispatch({ type: 'SET_ARTIST_PICK', payload: { itemId, itemType, message: "Check this out!" } });
+    const handleConfirmPick = () => {
+        if (selectedPickItem) {
+            dispatch({ type: 'SET_ARTIST_PICK', payload: { itemId: selectedPickItem.id, itemType: selectedPickItem.type, message: pickMessage.trim() } });
+        }
         setShowArtistPickModal(false);
+        setSelectedPickItem(null);
+        setPickMessage('');
+    };
+
+    const handleSelectPickItem = (itemId: string, itemType: 'song' | 'release') => {
+        setSelectedPickItem({ id: itemId, type: itemType });
     };
 
     const handlePitchSong = (songId: string) => {
@@ -748,7 +758,7 @@ const S4AProfile: React.FC = () => {
                 ) : (
                     <p className="text-sm text-zinc-500">No artist pick selected.</p>
                 )}
-                <button onClick={() => setShowArtistPickModal(true)} className="bg-black text-white text-sm font-semibold px-4 py-2 rounded-full">Change Pick</button>
+                <button onClick={() => { setShowArtistPickModal(true); setSelectedPickItem(null); setPickMessage(''); }} className="bg-black text-white text-sm font-semibold px-4 py-2 rounded-full">Change Pick</button>
             </div>
             
             <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
@@ -822,18 +832,38 @@ const S4AProfile: React.FC = () => {
             {showArtistPickModal && (
                  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowArtistPickModal(false)}>
                     <div className="bg-white rounded-lg w-full max-w-md p-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold mb-4">Select Artist Pick</h2>
-                        <div className="overflow-y-auto space-y-2">
-                            {releases.map(item => (
-                                <button key={item.id} onClick={() => handleSetArtistPick(item.id, 'release')} className="w-full flex gap-3 items-center p-2 hover:bg-zinc-100 rounded-md">
-                                    <img src={item.coverArt} className="w-12 h-12" />
-                                    <div className="text-left">
-                                        <p className="font-bold">{item.title}</p>
-                                        <p className="text-xs text-zinc-500">{item.type}</p>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                        {!selectedPickItem ? (
+                            <>
+                                <h2 className="text-xl font-bold mb-4">Select Artist Pick</h2>
+                                <div className="flex-1 overflow-y-auto space-y-2">
+                                    {releases.map(item => (
+                                        <button key={item.id} onClick={() => handleSelectPickItem(item.id, 'release')} className="w-full flex gap-3 items-center p-2 hover:bg-zinc-100 rounded-md">
+                                            <img src={item.coverArt} className="w-12 h-12" />
+                                            <div className="text-left">
+                                                <p className="font-bold">{item.title}</p>
+                                                <p className="text-xs text-zinc-500">{item.type}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <h2 className="text-xl font-bold mb-4">Add a Message (Optional)</h2>
+                                <input
+                                    type="text"
+                                    maxLength={40}
+                                    placeholder="e.g. My new album out now!"
+                                    value={pickMessage}
+                                    onChange={e => setPickMessage(e.target.value)}
+                                    className="w-full p-2 border border-zinc-300 rounded mb-4"
+                                />
+                                <div className="flex gap-4">
+                                    <button onClick={() => setSelectedPickItem(null)} className="w-full bg-zinc-200 py-2 rounded-full font-semibold">Back</button>
+                                    <button onClick={handleConfirmPick} className="w-full bg-black text-white py-2 rounded-full font-semibold">Confirm Pick</button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

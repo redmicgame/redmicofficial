@@ -785,9 +785,27 @@ export const generateWeeklyXContent = (
             });
 
         } else if (postType <= haterChance && topSong) { // Hater Post
-            const haterUsername = generateHaterUsername();
-            const haterId = `hater_${haterUsername}`;
-            newUsers.push({ id: haterId, name: haterUsername, username: haterUsername, avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==', isVerified: false, followersCount: 0, followingCount: 0, bio: '' });
+            let haterUser: XUser | undefined = undefined;
+            const existingHaters = artistData.xUsers.filter(u => u.id.startsWith('hater_'));
+            
+            if (existingHaters.length > 0 && Math.random() > 0.4) {
+                haterUser = pickRandom(existingHaters);
+            } else {
+                const haterUsername = generateHaterUsername();
+                const allNPCAvatars = gameState.npcs.map(n => n.coverArt).filter(Boolean);
+                const haterAvatar = allNPCAvatars.length > 0 ? pickRandom(allNPCAvatars) : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==';
+                haterUser = { 
+                    id: `hater_${haterUsername}_${crypto.randomUUID()}`, 
+                    name: haterUsername, 
+                    username: haterUsername, 
+                    avatar: haterAvatar, 
+                    isVerified: false, 
+                    followersCount: Math.floor(Math.random() * 500), 
+                    followingCount: Math.floor(Math.random() * 100), 
+                    bio: '' 
+                };
+                newUsers.push(haterUser);
+            }
             
             const haterTemplates = [
                 `${artistName} fell off so hard. the new music is not it.`,
@@ -798,7 +816,11 @@ export const generateWeeklyXContent = (
                 `paying for streams again I see... "${topSong.title}" is nowhere to be heard in public 💀`,
                 `who is streaming this?? it's unlistenable noise.`,
                 `${artistName} making the exact same song for the 5th time in a row 😭`,
-                `the absolute state of the music industry if this is what y'all are charting`
+                `the absolute state of the music industry if this is what y'all are charting`,
+                `she really thought this was gonna be a hit 😭`,
+                `I kept it civil with ${artistName} until this verse. This is the verse that pushed it too far. I hate you scum`,
+                `they say blues a rare color, what that make me ? 💙`,
+                `This is the most boring performance I've ever seen`
             ];
             
             let image: string | undefined = undefined;
@@ -826,7 +848,7 @@ export const generateWeeklyXContent = (
             }
 
             newPosts.push({
-                id: crypto.randomUUID(), authorId: haterId, content: pickRandom(haterTemplates), image, quoteOf: quoteTarget,
+                id: crypto.randomUUID(), authorId: haterUser.id, content: pickRandom(haterTemplates), image, quoteOf: quoteTarget,
                 likes: Math.floor(Math.random() * 500), retweets: Math.floor(Math.random() * 50), views: Math.floor(Math.random() * 8000), date
             });
         }
