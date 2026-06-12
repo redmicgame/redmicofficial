@@ -2733,6 +2733,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                         ...s, 
                                         isReleased: true, 
                                         releaseId: release.id,
+                                        coverArt: release.type === 'Single' ? release.coverArt : s.coverArt,
+                                        promoBoostWeeks: release.type === 'Single' ? (s.promoBoostWeeks || 0) + 4 : s.promoBoostWeeks,
                                         rightsSoldPercent: rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
                                         rightsOwnerLabelId: rightsOwnerLabelId 
                                     };
@@ -2742,6 +2744,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                             let hypeIncrease = 0;
                             switch (release.type) {
+                                case 'Single': hypeIncrease = 15; break;
                                 case 'EP': hypeIncrease = 25; break;
                                 case 'Album': hypeIncrease = 40; break;
                             }
@@ -7260,6 +7263,48 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistsData: updatedArtistsData,
                 currentView: 'game',
                 activeTab: 'Business',
+            };
+        }
+        case 'RELEASE_POST_ALBUM_SINGLE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const { projectId, songId, coverArt, releaseDate } = action.payload;
+
+            const song = activeData.songs.find(s => s.id === songId);
+            const project = activeData.releases.find(r => r.id === projectId);
+            if (!song || !project) return state;
+
+            const singleRelease: Release = {
+                id: crypto.randomUUID(),
+                title: song.title,
+                type: 'Single',
+                coverArt: coverArt || project.coverArt,
+                songIds: [songId],
+                releaseDate: releaseDate,
+                artistId: state.activeArtistId,
+                releasingLabel: project.releasingLabel,
+                rightsSoldPercent: project.rightsSoldPercent,
+                rightsOwnerLabelId: project.rightsOwnerLabelId
+            };
+
+            const newLabelSubmission: LabelSubmission = {
+                id: crypto.randomUUID(),
+                release: singleRelease,
+                status: 'scheduled',
+                submittedDate: state.date,
+                decisionDate: state.date,
+                projectReleaseDate: releaseDate,
+            };
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        labelSubmissions: [...activeData.labelSubmissions, newLabelSubmission]
+                    }
+                }
             };
         }
         case 'DELETE_SONG': {

@@ -232,6 +232,119 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
 };
 
 
+const PostAlbumSingleManager: React.FC<{ project: Release, allReleases: Release[] }> = ({ project, allReleases }) => {
+    const { gameState, dispatch, activeArtistData } = useGame();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [selectedTrackId, setSelectedTrackId] = useState<string>('');
+    const [releaseOffset, setReleaseOffset] = useState<number>(1);
+    const [customCover, setCustomCover] = useState<string>('');
+
+    if (!activeArtistData) return null;
+
+    // Filter tracks that are not already released as singles
+    const eligibleTracks = project.songIds.map(id => activeArtistData.songs.find(s => s.id === id)).filter((song): song is Song => {
+        if (!song) return false;
+        // If the song's current releaseId points to a Single release, it's already a single
+        const mainRelease = allReleases.find(r => r.id === song.releaseId);
+        return mainRelease?.type !== 'Single';
+    });
+
+    if (eligibleTracks.length === 0) return null;
+
+    const handleCoverUpload = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCustomCover(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRelease = () => {
+        if (!selectedTrackId) return;
+        const targetWeek = gameState.date.week + releaseOffset;
+        const targetYear = gameState.date.year + Math.floor(targetWeek / 53);
+        const normalizedWeek = targetWeek % 53 || 1;
+
+        dispatch({
+            type: 'RELEASE_POST_ALBUM_SINGLE',
+            payload: {
+                projectId: project.id,
+                songId: selectedTrackId,
+                coverArt: customCover || project.coverArt,
+                releaseDate: { week: normalizedWeek, year: targetYear }
+            }
+        });
+        setIsMenuOpen(false);
+        setSelectedTrackId('');
+        setCustomCover('');
+    };
+
+    return (
+        <div className="mb-4 bg-zinc-900/50 p-3 rounded-lg border border-zinc-700">
+            <button 
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="w-full flex items-center justify-between text-sm font-semibold text-zinc-300 hover:text-white"
+            >
+                <span>🚀 Release a New Single from this Project</span>
+                <ChevronDownIcon className={`w-5 h-5 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isMenuOpen && (
+                <div className="mt-3 space-y-3">
+                    <div>
+                        <label className="text-xs text-zinc-400 block mb-1">Select Track</label>
+                        <select 
+                            className="w-full bg-zinc-800 text-white rounded p-2 text-sm border border-zinc-700"
+                            value={selectedTrackId}
+                            onChange={(e) => setSelectedTrackId(e.target.value)}
+                        >
+                            <option value="">-- Choose a Track --</option>
+                            {eligibleTracks.map(t => (
+                                <option key={t.id} value={t.id}>{t.title}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {selectedTrackId && (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs text-zinc-400 block mb-1">Release Timing</label>
+                                    <select 
+                                        className="w-full bg-zinc-800 text-white rounded p-2 text-sm border border-zinc-700"
+                                        value={releaseOffset}
+                                        onChange={(e) => setReleaseOffset(Number(e.target.value))}
+                                    >
+                                        <option value={1}>Next Week</option>
+                                        <option value={2}>In 2 Weeks</option>
+                                        <option value={3}>In 3 Weeks</option>
+                                        <option value={4}>In 4 Weeks</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-zinc-400 block mb-1">Single Cover Art</label>
+                                    <label className="w-full bg-zinc-800 text-white rounded p-2 text-sm cursor-pointer block text-center hover:bg-zinc-700 border border-zinc-700 transition-colors">
+                                        {customCover ? 'Cover Selected' : 'Upload Cover'}
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} />
+                                    </label>
+                                    <p className="text-[10px] text-zinc-500 mt-1 text-center">Defaults to project cover</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={handleRelease}
+                                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded font-bold text-sm transition-colors mt-2"
+                            >
+                                Schedule Single Release
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const CatalogView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
     const { billboardHot100, chartHistory, billboardTopAlbums, albumChartHistory } = gameState;
@@ -416,6 +529,7 @@ const CatalogView: React.FC = () => {
                                         </div>
                                         {isExpanded && (
                                             <div className="mt-3 pt-3 border-t border-zinc-700 space-y-2">
+                                                {!isTakenDown && <PostAlbumSingleManager project={project} allReleases={allReleases} />}
                                                 <h4 className="font-semibold text-zinc-300">Tracklist</h4>
                                                 {project.songIds.map(songId => {
                                                     const song = activeArtistData.songs.find(s => s.id === songId);
