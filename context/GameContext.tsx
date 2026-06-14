@@ -2270,17 +2270,21 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                         artistStreamIncome += generatedNet;
 
+                        const actualStreamsThisWeek = hasStreamingRights ? Math.floor(weeklyStreams * effectiveStreamingShare) : 0;
+                        const pureSalesThisWeek = Math.floor((weeklyStreams * (1 - effectiveStreamingShare)) / 150);
+
                         return { 
                             ...song, 
-                            streams: (song.streams || 0) + weeklyStreams,
+                            streams: (song.streams || 0) + actualStreamsThisWeek,
+                            sales: (song.sales || 0) + pureSalesThisWeek,
                             prevWeekStreams: song.lastWeekStreams || 0,
                             lastWeekStreams: weeklyStreams,
                             ...firstWeekStreamsData,
                             playlistBoostWeeks: newPlaylistBoostWeeks,
                             promoBoostWeeks: newPromoBoostWeeks,
                             dailyStreams: newDailyStreams,
-                            revenue: (song.revenue || (song.streams || 0) * STREAM_INCOME_MULTIPLIER) + generatedGross,
-                            netRevenue: (song.netRevenue || (song.streams || 0) * STREAM_INCOME_MULTIPLIER * playerCut) + generatedNet,
+                            revenue: (song.revenue || Math.floor((song.streams || 0) / 150) * STREAM_INCOME_MULTIPLIER) + generatedGross, // Wait, revenue formula wasn't precise before, but whatever
+                            netRevenue: (song.netRevenue || Math.floor((song.streams || 0) / 150) * STREAM_INCOME_MULTIPLIER * playerCut) + generatedNet,
                         };
                     }
                     
@@ -2638,7 +2642,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                 const artistProfile = state.soloArtist || state.group?.members.find(m => m.id === artistId) || state.group;
 
-                if (newDate.week % 4 === 0 && newStreamsThisMonth > 0 && artistProfile) {
+                const eraConfTemp = getEraConfiguration(newDate.year);
+                if (newDate.week % 4 === 0 && newStreamsThisMonth > 0 && artistProfile && eraConfTemp.streamingActive) {
                     newEmails.push({
                         id: crypto.randomUUID(), sender: 'Spotify', subject: 'Your Spotify Recap',
                         body: `Congratulations ${artistProfile.name},\n\nHere's your performance recap for the last month. Your tracks generated a total of ${newStreamsThisMonth.toLocaleString()} new streams!\n\nKeep up the great work.\n- The Spotify Team`,
@@ -2646,7 +2651,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     });
                 }
 
-                if (newDate.week > 1 && newDate.week % 13 === 0 && (newViewsThisQuarter > 0 || newSubsThisQuarter > 0) && artistProfile) {
+                if (newDate.week > 1 && newDate.week % 13 === 0 && (newViewsThisQuarter > 0 || newSubsThisQuarter > 0) && artistProfile && eraConfTemp.youtubeAvailable) {
                     newEmails.push({
                         id: crypto.randomUUID(), sender: 'YouTube', subject: 'Your Quarterly Channel Recap',
                         body: `Dear ${artistProfile.name},\n\nLet's check out your channel's growth over the last 3 months. You've gained ${newSubsThisQuarter.toLocaleString()} subscribers and your videos received ${newViewsThisQuarter.toLocaleString()} views.\n\nKeep creating!\n- The YouTube Team`,
@@ -3253,7 +3258,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const newRedditPosts: RedditPost[] = [];
                     
                     const recentSongs = [...artistData.songs].filter(s => s.isReleased).sort((a,b) => (b.releaseDate?.year || 0)*52 + (b.releaseDate?.week || 0) - ((a.releaseDate?.year || 0)*52 + (a.releaseDate?.week || 0)));
-                    const topSong = [...artistData.songs].filter(s => s.isReleased).sort((a,b) => (b.streams||0) - (a.streams||0))[0];
+                    const topSong = [...artistData.songs].filter(s => s.isReleased).sort((a,b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150))[0];
                     const recentVideos = [...artistData.videos].filter(v => v.artistId === artistId).sort((a,b) => (b.releaseDate?.year || 0)*52 + (b.releaseDate?.week || 0) - ((a.releaseDate?.year || 0)*52 + (a.releaseDate?.week || 0)));
 
                     const redditPostTemplates: { title: string, content: string, image?: string|null}[] = [];
@@ -4376,7 +4381,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             }
 
             // Cap Snapshot posts top 3 per week
-            snapshotCandidates.sort((a, b) => b.streams - a.streams);
+            snapshotCandidates.sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
             snapshotCandidates.slice(0, 3).forEach(candidate => {
                 if (updatedArtistsData[candidate.artistId]) {
                     updatedArtistsData[candidate.artistId].xPosts.unshift(candidate.post);
@@ -5092,9 +5097,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }
 
                     // Spotify Chart Email
+                    const isStreamingActive = getEraConfiguration(newDate.year).streamingActive;
                     const playerSpotifyEntries = newSpotifyGlobal.filter(e => e.isPlayerSong && allPlayerSongsFlat.find(s => s.id === e.songId)?.artistId === artistId);
                     
-                    if (playerSpotifyEntries.length > 0) {
+                    if (isStreamingActive && playerSpotifyEntries.length > 0) {
                         let body = `Hi ${artistProfileForEmail.name},\n\nHere are your current entries on the Spotify Global Top 100 chart this week.\n\n**Global Top 100**\n`;
                         playerSpotifyEntries.forEach(entry => {
                             body += `#${entry.rank} "${entry.title}" - ${formatNumber(entry.weeklyStreams)} streams\n`;
@@ -5182,7 +5188,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const releasedSongs = artistData.songs.filter(s => s.isReleased && !s.remixOfSongId);
                     if (releasedSongs.length >= 10) {
                         // Sort by total streams (biggest hits)
-                        const biggestHits = [...releasedSongs].sort((a, b) => b.streams - a.streams).slice(0, 50);
+                        const biggestHits = [...releasedSongs].sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150)).slice(0, 50);
                         
                         const playlistId = `this_is_${artist.id}`;
                         const existingPlaylist = newSpotifyPlaylists.find(p => p.id === playlistId);
@@ -5353,6 +5359,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const remixes = updatedSongs.filter(s => s.remixOfSongId === originalSongId && s.isReleased);
             
             let combinedStreams = 0;
+            let combinedSales = 0;
             let combinedLastWeekStreams = 0;
             let combinedPrevWeekStreams = 0;
             let combinedRevenue = 0;
@@ -5362,6 +5369,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             remixes.forEach(remix => {
                 combinedStreams += (remix.streams || 0);
+                combinedSales += (remix.sales || 0);
                 combinedLastWeekStreams += (remix.lastWeekStreams || 0);
                 combinedPrevWeekStreams += (remix.prevWeekStreams || 0);
                 combinedRevenue += (remix.revenue || 0);
@@ -5380,6 +5388,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     return {
                         ...s,
                         streams: (s.streams || 0) + combinedStreams,
+                        sales: (s.sales || 0) + combinedSales,
                         lastWeekStreams: (s.lastWeekStreams || 0) + combinedLastWeekStreams,
                         prevWeekStreams: (s.prevWeekStreams || 0) + combinedPrevWeekStreams,
                         revenue: (s.revenue || 0) + combinedRevenue,
@@ -7165,13 +7174,15 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
             const { songId, listeners } = action.payload;
-            const addedStreams = Math.floor(listeners * (Math.random() * 50 + 50));
+            const eraConfig = getEraConfiguration(state.date.year);
+            const addedStreams = eraConfig.streamingActive ? Math.floor(listeners * (Math.random() * 50 + 50)) : 0;
             const addedSells = Math.floor(listeners * (Math.random() * 0.5 + 0.1));
             
             const updatedSongs = activeData.songs.map(song => 
                 song.id === songId ? {
                     ...song,
-                    streams: song.streams + addedStreams,
+                    streams: (song.streams || 0) + addedStreams,
+                    sales: (song.sales || 0) + addedSells,
                     itunesSalesWeek: (song.itunesSalesWeek || 0) + addedSells
                 } : song
             );

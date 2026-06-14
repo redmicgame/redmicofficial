@@ -13,8 +13,8 @@ import BanknotesIcon from './icons/BanknotesIcon';
 import ConfirmationModal from './ConfirmationModal';
 import { getEraConfiguration } from '../utils/eraUtils';
 
-const AlbumCertificationBadge: React.FC<{ streams: number }> = ({ streams }) => {
-    const units = Math.floor(streams / 1500);
+const AlbumCertificationBadge: React.FC<{ streams: number, sales?: number }> = ({ streams, sales = 0 }) => {
+    const units = Math.floor(streams / 1500) + sales;
     const DIAMOND = 10_000_000;
     const PLATINUM = 1_000_000;
     const GOLD = 500_000;
@@ -39,18 +39,19 @@ const AlbumCertificationBadge: React.FC<{ streams: number }> = ({ streams }) => 
     );
 };
 
-const SongCertificationBadge: React.FC<{ streams: number }> = ({ streams }) => {
-    const DIAMOND = 1_200_000_000;
-    const PLATINUM = 100_000_000;
-    const GOLD = 60_000_000;
+const SongCertificationBadge: React.FC<{ streams: number, sales?: number }> = ({ streams, sales = 0 }) => {
+    const units = Math.floor(streams / 150) + sales;
+    const DIAMOND = 10_000_000;
+    const PLATINUM = 1_000_000;
+    const GOLD = 500_000;
 
     let cert = null;
-    if (streams >= DIAMOND) {
+    if (units >= DIAMOND) {
         cert = { text: 'Diamond', color: 'bg-cyan-400 text-black' };
-    } else if (streams >= PLATINUM) {
-        const multiplier = Math.floor(streams / PLATINUM);
+    } else if (units >= PLATINUM) {
+        const multiplier = Math.floor(units / PLATINUM);
         cert = { text: `${multiplier}x Platinum`, color: 'bg-slate-300 text-black' };
-    } else if (streams >= GOLD) {
+    } else if (units >= GOLD) {
         cert = { text: 'Gold', color: 'bg-yellow-400 text-black' };
     }
 
@@ -195,10 +196,10 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                          {grammyWin && <GrammyAwardIcon className="w-4 h-4 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
                          {song.isTakenDown && <span className="text-[10px] font-bold bg-red-900/80 text-red-400 px-1.5 py-0.5 rounded-full">TAKEN DOWN</span>}
                     </div>
-                    <p className="text-sm text-zinc-400">{isStreamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(Math.floor(song.streams / 500))} sales`}</p>
+                    <p className="text-sm text-zinc-400">{isStreamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(song.sales || 0)} sales`}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <SongCertificationBadge streams={song.streams} />
+                    <SongCertificationBadge streams={song.streams} sales={song.sales} />
                     <button onClick={onToggleExpand} className="p-1 text-zinc-400 hover:text-white">
                         <InformationCircleIcon className="w-5 h-5" />
                     </button>
@@ -393,9 +394,9 @@ const CatalogView: React.FC = () => {
                 const merchUnits = activeArtistData.merch
                     .filter(m => m.releaseId === s.releaseId)
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-                return { ...s, streams: s.streams + (merchUnits * 150) };
+                return { ...s, streams: s.streams + (merchUnits * 150), sales: s.sales || 0 };
             })
-            .sort((a, b) => b.streams - a.streams);
+            .sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
     }, [songsForArtist, allReleases, activeArtistData.merch]);
     
     const releasedProjects = useMemo(() => {
@@ -406,12 +407,16 @@ const CatalogView: React.FC = () => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.streams || 0);
                 }, 0);
+                const releaseSales = release.songIds.reduce((total, songId) => {
+                    const song = activeArtistData.songs.find(s => s.id === songId);
+                    return total + (song?.sales || 0);
+                }, 0);
                 const merchUnits = activeArtistData.merch
                     .filter(m => m.releaseId === release.id)
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-                return { ...release, streams: releaseStreams + (merchUnits * 1500) };
+                return { ...release, streams: releaseStreams + (merchUnits * 1500), sales: releaseSales };
             })
-            .sort((a, b) => b.streams - a.streams);
+            .sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
     }, [activeArtistData.releases, activeArtistData.songs, activeArtistData.merch]);
     
     const handleToggleExpand = (projectId: string) => {
@@ -489,7 +494,7 @@ const CatalogView: React.FC = () => {
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                     <p className="font-bold text-lg">{project.title}</p>
                                                     {grammyWin && <GrammyAwardIcon className="w-5 h-5 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
-                                                    <AlbumCertificationBadge streams={project.streams} />
+                                                    <AlbumCertificationBadge streams={project.streams} sales={(project as any).sales} />
                                                 </div>
                                                 <p className="text-sm text-zinc-400">{formatNumber(totalUnits)} total units</p>
                                                 <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
@@ -632,13 +637,13 @@ const CatalogView: React.FC = () => {
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <p className="font-bold text-lg">{song.title}</p>
                                                             {grammyWin && <GrammyAwardIcon className="w-5 h-5 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
-                                                            <SongCertificationBadge streams={song.streams} />
+                                                            <SongCertificationBadge streams={song.streams} sales={song.sales} />
                                                         </div>
                                                         <button onClick={() => setExpandedSingleId(prev => prev === song.id ? null : song.id)} className="p-2 self-start text-zinc-400 hover:text-white">
                                                             <ChevronDownIcon className={`w-6 h-6 transition-transform ${expandedSingleId === song.id ? 'rotate-180' : ''}`} />
                                                         </button>
                                                     </div>
-                                                    <p className="text-sm text-zinc-400">{eraConfig.streamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(Math.floor(song.streams / 500))} sales`}</p>
+                                                    <p className="text-sm text-zinc-400">{eraConfig.streamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(song.sales || 0)} sales`}</p>
                                                     <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
                                                         <StatPill label="Current" value={chartInfo.current} />
                                                         <StatPill label="Peak" value={chartInfo.peak} />

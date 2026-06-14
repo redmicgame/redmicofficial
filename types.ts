@@ -54,6 +54,7 @@ export interface Song {
     peakWeeklyStreams?: number;
     remixOfSongId?: string;
     isAvailableOnStreaming?: boolean;
+    sales?: number;
     leakInfo?: {
         illegalStreams: number;
         illegalDownloads: number;
