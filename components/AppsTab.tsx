@@ -21,6 +21,7 @@ import OscarAwardIcon from './icons/OscarAwardIcon';
 import GoogleIcon from './icons/GoogleIcon';
 import TikTokIcon from './icons/TikTokIcon';
 import RiaaIcon from './icons/RiaaIcon';
+import { getEraConfiguration } from '../utils/eraUtils';
 
 interface AppInfo {
     name: string;
@@ -51,6 +52,7 @@ const appCategories: AppCategory[] = [
     {
         title: 'Social & Video',
         apps: [
+            { name: 'MySpace', description: 'A place for friends', icon: <span className="font-bold text-xl text-[#003399]">My</span>, view: 'myspace', bgColor: '#e9e9e9' },
             { name: 'TikTok', description: 'Make short videos', icon: <TikTokIcon className="w-8 h-8"/>, view: 'tiktok', bgColor: '#000000', iconColor: '#25F4EE' },
             { name: 'Instagram', description: 'Share photos visually', icon: <span className="font-bold text-2xl font-serif text-white">Ig</span>, view: 'instagram', bgColor: '#E1306C' },
             { name: 'Google', description: 'Search the web', icon: <GoogleIcon className="w-8 h-8"/>, view: 'google', bgColor: '#FFFFFF', iconColor: '#000000' },
@@ -66,6 +68,8 @@ const appCategories: AppCategory[] = [
             { name: 'Hits Radio', description: 'Manage radio airplay', icon: <span className="font-black italic text-xl pr-1">HITS</span>, view: 'radioDash', bgColor: '#000000' },
             { name: 'Labels', description: 'Sign a record deal', icon: <BuildingOfficeIcon className="w-8 h-8"/>, view: 'labels', bgColor: '#4b5563' },
             { name: 'Ticketmaster', description: 'Plan and manage your tours', icon: <TicketIcon className="w-8 h-8"/>, view: 'tours', bgColor: '#026cdf' },
+            { name: 'ASCAP', description: 'Digital streaming distribution rights', icon: <span className="font-bold text-xl text-white italic">ASCAP</span>, view: 'ascap', bgColor: '#183b5e' },
+            { name: 'Piracy', description: 'Monitor illegal downloads', icon: <span className="font-bold text-xl text-white">LW</span>, view: 'limewire', bgColor: '#2B8B3B' },
             { name: 'Payola', description: 'Influence the industry', icon: <MegaphoneIcon className="w-8 h-8"/>, view: 'promote', bgColor: '#ef4444' },
             { name: 'Gigs', description: 'Perform live shows', icon: <MicrophoneIcon className="w-8 h-8"/>, view: 'gigs', bgColor: '#a855f7' },
             { name: 'Merch Store', description: 'Sell vinyls, CDs, and more', icon: <ShoppingBagIcon className="w-8 h-8"/>, view: 'merchStore', bgColor: '#ec4899' },
@@ -87,8 +91,7 @@ const appCategories: AppCategory[] = [
     }
 ];
 
-const essentialAppNames = ['Spotify', 'Spotify for Artists', 'Catalog', 'X'];
-const essentialApps = appCategories.flatMap(cat => cat.apps).filter(app => essentialAppNames.includes(app.name));
+// removed essentialApps
 
 
 const AppItem: React.FC<{ app: AppInfo }> = ({ app }) => {
@@ -121,6 +124,29 @@ const AppItem: React.FC<{ app: AppInfo }> = ({ app }) => {
 };
 
 const AppsTab: React.FC = () => {
+    const { gameState } = useGame();
+    const eraConfig = getEraConfiguration(gameState.date.year);
+
+    const isAppAvailable = (appName: string) => {
+        if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
+        if (appName === 'iTunes') return eraConfig.digitalSalesActive;
+        if (appName === 'X') return eraConfig.xAvailable;
+        if (appName === 'Instagram') return eraConfig.instagramAvailable;
+        if (appName === 'TikTok') return eraConfig.tiktokAvailable;
+        if (appName === 'MySpace') return eraConfig.myspaceAvailable;
+        if (appName === 'YouTube' || appName === 'YT Studio') return eraConfig.youtubeAvailable;
+        if (appName === 'OnlyFans') return eraConfig.onlyfansAvailable;
+        if (appName === 'Piracy') return gameState.date.year >= 1999 && gameState.date.year <= 2008;
+        if (appName === 'ASCAP') return gameState.date.year >= 2008;
+        if (appName === 'Merch Store' && gameState.date.year >= 2005) {
+            return (activeArtistData?.youtubeSubscribers || 0) >= 100;
+        }
+        return true;
+    };
+
+    const essentialAppNames = ['Spotify', 'Spotify for Artists', 'Catalog', 'X'].filter(isAppAvailable);
+    const essentialApps = appCategories.flatMap(cat => cat.apps).filter(app => essentialAppNames.includes(app.name));
+
     return (
         <div className="bg-[#121212] min-h-full p-4 text-white">
             <h1 className="text-4xl font-bold">Apps</h1>
@@ -134,14 +160,18 @@ const AppsTab: React.FC = () => {
             </div>
 
             <div className="space-y-8">
-                {appCategories.map(category => (
-                    <div key={category.title}>
-                        <h2 className="text-2xl font-bold mb-4">{category.title}</h2>
-                        <div className="space-y-6">
-                            {category.apps.map(app => <AppItem key={app.name} app={app} />)}
+                {appCategories.map(category => {
+                    const availableApps = category.apps.filter(app => isAppAvailable(app.name));
+                    if (availableApps.length === 0) return null;
+                    return (
+                        <div key={category.title}>
+                            <h2 className="text-2xl font-bold mb-4">{category.title}</h2>
+                            <div className="space-y-6">
+                                {availableApps.map(app => <AppItem key={app.name} app={app} />)}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

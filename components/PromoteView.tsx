@@ -2,14 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { PROMOTION_PACKAGES, LABELS, TIER_LEVELS } from '../constants';
+import { getPromotionPackages, LABELS, TIER_LEVELS } from '../constants';
 import type { Song, Video, Promotion, Label } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ConfirmationModal from './ConfirmationModal';
 
 type Section = 'songs' | 'videos' | 'resurgence';
 
-type PromotionPackage = (typeof PROMOTION_PACKAGES.song)[0] | (typeof PROMOTION_PACKAGES.video)[0] | (typeof PROMOTION_PACKAGES.resurgence)[0];
+type PromotionPackage = { name: string; weeklyCost: number; boost: number; description: string; requiredTier?: string };
 
 const PromotionModal: React.FC<{
     title: string;
@@ -153,13 +153,15 @@ const PromoteView: React.FC = () => {
             effectiveLabel = LABELS.find(l => l.id === contract.labelId);
         }
 
+        const dynamicPackages = getPromotionPackages(gameState.date.year);
+
         if (isIndie) {
-            return { availableSongPackages: [PROMOTION_PACKAGES.song[0]], isIndie: true };
+            return { availableSongPackages: [dynamicPackages.song[0]], isIndie: true };
         }
         
         if (effectiveLabel) {
             const tierLevel = TIER_LEVELS[effectiveLabel.tier];
-            const packages = PROMOTION_PACKAGES.song.filter(p => TIER_LEVELS[p.requiredTier] <= tierLevel);
+            const packages = dynamicPackages.song.filter((p: any) => TIER_LEVELS[p.requiredTier] <= tierLevel);
             return { availableSongPackages: packages, isIndie: false };
         }
 
@@ -323,7 +325,7 @@ const PromoteView: React.FC = () => {
             {selectedSingleItem && (
                  <PromotionModal
                     title={`Payola for "${selectedSingleItem.item.title}"`}
-                    packages={selectedSingleItem.type === 'video' ? PROMOTION_PACKAGES.video : PROMOTION_PACKAGES.resurgence}
+                    packages={selectedSingleItem.type === 'video' ? getPromotionPackages(gameState.date.year).video : getPromotionPackages(gameState.date.year).resurgence}
                     onClose={() => setSelectedSingleItem(null)}
                     onSelectPackage={handleSelectPackageForSingleItem}
                     money={money}

@@ -171,7 +171,7 @@ const BillboardView: React.FC = () => {
     const currentChart = chartsData[selectedChart];
 
     return (
-        <div className="bg-[#e4e4e4] min-h-screen font-sans relative pb-24 text-black">
+        <div className="bg-[#e4e4e4] h-screen font-sans relative pb-24 text-black overflow-y-auto">
             <header className="bg-white">
                 <div className="flex items-center justify-between p-4 border-b-4 border-black relative">
                     <button 

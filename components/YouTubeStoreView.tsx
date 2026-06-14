@@ -15,25 +15,27 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 const AddMerchModal: React.FC<{
     onClose: () => void;
 }> = ({ onClose }) => {
-    const { dispatch, activeArtist, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const [releaseId, setReleaseId] = useState('');
     const [variantName, setVariantName] = useState('');
-    const [merchType, setMerchType] = useState<'Vinyl' | 'CD'>('Vinyl');
+    const [merchType, setMerchType] = useState<'Vinyl' | 'CD' | 'Ringtone'>('Vinyl');
     const [price, setPrice] = useState(39.98);
     const [stockQty, setStockQty] = useState(1000);
     const [image, setImage] = useState<string | null>(null);
     const [error, setError] = useState('');
 
-    const unitCost = merchType === 'Vinyl' ? 12 : 3;
-    const totalCost = stockQty * unitCost;
+    const isRingtoneEra = gameState.date.year >= 2006 && gameState.date.year <= 2010;
+
+    const unitCost = merchType === 'Vinyl' ? 12 : merchType === 'CD' ? 3 : 0;
+    const totalCost = merchType === 'Ringtone' ? 0 : stockQty * unitCost;
 
     if (!activeArtistData || !activeArtist) return null;
     const { merch, releases, money } = activeArtistData;
 
     const availableReleases = useMemo(() => {
-        const released = releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation'));
+        const released = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Single');
         const scheduled = activeArtistData.labelSubmissions
-            .filter(s => s.status === 'scheduled' && (s.release.type === 'Album' || s.release.type === 'EP' || s.release.type === 'Album (Deluxe)' || s.release.type === 'Compilation'))
+            .filter(s => s.release.type === 'Album' || s.release.type === 'EP' || s.release.type === 'Album (Deluxe)' || s.release.type === 'Compilation' || s.release.type === 'Single')
             .map(s => s.release);
         return [...released, ...scheduled];
     }, [releases, activeArtistData.labelSubmissions]);
@@ -57,9 +59,14 @@ const AddMerchModal: React.FC<{
         }
     };
     
-    const handleMerchTypeChange = (type: 'Vinyl' | 'CD') => {
+    const handleMerchTypeChange = (type: 'Vinyl' | 'CD' | 'Ringtone') => {
         setMerchType(type);
-        setPrice(type === 'Vinyl' ? 39.98 : 12.98);
+        if (type === 'Ringtone') {
+            setPrice(2.99);
+            setStockQty(9999999);
+        } else {
+            setPrice(type === 'Vinyl' ? 39.98 : 12.98);
+        }
     };
 
     const handleAddMerch = () => {
@@ -68,7 +75,7 @@ const AddMerchModal: React.FC<{
         if (!image && !selectedRelease.coverArt) { setError('Please provide an image.'); return; }
         if (itemsForSelectedRelease >= 8) { setError('You can only have 8 product variants per release.'); return; }
         if (money < totalCost) { setError('Not enough money to stock this inventory.'); return; }
-        if (stockQty < 1) { setError('Must stock at least 1 unit.'); return; }
+        if (stockQty < 1 && merchType !== 'Ringtone') { setError('Must stock at least 1 unit.'); return; }
         if (price < unitCost) { setError('Price cannot be lower than unit cost.'); return; }
 
         const isScheduled = !releases.some(r => r.id === selectedRelease.id);
@@ -76,10 +83,10 @@ const AddMerchModal: React.FC<{
         const newItem: MerchProduct = {
             id: crypto.randomUUID(),
             releaseId: selectedRelease.id,
-            name: `${selectedRelease.title}${variantName ? ` (${variantName})` : ''}`,
+            name: `${selectedRelease.title}${variantName ? ` (${variantName})` : (merchType === 'Ringtone' ? ' (Ringtone)' : '')}`,
             type: merchType,
             price,
-            stock: stockQty,
+            stock: merchType === 'Ringtone' ? 9999999 : stockQty, // Infinite stock basically
             unitsSold: 0,
             image: image || selectedRelease.coverArt,
             artistId: activeArtist.id,
@@ -92,7 +99,7 @@ const AddMerchModal: React.FC<{
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
             <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold">Add New Product</h2>
+                <h2 className="text-xl font-bold">Add New {merchType === 'Ringtone' ? 'Digital Item' : 'Product'}</h2>
                 <select value={releaseId} onChange={e => { setReleaseId(e.target.value); setImage(availableReleases.find(r=>r.id===e.target.value)?.coverArt || null); }} className="w-full bg-zinc-700 p-2 rounded">
                     <option value="">Select a Release...</option>
                     {availableReleases.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
@@ -101,18 +108,23 @@ const AddMerchModal: React.FC<{
                 
                 <input type="text" value={variantName} onChange={e => setVariantName(e.target.value)} placeholder="Variant Name (e.g., Apple Red Vinyl)" className="w-full bg-zinc-700 p-2 rounded" />
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className={`grid ${isRingtoneEra ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                     <button onClick={() => handleMerchTypeChange('Vinyl')} className={`py-2 rounded ${merchType === 'Vinyl' ? 'bg-red-500' : 'bg-zinc-700'}`}>Vinyl</button>
                     <button onClick={() => handleMerchTypeChange('CD')} className={`py-2 rounded ${merchType === 'CD' ? 'bg-red-500' : 'bg-zinc-700'}`}>CD</button>
+                    {isRingtoneEra && (
+                        <button onClick={() => handleMerchTypeChange('Ringtone')} className={`py-2 rounded ${merchType === 'Ringtone' ? 'bg-red-500' : 'bg-zinc-700'}`}>Ringtone</button>
+                    )}
                 </div>
 
-                <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-400">Initial Stock Quantity <span className="float-right text-[10px] bg-zinc-700 px-1 rounded block mt-0.5">Unit Cost: ${unitCost}</span></label>
-                    <input type="number" min="0" value={stockQty} onChange={e => setStockQty(Number(e.target.value))} placeholder="Stock Quantity" className="w-full bg-zinc-700 p-2 rounded" />
-                </div>
+                {merchType !== 'Ringtone' && (
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-zinc-400">Initial Stock Quantity <span className="float-right text-[10px] bg-zinc-700 px-1 rounded block mt-0.5">Unit Cost: ${unitCost}</span></label>
+                        <input type="number" min="0" value={stockQty} onChange={e => setStockQty(Number(e.target.value))} placeholder="Stock Quantity" className="w-full bg-zinc-700 p-2 rounded" />
+                    </div>
+                )}
 
                 <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-400">Retail Price <span className="text-[10px] text-zinc-500">(Recommended: ${merchType === 'Vinyl' ? '39.98' : '12.98'})</span></label>
+                    <label className="text-xs font-semibold text-zinc-400">Retail Price <span className="text-[10px] text-zinc-500">(Recommended: ${merchType === 'Vinyl' ? '39.98' : merchType === 'CD' ? '12.98' : '2.99'})</span></label>
                     <input type="number" step="0.01" min={unitCost} value={price} onChange={e => setPrice(Number(e.target.value))} placeholder="Price" className="w-full bg-zinc-700 p-2 rounded" />
                 </div>
 
@@ -208,7 +220,7 @@ const EditPriceModal: React.FC<{
 };
 
 const MerchStoreView: React.FC = () => {
-    const { dispatch, activeArtist, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const bannerInputRef = useRef<HTMLInputElement>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [restockItem, setRestockItem] = useState<MerchProduct | null>(null);
@@ -228,13 +240,13 @@ const MerchStoreView: React.FC = () => {
         }
     };
     
-    if (!youtubeStoreUnlocked) {
+    if (gameState.date.year >= 2005 && (activeArtistData.youtubeSubscribers || 0) < 100) {
         return (
             <div className="h-screen w-full bg-zinc-900 flex flex-col items-center justify-center text-center p-4">
                  <ShoppingBagIcon className="w-16 h-16 text-zinc-500 mb-4" />
-                <h1 className="text-2xl font-bold">Merch Store Locked</h1>
+                <h1 className="text-2xl font-bold text-white">Merch Store Locked</h1>
                 <p className="text-zinc-400 mt-2">
-                    Your merch store unlocks when you reach {formatNumber(500000)} subscribers on YouTube.
+                    Your merch store unlocks when you reach 100 subscribers on YouTube.
                 </p>
                  <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="mt-6 bg-red-600 text-white font-bold py-2 px-6 rounded-lg">
                     Back to Game

@@ -11,6 +11,7 @@ import GrammyAwardIcon from './icons/GrammyAwardIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import BanknotesIcon from './icons/BanknotesIcon';
 import ConfirmationModal from './ConfirmationModal';
+import { getEraConfiguration } from '../utils/eraUtils';
 
 const AlbumCertificationBadge: React.FC<{ streams: number }> = ({ streams }) => {
     const units = Math.floor(streams / 1500);
@@ -176,12 +177,13 @@ interface TrackItemProps {
     isExpanded: boolean;
     onToggleExpand: () => void;
     grammyWin?: string;
-    canTakeDown: boolean;
+    canTakeDown?: boolean;
     onTakeDown: () => void;
     onBuyBack: () => void;
+    isStreamingActive?: boolean;
 }
 
-const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack }) => {
+const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack, isStreamingActive }) => {
 
     return (
         <div className={`bg-zinc-800/50 p-2 rounded-lg ${song.isTakenDown ? 'opacity-60' : ''}`}>
@@ -193,7 +195,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                          {grammyWin && <GrammyAwardIcon className="w-4 h-4 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
                          {song.isTakenDown && <span className="text-[10px] font-bold bg-red-900/80 text-red-400 px-1.5 py-0.5 rounded-full">TAKEN DOWN</span>}
                     </div>
-                    <p className="text-sm text-zinc-400">{formatNumber(song.streams)} streams</p>
+                    <p className="text-sm text-zinc-400">{isStreamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(Math.floor(song.streams / 500))} sales`}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <SongCertificationBadge streams={song.streams} />
@@ -355,6 +357,8 @@ const CatalogView: React.FC = () => {
     const [rightsTarget, setRightsTarget] = useState<{ type: 'song' | 'release', item: Song | Release } | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ action: () => void, message: string, title: string, confirmText: string } | null>(null);
 
+    const eraConfig = useMemo(() => getEraConfiguration(gameState.date.year), [gameState.date.year]);
+
     if (!activeArtistData || !activeArtist) return null;
 
     const { grammyHistory } = activeArtistData;
@@ -385,8 +389,14 @@ const CatalogView: React.FC = () => {
                 const release = allReleases.find(r => r.id === s.releaseId);
                 return s.isReleased && release?.type === 'Single';
             })
+            .map(s => {
+                const merchUnits = activeArtistData.merch
+                    .filter(m => m.releaseId === s.releaseId)
+                    .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
+                return { ...s, streams: s.streams + (merchUnits * 150) };
+            })
             .sort((a, b) => b.streams - a.streams);
-    }, [songsForArtist, allReleases]);
+    }, [songsForArtist, allReleases, activeArtistData.merch]);
     
     const releasedProjects = useMemo(() => {
         return activeArtistData.releases
@@ -396,10 +406,13 @@ const CatalogView: React.FC = () => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.streams || 0);
                 }, 0);
-                return { ...release, streams: releaseStreams };
+                const merchUnits = activeArtistData.merch
+                    .filter(m => m.releaseId === release.id)
+                    .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
+                return { ...release, streams: releaseStreams + (merchUnits * 1500) };
             })
             .sort((a, b) => b.streams - a.streams);
-    }, [activeArtistData.releases, activeArtistData.songs]);
+    }, [activeArtistData.releases, activeArtistData.songs, activeArtistData.merch]);
     
     const handleToggleExpand = (projectId: string) => {
         setExpandedProjectIds(prev => {
@@ -560,6 +573,7 @@ const CatalogView: React.FC = () => {
                                                                     }
                                                                 });
                                                             }}
+                                                            isStreamingActive={eraConfig.streamingActive}
                                                         />
                                                     );
                                                 })}
@@ -624,7 +638,7 @@ const CatalogView: React.FC = () => {
                                                             <ChevronDownIcon className={`w-6 h-6 transition-transform ${expandedSingleId === song.id ? 'rotate-180' : ''}`} />
                                                         </button>
                                                     </div>
-                                                    <p className="text-sm text-zinc-400">{formatNumber(song.streams)} streams</p>
+                                                    <p className="text-sm text-zinc-400">{eraConfig.streamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(Math.floor(song.streams / 500))} sales`}</p>
                                                     <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
                                                         <StatPill label="Current" value={chartInfo.current} />
                                                         <StatPill label="Peak" value={chartInfo.peak} />

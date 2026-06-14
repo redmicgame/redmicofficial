@@ -6,6 +6,7 @@ import { createDefaultContract } from '../utils/contractUtils';
 import type { Contract, Label, CustomLabel, LabelSubmission } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ConfirmationModal from './ConfirmationModal';
+import { getEraConfiguration } from '../utils/eraUtils';
 
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 
@@ -23,7 +24,7 @@ const getLabelSplit = (label: Label) => {
     return '50% / 50%';
 };
 
-const LabelCard: React.FC<{ label: Label, onSign: (label: Label) => void, canSign: boolean }> = ({ label, onSign, canSign }) => (
+const LabelCard: React.FC<{ label: Label, onSign: (label: Label) => void, canSign: boolean, isStreamingActive: boolean }> = ({ label, onSign, canSign, isStreamingActive }) => (
     <div className={`bg-zinc-800 p-4 rounded-lg flex flex-col items-center text-center transition-opacity ${!canSign ? 'opacity-50' : ''}`}>
         <img src={label.logo} alt={label.name} className="w-20 h-20 rounded-full object-cover mb-3" />
         <h3 className="text-lg font-bold">{label.name}</h3>
@@ -32,7 +33,7 @@ const LabelCard: React.FC<{ label: Label, onSign: (label: Label) => void, canSig
             <p>Promotion: <span className="font-bold text-white">{label.promotionMultiplier}x</span></p>
             <p>Adv: <span className="font-bold text-green-400 font-mono">${formatNumber(getLabelAdvance(label))}</span></p>
             <p>Cut (You/Label): <span className="font-bold text-yellow-400">{getLabelSplit(label)}</span></p>
-            <p>Requires: <span className="font-bold text-white">{label.streamRequirement > 0 ? formatNumber(label.streamRequirement) + ' streams' : 'None'}</span></p>
+            <p>Requires: <span className="font-bold text-white">{label.streamRequirement > 0 ? (isStreamingActive ? formatNumber(label.streamRequirement) + ' streams' : formatNumber(Math.floor(label.streamRequirement / 500)) + ' sales') : 'None'}</span></p>
         </div>
         <button 
             onClick={() => onSign(label)}
@@ -285,6 +286,7 @@ const UnsignedView: React.FC = () => {
     const [nameChangeInput, setNameChangeInput] = useState('');
 
     if (!activeArtistData || !activeArtist) return null;
+    const eraConfig = getEraConfiguration(gameState.date.year);
     const careerStreams = activeArtistData.songs.reduce((sum, song) => sum + song.streams, 0);
 
     const standardLabels = LABELS.filter(l => l.contractType !== 'petty');
@@ -467,6 +469,7 @@ const UnsignedView: React.FC = () => {
                                 label={label} 
                                 onSign={setConfirmPettyJoin} 
                                 canSign={true}
+                                isStreamingActive={eraConfig.streamingActive}
                             />
                         ))}
                     </div>
@@ -483,6 +486,7 @@ const UnsignedView: React.FC = () => {
                                     label={label} 
                                     onSign={setOfferModalLabel} 
                                     canSign={canSign}
+                                    isStreamingActive={eraConfig.streamingActive}
                                 />
                             );
                         })}

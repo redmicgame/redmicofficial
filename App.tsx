@@ -39,6 +39,8 @@ import CreateLabelView from './components/CreateLabelView';
 import ManageLabelView from './components/ManageLabelView';
 import AlbumPromoView from './components/AlbumPromoView';
 import RadioDashView from './components/RadioDashView';
+import LimeWireView from './components/LimeWireView';
+import AscapView from './components/AscapView';
 import PromoInterviewView from './components/PromoInterviewView';
 import AchievementsView from './components/AchievementsView';
 import RedMicProUnlockView from './components/RedMicProUnlockView';
@@ -96,12 +98,16 @@ import TmzArticleView from './components/TmzArticleView';
 import RiaaView from './components/RiaaView';
 import AttendEventView from './components/AttendEventView';
 
+import MySpaceView from './components/MySpaceView';
 import { ChartPredictionsView } from './components/ChartPredictionsView';
+import { getEraConfiguration } from './utils/eraUtils';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
     const { careerMode, currentView } = gameState;
     const isGoldTheme = activeArtistData?.isGoldTheme ?? false;
+    
+    const eraConfig = getEraConfiguration(gameState.date.year);
 
     if (!careerMode) {
         return <StartScreen />;
@@ -195,6 +201,10 @@ const AppContent: React.FC = () => {
                 return <AlbumSalesChartView />;
             case 'radioDash':
                 return <RadioDashView />;
+            case 'limewire':
+                return <LimeWireView />;
+            case 'ascap':
+                return <AscapView />;
             case 'promoInterview':
                 return <PromoInterviewView />;
             case 'createGeniusInterview':
@@ -211,6 +221,8 @@ const AppContent: React.FC = () => {
                 return <CreateFeatureView />;
             case 'createFeatureVideo':
                 return <CreateFeatureVideoView />;
+            case 'myspace':
+                return <MySpaceView />;
             case 'x':
                 return <XView />;
             case 'xProfile':
@@ -296,9 +308,11 @@ const AppContent: React.FC = () => {
     };
 
     return (
-        <div className={`bg-zinc-900 text-white min-h-screen ${isGoldTheme ? 'gold-theme' : ''}`}>
-            {renderView()}
-            {gameState.activeEncounter && <EncounterModalView />}
+        <div className={`bg-black min-h-[100dvh] h-[100dvh] w-full flex items-center justify-center ${isGoldTheme ? 'gold-theme' : ''}`}>
+             <div className="relative bg-zinc-900 text-white w-full h-full overflow-hidden">
+                {renderView()}
+                {gameState.activeEncounter && <EncounterModalView />}
+             </div>
         </div>
     );
 };

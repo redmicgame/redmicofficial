@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES } from '../constants';
+import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES, SUBGENRES } from '../constants';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -13,6 +13,7 @@ const StudioView: React.FC = () => {
 
     const [title, setTitle] = useState('');
     const [genre, setGenre] = useState(GENRES[0]);
+    const [subgenre, setSubgenre] = useState(SUBGENRES[0]);
     const [studioIndex, setStudioIndex] = useState(0);
     const [isExplicit, setIsExplicit] = useState(false);
     const [coverArt, setCoverArt] = useState<string | null>(null);
@@ -205,6 +206,7 @@ const StudioView: React.FC = () => {
             id: crypto.randomUUID(),
             title: songTitle,
             genre,
+            subgenre: subgenre !== 'None' ? subgenre : undefined,
             quality: finalQuality,
             coverArt,
             isReleased: false,
@@ -281,6 +283,7 @@ const StudioView: React.FC = () => {
             id: crypto.randomUUID(),
             title: reRecordTitle,
             genre,
+            subgenre: subgenre !== 'None' ? subgenre : undefined,
             quality: finalQuality,
             coverArt,
             isReleased: false,
@@ -522,6 +525,13 @@ const StudioView: React.FC = () => {
                             <label htmlFor="genre" className="block text-sm font-medium text-zinc-300">Genre</label>
                             <select id="genre" value={genre} onChange={e => setGenre(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
                                 {GENRES.map(g => <option key={g}>{g}</option>)}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="subgenre" className="block text-sm font-medium text-zinc-300">Subgenre / Trend</label>
+                            <select id="subgenre" value={subgenre} onChange={e => setSubgenre(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                {SUBGENRES.map(g => <option key={g}>{g}</option>)}
                             </select>
                         </div>
                         

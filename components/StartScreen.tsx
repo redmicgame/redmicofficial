@@ -330,10 +330,6 @@ const StartScreen: React.FC = () => {
                                             <option>UK</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label htmlFor="start-year" className="block text-sm font-medium text-zinc-300">Start Year</label>
-                                        <input type="number" id="start-year" value={startYear} onChange={e => setStartYear(parseInt(e.target.value))} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
-                                    </div>
                                 </div>
                             </>
                         ) : (
@@ -384,6 +380,23 @@ const StartScreen: React.FC = () => {
                             </>
                         )}
 
+                        <div>
+                             <label htmlFor="start-year" className="block text-sm font-medium text-zinc-300">Start Year</label>
+                             <input type="number" id="start-year" min="1980" max="2024" value={startYear} onChange={e => setStartYear(parseInt(e.target.value))} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
+                        </div>
+                        <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-700/50">
+                            <p className="text-xs text-zinc-400 font-semibold mb-1">
+                                {startYear < 2003 ? '💿 The Physical Era' : startYear < 2013 ? '📱 The Digital Era' : startYear < 2020 ? '🎧 The Streaming Era' : '🚀 The Modern Era'}
+                            </p>
+                            <p className="text-[10px] text-zinc-500 leading-tight">
+                                {startYear < 2003 ? 'Physical sales dominate the charts. No digital or streaming platforms exist.' : 
+                                 startYear < 2006 ? 'Physical sales are strong, but digital downloads (iTunes) are beginning to rise. No streaming.' :
+                                 startYear < 2010 ? 'Digital downloads are booming. Social media (X/Twitter) is emerging.' :
+                                 startYear < 2013 ? 'Digital and physical sales remain, but streaming is on the horizon. Instagram is available.' :
+                                 startYear < 2018 ? 'Streaming takes over as the primary way people consume music. Physical sales plummet.' :
+                                 'Streaming dominates everything. TikTok is the main driver of viral hits. Physical sales are for collectors.'}
+                            </p>
+                        </div>
                         <div>
                              <label htmlFor="difficulty" className="block text-sm font-medium text-zinc-300">Difficulty</label>
                              <select id="difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value as any)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">

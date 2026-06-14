@@ -10,7 +10,7 @@ import { REAL_WORLD_DISCOGRAPHIES } from '../realWorldDiscographies';
 import { ActiveEncounter, EncounterChoice } from '../types';
 import { createDefaultContract } from '../utils/contractUtils';
 
-export const getPossibleEncounters = (artist: Artist | Group, artistData: ArtistData): ActiveEncounter[] => {
+export const getPossibleEncounters = (artist: Artist | Group, artistData: ArtistData, year: number): ActiveEncounter[] => {
     const isGroup = artist.type === 'group';
     const isMarried = artistData.relationships?.some(r => r.status === 'married');
 
@@ -402,6 +402,8 @@ const initialArtistData: ArtistData = {
     weeksUntilNextSoundtrackOffer: Math.floor(Math.random() * 13) + 12, // 12-24 weeks
 };
 
+
+import { getEraConfiguration } from '../utils/eraUtils';
 
 const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
     { id: 'tth', name: "Today's Top Hits", description: "Top hits right now.", followers: 34000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=500&fit=crop', tracks: [] },
@@ -1173,7 +1175,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (!artistProfile) continue;
 
                     artistData.releases.forEach(release => {
-                        if (!release.releasingLabel && release.releaseDate.week === newDate.week && release.releaseDate.year === newDate.year) {
+                        if (!release.releasingLabel && release.releaseDate?.week === newDate.week && release.releaseDate?.year === newDate.year) {
                             newMusicItems.push({
                                 artist: artistProfile.name,
                                 title: release.title,
@@ -1185,7 +1187,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     artistData.labelSubmissions.forEach(sub => {
                         if (sub.status === 'scheduled') {
                             sub.singlesToRelease?.forEach(single => {
-                                if (single.releaseDate.week === newDate.week && single.releaseDate.year === newDate.year) {
+                                if (single.releaseDate?.week === newDate.week && single.releaseDate?.year === newDate.year) {
                                     const song = artistData.songs.find(s => s.id === single.songId);
                                     if (song) {
                                         newMusicItems.push({ artist: artistProfile.name, title: song.title, type: 'song' });
@@ -1241,6 +1243,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             }
 
             const playerArtistIds = new Set(allPlayerArtistsAndGroups.map(a => a.id));
+
+            let leakedSongThisWeek: Song | null = null;
+            let leakEncounterThisWeek: ActiveEncounter | null = null;
+            let tiktokEncounterThisWeek: ActiveEncounter | null = null;
+            let tourDynamicPricingEncounter: ActiveEncounter | null = null;
 
             for (const artistId in updatedArtistsData) {
                 const artistData = updatedArtistsData[artistId];
@@ -1414,14 +1421,52 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             
                             // Price sensitivity: Suggestion is around $25-$120. 
                             // If price is high, demand drops.
-                            const priceSensitivity = 1.2 - (venue.ticketPrice / 200); // Simple linear drop
+                            let priceSensitivity = 1.2 - (venue.ticketPrice / 200); // Simple linear drop
                             let demand = baseDemand * Math.max(0.1, priceSensitivity);
                             
                             // Random flux
                             demand = demand * (0.8 + Math.random() * 0.4);
+
+                            let ticketsSold = Math.floor(Math.min(venue.capacity, demand));
                             
-                            const ticketsSold = Math.floor(Math.min(venue.capacity, demand));
-                            const revenue = ticketsSold * venue.ticketPrice;
+                            let actualTicketPrice = venue.ticketPrice;
+                            if (tour.useDynamicPricing) {
+                                actualTicketPrice = venue.ticketPrice * (Math.random() * 2 + 2);
+                                // Dynamic pricing pisses people off, lose hype/popularity but gain cash
+                                artistData.publicImage = Math.max(0, artistData.publicImage - 1);
+                                
+                                // 5% chance per week of a federal investigation encounter if using dynamic pricing
+                                if (Math.random() < 0.05 && !tourDynamicPricingEncounter) {
+                                    tourDynamicPricingEncounter = {
+                                        id: `ticketmaster-${tour.id}-${newDate.year}-${newDate.week}`,
+                                        text: `BREAKING: The Department of Justice has opened an antitrust investigation into your tour's use of Dynamic Pricing after fans complained about paying $4,000 for nosebleeds. You are facing a massive PR disaster.`,
+                                        requiresImage: false,
+                                        choices: [
+                                            {
+                                                label: "Apologize and refund the scalped fees (Huge PR win, lose money)",
+                                                publicImageEffect: 30,
+                                                hypeEffect: 10,
+                                                popularityEffect: 5,
+                                                moneyEffect: -(ticketsSold * actualTicketPrice * 0.5)
+                                            },
+                                            {
+                                                label: "Blame Ticketmaster and move on. (PR hit, keep the cash)",
+                                                publicImageEffect: -20,
+                                                hypeEffect: -5,
+                                                popularityEffect: -5,
+                                                moneyEffect: 0
+                                            }
+                                        ]
+                                    };
+                                }
+                            }
+
+                            let revenue = ticketsSold * actualTicketPrice;
+
+                            if (tour.useVipPackages) {
+                                const vipTickets = Math.floor(ticketsSold * 0.05); // 5% buy VIP
+                                revenue += vipTickets * (actualTicketPrice * 4); // VIP is an extra 4x
+                            }
                             
                             const updatedVenue = {
                                 ...venue,
@@ -1622,7 +1667,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 if (artistProfileForEmail) {
                     state.soundtrackAlbums.forEach(st => {
                        // if replacing the same week, we need player to be the artistId
-                       if (st.artistId === artistId && st.releaseDate.year === newDate.year && st.releaseDate.week === newDate.week && !st.isReleased) {
+                       if (st.artistId === artistId && st.releaseDate?.year === newDate.year && st.releaseDate?.week === newDate.week && !st.isReleased) {
                              const emailId = crypto.randomUUID();
                             newEmails.push({
                                 id: emailId,
@@ -1715,7 +1760,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
 
                 let newPopularity = artistData.popularity;
-                const lastRelease = [...artistData.releases].sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
+                const lastRelease = [...artistData.releases].sort((a,b) => {
+                    const aDate = a.releaseDate || { year: 0, week: 0 };
+                    const bDate = b.releaseDate || { year: 0, week: 0 };
+                    return (bDate.year * 52 + bDate.week) - (aDate.year * 52 + aDate.week);
+                })[0];
                 
                 let popDecay = 0.25;
                 if (difficulty === 'easy') popDecay = 0;
@@ -1723,7 +1772,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 else if (difficulty === 'extreme') popDecay = 1.0;
 
                 if (lastRelease) {
-                    const weeksSinceLastRelease = (newDate.year * 52 + newDate.week) - (lastRelease.releaseDate.year * 52 + lastRelease.week);
+                    const weeksSinceLastRelease = (newDate.year * 52 + newDate.week) - ((lastRelease.releaseDate?.year || 0) * 52 + (lastRelease.releaseDate?.week || 0));
                     if (weeksSinceLastRelease > 12) { // 3 months
                         newPopularity = Math.max(0, newPopularity - popDecay);
                     }
@@ -1734,7 +1783,42 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const popularityMultiplier = 1 + (newPopularity / 100);
                 const hypeMultiplier = 1 + (newHype / 100);
                 
-                let leakedSongThisWeek: Song | null = null;
+                // --- SONG VIRAL RESURGENCE LOGIC ---
+                if (newDate.year >= 2020 && Math.random() < 0.05) { // 5% chance per week per artist
+                    const eligibleOldSongs = artistData.songs.filter(s => 
+                        s.isReleased && 
+                        s.releaseDate && 
+                        (newDate.year - (s.releaseDate?.year || newDate.year)) >= 10 && 
+                        !s.remixOfSongId
+                    );
+                    if (eligibleOldSongs.length > 0) {
+                        const viralSong = eligibleOldSongs[Math.floor(Math.random() * eligibleOldSongs.length)];
+                        viralSong.streams += 150000000;
+                        viralSong.quality = Math.min(10, viralSong.quality + 2); // Boost quality as it re-enters algorithm
+                        tiktokEncounterThisWeek = {
+                            id: `tiktok-${viralSong.id}-${newDate.year}-${newDate.week}`,
+                            text: `CRAZY NEWS! Your decade+ old deep-cut "${viralSong.title}" just went completely viral on TikTok (Stranger Things style)!! You just got 150M streams overnight. Do you want to rush a new remix/video to capitalize on this, or let it ride naturally?`,
+                            requiresImage: false,
+                            choices: [
+                                {
+                                    label: "Rush a Remix / Content! (Costs $50,000, Huge Hype boost)",
+                                    publicImageEffect: 10,
+                                    hypeEffect: 80,
+                                    popularityEffect: 20,
+                                    moneyEffect: -50000
+                                },
+                                {
+                                    label: "Let it ride naturally. (Free money, small hype boost)",
+                                    publicImageEffect: 0,
+                                    hypeEffect: 15,
+                                    popularityEffect: 5,
+                                    moneyEffect: 0
+                                }
+                            ]
+                        };
+                    }
+                }
+
                 // --- SONG LEAK LOGIC ---
                 artistData.songs.forEach(song => {
                     // Update already leaked songs
@@ -1752,33 +1836,59 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                 leakChance *= team.leakProtection;
                             }
                         }
-                        if (Math.random() < leakChance) {
+                        if (Math.random() < leakChance && !leakedSongThisWeek && !leakEncounterThisWeek) {
                             const illegalStreams = Math.floor((song.quality * newHype * (Math.random() * 50 + 20)));
                             const illegalDownloads = Math.floor(illegalStreams / (Math.random() * 10 + 5));
                             song.leakInfo = { illegalStreams, illegalDownloads };
                             leakedSongThisWeek = song;
 
-                            let sender = "Music Insider";
-                            let senderIcon: Email['senderIcon'] = 'default';
-                             if (artistData.contract) {
-                                const label = LABELS.find(l => l.id === artistData.contract!.labelId) || allCustomLabels.find(l => l.id === artistData.contract!.labelId);
-                                if(label) {
-                                    sender = label.name;
-                                    senderIcon = 'label';
+                            // In the piracy era (1999-2008), trigger a specific encounter
+                            if (newDate.year >= 1999 && newDate.year <= 2008) {
+                                leakEncounterThisWeek = {
+                                    id: `leak-${song.uniqueId}`,
+                                    text: `Your upcoming song "${song.title}" just leaked on LimeWire and Napster! It's spreading like wildfire. While this damages your physical single sales, your underground fame is skyrocketing, unlocking bigger local venues. Do you sue your fans to stop the bleeding, or let the piracy fuel your local legend?`,
+                                    requiresImage: false,
+                                    choices: [
+                                        {
+                                            label: "Sue the fans! (Stop leak, huge PR hit, save money)",
+                                            publicImageEffect: -40,
+                                            hypeEffect: -10,
+                                            moneyEffect: 50000,
+                                            popularityEffect: -5
+                                        },
+                                        {
+                                            label: "Let it happen (Fame boost, lose potential sales)",
+                                            publicImageEffect: 10,
+                                            hypeEffect: 30,
+                                            popularityEffect: 15,
+                                            moneyEffect: 0
+                                        }
+                                    ]
+                                };
+                            } else {
+                                // For other eras, just an email notification
+                                let sender = "Music Insider";
+                                let senderIcon: Email['senderIcon'] = 'default';
+                                 if (artistData.contract) {
+                                    const label = LABELS.find(l => l.id === artistData.contract!.labelId) || allCustomLabels.find(l => l.id === artistData.contract!.labelId);
+                                    if(label) {
+                                        sender = label.name;
+                                        senderIcon = 'label';
+                                    }
                                 }
+                                
+                                const emailId = crypto.randomUUID();
+                                newEmails.push({
+                                    id: emailId,
+                                    sender: sender,
+                                    senderIcon: senderIcon,
+                                    subject: `URGENT: Your song "${song.title}" has leaked!`,
+                                    body: `Hi ${artistProfileForEmail?.name || 'Artist'},\n\nWe've detected an unauthorized leak of your unreleased song "${song.title}". The track is spreading online via illegal streams and downloads.\n\nThis will likely impact your official release plans. We recommend releasing the song officially as soon as possible to mitigate the damage.\n\n- ${sender}`,
+                                    date: newDate,
+                                    isRead: false,
+                                    offer: { type: 'leak', songId: song.id }
+                                });
                             }
-                            
-                            const emailId = crypto.randomUUID();
-                            newEmails.push({
-                                id: emailId,
-                                sender: sender,
-                                senderIcon: senderIcon,
-                                subject: `URGENT: Your song "${song.title}" has leaked!`,
-                                body: `Hi ${artistProfileForEmail?.name || 'Artist'},\n\nWe've detected an unauthorized leak of your unreleased song "${song.title}". The track is spreading online via illegal streams and downloads.\n\nThis will likely impact your official release plans. We recommend releasing the song officially as soon as possible to mitigate the damage.\n\n- ${sender}`,
-                                date: newDate,
-                                isRead: false,
-                                offer: { type: 'leak', songId: song.id }
-                            });
                         }
                     }
                 });
@@ -1998,7 +2108,30 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         else if (difficulty === 'hard') diffMultiplier = 0.6;
                         else if (difficulty === 'extreme') diffMultiplier = 0.3;
 
-                        let weeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * diffMultiplier * (Math.random() * 0.4 + 0.8)); 
+                        // ---- Sound Trends & Era Multipliers ----
+                        let trendMultiplier = 1.0;
+                        const sub = song.subgenre;
+                        
+                        if (newDate.year <= 2002 && sub === 'Teen Pop Boyband') {
+                            trendMultiplier = 3.0; // +200%
+                        } else if (newDate.year >= 2006 && newDate.year <= 2012 && sub === 'Teen Pop Boyband') {
+                            trendMultiplier = 0.1; // flops
+                        }
+
+                        if (newDate.year >= 2006 && newDate.year <= 2009 && (sub === 'Ringtone Rap' || sub === 'Electro-Pop')) {
+                            trendMultiplier = 2.5;
+                        }
+
+                        if (newDate.year >= 2010 && newDate.year <= 2014 && (sub === 'EDM' || sub === 'Festival')) {
+                            trendMultiplier = 2.5;
+                        }
+
+                        if (newDate.year >= 2018) {
+                            if (sub === 'Trap' || sub === 'Alt-Pop') trendMultiplier = 1.8;
+                            if (song.duration < 150) trendMultiplier *= 1.5; // Short songs algorithmic boost
+                        }
+
+                        let weeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * diffMultiplier * trendMultiplier * (Math.random() * 0.4 + 0.8)); 
 
                         // Decay logic
                         let releaseDate = song.releaseDate;
@@ -2014,7 +2147,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             else if (difficulty === 'extreme') decayIntensity = 0.4;
 
                             if (decayIntensity > 0) {
-                                const ageInWeeks = Math.max(0, (newDate.year - releaseDate.year) * 52 + (newDate.week - releaseDate.week));
+                                const ageInWeeks = Math.max(0, (newDate.year - (releaseDate?.year || newDate.year)) * 52 + (newDate.week - (releaseDate?.week || newDate.week)));
                                 const maxAge = Math.min(ageInWeeks, 156); // 3 years max decay
                                 const decayFactor = 1 / (1 + decayIntensity * maxAge);
                                 weeklyStreams = Math.floor(weeklyStreams * decayFactor);
@@ -2100,11 +2233,28 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         
                         const release = artistData.releases.find(r => r.id === song.releaseId);
                         let firstWeekStreamsData = {};
-                        if (release && (newDate.year * 52 + newDate.week) - (release.releaseDate.year * 52 + release.releaseDate.week) === 1) {
+                        if (release && (newDate.year * 52 + newDate.week) - (release.releaseDate?.year * 52 + release.releaseDate?.week) === 1) {
                             firstWeekStreamsData = { firstWeekStreams: weeklyStreams };
                         }
 
-                        const generatedGross = weeklyStreams * STREAM_INCOME_MULTIPLIER;
+                        // Era-based Revenue Calculation
+                        // Assume internal `weeklyStreams` represents STREAM EQUIVALENT UNITS
+                        // 150 streams = 1 track sale
+                        const eraConfig = getEraConfiguration(newDate.year);
+                        
+                        const physicalGrossPerUnit = 2.50 / 150; // physical single
+                        const digitalGrossPerUnit = 1.29 / 150; // digital download
+                        const streamingGrossPerUnit = 0.004; // stream
+                        
+                        const songReleaseYear = song.releaseDate?.year || 2008;
+                        const hasStreamingRights = song.isAvailableOnStreaming !== false && (songReleaseYear >= 2008 || song.isAvailableOnStreaming === true);
+                        const effectiveStreamingShare = hasStreamingRights ? eraConfig.marketShare.streaming : 0;
+                        
+                        const physicalGross = weeklyStreams * eraConfig.marketShare.physical * physicalGrossPerUnit;
+                        const digitalGross = weeklyStreams * eraConfig.marketShare.digital * digitalGrossPerUnit;
+                        const streamGross = weeklyStreams * effectiveStreamingShare * streamingGrossPerUnit;
+                        
+                        const generatedGross = physicalGross + digitalGross + streamGross;
                         
                         let myGross = song.isFeatureToNpc ? 0 : generatedGross;
                         if (song.rightsSoldPercent && song.rightsSoldPercent > 0) {
@@ -2147,7 +2297,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistData.songs = updatedSongs;
                 
                 artistData.releases = artistData.releases.map(release => {
-                    if ((newDate.year * 52 + newDate.week) - (release.releaseDate.year * 52 + release.releaseDate.week) === 1) {
+                    if ((newDate.year * 52 + newDate.week) - (release.releaseDate?.year * 52 + release.releaseDate?.week) === 1) {
                         const firstWeekProjectStreams = release.songIds.reduce((sum, songId) => {
                             const song = updatedSongs.find(s => s.id === songId);
                             return sum + (song?.firstWeekStreams || 0);
@@ -2212,7 +2362,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }
 
                     let firstWeekViewsData = {};
-                    if ((newDate.year * 52 + newDate.week) - (video.releaseDate.year * 52 + video.releaseDate.week) === 1) {
+                    if ((newDate.year * 52 + newDate.week) - (video.releaseDate?.year * 52 + video.releaseDate?.week) === 1) {
                         firstWeekViewsData = { firstWeekViews: weeklyViews };
                     }
 
@@ -2235,9 +2385,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         let weeklySales = Math.floor((artistData.youtubeSubscribers / 50000) * popularityMultiplier * (Math.random() * 5 + 1));
                         
                         // Scale demand by price (higher price = lower demand)
-                        const recommendedPrice = item.type === 'Vinyl' ? 39.98 : 12.98;
+                        const recommendedPrice = item.type === 'Vinyl' ? 39.98 : item.type === 'CD' ? 12.98 : 2.99;
                         if (item.price > recommendedPrice) {
                             weeklySales = Math.floor(weeklySales * (recommendedPrice / item.price));
+                        }
+                        
+                        if (item.type === 'Ringtone') {
+                            // Ringtones demand scales massively based on hype
+                            weeklySales = Math.floor((artistData.hype * 2000) * popularityMultiplier * (Math.random() * 5 + 1));
                         }
 
                         if (artistData.redMicPro.unlocked && artistData.salesBoost > 0) {
@@ -2601,7 +2756,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         let subModified = false;
                         // Check for single releases
                         const singlesReadyToRelease = sub.singlesToRelease?.filter(single =>
-                            single.releaseDate.week === newDate.week && single.releaseDate.year === newDate.year
+                            single.releaseDate?.week === newDate.week && single.releaseDate?.year === newDate.year
                         ) || [];
 
                         if (singlesReadyToRelease.length > 0) {
@@ -2687,7 +2842,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                     }
 
                                     // Genius offer for single
-                                    if (artistProfile) {
+                                    if (artistProfile && newDate.year >= 2020) {
                                         const emailId = crypto.randomUUID();
                                         newEmails.push({
                                             id: emailId,
@@ -2848,7 +3003,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                     const controversialPaparazzi = artistData.paparazziPhotos.find(p => p.category === 'Scandal');
                     const recentLowScoreRelease = artistData.releases
-                        .find(r => r.review && r.review.score < 5 && (newDate.year * 52 + newDate.week) - (r.releaseDate.year * 52 + r.releaseDate.week) <= 4);
+                        .find(r => r.review && r.review.score < 5 && (newDate.year * 52 + newDate.week) - (r.releaseDate?.year * 52 + r.releaseDate?.week) <= 4);
 
                     if (controversialPaparazzi && Math.random() < 0.5) { // 50% chance to be about scandal
                         // Clarification email
@@ -3244,7 +3399,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     // 1. Gather User Albums from this year
                     const userAlbums = artistData.releases.filter(r => 
                         (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'EP') &&
-                        r.releaseDate.year === newDate.year
+                        r.releaseDate?.year === newDate.year
                     ).map(album => {
                         // Calculate total streams for the album
                         const streams = album.songIds.reduce((sum, songId) => {
@@ -3383,7 +3538,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const activeArtist = allPlayerArtistsAndGroups.find(a => a.id === artistId);
                 
                 artistData.songs = artistData.songs.map(song => {
-                    if (song.isFeatureToNpc && !song.isReleased && song.releaseDate && song.releaseDate.week === newDate.week && song.releaseDate.year === newDate.year) {
+                    if (song.isFeatureToNpc && !song.isReleased && song.releaseDate && song.releaseDate?.week === newDate.week && song.releaseDate?.year === newDate.year) {
                         const newReleaseId = crypto.randomUUID();
                         
                         artistData.releases.push({
@@ -3417,7 +3572,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                         return { ...song, isReleased: true, releaseId: newReleaseId };
                     } else if (song.isFeatureToNpc && song.isReleased && song.releaseDate) {
-                        const weeksSinceRelease = (newDate.year * 52 + newDate.week) - (song.releaseDate.year * 52 + song.releaseDate.week);
+                        const weeksSinceRelease = (newDate.year * 52 + newDate.week) - (song.releaseDate?.year * 52 + song.releaseDate?.week);
                         
                         if (weeksSinceRelease === 1) {
                             // 75% chance to be offered a music video
@@ -3656,11 +3811,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 
                 let boost = 1;
                 let additionalItunesSales = 0;
+                let foundArtistId: string | null = null;
                 if (song.isPlayerSong && song.songId) {
-                    for (const artistId in updatedArtistsData) {
-                        const aData = updatedArtistsData[artistId];
+                    for (const aId in updatedArtistsData) {
+                        const aData = updatedArtistsData[aId];
                         const s = aData.songs.find(x => x.id === song.songId);
                         if (s) {
+                            foundArtistId = aId;
                             const pushWeek = aData.lastPushToItunesWeek;
                             const currentWeek = newDate.year * 52 + newDate.week;
                             if (aData.lastPushedSongId === song.songId && pushWeek && currentWeek - pushWeek <= 1) {
@@ -3687,15 +3844,36 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                     }
                 }
+                let additionalPhysicalSales = 0;
+                if (foundArtistId) {
+                    const ad = state.artistsData[foundArtistId];
+                    if (ad) {
+                        const songMerch = ad.merch.filter(m => {
+                            if (m.releaseId) {
+                                const release = ad.releases.find(r => r.id === m.releaseId);
+                                return release?.type === 'Single' && release.songIds.includes(song.songId!);
+                            }
+                            return false;
+                        });
+                        additionalPhysicalSales = songMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
+                    }
+                }
                 const sales = Math.floor(song.weeklyStreams / divisor) * boost + additionalItunesSales;
                 
-                // 50% streams, 30% radio, 20% digital sales
-                const streamPoints = song.weeklyStreams * 0.5;
-                const salesPoints = sales * 150 * 0.2;
-                const radioPoints = (song.radioPlays || 0) * 80 * 0.3; // 80 points per play scaling
-                const points = streamPoints + salesPoints + radioPoints;
+                const eraConfigTemp = getEraConfiguration(state.date.year);
                 
-                return { ...song, hot100Points: points, digitalSales: sales, radioPlays: song.radioPlays, radioImpressions: song.radioImpressions };
+                const songReleaseYear = song.releaseDate?.year || 2008;
+                const hasStreamingRights = song.isAvailableOnStreaming !== false && (songReleaseYear >= 2008 || song.isAvailableOnStreaming === true);
+                const effectiveStreamingShare = hasStreamingRights ? eraConfigTemp.marketShare.streaming : 0;
+                
+                const streamPoints = (song.weeklyStreams * effectiveStreamingShare) * 0.5;
+                const digitalPoints = (sales * eraConfigTemp.marketShare.digital) * 150 * 0.2;
+                const physicalPoints = (sales * eraConfigTemp.marketShare.physical + additionalPhysicalSales) * 150 * 0.2;
+                const radioPoints = (song.radioPlays || 0) * eraConfigTemp.marketShare.radio * 80 * 0.3;
+                
+                const points = streamPoints + digitalPoints + physicalPoints + radioPoints;
+                
+                return { ...song, hot100Points: points, digitalSales: sales + additionalPhysicalSales, radioPlays: song.radioPlays, radioImpressions: song.radioImpressions };
             });
             hot100Contenders.sort((a, b) => b.hot100Points - a.hot100Points);
 
@@ -3931,17 +4109,28 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         return sum + songStreams;
                     }, 0);
 
+                    const eraConfigTmp2 = getEraConfiguration(state.date.year);
+
+                    // Add digital album sales based on era. totalWeeklyStreams represents "reach".
+                    // For albums, 1 digital sale = 1500 stream equivalents in popularity terms usually.
+                    const digitalAlbumSales = Math.floor((totalWeeklyStreams / 1500) * eraConfigTmp2.marketShare.digital * 1.5); // 1.5x boost for albums
+                    // Physical sales from general reach (aside from player-made merch)
+                    const generalPhysicalSales = Math.floor((totalWeeklyStreams / 1500) * eraConfigTmp2.marketShare.physical);
+                    
+                    const actualStreamEquivalents = Math.floor((totalWeeklyStreams / 1500) * eraConfigTmp2.marketShare.streaming);
+
                     const albumMerch = artistData.merch.filter(m => m.releaseId === release.id);
-                    let totalWeeklySales = albumMerch.reduce((sum, item) => {
-                        return sum + (item._actualWeeklySales || 0);
-                    }, 0);
+                    let totalWeeklySales = albumMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
+                    
+                    totalWeeklySales += digitalAlbumSales + generalPhysicalSales;
 
                     // Inject accumulated preorder sales on the first charting week
-                    if ((newDate.year * 52 + newDate.week) - (release.releaseDate.year * 52 + release.releaseDate.week) === 1) {
+                    const relDate = release.releaseDate || { year: state.date.year, week: state.date.week };
+                    if ((newDate.year * 52 + newDate.week) - (relDate.year * 52 + relDate.week) === 1) {
                         totalWeeklySales += (release.preorderSales || 0);
                     }
 
-                    const weeklySES = Math.floor(totalWeeklyStreams / 1500);
+                    const weeklySES = actualStreamEquivalents;
                     const weeklyActivity = weeklySES + totalWeeklySales;
                     const labelName = release.releasingLabel ? release.releasingLabel.name : 'Independent';
 
@@ -3968,12 +4157,19 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     return sum + Math.floor(song.basePopularity * (Math.random() * 0.4 + 0.8));
                 }, 0);
 
-                const streamActivity = Math.floor(totalWeeklyStreams / 1500);
+                const eraConfigTmp3 = getEraConfiguration(state.date.year);
+                
+                const streamActivity = Math.floor((totalWeeklyStreams / 1500) * eraConfigTmp3.marketShare.streaming);
+
                 // Use the sales potential to guarantee higher chart positions
                 // Sales potential (14k+) ensures chart relevance.
                 // Vary sales weekly by +/- 10%
                 const variance = 0.9 + (Math.random() * 0.2); 
-                const weeklySales = Math.floor((album.salesPotential || 1000) * variance);
+                
+                // Pure sales scaling by era
+                // In earlier eras, we need MORE pure sales to be relevant on the chart.
+                const eraSalesBoost = (eraConfigTmp3.marketShare.physical + eraConfigTmp3.marketShare.digital) > 0.8 ? 2.5 : 1.0;
+                const weeklySales = Math.floor((album.salesPotential || 1000) * variance * eraSalesBoost);
                 
                 const weeklyActivity = streamActivity + weeklySales;
 
@@ -4210,7 +4406,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (artistProfile && !hasOscarEmailThisYear) {
                         const eligibleSongs = artistData.songs.filter(s => {
                             const release = artistData.releases.find(r => r.id === s.releaseId);
-                            return s.soundtrackTitle && release && release.releaseDate.year === newDate.year - 1;
+                            return s.soundtrackTitle && release && release.releaseDate?.year === newDate.year - 1;
                         });
 
                         if (eligibleSongs.length > 0) {
@@ -4684,7 +4880,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         } else if (categoryName === 'Best New Artist') {
                             const totalStreamsThisYear = artistData.songs.reduce((sum, s) => {
                                 const release = artistData.releases.find(r => r.id === s.releaseId);
-                                return (release && release.releaseDate.year === newDate.year) ? sum + s.streams : sum;
+                                return (release && release.releaseDate?.year === newDate.year) ? sum + s.streams : sum;
                             }, 0);
                             score = artistData.hype + (totalStreamsThisYear / 1000000);
                             coverArt = artistProfile.image;
@@ -5061,12 +5257,18 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 };
             }
 
-            if (!finalState.disableEncounters && finalState.currentView !== 'contractRenewal' && !finalState.activeEncounter && !finalState.contractOffer) {
+            if (tourDynamicPricingEncounter && !finalState.disableEncounters) {
+                finalState.activeEncounter = tourDynamicPricingEncounter;
+            } else if (tiktokEncounterThisWeek && !finalState.disableEncounters) {
+                finalState.activeEncounter = tiktokEncounterThisWeek;
+            } else if (leakEncounterThisWeek && !finalState.disableEncounters) {
+                finalState.activeEncounter = leakEncounterThisWeek;
+            } else if (!finalState.disableEncounters && finalState.currentView !== 'contractRenewal' && !finalState.activeEncounter && !finalState.contractOffer) {
                 const updatedActiveData = updatedArtistsData[state.activeArtistId];
                 if (updatedActiveData) {
                     const artist = allPlayerArtistsAndGroups.find(a => a.id === state.activeArtistId);
                     if (artist && Math.random() < (updatedActiveData.popularity / 100) * 0.33) {
-                        const possibleEncounters = getPossibleEncounters(artist, updatedActiveData);
+                        const possibleEncounters = getPossibleEncounters(artist, updatedActiveData, newDate.year);
                         if (possibleEncounters.length > 0) {
                             finalState.activeEncounter = possibleEncounters[Math.floor(Math.random() * possibleEncounters.length)];
                         }
@@ -5330,25 +5532,27 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         // Let's just drop public image, the game already uses public image to reduce fans growth and stream growth
                     }
 
-                    const emailIdGenius = crypto.randomUUID();
-                    newEmails.push({
-                        id: emailIdGenius,
-                        sender: 'Genius',
-                        subject: `Verified Interview for "${song.title}"?`,
-                        body: `Hey ${artistName},\n\nWe're big fans of your new single "${song.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.\n\nLet us know if you're interested.\n\nBest,\nThe Genius Team`,
-                        date: releaseWithLabel.releaseDate,
-                        isRead: false,
-                        senderIcon: 'genius',
-                        offer: {
-                            type: 'geniusInterview',
-                            songId: song.id,
-                            isAccepted: false,
-                            emailId: emailIdGenius,
-                        }
-                    });
+                    if (releaseWithLabel.releaseDate?.year >= 2020) {
+                        const emailIdGenius = crypto.randomUUID();
+                        newEmails.push({
+                            id: emailIdGenius,
+                            sender: 'Genius',
+                            subject: `Verified Interview for "${song.title}"?`,
+                            body: `Hey ${artistName},\n\nWe're big fans of your new single "${song.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.\n\nLet us know if you're interested.\n\nBest,\nThe Genius Team`,
+                            date: releaseWithLabel.releaseDate,
+                            isRead: false,
+                            senderIcon: 'genius',
+                            offer: {
+                                type: 'geniusInterview',
+                                songId: song.id,
+                                isAccepted: false,
+                                emailId: emailIdGenius,
+                            }
+                        });
+                    }
 
                     // On The Radar / TRSH'D offer for Hip Hop singles
-                    if (song.genre === 'Hip Hop' && Math.random() < 0.75) { // 75% chance
+                    if (song.genre === 'Hip Hop' && releaseWithLabel.releaseDate?.year >= 2020 && Math.random() < 0.75) { // 75% chance
                         const platform = Math.random() < 0.5 ? 'On The Radar' : "TRSH'D";
                         const emailIdPlatform = crypto.randomUUID();
                         if (platform === 'On The Radar') {
@@ -5649,15 +5853,31 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         case 'BUY_BACK_SONG': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
-            if (activeData.funds < action.payload.cost) return state;
+            if (activeData.money < action.payload.cost) return state;
             return {
                 ...state,
                 artistsData: {
                     ...state.artistsData,
                     [state.activeArtistId]: {
                         ...activeData,
-                        funds: activeData.funds - action.payload.cost,
+                        money: activeData.money - action.payload.cost,
                         songs: activeData.songs.map(s => s.id === action.payload.songId ? { ...s, isTakenDown: false, rightsSoldPercent: 0, rightsOwnerLabelId: undefined } : s)
+                    }
+                }
+            };
+        }
+        case 'UPLOAD_TO_STREAMING': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (activeData.money < action.payload.cost) return state;
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money - action.payload.cost,
+                        songs: activeData.songs.map(s => s.id === action.payload.songId ? { ...s, isAvailableOnStreaming: true } : s)
                     }
                 }
             };
@@ -6651,7 +6871,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         if (single) {
                             single.isAnnounced = true;
                             if (single.releaseDate) {
-                                releaseDateStr = `Week ${single.releaseDate.week}, ${single.releaseDate.year}`;
+                                releaseDateStr = `Week ${single.releaseDate?.week}, ${single.releaseDate?.year}`;
                             }
                         }
                         const song = activeData.songs.find(s => s.id === songId);
@@ -10044,6 +10264,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     ...state.artistsData,
                     [state.activeArtistId]: {
                         ...activeData,
+                        money: Math.max(0, activeData.money + (choice.moneyEffect || 0)),
+                        popularity: Math.max(0, Math.min(100, activeData.popularity + (choice.popularityEffect || 0))),
                         publicImage: Math.max(0, Math.min(100, (activeData.publicImage || 50) + choice.publicImageEffect)),
                         hype: Math.max(0, Math.min(100, (activeData.hype || 50) + choice.hypeEffect)),
                         xPosts: newPosts,

@@ -102,7 +102,7 @@ const WikipediaView: React.FC = () => {
                 if (projectIndex === 0) {
                     projectNumberString = 'debut';
                 } else if (projectIndex > 0) {
-                    const numberWords = ['second', 'third', 'fourth', 'fifth', 'sixth'];
+                    const numberWords = ['second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
                     projectNumberString = `${numberWords[projectIndex - 1] || `${projectIndex + 1}th`}`;
                     
                     const previousProject = artistProjects[projectIndex - 1];
@@ -119,20 +119,70 @@ const WikipediaView: React.FC = () => {
                     controversies.push(`The release was accompanied by controversy when over ${Math.round(fraudulentStreams / 1e6)} million streams were identified as artificial and removed from platforms.`);
                 }
 
+                // Gather Awards
+                const grammyPlays = activeArtistData?.grammyHistory || [];
+                const amaPlays = activeArtistData?.amaHistory || [];
+                const oscarPlays = activeArtistData?.oscarHistory || [];
+
+                const relatedGrammys = grammyPlays.filter(g => g.itemId === release.id || release.songIds.includes(g.itemId));
+                const relatedAmas = amaPlays.filter(a => a.itemId === release.id || release.songIds.includes(a.itemId));
+                const relatedOscars = oscarPlays.filter(o => release.songIds.includes(o.itemId));
+
+                const wins: string[] = [];
+                const noms: string[] = [];
+                [...relatedGrammys, ...relatedAmas].forEach(award => {
+                    const awardString = `${award.category} ${'year' in award ? `(${award.year})` : ''} for "${award.itemName}"`;
+                    if (award.isWinner) wins.push(awardString);
+                    else noms.push(awardString);
+                });
+                relatedOscars.forEach(award => {
+                    const awardString = `Academy Award for ${award.category} ${'year' in award ? `(${award.year})` : ''} for "${award.itemName}"`;
+                    if (award.isWinner) wins.push(awardString);
+                    else noms.push(awardString);
+                });
+
+                // Gather Tours
+                const relatedTours = (activeArtistData?.tours || []).filter(t => t.setlist.some(sId => release.songIds.includes(sId)));
+                let tourInfo = '';
+                if (relatedTours.length > 0) {
+                    tourInfo = `The era was supported by the ${relatedTours.map(t => `${t.name} (grossing $${Math.round(t.totalRevenue).toLocaleString()})`).join(' and ')}.`;
+                }
+
+                // Gather Streaming Stats & Chart Stats
+                const totalStreams = releaseSongs.reduce((sum, s) => sum + s.streams, 0);
+                const albumChartRank = gameState.albumChartHistory[release.id];
+                
+                let statsInfo = `The ${release.type.toLowerCase()} has accumulated ${(totalStreams / 1e9).toFixed(2)} billion global streams. `;
+                if (albumChartRank) {
+                    statsInfo += `It peaked at number ${albumChartRank.peak} on the Billboard 200, charting for ${albumChartRank.weeksOnChart} weeks. `;
+                }
+
+                const chartSongs = releaseSongs.map(s => ({ title: s.title, chart: gameState.chartHistory[s.id] })).filter(s => s.chart);
+                const top10Songs = chartSongs.filter(s => s.chart.peak <= 10).sort((a,b) => a.chart.peak - b.chart.peak);
+                if (top10Songs.length > 0) {
+                    statsInfo += `It spawned ${top10Songs.length} top-10 hits on the Hot 100, including ${top10Songs.map(s => `"${s.title}" (peaking at number ${s.chart.peak})`).join(', ')}. `;
+                }
+
                 let newSummary = '';
                 if (gameState.offlineMode || !activeArtistData?.redMicPro?.unlocked) {
                     newSummary = `"${release.title}" is the ${projectNumberString} by ${artist.name}. Released on ${formatGameDate(release.releaseDate)} ${labelInfo}, the ${release.type.toLowerCase().replace(" (deluxe)", "")} contains ${releaseSongs.length} tracks. ${features.size > 0 ? `It features guest appearances by ${Array.from(features).join(', ')}.` : ''} ${singles.length > 0 ? `The release was supported by the singles ${singles.map(s => `"${s.title}"`).join(', ')}.` : ''}`;
+                    if (statsInfo) newSummary += `\n\n${statsInfo}`;
+                    if (tourInfo) newSummary += `\n\n${tourInfo}`;
                 } else {
-                    const prompt = `You are a music historian writing a Wikipedia article. Write a lead section for the album "${release.title}" by artist "${artist.name}".
+                    const prompt = `You are a music historian writing a Wikipedia article. Write a lead section for the ${release.type} "${release.title}" by artist "${artist.name}".
 It is their ${projectNumberString}. It was released on ${formatGameDate(release.releaseDate)} ${labelInfo}.
 
 The tracklist includes: ${songList}.
 ${singlesInfo ? `Info about singles:\n${singlesInfo}` : ''}
 ${promos.length > 0 ? `Promotional activities included:\n${promos.join('\n')}` : ''}
 ${features.size > 0 ? `It includes features from ${Array.from(features).join(', ')}.` : ''}
+${statsInfo ? `Commercial Performance:\n${statsInfo}` : ''}
+${wins.length > 0 ? `It won the following awards:\n- ${wins.join('\n- ')}` : ''}
+${noms.length > 0 ? `It received nominations for:\n- ${noms.join('\n- ')}` : ''}
+${tourInfo ? `Touring:\n${tourInfo}` : ''}
 ${controversies.length > 0 ? `Controversies during this era include:\n- ${controversies.join('\n- ')}` : ''}
 
-Based on all this information, write a concise, neutral, and encyclopedic summary for the album's Wikipedia page lead section. Integrate all details naturally. The text should be a single paragraph.`;
+Based on all this detailed information, write a comprehensive, neutral, and encyclopedic summary for the album's Wikipedia page lead section (3-4 concise paragraphs). Integrate all details, stats, awards, singles and tours naturally. Describe the era as a whole. Do not use markdown lists.`;
 
                     const aiClient = getAI();
                     const response = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });

@@ -5,6 +5,8 @@ import { ArtistData } from './types';
 export const INITIAL_MONEY = 100000;
 
 export const GENRES = ['Pop', 'Hip Hop', 'R&B', 'Rock', 'Electronic', 'Indie', 'Country', 'Christmas', 'K-Pop', 'Latin', 'Afrobeats', 'Reggae'];
+export const SUBGENRES = ['None', 'Teen Pop Boyband', 'Ringtone Rap', 'Electro-Pop', 'EDM', 'Festival', 'Trap', 'Alt-Pop', 'Singer-Songwriter'];
+
 
 export const STUDIOS = [
     { name: 'Voice Memos', cost: 0, qualityRange: [1, 5] },
@@ -56,25 +58,58 @@ export const TIER_LEVELS: { [key in Label['tier']]: number } = {
 
 
 // Promotion Constants
-export const PROMOTION_PACKAGES = {
-    song: [
-        { name: 'Guaranteed Placement', weeklyCost: 2500, boost: 1.5, description: 'Your song, their playlist. No questions asked.', requiredTier: 'Low' as const },
-        { name: 'Airwave Saturation', weeklyCost: 12500, boost: 2.5, description: 'Ensure your track is on repeat across all stations.', requiredTier: 'Mid-Low' as const },
-        { name: 'Viral Injection', weeklyCost: 75000, boost: 4.0, description: 'Forge a viral moment. Authenticity not included.', requiredTier: 'Mid-high' as const },
-        { name: 'Industry Plant Initiative', weeklyCost: 125000, boost: 10, description: 'The full package. We make them a star.', requiredTier: 'Top' as const },
-    ],
-    video: [
-        { name: 'Homepage Hijack', weeklyCost: 5000, boost: 2, description: 'Front page placement. Guaranteed.' },
-        { name: 'Algorithmic Manipulation', weeklyCost: 18750, boost: 3.5, description: 'Force your video into the recommendation engine.' },
-        { name: 'Bot Farm Boost', weeklyCost: 125000, boost: 10, description: 'Simulate viral engagement with our network.' },
-        { name: 'Stream Laundering', weeklyCost: 75000, boost: -1, description: 'Convert song streams into "organic" video views.' },
-        { name: 'Manufactured Event', weeklyCost: 250000, boost: 30, description: 'Create the illusion of a worldwide premiere event.' },
-        { name: 'The Takeover', weeklyCost: 2500000, boost: 75, description: 'An offer you can\'t refuse. Your video will be everywhere.' }
-    ],
-    resurgence: [
-        { name: 'Memory Machine', weeklyCost: 31250, boost: 10, description: 'Revive a classic with a modern "organic" trend.' },
-        { name: 'Zombie Hit Revival', weeklyCost: 125000, boost: 30, description: 'Resurrect a forgotten hit and make it a legend.' }
-    ]
+export const getPromotionPackages = (year: number) => {
+    const packages: any = {
+        song: [],
+        video: [],
+        resurgence: []
+    };
+
+    // --- SONG PROMOTIONS ---
+    
+    // Core physical/radio era
+    if (year < 2010) {
+        packages.song.push({ name: 'Street Team Flyers', weeklyCost: 500, boost: 1.2, description: 'Pay kids to hand out flyers and bootlegs at shows.', requiredTier: 'Low' });
+        packages.song.push({ name: 'Radio Payola', weeklyCost: 15000, boost: 3.0, description: 'Under-the-table money to ensure spins.', requiredTier: 'Mid-Low' });
+    }
+
+    if (year >= 2003 && year < 2012) {
+        packages.song.push({ name: 'MySpace Profile Blast', weeklyCost: 2500, boost: 1.8, description: 'Message blast local scene kids to put your song on their profile.', requiredTier: 'Low' });
+    }
+
+    if (year >= 2012) {
+        packages.song.push({ name: 'Algorithmic Placement', weeklyCost: 10000, boost: 2.0, description: 'Guaranteed streaming playlist placement.', requiredTier: 'Low' });
+    }
+
+    if (year >= 2010 && year < 2020) {
+        packages.song.push({ name: 'Twitter PR Beef', weeklyCost: 40000, boost: 3.5, description: 'Manufacture a beef online to drive song streams.', requiredTier: 'Mid-high' });
+    }
+
+    if (year >= 2018) {
+        packages.song.push({ name: 'TikTok Dance Challenge', weeklyCost: 80000, boost: 5.0, description: 'Pay influencers to make your hook go viral.', requiredTier: 'Mid-high' });
+    }
+
+    // Modern super-tier
+    packages.song.push({ name: 'Industry Plant Initiative', weeklyCost: 150000, boost: 8.0, description: 'The label covers the world with your face.', requiredTier: 'Top' });
+
+    // --- VIDEO PROMOTIONS ---
+    if (year < 2010) {
+        packages.video.push({ name: 'MTV TRL Manipulation', weeklyCost: 20000, boost: 3.0, description: 'Pay kids to call in to request the video hourly.' });
+    } else {
+        packages.video.push({ name: 'Homepage Hijack', weeklyCost: 8000, boost: 2.0, description: 'Front page video placement.' });
+        packages.video.push({ name: 'Algorithmic Manipulation', weeklyCost: 25000, boost: 3.5, description: 'Force your video into the recommendation engine.' });
+        packages.video.push({ name: 'Bot Farm Boost', weeklyCost: 100000, boost: 8.0, description: 'Simulate viral engagement with our network.' });
+    }
+    
+    // --- RESURGENCE ---
+    packages.resurgence.push({ name: 'Memory Machine', weeklyCost: 31250, boost: 10, description: 'Revive a classic with a modern "organic" trend.' });
+    if (year >= 2018) {
+        packages.resurgence.push({ name: 'TikTok Sound Rebirth', weeklyCost: 150000, boost: 40, description: 'Your old acoustic bridge becomes the #1 global trend.' });
+    } else {
+        packages.resurgence.push({ name: 'Feature Film Sync', weeklyCost: 125000, boost: 25, description: 'Get your old song featured in a blockbuster teen drama.' });
+    }
+
+    return packages;
 };
 
 // Spotify Constants

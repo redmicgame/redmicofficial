@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { LABELS, CUSTOM_LABEL_TIERS } from '../constants';
+import { getEraConfiguration } from '../utils/eraUtils';
 import type { CustomLabel, Label } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -22,6 +23,7 @@ const CreateLabelView: React.FC = () => {
     const { group, careerMode } = gameState;
 
     const careerStreams = songs.reduce((sum, song) => sum + song.streams, 0);
+    const eraConfig = getEraConfiguration(gameState.date.year);
 
     const availableDeals = useMemo(() => {
         return LABELS.filter(label => careerStreams >= label.streamRequirement);
@@ -140,7 +142,7 @@ const CreateLabelView: React.FC = () => {
                                 </div>
                             </button>
                         ))}
-                        {availableDeals.length === 0 && <p className="text-sm text-zinc-500 p-2">You don't meet the requirements for any major label deals yet. Keep growing your streams!</p>}
+                        {availableDeals.length === 0 && <p className="text-sm text-zinc-500 p-2">You don't meet the requirements for any major label deals yet. Keep growing your {eraConfig.streamingActive ? 'streams' : 'sales'}!</p>}
                     </div>
                 </div>
 
@@ -156,7 +158,7 @@ const CreateLabelView: React.FC = () => {
                                         <p className="font-bold">{tier} Label</p>
                                         <p className="text-sm text-green-400 font-semibold">-${formatNumber(tierData.cost)}</p>
                                         <p className="text-xs text-zinc-400">Promo: {tierData.promotionMultiplier}x</p>
-                                        {!canAfford && <p className="text-xs text-red-400 mt-1">Req: {formatNumber(tierData.requiredStreams)} streams</p>}
+                                        {!canAfford && <p className="text-xs text-red-400 mt-1">Req: {eraConfig.streamingActive ? formatNumber(tierData.requiredStreams) + ' streams' : formatNumber(Math.floor(tierData.requiredStreams / 500)) + ' sales'}</p>}
                                     </button>
                                 )
                             })}

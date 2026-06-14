@@ -36,7 +36,7 @@ const BottomNav: React.FC = () => {
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 h-20 bg-zinc-800 border-t border-zinc-700 flex justify-around items-center z-30">
+        <nav className="absolute bottom-0 w-full h-20 bg-zinc-800 border-t border-zinc-700 flex justify-around items-center z-30">
             <NavItem
                 label="Home"
                 icon={<HomeIcon className="h-6 w-6" />}

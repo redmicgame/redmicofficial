@@ -10,7 +10,7 @@ import ChevronRightIcon from './icons/ChevronRightIcon';
 import { Song, Release, Video, GameDate } from '../types';
 import PlusIcon from './icons/PlusIcon';
 import LosslessIcon from './icons/LosslessIcon';
-import ArrowUpOnBoxIcon from './icons/ArrowUpOnBoxIcon';
+import AppleMusicBrowseView from './AppleMusicBrowseView';
 
 const formatDateApple = (gameDate: GameDate) => {
     const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
@@ -293,10 +293,12 @@ const HorizontalSection: React.FC<{title: string, items: (Release | Video)[], on
 }
 
 const AppleMusicView: React.FC = () => {
-    const { dispatch, activeArtist, activeArtistData } = useGame();
+    const { dispatch, activeArtist, activeArtistData, gameState } = useGame();
+    const [tab, setTab] = useState<'artist' | 'browse'>('browse');
     const [view, setView] = useState<'artistProfile' | 'releaseDetail'>('artistProfile');
+    const [browseView, setBrowseView] = useState<'home' | 'topPlaylists' | 'topSongs' | 'topAlbums' | 'bestNewSongs' | 'topPreAdds' | 'playlistDetail'>('home');
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
-
+    const [selectedBrowsePlaylist, setSelectedBrowsePlaylist] = useState<string | null>(null);
 
     if (!activeArtist || !activeArtistData) {
         return (
@@ -307,157 +309,186 @@ const AppleMusicView: React.FC = () => {
     }
     
     const handleSelectRelease = (id: string) => {
+        setTab('artist');
         setSelectedReleaseId(id);
         setView('releaseDetail');
     };
 
-    const handleBack = () => {
+    const handleBackToProfile = () => {
         setSelectedReleaseId(null);
         setView('artistProfile');
     };
     
-    if (view === 'releaseDetail' && selectedReleaseId) {
-        return <AppleMusicReleaseDetailView releaseId={selectedReleaseId} onBack={handleBack} onSelectRelease={handleSelectRelease} />;
-    }
+    const renderArtistView = () => {
+        if (view === 'releaseDetail' && selectedReleaseId) {
+            return <AppleMusicReleaseDetailView releaseId={selectedReleaseId} onBack={handleBackToProfile} onSelectRelease={handleSelectRelease} />;
+        }
 
+        const { songs, releases, videos } = activeArtistData;
+        const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc);
+        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r));
 
-    const { songs, releases, videos } = activeArtistData;
+        const latestRelease = [...availableReleases]
+            .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation')
+            .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
 
-    const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc);
-    const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r));
+        const topSongs = [...songs]
+            .filter(s => s.isReleased)
+            .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
+            .slice(0, 5);
+        
+        const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
+        const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.hasCountdownPage).map(s => s.release);
+        const musicVideos = videos.filter(v => v.type === 'Music Video').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+        const singlesAndEps = availableReleases.filter(r => r.type === 'Single' || r.type === 'EP').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+        const essentialAlbums = albums.filter(r => r.isAppleMusicEssential);
 
-    const latestRelease = [...availableReleases]
-        .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation')
-        .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
-
-    const topSongs = [...songs]
-        .filter(s => s.isReleased)
-        .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
-        .slice(0, 5);
-    
-    const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
-
-    const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.hasCountdownPage).map(s => s.release);
-
-    const musicVideos = videos.filter(v => v.type === 'Music Video').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
-
-    const singlesAndEps = availableReleases.filter(r => r.type === 'Single' || r.type === 'EP').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
-
-    const essentialAlbums = albums.filter(r => r.isAppleMusicEssential);
-
-    return (
-        <div className="bg-black text-white min-h-screen">
-            <div className="relative h-[45vh] min-h-[340px]">
-                <img src={activeArtist.image} className="absolute w-full h-full object-cover" alt={activeArtist.name} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
-                
-                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
-                <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 mt-8">
-                    <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })}><ChevronLeftIcon className="w-7 h-7" /></button>
-                    <h1 className="font-bold opacity-0 transition-opacity">{activeArtist.name}</h1>
-                    <div className="flex items-center gap-4">
-                        <button><StarIcon className="w-6 h-6" /></button>
-                        <button><DotsHorizontalIcon className="w-6 h-6" /></button>
-                    </div>
-                </header>
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="flex justify-between items-end">
-                        <h1 className="text-6xl font-black">{activeArtist.name}</h1>
-                        <PlayRedCircleIcon className="w-16 h-16 flex-shrink-0" />
+        return (
+            <div className="pb-24">
+                <div className="relative h-[45vh] min-h-[340px]">
+                    <img src={activeArtist.image} className="absolute w-full h-full object-cover" alt={activeArtist.name} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
+                    
+                    <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
+                    <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 mt-8">
+                        <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })}><ChevronLeftIcon className="w-7 h-7 bg-black/40 rounded-full p-0.5" /></button>
+                        <h1 className="font-bold opacity-0 transition-opacity">{activeArtist.name}</h1>
+                        <div className="flex items-center gap-4">
+                            <button><StarIcon className="w-6 h-6 drop-shadow-md" /></button>
+                            <button><DotsHorizontalIcon className="w-6 h-6 drop-shadow-md" /></button>
+                        </div>
+                    </header>
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="flex justify-between items-end">
+                            <h1 className="text-6xl font-black">{activeArtist.name}</h1>
+                            <PlayRedCircleIcon className="w-16 h-16 flex-shrink-0" />
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <main className="p-4 space-y-8 pb-16">
-                {latestRelease && (
-                    <section>
-                        <button onClick={() => handleSelectRelease(latestRelease.id)} className="flex items-center gap-4 w-full text-left">
-                            <img src={latestRelease.coverArt} className="w-32 h-32 rounded-lg object-cover" alt={latestRelease.title} />
-                            <div className="flex-grow">
-                                <p className="text-xs uppercase text-zinc-400">{formatDateApple(latestRelease.releaseDate)}</p>
-                                <h2 className="text-xl font-bold">{latestRelease.title}</h2>
-                                <p className="text-zinc-400">{latestRelease.songIds.length} songs</p>
-                            </div>
-                        </button>
-                    </section>
-                )}
-                
-                {topSongs.length > 0 && (
-                    <section>
-                        <div className="flex justify-between items-center mb-2">
-                            <h2 className="text-2xl font-bold">Top Songs</h2>
-                            <button className="text-zinc-400"><ChevronRightIcon className="w-6 h-6" /></button>
-                        </div>
-                        <div className="divide-y divide-zinc-800">
-                            {topSongs.map((song) => {
-                                const release = releases.find(r => r.id === song.releaseId);
-                                const songTitle = song.collaboration
-                                    ? song.title.replace(` (feat. ${song.collaboration.artistName})`, '')
-                                    : song.title;
-                                
-                                let subTitle = '';
-                                if (release) {
-                                    if (release.type === 'Single') {
-                                        subTitle = 'Single';
-                                    } else {
-                                        subTitle = `${release.title} • ${release.releaseDate.year}`;
-                                    }
-                                }
-
-                                return (
-                                    <div key={song.id} className="flex items-center gap-3 py-2">
-                                        <img src={song.coverArt} className="w-12 h-12 rounded-md object-cover" alt={songTitle} />
-                                        <div className="flex-grow min-w-0">
-                                            <p className="font-semibold truncate">{songTitle}</p>
-                                            <p className="text-sm text-zinc-400 truncate">{subTitle}</p>
-                                        </div>
-                                        <button className="flex-shrink-0"><DotsHorizontalIcon className="w-5 h-5 text-zinc-400" /></button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-                )}
-
-                {essentialAlbums.length > 0 && (
-                    <section>
-                        <h2 className="text-2xl font-bold mb-4">Essential Albums</h2>
-                        <div className="space-y-6">
-                            {essentialAlbums.map(ea => {
-                                const hasExplicit = ea.songIds.some(id => songs.find(s => s.id === id)?.explicit);
-                                return (
-                                <div key={ea.id} onClick={() => handleSelectRelease(ea.id)} className="cursor-pointer">
-                                    <div className="w-full aspect-square rounded-xl overflow-hidden relative">
-                                        <img src={ea.coverArt} className="w-full h-full object-cover" alt={ea.title} />
-                                    </div>
-                                    <div className="mt-3">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-lg">{ea.title}</h3>
-                                            {hasExplicit && <span className="text-xs w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
-                                        </div>
-                                        <p className="text-zinc-400 text-sm mt-1 leading-snug line-clamp-2">
-                                            {ea.appleMusicEssentialReview || `${activeArtist.name}'s defining album.`}
-                                        </p>
-                                    </div>
+                <main className="p-4 space-y-8">
+                    {latestRelease && (
+                        <section>
+                            <button onClick={() => handleSelectRelease(latestRelease.id)} className="flex items-center gap-4 w-full text-left">
+                                <img src={latestRelease.coverArt} className="w-32 h-32 rounded-lg object-cover" alt={latestRelease.title} />
+                                <div className="flex-grow">
+                                    <p className="text-xs uppercase text-zinc-400">{formatDateApple(latestRelease.releaseDate)}</p>
+                                    <h2 className="text-xl font-bold">{latestRelease.title}</h2>
+                                    <p className="text-zinc-400">{latestRelease.songIds.length} songs</p>
                                 </div>
-                            )})}
-                        </div>
-                    </section>
-                )}
+                            </button>
+                        </section>
+                    )}
+                    
+                    {topSongs.length > 0 && (
+                        <section>
+                            <div className="flex justify-between items-center mb-2">
+                                <h2 className="text-2xl font-bold">Top Songs</h2>
+                            </div>
+                            <div className="divide-y divide-zinc-800">
+                                {topSongs.map((song) => {
+                                    const release = releases.find(r => r.id === song.releaseId);
+                                    const songTitle = song.collaboration
+                                        ? song.title.replace(` (feat. ${song.collaboration.artistName})`, '')
+                                        : song.title;
+                                    
+                                    let subTitle = '';
+                                    if (release) {
+                                        if (release.type === 'Single') {
+                                            subTitle = 'Single';
+                                        } else {
+                                            subTitle = `${release.title} • ${release.releaseDate.year}`;
+                                        }
+                                    }
 
-                {albums.length > 0 && (
-                    <HorizontalSection title="Albums" items={albums} onSelect={handleSelectRelease} />
-                )}
-                {upcomingReleases.length > 0 && (
-                    <HorizontalSection title="Coming Soon" items={upcomingReleases} onSelect={handleSelectRelease} />
-                )}
-                {musicVideos.length > 0 && (
-                     <HorizontalSection title="Music Videos" items={musicVideos} onSelect={() => {}} artistName={activeArtist.name} />
-                )}
-                 {singlesAndEps.length > 0 && (
-                     <HorizontalSection title="Singles & EPs" items={singlesAndEps} onSelect={handleSelectRelease} />
-                )}
-            </main>
+                                    return (
+                                        <div key={song.id} className="flex items-center gap-3 py-2">
+                                            <img src={song.coverArt} className="w-12 h-12 rounded-md object-cover" alt={songTitle} />
+                                            <div className="flex-grow min-w-0">
+                                                <p className="font-semibold truncate">{songTitle}</p>
+                                                <p className="text-sm text-zinc-400 truncate">{subTitle}</p>
+                                            </div>
+                                            <button className="flex-shrink-0"><DotsHorizontalIcon className="w-5 h-5 text-zinc-400" /></button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
+                    {essentialAlbums.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold mb-4">Essential Albums</h2>
+                            <div className="space-y-6">
+                                {essentialAlbums.map(ea => {
+                                    const hasExplicit = ea.songIds.some(id => songs.find(s => s.id === id)?.explicit);
+                                    return (
+                                    <div key={ea.id} onClick={() => handleSelectRelease(ea.id)} className="cursor-pointer">
+                                        <div className="w-full aspect-square rounded-xl overflow-hidden relative">
+                                            <img src={ea.coverArt} className="w-full h-full object-cover" alt={ea.title} />
+                                        </div>
+                                        <div className="mt-3">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-lg">{ea.title}</h3>
+                                                {hasExplicit && <span className="text-xs w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
+                                            </div>
+                                            <p className="text-zinc-400 text-sm mt-1 leading-snug line-clamp-2">
+                                                {ea.appleMusicEssentialReview || `${activeArtist.name}'s defining album.`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )})}
+                            </div>
+                        </section>
+                    )}
+
+                    {albums.length > 0 && (
+                        <HorizontalSection title="Albums" items={albums} onSelect={handleSelectRelease} />
+                    )}
+                    {upcomingReleases.length > 0 && (
+                        <HorizontalSection title="Coming Soon" items={upcomingReleases} onSelect={handleSelectRelease} />
+                    )}
+                    {musicVideos.length > 0 && (
+                        <HorizontalSection title="Music Videos" items={musicVideos} onSelect={() => {}} artistName={activeArtist.name} />
+                    )}
+                    {singlesAndEps.length > 0 && (
+                        <HorizontalSection title="Singles & EPs" items={singlesAndEps} onSelect={handleSelectRelease} />
+                    )}
+                </main>
+            </div>
+        );
+    };
+
+    return (
+        <div className="bg-black text-white min-h-screen pb-safe">
+            {tab === 'artist' ? renderArtistView() : <AppleMusicBrowseView 
+                 browseView={browseView} 
+                 setBrowseView={setBrowseView} 
+                 selectedPlaylist={selectedBrowsePlaylist} 
+                 setSelectedPlaylist={setSelectedBrowsePlaylist} 
+                 onExit={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} 
+            />}
+            
+            <div className="fixed bottom-0 left-0 right-0 bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-800 pb-safe pt-2 px-6 flex justify-around items-center z-50 h-16 sm:pb-2">
+                <button 
+                    onClick={() => setTab('artist')}
+                    className={`flex flex-col items-center gap-1 ${tab === 'artist' ? 'text-[#fa243c]' : 'text-zinc-500'}`}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                        <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-[10px] font-medium">Artist</span>
+                </button>
+                <button 
+                    onClick={() => { setTab('browse'); setBrowseView('home'); }}
+                    className={`flex flex-col items-center gap-1 ${tab === 'browse' ? 'text-[#fa243c]' : 'text-zinc-500'}`}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                        <path fillRule="evenodd" d="M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm4.5 7.5a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0v-2.25a.75.75 0 01.75-.75zm3.75-1.5a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0V12zm2.25-3a.75.75 0 01.75.75v6.75a.75.75 0 01-1.5 0V9.75A.75.75 0 0113.5 9zm3.75-1.5a.75.75 0 00-1.5 0v9a.75.75 0 001.5 0v-9z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-[10px] font-medium">Browse</span>
+                </button>
+            </div>
         </div>
     );
 };

@@ -17,12 +17,16 @@ const CreateTourView: React.FC = () => {
     const [venuesForSelection, setVenuesForSelection] = useState<(typeof VENUES[TourTier][0] & {id: string})[]>([]);
     const [chosenVenueIds, setChosenVenueIds] = useState<Set<string>>(new Set());
     const [ticketPrice, setTicketPrice] = useState(0);
+    const [useDynamicPricing, setUseDynamicPricing] = useState(false);
+    const [useVipPackages, setUseVipPackages] = useState(false);
     const [setlist, setSetlist] = useState<Set<string>>(new Set());
     const [error, setError] = useState('');
 
     if (!activeArtistData || !activeArtist) return null;
     const { popularity, songs } = activeArtistData;
     const allSongs = useMemo(() => songs, [songs]);
+
+    const isModernEra = gameState.date.year >= 2018;
 
     const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -90,6 +94,8 @@ const CreateTourView: React.FC = () => {
             currentVenueIndex: 0,
             totalRevenue: 0,
             ticketsSold: 0,
+            useDynamicPricing,
+            useVipPackages,
         };
 
         dispatch({ type: 'CREATE_TOUR', payload: newTour });
@@ -127,6 +133,24 @@ const CreateTourView: React.FC = () => {
                             <label className="block text-sm font-medium text-zinc-300">Ticket Price</label>
                             <input type="number" value={ticketPrice} onChange={e => setTicketPrice(Number(e.target.value))} className="mt-1 w-full bg-zinc-700 p-2 rounded-md" />
                         </div>
+                        {isModernEra && (
+                            <div className="space-y-2 p-3 bg-zinc-800 rounded-lg">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={useDynamicPricing} onChange={() => setUseDynamicPricing(!useDynamicPricing)} className="form-checkbox text-red-500 rounded bg-zinc-700 border-zinc-600 focus:ring-red-500"/>
+                                    <div>
+                                        <span className="font-bold text-sm block">Ticketmaster Dynamic Pricing</span>
+                                        <span className="text-xs text-zinc-400">Extracts 2-4x more cash per ticket depending on demand, but risks a massive PR disaster and federal investigation.</span>
+                                    </div>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={useVipPackages} onChange={() => setUseVipPackages(!useVipPackages)} className="form-checkbox text-red-500 rounded bg-zinc-700 border-zinc-600 focus:ring-red-500"/>
+                                    <div>
+                                        <span className="font-bold text-sm block">VIP Meet & Greet Packages</span>
+                                        <span className="text-xs text-zinc-400">Add highly expensive premium tickets. Huge profit margin.</span>
+                                    </div>
+                                </label>
+                            </div>
+                        )}
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                             {venuesForSelection.map(v => (
                                 <button key={v.id} onClick={() => handleToggleVenue(v.id)} className={`w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors ${chosenVenueIds.has(v.id) ? 'bg-red-500/20' : 'bg-zinc-800'}`}>
