@@ -3732,8 +3732,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             s.weeksOnRadio = weeksOn + 1;
                             
                             const formatMultiplier = isFormatCompatible(song.genre, rFormat);
+                            const radioEraBoost = state.date.year < 2010 ? (state.date.year < 2000 ? 5.0 : 3.0) : 1.0;
                             
-                            let targetPlays = Math.floor((song.weeklyStreams * 0.005) * (qualityBoost / 100) * labelBoost * formatMultiplier);
+                            let targetPlays = Math.floor((song.weeklyStreams * 0.005) * (qualityBoost / 100) * labelBoost * formatMultiplier * radioEraBoost);
                             if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
                             
                             const previousPlays = s.radioPlays || 0;
@@ -3795,8 +3796,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         } else {
                             rFormat = 'pop';
                         }
+                        const radioEraBoost = state.date.year < 2010 ? (state.date.year < 2000 ? 5.0 : 3.0) : 1.0;
 
-                        let targetPlays = Math.floor(song.weeklyStreams * 0.005);
+                        let targetPlays = Math.floor(song.weeklyStreams * 0.005 * radioEraBoost);
                         if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
                         if (isOnRadio) {
                             rPlays = targetPlays; 
@@ -6819,6 +6821,51 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     }
                 },
                 currentView: 'inbox',
+            };
+        }
+        case 'POST_ON_MYSPACE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            let hypeBoost = 0;
+            let popBoost = 0;
+            const newMySpaceData = activeData.mySpaceData ? { ...activeData.mySpaceData } : { blogPosts: [], bulletins: [] };
+            
+            if (action.payload.type === 'bulletin') {
+                hypeBoost = 2;
+                popBoost = 0.5;
+                if (action.payload.content) {
+                    newMySpaceData.bulletins = [{ content: action.payload.content, year: state.date.year, week: state.date.week }, ...newMySpaceData.bulletins].slice(0, 10);
+                }
+            } else if (action.payload.type === 'blog') {
+                hypeBoost = 3;
+                popBoost = 1;
+                if (action.payload.content) {
+                    newMySpaceData.blogPosts = [{ title: 'New Blog Post', content: action.payload.content, year: state.date.year, week: state.date.week }, ...newMySpaceData.blogPosts].slice(0, 5);
+                }
+            } else if (action.payload.type === 'profile_song' && action.payload.songId) {
+                hypeBoost = 5;
+                popBoost = 2;
+                newMySpaceData.profileSongId = action.payload.songId;
+                // Add tiny streams to target song
+                const song = activeData.songs.find(s => s.id === action.payload.songId);
+                if (song) {
+                    const streamsBoost = Math.floor(Math.random() * 5000) + 1000;
+                    activeData.songs = activeData.songs.map(s => s.id === song.id ? { ...s, streams: (s.streams || 0) + streamsBoost, sales: s.sales || 0 } : s);
+                }
+            }
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        mySpaceData: newMySpaceData,
+                        hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
+                        popularity: Math.min(100, activeData.popularity + popBoost)
+                    }
+                }
             };
         }
         case 'POST_ON_X': {

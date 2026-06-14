@@ -1,5 +1,5 @@
-import React from 'react';
-import { useGame } from '../context/GameContext';
+import React, { useState } from 'react';
+import { useGame, formatNumber } from '../context/GameContext';
 
 const UsersIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -7,14 +7,47 @@ const UsersIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+const PlayIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
+    </svg>
+);
+
 const MySpaceView: React.FC = () => {
     const { gameState, dispatch, activeArtist } = useGame();
+    const [bulletinText, setBulletinText] = useState('');
+    const [blogText, setBlogText] = useState('');
+    const [selectedSongId, setSelectedSongId] = useState('');
+
+    const activeData = gameState.artistsData[activeArtist?.id || ''];
+    const releasedSongs = activeData?.songs.filter(s => s.isReleased && !s.remixOfSongId) || [];
+    const mySpaceData = activeData?.mySpaceData;
+    
+    const profileSong = mySpaceData?.profileSongId ? releasedSongs.find(s => s.id === mySpaceData.profileSongId) : null;
+
+    const handlePostBulletin = () => {
+        if (!bulletinText.trim()) return;
+        dispatch({ type: 'POST_ON_MYSPACE', payload: { type: 'bulletin', content: bulletinText } });
+        setBulletinText('');
+    };
+
+    const handlePostBlog = () => {
+        if (!blogText.trim()) return;
+        dispatch({ type: 'POST_ON_MYSPACE', payload: { type: 'blog', content: blogText } });
+        setBlogText('');
+    };
+
+    const handleUpdateProfileSong = () => {
+        if (!selectedSongId) return;
+        dispatch({ type: 'POST_ON_MYSPACE', payload: { type: 'profile_song', songId: selectedSongId } });
+        setSelectedSongId('');
+    };
 
     return (
-        <div className="bg-[#e9e9e9] min-h-screen text-black font-sans pb-24">
+        <div className="bg-[#e9e9e9] h-full overflow-y-auto text-black font-sans pb-24">
             <header className="bg-[#003399] p-2 flex justify-between items-center text-white">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="px-2 py-1 bg-[#6699cc] text-xs font-bold rounded border border-blue-300">Back</button>
+                    <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="px-2 py-1 bg-[#6699cc] text-xs font-bold rounded border border-blue-300 hover:bg-[#4d7ca6]">Back</button>
                     <h1 className="font-bold tracking-tight">MySpace</h1>
                 </div>
                 <div className="text-xs">
@@ -22,37 +55,103 @@ const MySpaceView: React.FC = () => {
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto p-4 flex flex-col md:flex-row gap-6">
+            <main className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row gap-6">
                 <aside className="w-full md:w-1/3">
                     <h2 className="text-xl font-bold mb-2">{activeArtist?.name}</h2>
                     <img src={activeArtist?.image} alt={activeArtist?.name} className="w-full max-w-[200px] border border-gray-400 mb-2" />
-                    <p className="text-sm">"{activeArtist?.name} is in your extended network"</p>
+                    <p className="text-sm font-semibold">"{activeArtist?.name} is in your extended network"</p>
                     
+                    <div className="bg-white border text-sm mt-4 p-2 shadow-sm flex items-center gap-4">
+                         <div className="w-16 h-16 bg-gray-200 border border-gray-400 flex items-center justify-center">
+                             {profileSong ? <img src={profileSong.coverArt} className="w-full h-full object-cover" /> : <PlayIcon className="w-8 h-8 text-gray-400" />}
+                         </div>
+                         <div>
+                             <p className="font-bold text-[#003399]">{profileSong ? profileSong.title : 'No Profile Song'}</p>
+                             <p className="text-xs">{activeArtist?.name}</p>
+                         </div>
+                    </div>
+
                     <div className="bg-white border border-[#003399] mt-4 p-2">
                         <h3 className="bg-[#6699cc] text-white p-1 text-sm font-bold">Contacting {activeArtist?.name}</h3>
                         <div className="grid grid-cols-2 gap-2 text-xs text-blue-800 mt-2">
-                            <a href="#" className="flex items-center gap-1"><UsersIcon className="w-3 h-3"/> Add to Friends</a>
-                            <a href="#" className="flex items-center gap-1"><UsersIcon className="w-3 h-3"/> Send Message</a>
-                            <a href="#" className="flex items-center gap-1"><UsersIcon className="w-3 h-3"/> Add to Group</a>
-                            <a href="#" className="flex items-center gap-1"><UsersIcon className="w-3 h-3"/> Block User</a>
+                            <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Add to Friends</a>
+                            <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Send Message</a>
+                            <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Add to Group</a>
+                            <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Block User</a>
                         </div>
                     </div>
                 </aside>
 
-                <section className="w-full md:w-2/3">
+                <section className="w-full md:w-2/3 space-y-6">
+                    <div className="flex gap-4 p-4 bg-white border border-gray-300 shadow-sm items-start">
+                        <div className="flex-1 space-y-4">
+                             <div>
+                                <label className="text-xs font-bold text-gray-700">Update Profile Song (Boosts Streams & Hype)</label>
+                                <div className="flex gap-2 mt-1">
+                                    <select value={selectedSongId} onChange={e => setSelectedSongId(e.target.value)} className="text-sm p-1 border border-gray-400 flex-1">
+                                        <option value="">Select a released song...</option>
+                                        {releasedSongs.map(s => (
+                                            <option key={s.id} value={s.id}>{s.title}</option>
+                                        ))}
+                                    </select>
+                                    <button onClick={handleUpdateProfileSong} disabled={!selectedSongId} className="px-3 py-1 bg-[#003399] hover:bg-[#002266] text-white font-bold text-xs rounded disabled:opacity-50">Set</button>
+                                </div>
+                             </div>
+
+                             <div>
+                                <label className="text-xs font-bold text-gray-700">Post Bulletin (Quick hype boost)</label>
+                                <div className="flex gap-2 mt-1">
+                                    <input type="text" value={bulletinText} onChange={e => setBulletinText(e.target.value)} maxLength={100} className="text-sm p-1 border border-gray-400 flex-1" placeholder="What are you doing right now?" />
+                                    <button onClick={handlePostBulletin} disabled={!bulletinText.trim()} className="px-3 py-1 bg-[#003399] hover:bg-[#002266] text-white font-bold text-xs rounded disabled:opacity-50">Post</button>
+                                </div>
+                             </div>
+
+                             <div>
+                                 <label className="text-xs font-bold text-gray-700">Write Blog (Bigger hype & popularity boost)</label>
+                                 <textarea value={blogText} onChange={e => setBlogText(e.target.value)} rows={3} className="text-sm p-1 border border-gray-400 w-full mt-1 resize-none" placeholder="Write to your fans..."></textarea>
+                                 <button onClick={handlePostBlog} disabled={!blogText.trim()} className="w-full mt-2 px-3 py-1 bg-[#003399] hover:bg-[#002266] text-white font-bold text-xs rounded disabled:opacity-50">Publish Blog</button>
+                             </div>
+                        </div>
+                    </div>
+
                     <div className="bg-white border border-[#003399]">
-                        <h3 className="bg-[#ffcc99] text-[#cc6600] p-1 text-sm font-bold mb-2">{activeArtist?.name}'s Interests</h3>
-                        <div className="p-2 text-sm space-y-2">
-                            <p><strong>General:</strong> Music, recording, touring.</p>
-                            <p><strong>Music:</strong> Everything.</p>
+                        <h3 className="bg-[#ffcc99] text-[#cc6600] p-1 text-sm font-bold mb-2">MySpace Blog</h3>
+                        <div className="p-4 space-y-4">
+                            {mySpaceData?.blogPosts && mySpaceData.blogPosts.length > 0 ? (
+                                mySpaceData.blogPosts.map((post, idx) => (
+                                    <div key={idx} className="mb-4 border-b border-gray-200 pb-2">
+                                        <h4 className="font-bold text-base text-[#003399]">{post.title}</h4>
+                                        <p className="text-[10px] text-gray-500 mb-2">Posted Week {post.week}, {post.year}</p>
+                                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{post.content}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-gray-500">No blog posts yet.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-[#003399]">
+                        <h3 className="bg-[#ffcc99] text-[#cc6600] p-1 text-sm font-bold mb-2">Recent Bulletins</h3>
+                        <div className="p-4 space-y-2">
+                             {mySpaceData?.bulletins && mySpaceData.bulletins.length > 0 ? (
+                                mySpaceData.bulletins.map((bull, idx) => (
+                                    <p key={idx} className="text-sm text-gray-800 border-b border-gray-100 pb-1">
+                                        <span className="text-[#003399] font-bold mr-2">Week {bull.week}:</span>
+                                        {bull.content}
+                                    </p>
+                                ))
+                             ) : (
+                                 <p className="text-sm text-gray-500">No bulletins posted.</p>
+                             )}
                         </div>
                     </div>
 
                     <div className="mt-6">
                         <h3 className="text-[#ff6600] text-lg font-bold mb-2">{activeArtist?.name}'s Friend Space</h3>
-                        <p className="font-bold text-sm mb-2">{activeArtist?.name} has <span className="text-[#ff0000]">{Math.floor(gameState.artistsData[activeArtist?.id || '']?.popularity * 1000).toLocaleString()}</span> friends.</p>
+                        <p className="font-bold text-sm mb-2">{activeArtist?.name} has <span className="text-[#ff0000]">{Math.floor(activeData?.popularity * 1000).toLocaleString()}</span> friends.</p>
                         
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
                             {/* Dummy friends */}
                             {gameState.npcs.slice(0, 8).map(npc => (
                                 <div key={npc.id} className="text-center">

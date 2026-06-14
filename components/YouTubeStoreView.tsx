@@ -260,7 +260,7 @@ const MerchStoreView: React.FC = () => {
             {showAddModal && <AddMerchModal onClose={() => setShowAddModal(false)} />}
             {restockItem && <RestockModal item={restockItem} onClose={() => setRestockItem(null)} />}
             {priceItem && <EditPriceModal item={priceItem} onClose={() => setPriceItem(null)} />}
-            <div className="bg-white text-black min-h-screen">
+            <div className="bg-white text-black h-full overflow-y-auto pb-24">
                 <header className="sticky top-0 bg-white z-20 border-b border-zinc-200">
                     <div className="p-4 flex justify-between items-center">
                         <button><MenuIcon className="w-6 h-6" /></button>

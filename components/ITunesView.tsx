@@ -975,9 +975,9 @@ const ITunesView: React.FC = () => {
     };
 
     return (
-        <div className="bg-black text-[#f1f1f1] min-h-screen font-sans">
+        <div className="bg-black text-[#f1f1f1] h-full overflow-y-auto font-sans pb-24">
             <ITunesHeader viewStack={viewStack} onBack={goBack} currentTab={currentTab} onTabChange={handleTabChange} />
-            <div className="overflow-y-auto">
+            <div>
                 {renderView()}
             </div>
         </div>
