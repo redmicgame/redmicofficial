@@ -52,8 +52,8 @@ const AscapView: React.FC = () => {
     if (!activeArtistData) return null;
 
     return (
-        <div className="bg-[#EFEFEF] h-full font-serif text-black pt-12 pb-24 relative overflow-y-auto">
-            <div className="absolute top-0 left-0 right-0 h-12 bg-blue-900 flex items-center px-4 shadow-md z-10">
+        <div className="absolute inset-0 bg-[#EFEFEF] font-serif text-black pb-24 overflow-y-auto">
+            <div className="sticky top-0 left-0 right-0 h-12 bg-blue-900 flex items-center px-4 shadow-md z-20">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="text-white p-1 hover:bg-blue-800 rounded mr-4">
                     <ArrowLeftIcon className="w-5 h-5"/>
                 </button>

@@ -1135,13 +1135,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
         case 'PROGRESS_WEEK': {
             // NPC Churn Logic: Simulate new songs releasing
             let newNpcsList = [...state.npcs];
-            const CHURN_COUNT = 100;
-            // Remove 100 NPCs from the bottom of the list.
+            const CHURN_COUNT = 350;
+            // Remove NPCs from the bottom of the list.
             if (newNpcsList.length >= CHURN_COUNT) {
                  newNpcsList.splice(newNpcsList.length - CHURN_COUNT, CHURN_COUNT);
             }
            
-            // Generate 100 new NPCs, avoiding name collisions
+            // Generate new NPCs, avoiding name collisions
             const allPlayerNamesForNpcs = [...(state.allPlayerArtists?.map(a => a.name) || []), state.soloArtist?.name, state.group?.name].filter((n): n is string => !!n);
             const newlyGeneratedNpcs = generateNewHits(CHURN_COUNT, newNpcsList, state.npcImages, allPlayerNamesForNpcs);
 
@@ -1150,7 +1150,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             // NPC Album Churn Logic
             let newNpcAlbums = [...state.npcAlbums];
-            const ALBUM_CHURN_COUNT = 5;
+            const ALBUM_CHURN_COUNT = 25;
             if (newNpcAlbums.length > ALBUM_CHURN_COUNT) {
                 newNpcAlbums.splice(newNpcAlbums.length - ALBUM_CHURN_COUNT, ALBUM_CHURN_COUNT);
             }
