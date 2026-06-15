@@ -85,7 +85,7 @@ const ChartHistoryView: React.FC = () => {
     }, [selectedChart, gameState, songs, releases]);
 
     return (
-        <div className="bg-zinc-900 text-white min-h-screen">
+        <div className="bg-zinc-900 text-white h-full overflow-y-auto pb-24">
             <div className="relative h-64">
                 <img src={activeArtist.image} alt={activeArtist.name} className="w-full h-full object-cover opacity-30" />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
