@@ -163,7 +163,7 @@ Based on your persona and the chat history, write a short, realistic reply as ${
     }
     
     return (
-         <div className="bg-black text-white min-h-screen flex flex-col">
+         <div className="bg-black text-white h-full overflow-y-auto flex flex-col pb-24">
             <header className="sticky top-0 bg-black/80 backdrop-blur-sm z-20 p-3 flex items-center gap-4 border-b border-zinc-700/70">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'x' })} className="p-2 rounded-full hover:bg-zinc-800">
                     <ArrowLeftIcon className="w-5 h-5" />

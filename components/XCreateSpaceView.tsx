@@ -22,7 +22,7 @@ const XCreateSpaceView: React.FC = () => {
     };
 
     return (
-        <div className="bg-black min-h-screen text-white flex flex-col pt-safe px-4">
+        <div className="bg-black h-full overflow-y-auto text-white flex flex-col pt-safe px-4 pb-24">
             <header className="flex items-center justify-between py-4">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'x' })} className="text-white text-lg">Cancel</button>
                 <h1 className="font-bold text-xl">Create your Space</h1>

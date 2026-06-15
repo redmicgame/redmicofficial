@@ -37,7 +37,7 @@ const SpotifySoundtrackDetailView: React.FC = () => {
     
     if (!soundtrack) {
         return (
-            <div className="bg-black text-white min-h-screen flex items-center justify-center">
+            <div className="bg-black text-white h-full overflow-y-auto flex items-center justify-center pb-24">
                 <p>Soundtrack not found.</p>
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotify' })} className="absolute top-4 left-4">Back</button>
             </div>
@@ -48,7 +48,7 @@ const SpotifySoundtrackDetailView: React.FC = () => {
     const totalMinutes = Math.round(totalDuration / 60);
 
     return (
-        <div className="min-h-screen text-white bg-gradient-to-b from-zinc-800 to-black">
+        <div className="h-full overflow-y-auto w-full text-white bg-gradient-to-b from-zinc-800 to-black pb-24">
             <button 
                 onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotify' })}
                 className="absolute top-12 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-10"

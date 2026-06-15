@@ -1029,7 +1029,7 @@ const XView: React.FC = () => {
     };
 
     return (
-        <div className="bg-black text-white min-h-screen flex flex-col">
+        <div className="bg-black text-white h-full overflow-y-auto flex flex-col pb-24">
             {showPremiumModal && <XPremiumModal onClose={() => setShowPremiumModal(false)} />}
             {isComposeModalOpen && playerUser && (
                 <ComposeXPostModal 

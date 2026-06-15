@@ -47,7 +47,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
 
     if (!release || !activeArtist) {
         return (
-            <div className="bg-black text-white min-h-screen p-4">
+            <div className="bg-black text-white h-full overflow-y-auto pb-24 p-4">
                 <p>Release not found.</p>
                 <button onClick={onBack} className="text-rose-400">Back</button>
             </div>
@@ -107,7 +107,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                 </div>
             )}
 
-            <div className="bg-black text-white min-h-screen pb-16">
+            <div className="bg-black text-white h-full overflow-y-auto pb-24">
                 {(release.isAppleMusicExpandedCover && !isSingle) ? (
                     <div className="relative w-full aspect-square md:aspect-[4/3] group">
                         <img src={release.coverArt} alt={releaseTitle} className="absolute inset-0 w-full h-full object-cover" />
@@ -302,7 +302,7 @@ const AppleMusicView: React.FC = () => {
 
     if (!activeArtist || !activeArtistData) {
         return (
-            <div className="bg-black text-white min-h-screen flex items-center justify-center">
+            <div className="bg-black text-white h-full overflow-y-auto flex items-center justify-center pb-24">
                 <p>Loading...</p>
             </div>
         );
@@ -460,7 +460,7 @@ const AppleMusicView: React.FC = () => {
     };
 
     return (
-        <div className="bg-black text-white min-h-screen pb-safe">
+        <div className="bg-black text-white h-full pb-24 overflow-y-auto">
             {tab === 'artist' ? renderArtistView() : <AppleMusicBrowseView 
                  browseView={browseView} 
                  setBrowseView={setBrowseView} 

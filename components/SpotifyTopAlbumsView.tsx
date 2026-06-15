@@ -70,7 +70,7 @@ const SpotifyTopAlbumsView: React.FC = () => {
 
 
     return (
-        <div className="bg-[#121212] min-h-screen text-white">
+        <div className="bg-[#121212] h-full overflow-y-auto text-white pb-24">
             <header className="p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <SpotifyIcon className="w-7 h-7" />

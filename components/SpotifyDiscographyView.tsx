@@ -128,7 +128,7 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
     const filterButtons: Array<'Albums' | 'Singles and EPs' | 'Compilations' | 'Featured'> = ['Albums', 'Singles and EPs', 'Compilations', 'Featured'];
 
     return (
-        <div className="bg-black text-white min-h-screen">
+        <div className="bg-black text-white h-full overflow-y-auto pb-24">
             <header className="sticky top-0 bg-black z-10 p-4 flex items-center gap-6">
                 <button 
                     onClick={onBack} 

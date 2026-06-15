@@ -311,7 +311,7 @@ const SpotifyView: React.FC = () => {
 
 
     return (
-        <div className="bg-[#121212] text-white min-h-screen">
+        <div className="bg-[#121212] text-white h-full overflow-y-auto pb-24">
             {/* Header with Background Image */}
             <div className="relative h-[40vh] min-h-[340px] w-full group cursor-pointer" onClick={triggerFileInput}>
                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />

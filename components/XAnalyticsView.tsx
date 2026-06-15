@@ -19,7 +19,7 @@ const XAnalyticsView: React.FC = () => {
     const engagements = totalLikes + totalRetweets + Math.floor(totalViews * 0.05);
 
     return (
-        <div className="bg-black min-h-screen text-white pt-safe px-4 flex flex-col pb-4">
+        <div className="bg-black h-full overflow-y-auto text-white pt-safe px-4 flex flex-col pb-24">
             <header className="flex items-center gap-4 py-4 border-b border-zinc-800">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'x' })} className="p-2 rounded-full hover:bg-zinc-900 transition-colors">
                     <ArrowLeftIcon className="w-5 h-5"/>

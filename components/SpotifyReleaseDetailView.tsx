@@ -105,7 +105,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
 
     if (!release || !activeArtist) {
         return (
-            <div className="bg-black text-white min-h-screen flex items-center justify-center">
+            <div className="bg-black text-white h-full overflow-y-auto flex items-center justify-center pb-24">
                 <p>Release not found.</p>
                 <button onClick={onBack} className="absolute top-4 left-4">Back</button>
             </div>
@@ -204,7 +204,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                     </div>
                 </div>
             )}
-            <div className="min-h-screen text-white transition-colors duration-500" style={{ background: `linear-gradient(to bottom, ${bgColor} 0%, #121212 40%)` }}>
+            <div className="h-full overflow-y-auto text-white transition-colors duration-500 pb-24" style={{ background: `linear-gradient(to bottom, ${bgColor} 0%, #121212 40%)` }}>
                 <button 
                     onClick={onBack} 
                     className="absolute top-12 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-10"

@@ -120,7 +120,7 @@ const XProfileView: React.FC = () => {
     }
 
     return (
-        <div className="bg-black text-white min-h-screen">
+        <div className="bg-black text-white h-full overflow-y-auto w-full pb-24">
             <header className="sticky top-0 bg-black/80 backdrop-blur-sm z-20 p-3 flex items-center gap-4">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'x' })} className="p-2 rounded-full hover:bg-zinc-800">
                     <ArrowLeftIcon className="w-5 h-5" />

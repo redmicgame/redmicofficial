@@ -38,7 +38,7 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
     const totalDuration = playlist.tracks.length * 3.5; // placeholder duration
 
     return (
-        <div className="bg-[#121212] text-white min-h-screen mb-16 pb-[100px]">
+        <div className="bg-[#121212] text-white h-full overflow-y-auto mb-16 pb-[100px]">
             {/* Header / Full Bleed Cover */}
             <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[21/9] bg-[#121212]">
                 <button 

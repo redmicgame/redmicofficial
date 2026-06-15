@@ -43,7 +43,7 @@ const AppleMusicForArtistsView: React.FC = () => {
     }
 
     return (
-        <div className="bg-white text-black min-h-screen font-sans">
+        <div className="bg-white text-black h-full overflow-y-auto font-sans pb-24">
             <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-zinc-200 flex items-center justify-between p-4">
                 <button onClick={handleBack} className="text-[#fa243c] flex items-center font-semibold">
                     <ChevronLeftIcon className="w-5 h-5 -ml-2" /> Back
@@ -170,7 +170,7 @@ const AppleMusicSongDetail: React.FC<{ song: Song, onBack: () => void }> = ({ so
     }, [song.streams, song.weeksOut]);
 
     return (
-        <div className="bg-white text-black min-h-screen font-sans">
+        <div className="bg-white text-black h-full overflow-y-auto font-sans pb-24">
             <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between p-4">
                 <button onClick={onBack} className="text-[#fa243c] flex items-center text-lg">
                     <ChevronLeftIcon className="w-7 h-7 -ml-2" /> Back

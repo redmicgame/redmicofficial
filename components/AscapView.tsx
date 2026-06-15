@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import ConfirmationModal from './ConfirmationModal';
 
 const AscapView: React.FC = () => {
-    const { gameState, dispatch, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
+    const [confirmAction, setConfirmAction] = useState<{ action: () => void, message: string, title: string, confirmText: string } | null>(null);
 
     const oldSongs = useMemo(() => {
         if (!activeArtistData) return [];
@@ -13,6 +15,16 @@ const AscapView: React.FC = () => {
             s.releaseDate.year < 2008 && 
             s.isAvailableOnStreaming !== true
         );
+    }, [activeArtistData]);
+
+    const takenDownReleases = useMemo(() => {
+        if (!activeArtistData) return [];
+        return activeArtistData.releases.filter(r => r.isTakenDown);
+    }, [activeArtistData]);
+
+    const takenDownSingles = useMemo(() => {
+        if (!activeArtistData) return [];
+        return activeArtistData.songs.filter(s => s.isTakenDown && s.isReleased && s.releaseId && !activeArtistData.releases.find(r => r.id === s.releaseId)?.isTakenDown);
     }, [activeArtistData]);
 
     const handleUpload = (songId: string) => {
@@ -91,7 +103,91 @@ const AscapView: React.FC = () => {
                         </div>
                     </div>
                 )}
+                
+                {(takenDownReleases.length > 0 || takenDownSingles.length > 0) && (
+                    <div className="mt-8">
+                        <h3 className="text-xl font-bold mb-4 border-b-2 border-red-900 pb-2 text-red-900">Withheld Former Label Catalog</h3>
+                        <div className="bg-red-50 p-4 border border-red-200 text-sm text-red-800 mb-4 shadow">
+                            Record labels freeze and withhold catalogs upon contract termination. 
+                            You may negotiate the master rights back from your former label by paying a release fee based on the catalog's intrinsic value and overall popularity.
+                        </div>
+                        <div className="space-y-4">
+                            {takenDownReleases.map(release => {
+                                const totalRev = release.songIds.reduce((sum, sId) => {
+                                    const s = activeArtistData.songs.find(sg => sg.id === sId);
+                                    return sum + (s?.revenue || 0);
+                                }, 0);
+                                const cost = Math.floor(Math.max(2500000, totalRev * 5 + (activeArtistData.popularity * 100000)));
+                                
+                                return (
+                                    <div key={release.id} className="bg-white p-4 border border-gray-300 shadow flex justify-between items-center relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
+                                        <div className="pl-2">
+                                            <p className="font-bold">{release.title}</p>
+                                            <p className="text-xs text-gray-500">{release.type} • Released {release.releaseDate?.year}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                setConfirmAction({
+                                                    title: 'Buy Back Release',
+                                                    message: `Are you sure you want to buy back "${release.title}" for $${formatNumber(cost)}? It will be 100% owned by you and distributed immediately.`,
+                                                    confirmText: 'Buy Back',
+                                                    action: () => dispatch({ type: 'BUY_BACK_RELEASE', payload: { releaseId: release.id, cost } })
+                                                });
+                                            }}
+                                            className="bg-blue-900 text-white px-3 py-1 text-sm font-bold rounded-sm shadow hover:bg-blue-800"
+                                        >
+                                            Buy Back ($ {formatNumber(cost)})
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            
+                            {takenDownSingles.map(song => {
+                                const totalRev = song.revenue || 0;
+                                const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+                                
+                                return (
+                                    <div key={song.id} className="bg-white p-4 border border-gray-300 shadow flex justify-between items-center relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
+                                        <div className="pl-2">
+                                            <p className="font-bold">{song.title}</p>
+                                            <p className="text-xs text-gray-500">Single • Released {song.releaseDate?.year}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                setConfirmAction({
+                                                    title: 'Buy Back Song',
+                                                    message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you and distributed immediately.`,
+                                                    confirmText: 'Buy Back',
+                                                    action: () => dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } })
+                                                });
+                                            }}
+                                            className="bg-blue-900 text-white px-3 py-1 text-sm font-bold rounded-sm shadow hover:bg-blue-800"
+                                        >
+                                            Buy Back ($ {formatNumber(cost)})
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
+            
+            <ConfirmationModal
+                isOpen={confirmAction !== null}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={() => {
+                    if (confirmAction) {
+                        confirmAction.action();
+                        setConfirmAction(null);
+                    }
+                }}
+                title={confirmAction?.title || ''}
+                message={confirmAction?.message || ''}
+                confirmText={confirmAction?.confirmText || ''}
+            />
         </div>
     );
 };

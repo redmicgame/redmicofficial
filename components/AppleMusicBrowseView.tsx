@@ -74,7 +74,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     if (browseView === 'topPlaylists') {
         return (
-            <div className="bg-black min-h-screen text-white pb-24">
+            <div className="bg-black h-full overflow-y-auto text-white pb-24">
                 <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
                     <h1 className="font-bold">Top Playlists</h1>
@@ -99,7 +99,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     if (browseView === 'topSongs') {
         return (
-            <div className="bg-black min-h-screen text-white pb-24">
+            <div className="bg-black h-full overflow-y-auto text-white pb-24">
                 <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
                     <h1 className="font-bold">Top Songs</h1>
@@ -129,7 +129,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     if (browseView === 'topAlbums') {
         return (
-            <div className="bg-black min-h-screen text-white pb-24">
+            <div className="bg-black h-full overflow-y-auto text-white pb-24">
                 <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
                     <h1 className="font-bold">Top Albums</h1>
@@ -154,7 +154,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     if (browseView === 'bestNewSongs') {
         return (
-            <div className="bg-black min-h-screen text-white pb-24">
+            <div className="bg-black h-full overflow-y-auto text-white pb-24">
                 <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
                     <h1 className="font-bold">Best New Songs</h1>
@@ -182,7 +182,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     if (browseView === 'topPreAdds') {
         return (
-            <div className="bg-black min-h-screen text-white pb-24">
+            <div className="bg-black h-full overflow-y-auto text-white pb-24">
                 <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
                     <h1 className="font-bold">Top Pre-Adds</h1>
@@ -210,7 +210,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
         const playlist = topPlaylists.find(p => p.id === selectedPlaylist) || topPlaylists[0];
         
         return (
-            <div className="bg-black min-h-screen text-white pb-24 relative overflow-hidden">
+            <div className="bg-black h-full overflow-y-auto text-white pb-24 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-[#bda641] to-black opacity-30 pointer-events-none" />
                 <header className="sticky top-0 bg-transparent z-10 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/60 backdrop-blur-md p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
@@ -272,7 +272,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
     }
 
     return (
-        <div className="bg-black text-white min-h-screen pb-24">
+        <div className="bg-black text-white h-full overflow-y-auto pb-24">
             <header className="p-4 pt-12 flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Browse</h1>
                 <button onClick={onExit} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>

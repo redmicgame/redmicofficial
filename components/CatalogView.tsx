@@ -196,7 +196,9 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                          {grammyWin && <GrammyAwardIcon className="w-4 h-4 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
                          {song.isTakenDown && <span className="text-[10px] font-bold bg-red-900/80 text-red-400 px-1.5 py-0.5 rounded-full">TAKEN DOWN</span>}
                     </div>
-                    <p className="text-sm text-zinc-400">{isStreamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(song.sales || 0)} sales`}</p>
+                    <p className="text-sm text-zinc-400">
+                        {isStreamingActive ? `${formatNumber(song.streams)} streams & ${formatNumber(song.sales || 0)} sales` : `${formatNumber(song.sales || 0)} sales`}
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <SongCertificationBadge streams={song.streams} sales={song.sales} />
@@ -497,6 +499,9 @@ const CatalogView: React.FC = () => {
                                                     <AlbumCertificationBadge streams={project.streams} sales={(project as any).sales} />
                                                 </div>
                                                 <p className="text-sm text-zinc-400">{formatNumber(totalUnits)} total units</p>
+                                                {eraConfig.streamingActive && (
+                                                    <p className="text-xs text-zinc-500 mt-0.5">{formatNumber(project.streams)} streams & {formatNumber((project as any).sales || 0)} sales</p>
+                                                )}
                                                 <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
                                                     <StatPill label="Album Chart" value={albumChartInfo.current} />
                                                     <StatPill label="Peak" value={albumChartInfo.peak} />
@@ -643,7 +648,9 @@ const CatalogView: React.FC = () => {
                                                             <ChevronDownIcon className={`w-6 h-6 transition-transform ${expandedSingleId === song.id ? 'rotate-180' : ''}`} />
                                                         </button>
                                                     </div>
-                                                    <p className="text-sm text-zinc-400">{eraConfig.streamingActive ? `${formatNumber(song.streams)} streams` : `${formatNumber(song.sales || 0)} sales`}</p>
+                                                    <p className="text-sm text-zinc-400">
+                                                        {eraConfig.streamingActive ? `${formatNumber(song.streams)} streams & ${formatNumber(song.sales || 0)} sales` : `${formatNumber(song.sales || 0)} sales`}
+                                                    </p>
                                                     <div className="mt-2 grid grid-cols-2 gap-2 max-w-xs">
                                                         <StatPill label="Current" value={chartInfo.current} />
                                                         <StatPill label="Peak" value={chartInfo.peak} />
