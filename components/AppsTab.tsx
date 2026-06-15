@@ -124,8 +124,9 @@ const AppItem: React.FC<{ app: AppInfo }> = ({ app }) => {
 };
 
 const AppsTab: React.FC = () => {
-    const { gameState } = useGame();
+    const { gameState, activeArtist } = useGame();
     const eraConfig = getEraConfiguration(gameState.date.year);
+    const activeArtistData = gameState.artistsData[activeArtist?.id || ''];
 
     const isAppAvailable = (appName: string) => {
         if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
