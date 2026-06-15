@@ -262,7 +262,7 @@ const YouTubeChannelView: React.FC = () => {
     };
 
     return (
-        <div className="bg-[#0f0f0f] text-white min-h-screen">
+        <div className="bg-[#0f0f0f] text-white h-full overflow-y-auto pb-16">
             <header className="p-4 flex items-center gap-4 sticky top-0 bg-[#0f0f0f]/80 backdrop-blur-sm z-10 border-b border-white/10">
                 <button onClick={handleBack} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
@@ -401,7 +401,7 @@ const YouTubeView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'home' | 'channels'>('home');
 
     return (
-        <div className="bg-[#0f0f0f] text-white min-h-screen">
+        <div className="bg-[#0f0f0f] text-white h-full overflow-y-auto">
             <div className="pb-16"> {/* Padding for bottom nav */}
                 {activeTab === 'home' ? <YouTubeHome /> : <YouTubeChannelView />}
             </div>

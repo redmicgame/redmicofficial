@@ -150,6 +150,35 @@ const guideSections: GuideSection[] = [
         )
     },
     {
+        id: 'timeline-and-eras',
+        title: 'Timeline & Eras',
+        icon: <BookOpenIcon className="w-5 h-5" />,   
+        content: (
+            <>
+                <p>The music industry evolves rapidly as years progress in the game. Here is a definitive guide on how the landscape changes:</p>
+                
+                <h3 className="font-bold text-red-400 mt-4">Pre-2003: The Physical Golden Age</h3>
+                <p><strong>Physical Sales (90% market share):</strong> CDs, Cassettes, and Vinyl rule the world. <strong>Radio (100% impact):</strong> Radio play is the primary way your songs chart. You must dominate radio to succeed. No streaming or digital downloads exist.</p>
+
+                <h3 className="font-bold text-red-400 mt-4">2003 - 2007: The Digital Revolution Begins</h3>
+                <p><strong>iTunes & MySpace:</strong> In 2003, digital downloads (iTunes) become active, opening up the digital sales market. Additionally, MySpace becomes available from 2003-2011, allowing you to connect directly with fans, post blogs, and update your profile song for huge hype.</p>
+                <p><strong>YouTube (2005):</strong> The ability to post Music Videos, Interviews, and Live Performances debuts. A very critical visual era begins.</p>
+                
+                <h3 className="font-bold text-red-400 mt-4">2008 - 2011: The Streaming Dawn</h3>
+                <p><strong>Spotify & Twitter (X):</strong> In 2008, streaming (Spotify) goes live, slowly eating into market share. 'X' (Twitter) also goes mainstream, shifting organic hype towards micro-blogging and viral fan wars.</p>
+                <p><strong>Market Dynamics:</strong> Physical sales steadily decline (dropping to 60%). Digital downloads peak in relevance alongside radio.</p>
+
+                <h3 className="font-bold text-red-400 mt-4">2012 - 2017: The Social Media Boom</h3>
+                <p><strong>Instagram (2012):</strong> Visual dominance shifts to Instagram. MySpace dies and is no longer available.</p>
+                <p><strong>OnlyFans (2016):</strong> A new way to monetize hardcore fans. Streaming slowly becomes the dominant force over digital and physical sales.</p>
+                
+                <h3 className="font-bold text-red-400 mt-4">2018+: The Streaming & Short-Form Era</h3>
+                <p><strong>TikTok (2018):</strong> Viral short-form video takes over. Songs explode seemingly overnight through trends.</p>
+                <p><strong>Market Dynamics:</strong> Streaming has an 85% market share. Pure digital downloads are mostly dead. Physical sales only exist as niche record sales (5% - vinyl resurgence). Radio impact is significantly diluted to 30% of its former glory.</p>
+            </>
+        )
+    },
+    {
         id: 'red-mic-pro',
         title: 'Red Mic Pro',
         icon: <StarIcon className="w-5 h-5" />,
