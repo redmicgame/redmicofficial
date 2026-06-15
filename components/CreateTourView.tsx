@@ -9,7 +9,7 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 type TourTier = 'Small Halls' | 'Large Halls' | 'Arenas' | 'Stadiums';
 
 const CreateTourView: React.FC = () => {
-    const { dispatch, activeArtist, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const [step, setStep] = useState(1);
     const [tourName, setTourName] = useState('');
     const [bannerImage, setBannerImage] = useState<string | null>(null);

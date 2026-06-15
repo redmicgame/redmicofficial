@@ -466,7 +466,7 @@ const CatalogView: React.FC = () => {
                         <div className="space-y-3">
                             {releasedProjects.map(project => {
                                 const isExpanded = expandedProjectIds.has(project.id);
-                                const totalUnits = Math.floor(project.streams / 1500);
+                                const totalUnits = Math.floor(project.streams / 1500) + ((project as any).sales || 0);
                                 const albumChartEntry = billboardTopAlbums.find(e => e.albumId === project.id);
                                 const albumHistory = albumChartHistory[project.id];
                                 const albumChartInfo = {

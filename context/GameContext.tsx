@@ -3972,16 +3972,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const newSpotifyGlobal: ChartEntry[] = [];
             const prevSpotifyMap = new Map(state.spotifyGlobal.map(entry => [entry.uniqueId, entry.rank]));
             let newEntriesCount = 0;
-            
+            const eraConfigTmpSp = getEraConfiguration(state.date.year);
+            const streamMultiplier = Math.max(0, eraConfigTmpSp.marketShare.streaming);
+
             spotifyLocalTop.forEach((song, index) => {
                 const rank = index + 1;
                 const lastWeekRank = prevSpotifyMap.get(song.uniqueId) ?? null;
                 if (lastWeekRank === null) newEntriesCount++;
+                const actualStreams = Math.floor(song.weeklyStreams * streamMultiplier);
+                
                 newSpotifyGlobal.push({
                     rank: rank, lastWeek: lastWeekRank, peak: newChartHistory[song.uniqueId]?.peak ?? rank,
                     weeksOnChart: newChartHistory[song.uniqueId]?.weeksOnChart ?? 1, title: song.title, artist: song.artist,
                     coverArt: song.coverArt, isPlayerSong: song.isPlayerSong, songId: song.songId,
-                    uniqueId: song.uniqueId, weeklyStreams: song.weeklyStreams,
+                    uniqueId: song.uniqueId, weeklyStreams: actualStreams,
                 });
             });
 
@@ -4124,7 +4128,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     // Physical sales from general reach (aside from player-made merch)
                     const generalPhysicalSales = Math.floor((totalWeeklyStreams / 1500) * eraConfigTmp2.marketShare.physical);
                     
-                    const actualStreamEquivalents = Math.floor((totalWeeklyStreams / 1500) * eraConfigTmp2.marketShare.streaming);
+                    const actualStreamEquivalents = Math.floor((totalWeeklyStreams / 1500) * Math.max(0, eraConfigTmp2.marketShare.streaming));
 
                     const albumMerch = artistData.merch.filter(m => m.releaseId === release.id);
                     let totalWeeklySales = albumMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
@@ -4137,8 +4141,21 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         totalWeeklySales += (release.preorderSales || 0);
                     }
 
-                    const weeklySES = actualStreamEquivalents;
-                    const weeklyActivity = weeklySES + totalWeeklySales;
+                    // Realistic Sales Cap per week
+                    if (totalWeeklySales > 3800000) {
+                        totalWeeklySales = 3800000 + Math.floor(Math.random() * 200000); 
+                    }
+
+                    let weeklySES = actualStreamEquivalents;
+                    if (weeklySES > 4000000) {
+                        weeklySES = 4000000 + Math.floor(Math.random() * 200000);
+                    }
+
+                    let weeklyActivity = weeklySES + totalWeeklySales;
+                    if (weeklyActivity > 4500000) {
+                        weeklyActivity = Math.floor(4500000 + Math.random() * 500000);
+                    }
+
                     const labelName = release.releasingLabel ? release.releasingLabel.name : 'Independent';
 
                     return {
@@ -4303,9 +4320,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (isEligible && song.lastWeekStreams > (song.peakWeeklyStreams || 0)) {
                         // Generate daily streams mockup
                         const dailyStreams = [];
-                        let remain = song.lastWeekStreams;
+                        const actualSongStreams = Math.floor(song.lastWeekStreams * Math.max(0, getEraConfiguration(newDate.year).marketShare.streaming));
+                        let remain = actualSongStreams;
                         for(let i=0; i<6; i++) {
-                            const val = Math.floor(song.lastWeekStreams / 7 * (0.8 + Math.random() * 0.4));
+                            const val = Math.floor(actualSongStreams / 7 * (0.8 + Math.random() * 0.4));
                             dailyStreams.push(val);
                             remain -= val;
                         }
@@ -4316,7 +4334,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             songName: song.title,
                             artistName: artistProfile?.name || 'Unknown',
                             coverArt: song.coverArt,
-                            streams: song.lastWeekStreams,
+                            streams: actualSongStreams,
                             totalStreams: song.streams,
                             dailyStreams: dailyStreams,
                             date: newDate,
@@ -4324,7 +4342,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                         snapshotCandidates.push({
                             artistId,
-                            streams: song.lastWeekStreams,
+                            streams: actualSongStreams,
                             post: {
                                 id: crypto.randomUUID(), authorId: 'spotifysnapshot',
                                 content: `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
@@ -4344,12 +4362,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistData.releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').forEach(release => {
                     const albumSongs = release.songIds.map(id => artistData.songs.find(s => s.id === id)).filter((s): s is Song => !!s);
                     const weeklyAlbumStreams = albumSongs.reduce((sum, s) => sum + s.lastWeekStreams, 0);
+                    const eraConfigTmpAlbum = getEraConfiguration(newDate.year);
+                    const actualWeeklyAlbumStreams = Math.floor(weeklyAlbumStreams * Math.max(0, eraConfigTmpAlbum.marketShare.streaming));
                     
                     if (release.isReleased && weeklyAlbumStreams >= 500000 && weeklyAlbumStreams > (release.peakWeeklyStreams || 0)) {
                         const tracks = albumSongs.map(s => ({
                            title: s.title,
                            totalStreams: s.streams,
-                           dailyStreams: s.lastWeekStreams, 
+                           dailyStreams: Math.floor(s.lastWeekStreams * Math.max(0, eraConfigTmpAlbum.marketShare.streaming)), 
                         }));
                         
                         const jsonStr = JSON.stringify({
@@ -4357,7 +4377,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             albumName: release.title,
                             artistName: artistProfile?.name || 'Unknown',
                             coverArt: release.coverArt,
-                            streams: weeklyAlbumStreams,
+                            streams: actualWeeklyAlbumStreams,
                             totalStreams: albumSongs.reduce((sum, s) => sum + s.streams, 0),
                             tracks: tracks,
                             date: newDate,
@@ -4365,7 +4385,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                         snapshotCandidates.push({
                             artistId,
-                            streams: weeklyAlbumStreams,
+                            streams: actualWeeklyAlbumStreams,
                             post: {
                                 id: crypto.randomUUID(), authorId: 'spotifysnapshot',
                                 content: `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
