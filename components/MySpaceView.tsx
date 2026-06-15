@@ -114,6 +114,38 @@ const MySpaceView: React.FC = () => {
                         </div>
                     </div>
 
+                    {gameState.date.year < 2012 && (
+                        <div className="flex gap-4 p-4 bg-white border border-gray-300 shadow-sm items-start">
+                            <div className="flex-1 space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-700">Push to iTunes</label>
+                                    <p className="text-[10px] text-zinc-500 mb-1">Direct your MySpace friends to buy your song on iTunes. (Can only push once per week)</p>
+                                    <div className="flex gap-2">
+                                        <select value={selectedSongId} onChange={e => setSelectedSongId(e.target.value)} className="text-sm p-1 border border-gray-400 flex-1">
+                                            <option value="">Select a released song...</option>
+                                            {releasedSongs.map(s => (
+                                                <option key={s.id} value={s.id}>{s.title}</option>
+                                            ))}
+                                        </select>
+                                        <button 
+                                            onClick={() => {
+                                                if (!selectedSongId) return;
+                                                dispatch({ type: 'POST_ON_MYSPACE', payload: { type: 'push', songId: selectedSongId, content: `Buy ${releasedSongs.find(s=>s.id===selectedSongId)?.title || 'my new song'} on iTunes!` } });
+                                                setSelectedSongId('');
+                                            }} 
+                                            disabled={!selectedSongId || (activeData.lastPushToItunesWeek === gameState.date.year * 52 + gameState.date.week)} 
+                                            className="px-3 py-1 bg-[#003399] hover:bg-[#002266] text-white font-bold text-xs rounded disabled:opacity-50 tracking-wider">
+                                            PUSH TO ITUNES
+                                        </button>
+                                    </div>
+                                    {activeData.lastPushToItunesWeek === gameState.date.year * 52 + gameState.date.week && (
+                                        <p className="text-xs text-red-500 mt-1">You already pushed a song to iTunes this week.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white border border-[#003399]">
                         <h3 className="bg-[#ffcc99] text-[#cc6600] p-1 text-sm font-bold mb-2">MySpace Blog</h3>
                         <div className="p-4 space-y-4">

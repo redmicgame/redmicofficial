@@ -1283,7 +1283,7 @@ export type GameAction =
     | { type: 'COMBINE_REMIXES'; payload: { originalSongId: string } }
     | { type: 'CHANGE_STAGE_NAME'; payload: { newName: string; cost?: number; contractId?: string } }
     | { type: 'POST_ON_X'; payload: { content: string; image?: string; postType: 'normal' | 'fanWar' | 'push' | 'announce'; targetId?: string; songId?: string; quoteOf?: XPost; announceItem?: { type: 'project' | 'single', submissionId: string, songId?: string } } }
-    | { type: 'POST_ON_MYSPACE'; payload: { type: 'bulletin' | 'blog' | 'profile_song'; content?: string; songId?: string } }
+    | { type: 'POST_ON_MYSPACE'; payload: { type: 'bulletin' | 'blog' | 'profile_song' | 'push'; content?: string; songId?: string } }
     | { type: 'REPLY_TO_X_POST'; payload: { postId: string; content: string; image?: string; authorId: string; } }
     | { type: 'VIEW_X_PROFILE'; payload: string }
     | { type: 'CREATE_X_ACCOUNT'; payload: { username: string; name: string; avatar: string; bio?: string } }

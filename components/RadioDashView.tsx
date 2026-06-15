@@ -149,7 +149,7 @@ const RadioDashView: React.FC = () => {
     }
 
     return (
-        <div className="bg-white min-h-screen font-sans pb-24 text-black">
+        <div className="bg-white h-full overflow-y-auto font-sans pb-24 text-black">
             <header className="bg-black text-white p-4 sticky top-0 z-10 flex items-center justify-between">
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="font-bold text-sm">&larr; BACK</button>
                 <div className="font-black italic tracking-widest text-lg ml-auto mr-auto pl-4">HITS</div>

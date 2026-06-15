@@ -6853,6 +6853,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const streamsBoost = Math.floor(Math.random() * 5000) + 1000;
                     activeData.songs = activeData.songs.map(s => s.id === song.id ? { ...s, streams: (s.streams || 0) + streamsBoost, sales: s.sales || 0 } : s);
                 }
+            } else if (action.payload.type === 'push' && action.payload.songId) {
+                hypeBoost = 2;
+                activeData.lastPushToItunesWeek = state.date.year * 52 + state.date.week;
+                activeData.lastPushedSongId = action.payload.songId;
+                newMySpaceData.bulletins = [{ content: action.payload.content || 'Buy my new song on iTunes!', year: state.date.year, week: state.date.week }, ...newMySpaceData.bulletins].slice(0, 10);
             }
 
             return {
