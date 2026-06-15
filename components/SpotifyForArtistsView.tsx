@@ -424,7 +424,7 @@ const S4AMusic: React.FC<{ onSelectSong: (song: Song) => void; onSelectUpcomingR
                     .sort((a, b) => b.calculatedStreams - a.calculatedStreams);
             case '7d':
                 return [...releasedSongs]
-                    .map(song => ({ ...song, calculatedStreams: song.lastWeekStreams || 0 }))
+                    .map(song => ({ ...song, calculatedStreams: song.actualLastWeekStreams || song.lastWeekStreams || 0 }))
                     .sort((a, b) => b.calculatedStreams - a.calculatedStreams);
             case '24h':
                  return [...releasedSongs]

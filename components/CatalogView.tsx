@@ -402,8 +402,13 @@ const CatalogView: React.FC = () => {
     }, [songsForArtist, allReleases, activeArtistData.merch]);
     
     const releasedProjects = useMemo(() => {
-        return activeArtistData.releases
-            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo)
+        const projects = activeArtistData.releases
+            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo);
+            
+        const deluxeOriginalIds = new Set(projects.filter(p => p.type === 'Album (Deluxe)' && p.originalReleaseId).map(p => p.originalReleaseId));
+        
+        return projects
+            .filter(r => !deluxeOriginalIds.has(r.id))
             .map(release => {
                 const releaseStreams = release.songIds.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
@@ -414,7 +419,7 @@ const CatalogView: React.FC = () => {
                     return total + (song?.sales || 0);
                 }, 0);
                 const merchUnits = activeArtistData.merch
-                    .filter(m => m.releaseId === release.id)
+                    .filter(m => m.releaseId === release.id || (release.originalReleaseId && m.releaseId === release.originalReleaseId))
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
                 return { ...release, streams: releaseStreams + (merchUnits * 1500), sales: releaseSales };
             })

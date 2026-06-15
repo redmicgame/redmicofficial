@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useGame, formatNumber, formatDuration } from '../context/GameContext';
+import { getEraConfiguration } from '../utils/eraUtils';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
@@ -26,99 +27,19 @@ export const ChartPredictionsView: React.FC = () => {
         for (const artistId in gameState.artistsData) {
             const aData = gameState.artistsData[artistId];
             const artist = allPlayerArtists.find(a => a.id === artistId);
-            
-            let labelMultiplier = 1;
-            if (aData.contract) {
-                if (aData.contract.isCustom) {
-                    const label = gameState.customLabels?.find(l => l.id === aData.contract!.labelId);
-                    if (label) {
-                        labelMultiplier = label.promotionMultiplier || 1;
-                        if (label.exclusiveLicenseId) {
-                            const exclusiveLabel = LABELS.find(l => l.id === label.exclusiveLicenseId);
-                            if (exclusiveLabel) labelMultiplier = Math.max(labelMultiplier, exclusiveLabel.promotionMultiplier || 1);
-                        }
-                    }
-                } else {
-                    const label = LABELS.find(l => l.id === aData.contract!.labelId);
-                    if (label) labelMultiplier = label.promotionMultiplier || 1;
-                }
-            }
-
-            const hypeMultiplier = Math.max(1, (aData.hype || 0) / 10 + 1);
-            const popularityMultiplier = Math.max(1, (aData.popularity || 0) / 10 + 1);
-            
-            const difficulty = gameState.difficultyMode || 'normal';
-            let diffMultiplier = 1;
-            if (difficulty === 'easy') diffMultiplier = 2.0;
-            else if (difficulty === 'hard') diffMultiplier = 0.6;
-            else if (difficulty === 'extreme') diffMultiplier = 0.3;
 
             aData.songs.filter(s => s.isReleased && !s.remixOfSongId && !s.isTakenDown).forEach(song => {
-                const simulateStreams = (s: typeof song) => {
-                    const baseStreams = (s.quality ** 2) * 50;
-                    let streams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * diffMultiplier * 1.0);  // avg random
-                    
-                    let releaseDate = s.releaseDate;
-                    if (!releaseDate && s.releaseId) {
-                        const release = aData.releases.find(r => r.id === s.releaseId);
-                        if (release) releaseDate = release.releaseDate;
-                    }
-
-                    if (releaseDate) {
-                        let decayIntensity = 0.15;
-                        if (difficulty === 'easy') decayIntensity = 0;
-                        else if (difficulty === 'hard') decayIntensity = 0.25;
-                        else if (difficulty === 'extreme') decayIntensity = 0.4;
-
-                        if (decayIntensity > 0) {
-                            const ageInWeeks = Math.max(0, (gameState.date.year - releaseDate.year) * 52 + (gameState.date.week - releaseDate.week));
-                            const maxAge = Math.min(ageInWeeks, 156);
-                            const decayFactor = 1 / (1 + decayIntensity * maxAge);
-                            streams = Math.floor(streams * decayFactor);
-                        }
-                    }
-
-                    if (s.genre === 'Christmas') {
-                        const week = gameState.date.week;
-                        if (week >= 50) streams *= 17;
-                        else if (week >= 45) streams *= 10;
-                        else if (week >= 41) streams *= 2;
-                        else streams *= 0.15;
-                    }
-
-                    if (s.pitchforkBoost) streams *= 3;
-                    
-                    let playlistStreams = 0;
-                    const spotifyPlaylists = gameState.spotifyPlaylists || [];
-                    spotifyPlaylists.forEach(playlist => {
-                        const trackIndex = playlist.tracks.findIndex(t => t.songId === s.id);
-                        if (trackIndex !== -1) {
-                            const percentage = Math.max(0.001, 0.03 - (trackIndex * 0.0006));
-                            playlistStreams += Math.floor((playlist.followers || 10000) * percentage);
-                        }
-                    });
-                    streams += playlistStreams;
-
-                    const songPromo = aData.promotions.find(p => p.itemId === s.id && p.itemType === 'song');
-                    if (songPromo) streams = Math.floor(streams * songPromo.boostMultiplier);
-                    
-                    if (typeof s.promoBoostWeeks === 'number' && s.promoBoostWeeks > 0) {
-                        streams = Math.floor(streams * 1.10);
-                    }
-                    return streams;
-                };
-
-                let totalWeeklyStreams = simulateStreams(song);
+                let totalWeeklyStreams = song.lastWeekStreams || 0;
                 
                 const remixes = aData.songs.filter(r => r.isReleased && r.remixOfSongId === song.id && !r.isTakenDown);
                 remixes.forEach(remix => {
-                    totalWeeklyStreams += simulateStreams(remix);
+                    totalWeeklyStreams += remix.lastWeekStreams || 0;
                 });
 
                 allContenders.push({
                     title: song.title,
                     artist: artist?.name || song.npcArtistName || 'Unknown',
-                    weeklyStreams: totalWeeklyStreams,
+                    weeklyStreams: totalWeeklyStreams, // This represents base engagement
                     coverArt: song.coverArt,
                     isPlayerSong: true,
                     uniqueId: song.id,
@@ -147,6 +68,7 @@ export const ChartPredictionsView: React.FC = () => {
             let boost = 1;
             let additionalItunesSales = 0;
             let currentRadioPlays = 0;
+            const eraConfigTemp = getEraConfiguration(gameState.date.year);
 
             if (song.isPlayerSong) {
                 for (const artistId in gameState.artistsData) {
@@ -172,18 +94,36 @@ export const ChartPredictionsView: React.FC = () => {
                                 additionalItunesSales += vSales;
                             });
                         }
+
+                        // Add merch physical sales
+                        const songMerch = aData.merch.filter(m => {
+                            if (m.releaseId) {
+                                const release = aData.releases.find(r => r.id === m.releaseId);
+                                return release?.type === 'Single' && release.songIds.includes(song.uniqueId);
+                            }
+                            return false;
+                        });
+                        const additionalPhysicalSales = songMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
+                        additionalItunesSales += additionalPhysicalSales;
+
                         break;
                     }
                 }
             } else {
-                currentRadioPlays = Math.floor(song.weeklyStreams * 0.005);
+                currentRadioPlays = (song as any).lastWeekRadio || Math.floor(song.weeklyStreams * 0.005);
             }
 
             const sales = Math.floor(song.weeklyStreams / divisor) * boost + additionalItunesSales;
-            const streamPoints = song.weeklyStreams * 0.5;
-            const salesPoints = sales * 150 * 0.2;
-            const radioPoints = currentRadioPlays * 80 * 0.3; 
-            const points = streamPoints + salesPoints + radioPoints;
+            
+            const hasStreamingRights = true; // simplifying prediction
+            const effectiveStreamingShare = hasStreamingRights ? eraConfigTemp.marketShare.streaming : 0;
+            
+            const streamPoints = (song.weeklyStreams * effectiveStreamingShare) * 0.5;
+            const digitalPoints = (sales * eraConfigTemp.marketShare.digital) * 150 * 0.2;
+            const physicalPoints = (sales * eraConfigTemp.marketShare.physical) * 150 * 0.2;
+            const radioPoints = currentRadioPlays * eraConfigTemp.marketShare.radio * 80 * 0.3;
+            
+            const points = streamPoints + digitalPoints + physicalPoints + radioPoints;
             
             return {
                 ...song,

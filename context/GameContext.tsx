@@ -2285,6 +2285,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             sales: (song.sales || 0) + pureSalesThisWeek,
                             prevWeekStreams: song.lastWeekStreams || 0,
                             lastWeekStreams: weeklyStreams,
+                            actualPrevWeekStreams: song.actualLastWeekStreams || 0,
+                            actualLastWeekStreams: actualStreamsThisWeek,
                             ...firstWeekStreamsData,
                             playlistBoostWeeks: newPlaylistBoostWeeks,
                             promoBoostWeeks: newPromoBoostWeeks,
@@ -4091,8 +4093,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 releaseRawStreams.set(release.id, rawStreams);
             });
 
+            const deluxeOriginalIds = new Set(allPlayerReleases.filter(p => p.type === 'Album (Deluxe)' && p.originalReleaseId).map(p => p.originalReleaseId));
+
             const playerAlbumContenders = allPlayerReleases
-                .filter(r => r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation')
+                .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !deluxeOriginalIds.has(r.id))
                 .map(release => {
                     const artist = allPlayerArtistsAndGroups.find(a => a.id === release.artistId);
                     const artistData = updatedArtistsData[release.artistId];
@@ -4136,7 +4140,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     
                     const actualStreamEquivalents = Math.floor((totalWeeklyStreams / 1500) * Math.max(0, eraConfigTmp2.marketShare.streaming));
 
-                    const albumMerch = artistData.merch.filter(m => m.releaseId === release.id);
+                    const albumMerch = artistData.merch.filter(m => m.releaseId === release.id || (release.originalReleaseId && m.releaseId === release.originalReleaseId));
                     let totalWeeklySales = albumMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
                     
                     totalWeeklySales += digitalAlbumSales + generalPhysicalSales;
@@ -4145,6 +4149,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const relDate = release.releaseDate || { year: state.date.year, week: state.date.week };
                     if ((newDate.year * 52 + newDate.week) - (relDate.year * 52 + relDate.week) === 1) {
                         totalWeeklySales += (release.preorderSales || 0);
+                        if (release.originalReleaseId) {
+                            const originalRelease = allPlayerReleases.find(r => r.id === release.originalReleaseId);
+                            if (originalRelease && (newDate.year * 52 + newDate.week) - (originalRelease.releaseDate!.year * 52 + originalRelease.releaseDate!.week) === 1) {
+                                totalWeeklySales += (originalRelease.preorderSales || 0);
+                            }
+                        }
                     }
 
                     // Realistic Sales Cap per week
