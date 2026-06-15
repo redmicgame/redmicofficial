@@ -21,7 +21,7 @@ const QualityBadge: React.FC<{ quality: number; showNumber: boolean }> = ({ qual
     );
 };
 
-const UnreleasedSongItem: React.FC<{ song: Song; showQualityNumber: boolean }> = ({ song, showQualityNumber }) => (
+const UnreleasedSongItem: React.FC<{ song: Song; showQualityNumber: boolean, onDelete?: (songId: string) => void }> = ({ song, showQualityNumber, onDelete }) => (
     <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
         <img src={song.coverArt} alt={song.title} className="w-16 h-16 rounded-md object-cover"/>
         <div className="flex-grow">
@@ -29,6 +29,11 @@ const UnreleasedSongItem: React.FC<{ song: Song; showQualityNumber: boolean }> =
             <p className="text-sm text-zinc-400">{song.genre}</p>
         </div>
         <QualityBadge quality={song.quality} showNumber={showQualityNumber} />
+        {onDelete && (
+            <button onClick={() => onDelete(song.id)} className="p-2 ml-2 bg-red-600 rounded-md text-white font-bold text-xs hover:bg-red-500">
+                Delete
+            </button>
+        )}
     </div>
 );
 
@@ -67,6 +72,11 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({ submission 
                 {submission.status === 'awaiting_player_input' && (
                     <button onClick={handlePlanRelease} className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600">
                         Plan Release
+                    </button>
+                )}
+                {submission.status === 'scheduled' && (
+                    <button onClick={() => dispatch({type: 'CANCEL_SCHEDULED_RELEASE', payload: { submissionId: submission.id }})} className="text-xs bg-red-600/20 text-red-400 font-semibold px-2 py-1 rounded hover:bg-red-600/40">
+                        Cancel
                     </button>
                 )}
             </div>
@@ -283,7 +293,7 @@ const HomeTab: React.FC = () => {
                 </div>
                 {hasUnreleased ? (
                     <div className="space-y-3">
-                        {unreleasedSongs.slice(0, 3).map(song => <UnreleasedSongItem key={song.id} song={song} showQualityNumber={redMicPro.unlocked} />)}
+                        {unreleasedSongs.slice(0, 3).map(song => <UnreleasedSongItem key={song.id} song={song} showQualityNumber={redMicPro.unlocked} onDelete={(id) => dispatch({type: 'DELETE_SONG', payload: {songId: id}})} />)}
                     </div>
                 ) : (
                     <div className="text-center py-8 bg-zinc-800 rounded-lg">

@@ -1306,6 +1306,7 @@ export type GameAction =
     | { type: 'CREATE_CUSTOM_LABEL'; payload: { label: CustomLabel; cost: number; membersToSign: string[] } }
     | { type: 'SET_EXCLUSIVE_LICENSE'; payload: { customLabelId: string; exclusiveLicenseId: Label['id'] | undefined } }
     | { type: 'DELETE_SONG'; payload: { songId: string } }
+    | { type: 'CANCEL_SCHEDULED_RELEASE'; payload: { submissionId: string } }
     | { type: 'GO_TO_ALBUM_PROMO'; payload: { submissionId: string } }
     | { type: 'LAUNCH_COUNTDOWN_PAGE'; payload: { submissionId: string; cost: number } }
     | { type: 'REQUEST_GENIUS_PROMO'; payload: { submissionId: string; songId: string; cost: number } }

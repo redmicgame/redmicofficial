@@ -2133,6 +2133,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                         let weeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * popularityMultiplier * diffMultiplier * trendMultiplier * (Math.random() * 0.4 + 0.8)); 
 
+                        // Tour Setlist Boost
+                        const isOnActiveTourSetlist = artistData.tours && artistData.tours.some(tour => tour.status === 'active' && tour.setlist && tour.setlist.includes(song.id));
+                        if (isOnActiveTourSetlist) {
+                            weeklyStreams = Math.floor(weeklyStreams * 1.05); // +5% boost
+                        }
+
                         // Decay logic
                         let releaseDate = song.releaseDate;
                         if (!releaseDate && song.releaseId) {
@@ -7621,6 +7627,36 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     [state.activeArtistId]: {
                         ...activeData,
                         songs: updatedSongs,
+                    }
+                }
+            };
+        }
+        case 'CANCEL_SCHEDULED_RELEASE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const submissionToCancel = activeData.labelSubmissions.find(sub => sub.id === action.payload.submissionId);
+            
+            if (!submissionToCancel) return state;
+            
+            // Mark the songs from this release as unreleased again
+            const releaseSongIds = submissionToCancel.release.songIds || [];
+            const updatedSongs = activeData.songs.map(song => {
+                if (releaseSongIds.includes(song.id)) {
+                    return { ...song, isReleased: false, releaseId: undefined, dateReleased: undefined };
+                }
+                return song;
+            });
+
+            const updatedSubmissions = activeData.labelSubmissions.filter(sub => sub.id !== action.payload.submissionId);
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        songs: updatedSongs,
+                        labelSubmissions: updatedSubmissions
                     }
                 }
             };

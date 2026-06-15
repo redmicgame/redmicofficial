@@ -21,27 +21,32 @@ const QualityBadge: React.FC<{ quality: number; showNumber: boolean }> = ({ qual
     );
 };
 
-const UnreleasedSongItem: React.FC<{ song: Song; showQuality: boolean }> = ({ song, showQuality }) => (
+const UnreleasedSongItem: React.FC<{ song: Song; showQuality: boolean, onDelete?: (songId: string) => void }> = ({ song, showQuality, onDelete }) => (
     <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
         <img src={song.coverArt} alt={song.title} className="w-16 h-16 rounded-md object-cover"/>
         <div className="flex-grow">
             <p className="font-bold">{song.title}</p>
             <p className="text-sm text-zinc-400">{song.genre}</p>
             {song.leakInfo && (
-              <div className="mt-1 text-xs font-semibold flex items-center gap-3">
-                <span className="bg-yellow-900/50 px-2 py-0.5 rounded-full text-yellow-300">LEAKED</span>
-                <div className="flex items-center gap-1 text-yellow-400">
-                    <ChartBarIcon className="w-4 h-4"/>
-                    <span>{formatNumber(song.leakInfo.illegalStreams)}</span>
+                <div className="mt-1 text-xs font-semibold flex items-center gap-3">
+                    <span className="bg-yellow-900/50 px-2 py-0.5 rounded-full text-yellow-300">LEAKED</span>
+                    <div className="flex items-center gap-1 text-yellow-400">
+                        <ChartBarIcon className="w-4 h-4"/>
+                        <span>{formatNumber(song.leakInfo.illegalStreams)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-yellow-400">
+                        <DownloadIconSimple className="w-4 h-4"/>
+                        <span>{formatNumber(song.leakInfo.illegalDownloads)}</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1 text-yellow-400">
-                    <DownloadIconSimple className="w-4 h-4"/>
-                    <span>{formatNumber(song.leakInfo.illegalDownloads)}</span>
-                </div>
-              </div>
             )}
         </div>
         <QualityBadge quality={song.quality} showNumber={showQuality} />
+        {onDelete && (
+            <button onClick={() => onDelete(song.id)} className="p-2 ml-2 bg-red-600 rounded-md text-white font-bold text-xs hover:bg-red-500">
+                Delete
+            </button>
+        )}
     </div>
 );
 
@@ -76,7 +81,7 @@ const ReleaseHubView: React.FC = () => {
                 </div>
                 {hasUnreleased ? (
                     <div className="space-y-3">
-                        {unreleasedSongs.map(song => <UnreleasedSongItem key={song.id} song={song} showQuality={redMicPro.unlocked} />)}
+                        {unreleasedSongs.map(song => <UnreleasedSongItem key={song.id} song={song} showQuality={redMicPro.unlocked} onDelete={(id) => dispatch({type: 'DELETE_SONG', payload: {songId: id}})} />)}
                     </div>
                 ) : (
                     <div className="text-center py-8 bg-zinc-800 rounded-lg">
