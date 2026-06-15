@@ -49,8 +49,18 @@ export const ChartPredictionsView: React.FC = () => {
 
         // NPCs
         gameState.npcs.forEach(npc => {
-            const decay = Math.pow(0.85, npc.weeksSincePeak || 0);
-            const weeklyStreams = Math.floor(npc.basePopularity * decay * 1.0);
+            const peak = gameState.chartHistory[npc.uniqueId]?.peak || 100;
+            const weeks = gameState.chartHistory[npc.uniqueId]?.weeksOnChart || 0;
+            let expectedWeeksSincePeak = npc.weeksSincePeak || 0;
+            if (peak <= 20) expectedWeeksSincePeak += 1;
+            
+            let pop = npc.basePopularity;
+            if (expectedWeeksSincePeak > 4 && weeks > 20) {
+                pop = pop * 0.90;
+            }
+            if (weeks > 52) pop = pop * 0.70;
+
+            const weeklyStreams = Math.floor(pop * 1.0); // 1.0 is expected value of Math.random()*0.4 + 0.8
             allContenders.push({
                 title: npc.title,
                 artist: npc.artist,
@@ -62,20 +72,24 @@ export const ChartPredictionsView: React.FC = () => {
         });
 
         // Formulate points
-        const hot100Contenders = allContenders.map(song => {
+        allContenders.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
+        
+        const hot100Contenders = allContenders.map((song, index) => {
             const hash = song.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const divisor = 750 + (hash % 250);
             let boost = 1;
             let additionalItunesSales = 0;
+            let additionalPhysicalSales = 0;
             let currentRadioPlays = 0;
             const eraConfigTemp = getEraConfiguration(gameState.date.year);
+
+            const maxPlaysForRank = Math.max(0, Math.floor(15000 * Math.pow(0.95, index)));
 
             if (song.isPlayerSong) {
                 for (const artistId in gameState.artistsData) {
                     const aData = gameState.artistsData[artistId];
                     const s = aData.songs.find(x => x.id === song.uniqueId);
                     if (s) {
-                        currentRadioPlays = s.radioPlays || 0;
                         const currentWeek = gameState.date.year * 52 + gameState.date.week;
                         const pushWeek = aData.lastPushToItunesWeek;
                         if (aData.lastPushedSongId === song.uniqueId && pushWeek && currentWeek - pushWeek <= 1) {
@@ -103,14 +117,70 @@ export const ChartPredictionsView: React.FC = () => {
                             }
                             return false;
                         });
-                        const additionalPhysicalSales = songMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
-                        additionalItunesSales += additionalPhysicalSales;
+                        additionalPhysicalSales = songMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
+
+                        // Match radio logic perfectly
+                        if (s.isOnRadio) {
+                            let labelBoost = 1.0;
+                            const contract = aData.contract;
+                            if (contract) {
+                                if (contract.isCustom) {
+                                    const customLabel = gameState.customLabels?.find(l => l.id === contract.labelId);
+                                    if (customLabel) labelBoost = Math.max(labelBoost, customLabel.promotionMultiplier || 1);
+                                } else {
+                                    const majorLabel = LABELS.find(l => l.id === contract.labelId);
+                                    if (majorLabel) labelBoost = majorLabel.promotionMultiplier || 1;
+                                    else labelBoost = 1.3; // avg
+                                }
+                            }
+                            
+                            const rFormat = s.radioFormat || 'pop';
+                            const qualityBoost = (s.quality || 50) + (aData.popularity || 0);
+                            
+                            const isFormatCompatible = (genre: string, format: string) => {
+                                const g = genre.toLowerCase();
+                                const f = format.toLowerCase();
+                                if (f === 'pop') {
+                                    if (g.includes('hip hop') || g.includes('rap')) return 0.2;
+                                    if (g.includes('country')) return 0.05;
+                                    if (g.includes('hip hop') || g.includes('r&b') || g.includes('rap') || g.includes('pop') || g.includes('dance') || g.includes('k-pop') || g.includes('kpop') || g.includes('electronic')) return 1.0;
+                                    return 0.1;
+                                }
+                                if (f === 'country') {
+                                    if (g.includes('country')) return 1.0;
+                                    return 0.05;
+                                }
+                                if (f === 'christmas') {
+                                    if (g.includes('holiday') || g.includes('christmas')) return 1.0;
+                                    return 0.01;
+                                }
+                                return 1.0; // fallback
+                            };
+
+                            const formatMultiplier = isFormatCompatible(s.genre || 'pop', rFormat);
+                            const radioEraBoost = gameState.date.year < 2010 ? (gameState.date.year < 2000 ? 5.0 : 3.0) : 1.0;
+                            
+                            let targetPlays = Math.floor((song.weeklyStreams * 0.005) * (qualityBoost / 100) * labelBoost * formatMultiplier * radioEraBoost);
+                            if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
+                            
+                            const previousPlays = s.radioPlays || 0;
+                            let rPlays = previousPlays + Math.max(-1000, Math.floor((targetPlays - previousPlays) * 0.3));
+                            if (rPlays < 0) rPlays = 0;
+                            if (rPlays > maxPlaysForRank) rPlays = maxPlaysForRank;
+
+                            currentRadioPlays = rPlays;
+                        }
 
                         break;
                     }
                 }
             } else {
-                currentRadioPlays = (song as any).lastWeekRadio || Math.floor(song.weeklyStreams * 0.005);
+                const baseRadio = Math.floor(song.weeklyStreams * 0.005);
+                const prevRadio = gameState.billboardHot100.find(x => x.uniqueId === song.uniqueId)?.radioPlays || 0;
+                let rPlays = prevRadio > 0 ? (prevRadio + Math.max(-1000, Math.floor((baseRadio - prevRadio) * 0.3))) : baseRadio;
+                if (rPlays > maxPlaysForRank) rPlays = maxPlaysForRank;
+                if (rPlays < 0) rPlays = 0;
+                currentRadioPlays = rPlays;
             }
 
             const sales = Math.floor(song.weeklyStreams / divisor) * boost + additionalItunesSales;
@@ -120,7 +190,7 @@ export const ChartPredictionsView: React.FC = () => {
             
             const streamPoints = (song.weeklyStreams * effectiveStreamingShare) * 0.5;
             const digitalPoints = (sales * eraConfigTemp.marketShare.digital) * 150 * 0.2;
-            const physicalPoints = (sales * eraConfigTemp.marketShare.physical) * 150 * 0.2;
+            const physicalPoints = (sales * eraConfigTemp.marketShare.physical + additionalPhysicalSales) * 150 * 0.2;
             const radioPoints = currentRadioPlays * eraConfigTemp.marketShare.radio * 80 * 0.3;
             
             const points = streamPoints + digitalPoints + physicalPoints + radioPoints;
@@ -128,8 +198,8 @@ export const ChartPredictionsView: React.FC = () => {
             return {
                 ...song,
                 points: Math.floor(points),
-                pointsDiff: Math.floor(points * (Math.random() * 0.1 - 0.05)), // small +/- var
-                sales: sales,
+                pointsDiff: 0, // removed arbitrary noise for 'high accuracy'
+                sales: sales + additionalPhysicalSales,
                 radioPlays: currentRadioPlays,
             };
         });
