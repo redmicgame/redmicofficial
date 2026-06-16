@@ -22,6 +22,7 @@ const AddMerchModal: React.FC<{
     const [price, setPrice] = useState(39.98);
     const [stockQty, setStockQty] = useState(1000);
     const [image, setImage] = useState<string | null>(null);
+    const [color, setColor] = useState('#000000');
     const [error, setError] = useState('');
 
     const isRingtoneEra = gameState.date.year >= 2006 && gameState.date.year <= 2010;
@@ -86,6 +87,7 @@ const AddMerchModal: React.FC<{
             name: `${selectedRelease.title}${variantName ? ` (${variantName})` : (merchType === 'Ringtone' ? ' (Ringtone)' : '')}`,
             type: merchType,
             price,
+            color: merchType === 'Vinyl' ? color : undefined,
             stock: merchType === 'Ringtone' ? 9999999 : stockQty, // Infinite stock basically
             unitsSold: 0,
             image: image || selectedRelease.coverArt,
@@ -115,6 +117,16 @@ const AddMerchModal: React.FC<{
                         <button onClick={() => handleMerchTypeChange('Ringtone')} className={`py-2 rounded ${merchType === 'Ringtone' ? 'bg-red-500' : 'bg-zinc-700'}`}>Ringtone</button>
                     )}
                 </div>
+
+                {merchType === 'Vinyl' && (
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-zinc-400">Vinyl Color</label>
+                        <div className="flex items-center gap-2">
+                            <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-10 h-10 bg-transparent border-0 rounded cursor-pointer p-0" />
+                            <span className="text-sm text-zinc-300">{color}</span>
+                        </div>
+                    </div>
+                )}
 
                 {merchType !== 'Ringtone' && (
                     <div className="space-y-1">
@@ -295,13 +307,60 @@ const MerchStoreView: React.FC = () => {
                         )}
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                             {merch.map(item => (
-                                <div key={item.id} className="group relative border border-zinc-200">
-                                    <img src={item.image} alt={item.name} className="w-full aspect-square object-cover" />
-                                    {(item.isPreorder && !releases.some(r => r.id === item.releaseId)) && (
-                                        <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">PRE-ORDER</div>
-                                    )}
+                                <div key={item.id} className="group relative border border-zinc-200 bg-white flex flex-col">
+                                    <div className="relative w-full aspect-[5/4] bg-zinc-100 flex items-center justify-center overflow-hidden">
+                                        <div className="relative h-[75%] aspect-square mr-8"> {/* Offset so the disc is visible */}
+                                            {/* Vinyl Disc */}
+                                            {item.type === 'Vinyl' && (
+                                                <div 
+                                                    className="absolute top-0 bottom-0 -right-[40%] aspect-square rounded-full shadow-lg transition-transform duration-500 ease-out group-hover:translate-x-2"
+                                                    style={{ backgroundColor: item.color || '#1A1A1A' }}
+                                                >
+                                                    <div className="absolute inset-0 rounded-full border border-white/10" />
+                                                    <div className="absolute inset-1 rounded-full border border-black/20" />
+                                                    <div className="absolute inset-2 rounded-full border border-black/20" />
+                                                    <div className="absolute inset-4 rounded-full border border-black/10" />
+                                                    <div className="absolute top-1/2 left-1/2 w-[35%] h-[35%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/50 overflow-hidden">
+                                                        <img src={item.image} className="w-full h-full object-cover opacity-80" alt="center label" />
+                                                    </div>
+                                                    <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-inner" />
+                                                </div>
+                                            )}
+
+                                            {/* CD Disc */}
+                                            {item.type === 'CD' && (
+                                                <div 
+                                                    className="absolute top-[2%] bottom-[2%] -right-[45%] w-auto aspect-square rounded-full bg-gradient-to-tr from-zinc-300 via-gray-100 to-zinc-400 shadow-lg border border-zinc-300 transition-transform duration-500 ease-out group-hover:translate-x-2"
+                                                >
+                                                    <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.8),transparent,rgba(255,255,255,0.8),transparent)] mix-blend-overlay opacity-50" />
+                                                    <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_90deg,rgba(255,0,0,0.1),rgba(0,255,0,0.1),rgba(0,0,255,0.1),rgba(255,0,0,0.1))] mix-blend-overlay" />
+                                                    
+                                                    <div className="absolute top-1/2 left-1/2 w-[15%] h-[15%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-zinc-400 bg-white shadow-inner flex items-center justify-center">
+                                                        <div className="w-[30%] h-[30%] rounded-full bg-zinc-200 border border-black/10 shadow-inner" />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Sleeve/Case */}
+                                            <div className={`absolute inset-0 z-10 shadow-[0_5px_15px_rgba(0,0,0,0.25)] bg-white ${item.type === 'CD' ? 'rounded-sm overflow-hidden border border-white/50 border-r-zinc-300 border-b-zinc-300' : ''}`}>
+                                                {item.type === 'CD' && (
+                                                    <>
+                                                        <div className="absolute left-0 top-0 bottom-0 w-[12%] bg-zinc-900 flex flex-col items-center justify-center border-r-[2px] border-zinc-400/50 z-20 shadow-[inset_-2px_0_5px_rgba(0,0,0,0.5)]">
+                                                        </div>
+                                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/40 pointer-events-none z-20 mix-blend-screen" />
+                                                        <div className="absolute left-[12%] top-0 bottom-0 w-1 bg-white/30 pointer-events-none z-20" />
+                                                    </>
+                                                )}
+                                                <img src={item.image} alt={item.name} className={`w-full h-full object-cover relative z-10 ${item.type === 'CD' ? 'pl-[12%] pr-0.5' : ''}`} />
+                                            </div>
+                                        </div>
+
+                                        {(item.isPreorder && !releases.some(r => r.id === item.releaseId)) && (
+                                            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded z-20">PRE-ORDER</div>
+                                        )}
+                                    </div>
                                     {item.stock <= 0 && (
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 w-full py-2 text-center text-red-500 font-extrabold tracking-widest uppercase">SOLD OUT</div>
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 w-full py-2 text-center text-red-500 font-extrabold tracking-widest uppercase z-30">SOLD OUT</div>
                                     )}
                                     <div className="mt-2 text-center md:text-left px-2 mb-2">
                                         <p className="font-semibold line-clamp-1">{item.name}</p>
@@ -311,7 +370,7 @@ const MerchStoreView: React.FC = () => {
                                             <span>Sold: {formatNumber(item.unitsSold || 0)}</span>
                                         </div>
                                     </div>
-                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
                                         <button onClick={() => {
                                             setRestockItem(item);
                                         }} className="p-1 px-2 bg-white/90 text-xs font-bold rounded shadow hover:bg-zinc-200">

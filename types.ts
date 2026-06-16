@@ -173,6 +173,7 @@ export interface MerchProduct {
     name: string;
     type: 'Vinyl' | 'CD' | 'Ringtone';
     price: number;
+    color?: string;
     stock: number;
     unitsSold?: number;
     _actualWeeklySales?: number;

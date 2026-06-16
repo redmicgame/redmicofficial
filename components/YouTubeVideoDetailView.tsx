@@ -115,7 +115,41 @@ const DescriptionOverlay: React.FC<{ video: Video; onClose: () => void }> = ({ v
                         <div className="bg-zinc-800 rounded-xl p-4 space-y-4">
                             {storeItems.map(item => (
                                 <div key={item.id} className="flex items-center gap-3">
-                                    <img src={item.image} alt={item.name} className="w-12 h-12 rounded-sm object-cover" />
+                                    <div className="relative w-[3.5rem] h-12 shrink-0">
+                                        {/* Vinyl Disc */}
+                                        {item.type === 'Vinyl' && (
+                                            <div 
+                                                className="absolute inset-y-0 right-0 w-12 h-full rounded-full shadow-sm"
+                                                style={{ backgroundColor: item.color || '#1A1A1A' }}
+                                            >
+                                                <div className="absolute inset-1 rounded-full border border-black/20" />
+                                                <div className="absolute inset-2 rounded-full border border-black/20" />
+                                                <div className="absolute top-1/2 left-1/2 w-[35%] h-[35%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/50 overflow-hidden">
+                                                    <img src={item.image} className="w-full h-full object-cover opacity-80" alt="" />
+                                                </div>
+                                                <div className="absolute top-1/2 left-1/2 w-1 h-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+                                            </div>
+                                        )}
+                                        {/* CD Disc */}
+                                        {item.type === 'CD' && (
+                                            <div className="absolute top-[2%] bottom-[2%] right-0 w-[2.85rem] rounded-full bg-gradient-to-tr from-zinc-300 via-gray-100 to-zinc-400 shadow-sm border border-zinc-300">
+                                                <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.8),transparent,rgba(255,255,255,0.8),transparent)] mix-blend-overlay opacity-50" />
+                                                <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_90deg,rgba(255,0,0,0.1),rgba(0,255,0,0.1),rgba(0,0,255,0.1),rgba(255,0,0,0.1))] mix-blend-overlay" />
+                                                <div className="absolute top-1/2 left-1/2 w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-zinc-400 bg-white" />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Sleeve/Case */}
+                                        <div className={`absolute inset-y-0 left-0 w-12 h-12 z-10 shadow-sm bg-white ${item.type === 'CD' ? 'rounded-sm border border-zinc-300 overflow-hidden' : ''}`}>
+                                            {item.type === 'CD' && (
+                                                <>
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-black flex flex-col justify-center border-r-[1px] border-zinc-400/50 shadow-inner"></div>
+                                                    <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
+                                                </>
+                                            )}
+                                            <img src={item.image} alt={item.name} className={`w-full h-full object-cover ${item.type === 'CD' ? 'pl-1.5' : ''}`} />
+                                        </div>
+                                    </div>
                                     <div className="flex-grow">
                                         <p className="font-semibold text-sm line-clamp-2">{item.name}</p>
                                         <p className="text-xs text-zinc-400">shop.{activeArtist?.name.replace(/\s/g, '').toLowerCase()}.com</p>
