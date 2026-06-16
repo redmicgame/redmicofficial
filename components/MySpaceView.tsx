@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 
 const UsersIcon = ({ className }: { className?: string }) => (
@@ -25,6 +25,22 @@ const MySpaceView: React.FC = () => {
     
     const profileSong = mySpaceData?.profileSongId ? releasedSongs.find(s => s.id === mySpaceData.profileSongId) : null;
 
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editMood, setEditMood] = useState(mySpaceData?.mood || '');
+    const [editGeneralInterests, setEditGeneralInterests] = useState(mySpaceData?.generalInterests || '');
+    const [editMusicInterests, setEditMusicInterests] = useState(mySpaceData?.musicInterests || '');
+    
+    const potentialFriends = useMemo(() => [
+        ...gameState.npcs.filter(n => n?.name).map(n => ({ id: n.id, name: n.name, image: n.image })),
+        ...(activeData?.xUsers || []).filter(u => u?.name).map(u => ({ id: u.id, name: u.name, image: u.avatar }))
+    ], [gameState.npcs, activeData?.xUsers]);
+
+    const defaultTop8 = useMemo(() => gameState.npcs.filter(n => n?.name).slice(0, 8).map(n => ({ id: n.id, name: n.name, image: n.image })), [gameState.npcs]);
+    const [editTop8Friends, setEditTop8Friends] = useState<{id: string; name: string; image: string}[]>(mySpaceData?.top8Friends || defaultTop8);
+    const [friendSearch, setFriendSearch] = useState('');
+
+    const top8FriendsList = mySpaceData?.top8Friends || defaultTop8;
+
     const handlePostBulletin = () => {
         if (!bulletinText.trim()) return;
         dispatch({ type: 'POST_ON_MYSPACE', payload: { type: 'bulletin', content: bulletinText } });
@@ -42,6 +58,31 @@ const MySpaceView: React.FC = () => {
         dispatch({ type: 'POST_ON_MYSPACE', payload: { type: 'profile_song', songId: selectedSongId } });
         setSelectedSongId('');
     };
+
+    const handleSaveProfile = () => {
+        dispatch({
+            type: 'UPDATE_MYSPACE_PROFILE',
+            payload: {
+                mood: editMood,
+                generalInterests: editGeneralInterests,
+                musicInterests: editMusicInterests,
+                top8Friends: editTop8Friends
+            }
+        });
+        setIsEditingProfile(false);
+    };
+
+    const toggleTop8Friend = (friend: {id: string; name: string; image: string}) => {
+        if (editTop8Friends.find(f => f.id === friend.id)) {
+            setEditTop8Friends(editTop8Friends.filter(f => f.id !== friend.id));
+        } else {
+            if (editTop8Friends.length < 8) {
+                setEditTop8Friends([...editTop8Friends, friend]);
+            }
+        }
+    };
+
+    const filteredPotentialFriends = potentialFriends.filter(f => f?.name?.toLowerCase().includes((friendSearch || '').toLowerCase()));
 
     return (
         <div className="bg-[#e9e9e9] h-full overflow-y-auto text-black font-sans pb-24">
@@ -61,6 +102,11 @@ const MySpaceView: React.FC = () => {
                     <img src={activeArtist?.image} alt={activeArtist?.name} className="w-full max-w-[200px] border border-gray-400 mb-2" />
                     <p className="text-sm font-semibold">"{activeArtist?.name} is in your extended network"</p>
                     
+                    {mySpaceData?.mood && <p className="text-xs font-bold mt-2">Mood: <span className="font-normal">{mySpaceData.mood}</span></p>}
+                    <p className="text-xs font-bold mt-1">Profile Views: <span className="font-normal">{formatNumber(mySpaceData?.profileViews || 0)}</span></p>
+
+                    <button onClick={() => setIsEditingProfile(true)} className="mt-2 text-xs bg-gray-200 border border-gray-400 px-2 py-1 hover:bg-gray-300">Edit Profile</button>
+                    
                     <div className="bg-white border text-sm mt-4 p-2 shadow-sm flex items-center gap-4">
                          <div className="w-16 h-16 bg-gray-200 border border-gray-400 flex items-center justify-center">
                              {profileSong ? <img src={profileSong.coverArt} className="w-full h-full object-cover" /> : <PlayIcon className="w-8 h-8 text-gray-400" />}
@@ -78,6 +124,16 @@ const MySpaceView: React.FC = () => {
                             <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Send Message</a>
                             <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Add to Group</a>
                             <a href="#" className="flex items-center gap-1 hover:underline"><UsersIcon className="w-3 h-3"/> Block User</a>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-[#003399] mt-4">
+                        <h3 className="bg-[#6699cc] text-white p-1 text-sm font-bold">Interests</h3>
+                        <div className="p-2 text-xs">
+                            <p className="font-bold text-[#6699cc]">General</p>
+                            <p className="mb-2 whitespace-pre-wrap">{mySpaceData?.generalInterests || 'None specified.'}</p>
+                            <p className="font-bold text-[#6699cc]">Music</p>
+                            <p className="whitespace-pre-wrap">{mySpaceData?.musicInterests || 'None specified.'}</p>
                         </div>
                     </div>
                 </aside>
@@ -184,12 +240,11 @@ const MySpaceView: React.FC = () => {
                         <p className="font-bold text-sm mb-2">{activeArtist?.name} has <span className="text-[#ff0000]">{Math.floor(activeData?.popularity * 1000).toLocaleString()}</span> friends.</p>
                         
                         <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
-                            {/* Dummy friends */}
-                            {gameState.npcs.slice(0, 8).map(npc => (
-                                <div key={npc.id} className="text-center">
-                                    <h4 className="text-xs font-bold text-[#003399] truncate">{npc.name}</h4>
+                            {top8FriendsList.map(friend => (
+                                <div key={friend.id} className="text-center">
+                                    <h4 className="text-xs font-bold text-[#003399] truncate">{friend.name}</h4>
                                     <div className="bg-white shadow aspect-square mt-1 border border-gray-300 flex items-center justify-center p-1">
-                                        <img src={npc.image} alt={npc.name} className="w-full h-full object-cover" />
+                                        <img src={friend.image} alt={friend.name} className="w-full h-full object-cover" />
                                     </div>
                                 </div>
                             ))}
@@ -197,6 +252,54 @@ const MySpaceView: React.FC = () => {
                     </div>
                 </section>
             </main>
+
+            {isEditingProfile && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white max-w-2xl w-full p-4 border-2 border-[#003399] max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                            <h2 className="text-xl font-bold text-[#003399]">Edit Profile</h2>
+                            <button onClick={() => setIsEditingProfile(false)} className="text-gray-500 hover:text-black">X</button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold">Mood</label>
+                                <input type="text" value={editMood} onChange={e => setEditMood(e.target.value)} className="w-full border border-gray-300 p-1 text-sm" placeholder="e.g. happy, excited, working..." />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold">General Interests</label>
+                                <textarea value={editGeneralInterests} onChange={e => setEditGeneralInterests(e.target.value)} rows={3} className="w-full border border-gray-300 p-1 text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold">Music Interests</label>
+                                <textarea value={editMusicInterests} onChange={e => setEditMusicInterests(e.target.value)} rows={3} className="w-full border border-gray-300 p-1 text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold">Select Top 8 Friends ({editTop8Friends.length}/8)</label>
+                                <input type="text" placeholder="Search friends..." value={friendSearch} onChange={e => setFriendSearch(e.target.value)} className="w-full border border-gray-300 p-1 text-sm mb-2" />
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto border border-gray-300 p-2">
+                                    {filteredPotentialFriends.map(friend => {
+                                        const isSelected = editTop8Friends.some(f => f.id === friend.id);
+                                        return (
+                                            <div 
+                                                key={friend.id} 
+                                                onClick={() => toggleTop8Friend(friend)}
+                                                className={`cursor-pointer border p-1 text-center text-xs flex flex-col items-center gap-1 ${isSelected ? 'bg-blue-100 border-blue-500' : 'bg-gray-50 border-transparent hover:bg-gray-200'}`}
+                                            >
+                                                <img src={friend.image} className="w-10 h-10 object-cover border border-gray-400" />
+                                                <span className="truncate w-full">{friend.name}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => setIsEditingProfile(false)} className="px-4 py-1 border border-gray-400 bg-gray-200 text-sm hover:bg-gray-300">Cancel</button>
+                            <button onClick={handleSaveProfile} className="px-4 py-1 bg-[#003399] text-white font-bold text-sm hover:bg-blue-800">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

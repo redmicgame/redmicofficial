@@ -1258,6 +1258,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     artistData.xPosts.unshift(popBaseNewMusicPost);
                 }
 
+                // --- MYSPACE LOGIC ---
+                if (artistData.mySpaceData) {
+                    artistData.mySpaceData.profileViews = (artistData.mySpaceData.profileViews || 0) + Math.floor(artistData.popularity * 10) + Math.floor(artistData.hype * 2);
+                }
+
                 // --- MANAGER LOGIC ---
                 if (artistData.manager) {
                     const manager = MANAGERS.find(m => m.id === artistData.manager!.id);
@@ -6905,6 +6910,27 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         mySpaceData: newMySpaceData,
                         hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
                         popularity: Math.min(100, activeData.popularity + popBoost)
+                    }
+                }
+            };
+        }
+        case 'UPDATE_MYSPACE_PROFILE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const newMySpaceData = activeData.mySpaceData ? { ...activeData.mySpaceData } : { blogPosts: [], bulletins: [] };
+            
+            if (action.payload.mood !== undefined) newMySpaceData.mood = action.payload.mood;
+            if (action.payload.generalInterests !== undefined) newMySpaceData.generalInterests = action.payload.generalInterests;
+            if (action.payload.musicInterests !== undefined) newMySpaceData.musicInterests = action.payload.musicInterests;
+            if (action.payload.top8Friends !== undefined) newMySpaceData.top8Friends = action.payload.top8Friends;
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        mySpaceData: newMySpaceData,
                     }
                 }
             };
