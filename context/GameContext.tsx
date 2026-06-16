@@ -506,7 +506,8 @@ const calculateGenreChart = (
     allContenders: any[],
     genres: string[],
     previousChart: ChartEntry[],
-    chartHistory: ChartHistory
+    chartHistory: ChartHistory,
+    currentDate: { year: number; week: number }
 ): { newChart: ChartEntry[], newHistory: ChartHistory } => {
     const genreContenders = allContenders
         .filter(song => genres.includes(song.genre));
@@ -538,8 +539,16 @@ const calculateGenreChart = (
             if (rank === 1) {
                 history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
             }
+            if (history.chartRun) {
+                history.chartRun.push(rank);
+            } else {
+                history.chartRun = [rank];
+            }
+            if (!history.firstEntered) {
+                history.firstEntered = { year: currentDate.year, week: currentDate.week };
+            }
         } else {
-            newHistory[song.uniqueId] = { weeksOnChart: 1, peak: rank, lastRank: rank, weeksAtNo1: rank === 1 ? 1 : 0 };
+            newHistory[song.uniqueId] = { weeksOnChart: 1, peak: rank, lastRank: rank, weeksAtNo1: rank === 1 ? 1 : 0, chartRun: [rank], firstEntered: { year: currentDate.year, week: currentDate.week } };
         }
 
         newChart.push({
@@ -3921,8 +3930,16 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (rank === 1) {
                         history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
                     }
+                    if (history.chartRun) {
+                        history.chartRun.push(rank);
+                    } else {
+                        history.chartRun = [rank];
+                    }
+                    if (!history.firstEntered) {
+                        history.firstEntered = { year: newDate.year, week: newDate.week };
+                    }
                 } else {
-                    newChartHistory[song.uniqueId] = { weeksOnChart: 1, peak: rank, lastRank: rank, weeksAtNo1: rank === 1 ? 1 : 0 };
+                    newChartHistory[song.uniqueId] = { weeksOnChart: 1, peak: rank, lastRank: rank, weeksAtNo1: rank === 1 ? 1 : 0, chartRun: [rank], firstEntered: { year: newDate.year, week: newDate.week } };
                 }
                 
                 newBillboardHot100.push({
@@ -4004,16 +4021,16 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             // --- GENRE CHART CALCULATION ---
             const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } = calculateGenreChart(
-                allContenders, ['Pop'], state.hotPopSongs, state.hotPopSongsHistory
+                allContenders, ['Pop'], state.hotPopSongs, state.hotPopSongsHistory, newDate
             );
             const { newChart: newHotRapRnb, newHistory: newHotRapRnbHistory } = calculateGenreChart(
-                allContenders, ['Hip Hop', 'R&B'], state.hotRapRnb, state.hotRapRnbHistory
+                allContenders, ['Hip Hop', 'R&B'], state.hotRapRnb, state.hotRapRnbHistory, newDate
             );
             const { newChart: newElectronicChart, newHistory: newElectronicChartHistory } = calculateGenreChart(
-                allContenders, ['Electronic'], state.electronicChart, state.electronicChartHistory
+                allContenders, ['Electronic'], state.electronicChart, state.electronicChartHistory, newDate
             );
             const { newChart: newCountryChart, newHistory: newCountryChartHistory } = calculateGenreChart(
-                allContenders, ['Country'], state.countryChart, state.countryChartHistory
+                allContenders, ['Country'], state.countryChart, state.countryChartHistory, newDate
             );
 
             // --- RADIO CHART CALCULATION ---
@@ -4253,8 +4270,16 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (rank === 1) {
                         history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
                     }
+                    if (history.chartRun) {
+                        history.chartRun.push(rank);
+                    } else {
+                        history.chartRun = [rank];
+                    }
+                    if (!history.firstEntered) {
+                        history.firstEntered = { year: newDate.year, week: newDate.week };
+                    }
                 } else {
-                    newAlbumChartHistory[album.uniqueId] = { weeksOnChart: 1, peak: rank, lastRank: rank, weeksAtNo1: rank === 1 ? 1 : 0 };
+                    newAlbumChartHistory[album.uniqueId] = { weeksOnChart: 1, peak: rank, lastRank: rank, weeksAtNo1: rank === 1 ? 1 : 0, chartRun: [rank], firstEntered: { year: newDate.year, week: newDate.week } };
                 }
 
                 newBillboardTopAlbums.push({

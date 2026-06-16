@@ -9,6 +9,8 @@ const ChartHistoryView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
     const [selectedChart, setSelectedChart] = useState<ChartType>('billboardHot100');
 
+    const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
+
     if (!activeArtistData || !activeArtist) {
         return <div className="p-4">Loading history...</div>;
     }
@@ -136,17 +138,52 @@ const ChartHistoryView: React.FC = () => {
                 </div>
 
                 <div className="divide-y divide-zinc-800">
-                    {chartData.chartedItems.length > 0 ? chartData.chartedItems.map(({ item, stats }, index) => (
-                        <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center py-3 px-2">
-                            <div className="w-8 text-center text-zinc-400 font-semibold">{index + 1}</div>
-                            <div className="flex items-center gap-3 min-w-0">
-                                <img src={'coverArt' in item ? item.coverArt : ''} alt={item.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
-                                <p className="font-bold truncate">{item.title}</p>
+                    {chartData.chartedItems.length > 0 ? chartData.chartedItems.map(({ item, stats }, index) => {
+                        const isExpanded = expandedTrackId === item.id;
+                        
+                        const getChartRunString = (run?: number[]) => {
+                            if (!run || run.length === 0) return 'N/A';
+                            if (run.length <= 10) return run.map(r => `#${r}`).join(' - ');
+                            const first5 = run.slice(0, 5).map(r => `#${r}`).join(' - ');
+                            const last5 = run.slice(-5).map(r => `#${r}`).join(' - ');
+                            return `${first5} - ... - ${last5}`;
+                        };
+
+                        return (
+                        <div key={item.id} className="flex flex-col">
+                            <div 
+                                className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center py-3 px-2 cursor-pointer hover:bg-zinc-800/50 transition-colors"
+                                onClick={() => setExpandedTrackId(isExpanded ? null : item.id)}
+                            >
+                                <div className="w-8 text-center text-zinc-400 font-semibold">{index + 1}</div>
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <img src={'coverArt' in item ? item.coverArt : ''} alt={item.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
+                                    <p className="font-bold truncate">{item.title}</p>
+                                </div>
+                                <div className="w-20 text-center font-bold text-2xl">{stats.peak}</div>
+                                <div className="w-20 text-center font-bold text-2xl">{stats.weeksOnChart}</div>
                             </div>
-                            <div className="w-20 text-center font-bold text-2xl">{stats.peak}</div>
-                            <div className="w-20 text-center font-bold text-2xl">{stats.weeksOnChart}</div>
+                            
+                            {isExpanded && (
+                                <div className="bg-zinc-800/50 px-4 py-3 text-sm grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-zinc-700/50">
+                                    <div>
+                                        <p className="text-zinc-400 text-xs font-semibold uppercase mb-1">First Entered</p>
+                                        <p className="font-bold">
+                                            {stats.firstEntered ? `Week ${stats.firstEntered.week}, ${stats.firstEntered.year}` : 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-zinc-400 text-xs font-semibold uppercase mb-1">Weeks at #1</p>
+                                        <p className="font-bold">{stats.weeksAtNo1 || 0}</p>
+                                    </div>
+                                    <div className="md:col-span-3">
+                                        <p className="text-zinc-400 text-xs font-semibold uppercase mb-1">Chart Run</p>
+                                        <p className="font-mono text-xs">{getChartRunString(stats.chartRun)}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )) : (
+                    )}) : (
                         <p className="text-zinc-500 text-sm bg-zinc-800 p-4 rounded-lg text-center mt-4">No chart history for this category yet.</p>
                     )}
                 </div>

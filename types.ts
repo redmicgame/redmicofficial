@@ -519,6 +519,8 @@ export interface ChartHistory {
         weeksOnChart: number;
         lastRank: number | null;
         weeksAtNo1?: number;
+        chartRun?: number[];
+        firstEntered?: { year: number; week: number };
     }
 }
 
