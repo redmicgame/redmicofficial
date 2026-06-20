@@ -8921,6 +8921,14 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 currentView: 'game',
             };
         }
+        case 'UPDATE_ABOUT_PROFILE': {
+            if (!state.activeArtistId) return state;
+            const updatedData = { ...state.artistsData[state.activeArtistId], aboutBio: action.payload.bio, aboutImages: action.payload.images };
+            return {
+                ...state,
+                artistsData: { ...state.artistsData, [state.activeArtistId]: updatedData }
+            };
+        }
         case 'UPDATE_ARTIST_IMAGE': {
             const { artistId, newImage } = action.payload;
             const newState = { ...state };

@@ -791,6 +791,56 @@ const S4AProfile: React.FC = () => {
                     </>
                 )}
             </div>
+
+            <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
+                <h2 className="font-bold">About Section</h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm font-semibold block mb-1">Biography</label>
+                        <textarea 
+                            className="w-full p-2 border border-zinc-300 rounded-lg text-sm bg-white" 
+                            rows={4} 
+                            placeholder="Write your bio..."
+                            value={activeArtistData.aboutBio || ''}
+                            onChange={(e) => dispatch({ type: 'UPDATE_ABOUT_PROFILE', payload: { bio: e.target.value, images: activeArtistData.aboutImages || [] } })}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm font-semibold block mb-1">Image Gallery (Up to 2 images)</label>
+                        <div className="flex gap-2">
+                            {(activeArtistData.aboutImages || []).map((img, i) => (
+                                <div key={i} className="relative w-20 h-20 rounded-md overflow-hidden bg-zinc-200">
+                                    <img src={img} className="w-full h-full object-cover" />
+                                    <button onClick={() => {
+                                        const newImages = [...(activeArtistData.aboutImages || [])];
+                                        newImages.splice(i, 1);
+                                        dispatch({ type: 'UPDATE_ABOUT_PROFILE', payload: { bio: activeArtistData.aboutBio || '', images: newImages } })
+                                    }} className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">x</button>
+                                </div>
+                            ))}
+                            {(activeArtistData.aboutImages || []).length < 2 && (
+                                <button onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = 'image/*';
+                                    input.onchange = (e) => {
+                                        const file = (e.target as HTMLInputElement).files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = (e) => {
+                                                const newImages = [...(activeArtistData.aboutImages || []), e.target?.result as string];
+                                                dispatch({ type: 'UPDATE_ABOUT_PROFILE', payload: { bio: activeArtistData.aboutBio || '', images: newImages } });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    };
+                                    input.click();
+                                }} className="w-20 h-20 rounded-md border-2 border-dashed border-zinc-300 flex items-center justify-center text-2xl text-zinc-400 hover:bg-zinc-200">+</button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
                 <h2 className="font-bold">Pitch a song to playlists</h2>

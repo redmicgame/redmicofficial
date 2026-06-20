@@ -121,6 +121,60 @@ const VerifiedModal: React.FC<{ isOpen: boolean; onClose: () => void; sinceYear:
 };
 
 
+const AboutModal: React.FC<{ isOpen: boolean; onClose: () => void; artistData: ArtistData; artist: Artist; }> = ({ isOpen, onClose, artistData, artist }) => {
+    if (!isOpen) return null;
+
+    const listeners = artistData.monthlyListeners >= 1000000 ? `${(artistData.monthlyListeners / 1000000).toFixed(1).replace(/\.0$/, '')}M` : artistData.monthlyListeners.toLocaleString();
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+            <div className="bg-[#282828] w-full max-w-lg rounded-xl flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-end p-4 absolute top-0 right-0 z-10 w-full bg-gradient-to-b from-black/50 to-transparent pt-4">
+                    <button onClick={onClose} className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-md">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                
+                <div className="overflow-y-auto w-full">
+                    {artistData.aboutImages && artistData.aboutImages.length > 0 ? (
+                        <div className="flex overflow-x-auto snap-x scrollbar-hide">
+                            {artistData.aboutImages.map((img, i) => (
+                                <img key={i} src={img} className="w-full snap-start flex-shrink-0 object-cover aspect-[4/5] sm:aspect-auto" />
+                            ))}
+                        </div>
+                    ) : (
+                        <img src={artist.image} className="w-full object-cover" />
+                    )}
+
+                    <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <p className="text-3xl font-black mb-1">{listeners}</p>
+                                <p className="text-sm text-zinc-400 font-semibold uppercase tracking-wider">Monthly Listeners</p>
+                            </div>
+                        </div>
+
+                        {artistData.aboutBio && (
+                            <p className="text-base text-zinc-200 whitespace-pre-wrap mb-8">
+                                {artistData.aboutBio}
+                            </p>
+                        )}
+                        
+                        <div className="flex items-center gap-3">
+                             <img src={artist.image} className="w-12 h-12 rounded-full object-cover" />
+                             <div>
+                                 <p className="text-sm text-zinc-400">Posted by</p>
+                                 <p className="font-bold">{artist.name}</p>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="absolute inset-0 z-[-1]" onClick={onClose}></div>
+        </div>
+    );
+};
+
 const SpotifyView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, allPlayerArtists } = useGame();
     const [view, setView] = useState<'profile' | 'discography' | 'releaseDetail' | 'playlistDetail'>('profile');
@@ -129,6 +183,7 @@ const SpotifyView: React.FC = () => {
     const [history, setHistory] = useState<Array<'profile' | 'discography' | 'playlistDetail'>>(['profile']);
     const [isPopularExpanded, setIsPopularExpanded] = useState(false);
     const [showVerifiedModal, setShowVerifiedModal] = useState(false);
+    const [showAboutModal, setShowAboutModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!activeArtist || !activeArtistData) return null;
@@ -522,7 +577,53 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
                 
+                {/* About Section */}
+                <div className="space-y-4 pt-4">
+                    <h2 className="text-2xl font-bold">About</h2>
+                    <div 
+                        className="bg-[#282828] rounded-xl overflow-hidden cursor-pointer hover:bg-[#3E3E3E] transition-colors relative"
+                        onClick={() => setShowAboutModal(true)}
+                    >
+                        <div className="h-64 sm:h-80 w-full">
+                            <img 
+                                src={(activeArtistData.aboutImages && activeArtistData.aboutImages.length > 0) ? activeArtistData.aboutImages[0] : activeArtist.image} 
+                                className="w-full h-full object-cover" 
+                                alt={`${activeArtist.name} about`} 
+                            />
+                        </div>
+                        <div className="p-4" style={{ background: 'linear-gradient(to top, #282828 100%, transparent) -mt-10' }}>
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-1">
+                                    <h3 className="text-xl font-bold">{activeArtist.name}</h3>
+                                    {activeArtistData.isSpotifyVerified && (
+                                        <div className="ml-1 flex items-center">
+                                            <VerifiedBadgeIcon className="w-5 h-5 text-[#A0D9B1]" />
+                                        </div>
+                                    )}
+                                </div>
+                                <button className="border border-zinc-400 rounded-full px-4 py-1 text-sm font-semibold hover:border-white">
+                                    Follow
+                                </button>
+                            </div>
+                            <p className="text-sm text-zinc-400 mb-4">{monthlyListeners >= 1000000 ? `${(monthlyListeners / 1000000).toFixed(1).replace(/\.0$/, '')}M` : monthlyListeners.toLocaleString()} monthly listeners</p>
+                            
+                            {activeArtistData.aboutBio && (
+                                <p className="text-sm line-clamp-3 text-zinc-300">
+                                    {activeArtistData.aboutBio}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
             </div>
+
+            <AboutModal 
+                isOpen={showAboutModal} 
+                onClose={() => setShowAboutModal(false)}
+                artistData={activeArtistData}
+                artist={activeArtist}
+            />
         </div>
     );
 };

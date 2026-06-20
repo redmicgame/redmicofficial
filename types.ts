@@ -990,6 +990,8 @@ export interface RedditPost {
 }
 
 export interface ArtistData {
+    aboutBio?: string;
+    aboutImages?: string[];
     money: number;
     hype: number;
     peakHype?: number;
@@ -1359,6 +1361,7 @@ export type GameAction =
     | { type: 'RENEW_CONTRACT' }
     | { type: 'GO_INDEPENDENT' }
     | { type: 'UPDATE_ARTIST_IMAGE'; payload: { artistId: string; newImage: string } }
+    | { type: 'UPDATE_ABOUT_PROFILE'; payload: { bio: string; images: string[] } }
     | { type: 'CREATE_ONLYFANS_PROFILE'; payload: { profile: OnlyFansProfile } }
     | { type: 'UPDATE_ONLYFANS_SETTINGS'; payload: { price: number } }
     | { type: 'CREATE_INSTAGRAM_POST'; payload: { imageUrl: string; caption: string } }

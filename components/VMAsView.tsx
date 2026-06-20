@@ -76,7 +76,7 @@ const VMAsView: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-grow flex flex-col">
+                <div className="flex-grow flex flex-col min-h-0">
                     {awardsByYear.length > 0 ? (
                         <>
                          <div className="border-b-2 border-zinc-400 pb-2 flex justify-between items-center">
