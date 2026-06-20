@@ -2068,7 +2068,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const conceptionWeeks = artistData.pregnancy.conceptionDate.year * 52 + artistData.pregnancy.conceptionDate.week;
                     const currentWeeks = newDate.year * 52 + newDate.week;
                     if (currentWeeks - conceptionWeeks >= 39) {
-                        const hasReceivedBirthEmail = artistData.inbox.some(e => e.offer?.type === 'giveBirth') || newEmails.some(e => e.offer?.type === 'giveBirth');
+                        const hasReceivedBirthEmail = artistData.inbox.some(e => e.offer?.type === 'giveBirth' && !e.offer.isAnswered) || newEmails.some(e => e.offer?.type === 'giveBirth');
                         if (!hasReceivedBirthEmail && artistProfileForEmail) {
                             newEmails.push({
                                 id: crypto.randomUUID(),
@@ -2266,7 +2266,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         const digitalGrossPerUnit = 1.29 / 150; // digital download
                         const streamingGrossPerUnit = 0.004; // stream
                         
-                        const songReleaseYear = song.releaseDate?.year || 2008;
+                        const songReleaseYear = song.releaseDate?.year || 2000;
                         const hasStreamingRights = song.isAvailableOnStreaming !== false && (songReleaseYear >= 2008 || song.isAvailableOnStreaming === true);
                         const effectiveStreamingShare = hasStreamingRights ? eraConfig.marketShare.streaming : 0;
                         
@@ -3891,7 +3891,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 
                 const eraConfigTemp = getEraConfiguration(state.date.year);
                 
-                const songReleaseYear = song.releaseDate?.year || 2008;
+                const songReleaseYear = song.releaseDate?.year || 2000;
                 const hasStreamingRights = song.isAvailableOnStreaming !== false && (songReleaseYear >= 2008 || song.isAvailableOnStreaming === true);
                 const effectiveStreamingShare = hasStreamingRights ? eraConfigTemp.marketShare.streaming : 0;
                 
@@ -4115,15 +4115,23 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 releaseRawStreams.set(release.id, rawStreams);
             });
 
-            const deluxeOriginalIds = new Set(allPlayerReleases.filter(p => p.type === 'Album (Deluxe)' && p.originalReleaseId).map(p => p.originalReleaseId));
+            const deluxeMap = new Map<string, Release>();
+            allPlayerReleases.forEach(p => {
+                if (p.type === 'Album (Deluxe)' && p.originalReleaseId) {
+                    deluxeMap.set(p.originalReleaseId, p);
+                }
+            });
 
             const playerAlbumContenders = allPlayerReleases
-                .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !deluxeOriginalIds.has(r.id))
+                .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo)
+                .filter(r => !(r.type === 'Album (Deluxe)' && r.originalReleaseId))
                 .map(release => {
                     const artist = allPlayerArtistsAndGroups.find(a => a.id === release.artistId);
                     const artistData = updatedArtistsData[release.artistId];
+                    const deluxeVersion = deluxeMap.get(release.id);
+                    const songsToCount = deluxeVersion ? deluxeVersion.songIds : release.songIds;
 
-                    const totalWeeklyStreams = release.songIds.reduce((sum, songId) => {
+                    const totalWeeklyStreams = songsToCount.reduce((sum, songId) => {
                         const song = artistData.songs.find(s => s.id === songId);
                         let songStreams = song?.lastWeekStreams || 0;
                         
@@ -4145,7 +4153,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             return best;
                         }, { id: release.id, raw: thisRaw });
 
-                        if (bestRelease.id !== release.id) {
+                        if (bestRelease.id !== release.id && (!deluxeVersion || bestRelease.id !== deluxeVersion.id)) {
                             return sum; // Streams are credited to the larger release
                         }
 
@@ -4162,7 +4170,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     
                     const actualStreamEquivalents = Math.floor((totalWeeklyStreams / 1500) * Math.max(0, eraConfigTmp2.marketShare.streaming));
 
-                    const albumMerch = artistData.merch.filter(m => m.releaseId === release.id || (release.originalReleaseId && m.releaseId === release.originalReleaseId));
+                    const albumMerch = artistData.merch.filter(m => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id));
                     let totalWeeklySales = albumMerch.reduce((sum, item) => sum + (item._actualWeeklySales || 0), 0);
                     
                     totalWeeklySales += digitalAlbumSales + generalPhysicalSales;
@@ -4171,11 +4179,10 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const relDate = release.releaseDate || { year: state.date.year, week: state.date.week };
                     if ((newDate.year * 52 + newDate.week) - (relDate.year * 52 + relDate.week) === 1) {
                         totalWeeklySales += (release.preorderSales || 0);
-                        if (release.originalReleaseId) {
-                            const originalRelease = allPlayerReleases.find(r => r.id === release.originalReleaseId);
-                            if (originalRelease && (newDate.year * 52 + newDate.week) - (originalRelease.releaseDate!.year * 52 + originalRelease.releaseDate!.week) === 1) {
-                                totalWeeklySales += (originalRelease.preorderSales || 0);
-                            }
+                    }
+                    if (deluxeVersion && deluxeVersion.releaseDate) {
+                        if ((newDate.year * 52 + newDate.week) - (deluxeVersion.releaseDate.year * 52 + deluxeVersion.releaseDate.week) === 1) {
+                            totalWeeklySales += (deluxeVersion.preorderSales || 0);
                         }
                     }
 

@@ -27,11 +27,16 @@ const AscapView: React.FC = () => {
         return activeArtistData.songs.filter(s => s.isTakenDown && s.isReleased && s.releaseId && !activeArtistData.releases.find(r => r.id === s.releaseId)?.isTakenDown);
     }, [activeArtistData]);
 
+    const getDistributeCost = () => {
+        if (!activeArtistData) return 1500;
+        return activeArtistData.currentLabel !== 'Independent' ? 0 : 1500;
+    };
+
     const handleUpload = (songId: string) => {
         if (!activeArtistData) return;
-        const COST = 1500;
+        const COST = getDistributeCost();
         if (activeArtistData.money < COST) {
-            alert('Not enough money to upload to streaming. Costs $1,500.');
+            alert(`Not enough money to upload to streaming. Costs $${formatNumber(COST)}.`);
             return;
         }
         dispatch({ type: 'UPLOAD_TO_STREAMING', payload: { songId, cost: COST } });
@@ -39,13 +44,13 @@ const AscapView: React.FC = () => {
 
     const handleUploadAll = () => {
         if (!activeArtistData) return;
-        const COST = oldSongs.length * 1500;
+        const COST = getDistributeCost() * oldSongs.length;
         if (activeArtistData.money < COST) {
             alert(`Not enough money to upload all. Costs $${formatNumber(COST)}.`);
             return;
         }
         oldSongs.forEach(song => {
-             dispatch({ type: 'UPLOAD_TO_STREAMING', payload: { songId: song.id, cost: 1500 } });
+             dispatch({ type: 'UPLOAD_TO_STREAMING', payload: { songId: song.id, cost: getDistributeCost() } });
         });
     }
 
@@ -82,7 +87,7 @@ const AscapView: React.FC = () => {
                     <div>
                         <div className="mb-4 flex justify-end">
                             <button onClick={handleUploadAll} className="bg-blue-900 text-white px-4 py-2 text-sm font-bold shadow hover:bg-blue-800">
-                                Distribute All Selected ($ {formatNumber(oldSongs.length * 1500)})
+                                Distribute All Selected ({getDistributeCost() === 0 ? 'Free' : `$ ${formatNumber(getDistributeCost() * oldSongs.length)}`})
                             </button>
                         </div>
                         <div className="space-y-3">
@@ -96,7 +101,7 @@ const AscapView: React.FC = () => {
                                         onClick={() => handleUpload(song.id)}
                                         className="bg-green-700 text-white px-3 py-1 text-sm font-bold rounded-sm shadow hover:bg-green-600 border border-green-900"
                                     >
-                                        Distribute ($1,500)
+                                        Distribute ({getDistributeCost() === 0 ? 'Free' : `$${formatNumber(getDistributeCost())}`})
                                     </button>
                                 </div>
                             ))}

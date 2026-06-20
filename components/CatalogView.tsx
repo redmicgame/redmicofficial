@@ -405,21 +405,29 @@ const CatalogView: React.FC = () => {
         const projects = activeArtistData.releases
             .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo);
             
-        const deluxeOriginalIds = new Set(projects.filter(p => p.type === 'Album (Deluxe)' && p.originalReleaseId).map(p => p.originalReleaseId));
+        const deluxeMap = new Map<string, Release>();
+        projects.forEach(p => {
+            if (p.type === 'Album (Deluxe)' && p.originalReleaseId) {
+                deluxeMap.set(p.originalReleaseId, p);
+            }
+        });
         
         return projects
-            .filter(r => !deluxeOriginalIds.has(r.id))
+            .filter(r => !(r.type === 'Album (Deluxe)' && r.originalReleaseId))
             .map(release => {
-                const releaseStreams = release.songIds.reduce((total, songId) => {
+                const deluxeVersion = deluxeMap.get(release.id);
+                const songsToCount = deluxeVersion ? deluxeVersion.songIds : release.songIds;
+
+                const releaseStreams = songsToCount.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.streams || 0);
                 }, 0);
-                const releaseSales = release.songIds.reduce((total, songId) => {
+                const releaseSales = songsToCount.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.sales || 0);
                 }, 0);
                 const merchUnits = activeArtistData.merch
-                    .filter(m => m.releaseId === release.id || (release.originalReleaseId && m.releaseId === release.originalReleaseId))
+                    .filter(m => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id))
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
                 return { ...release, streams: releaseStreams + (merchUnits * 1500), sales: releaseSales };
             })

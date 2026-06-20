@@ -111,7 +111,7 @@ const GrammysView: React.FC = () => {
                                 <button onClick={handlePrevYear} disabled={currentYearIndex === awardsByYear.length - 1} className="p-1 disabled:opacity-30"><ChevronRightIcon className="w-5 h-5" /></button>
                             </div>
                          </div>
-                         <div className="py-4 flex-grow space-y-4">
+                         <div className="py-4 flex-grow space-y-4 overflow-y-auto">
                             {awardsByYear[currentYearIndex][1].map(award => (
                                 <div key={award.itemId + award.category} className="flex items-center gap-4">
                                     <img src={getItemCoverArt(award.itemId)} alt={award.itemName} className="w-16 h-16 object-cover" />

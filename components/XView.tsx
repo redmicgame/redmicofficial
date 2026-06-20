@@ -1029,7 +1029,7 @@ const XView: React.FC = () => {
     };
 
     return (
-        <div className="bg-black text-white h-full overflow-y-auto flex flex-col pb-24">
+        <div className="bg-black text-white h-screen flex flex-col pb-14">
             {showPremiumModal && <XPremiumModal onClose={() => setShowPremiumModal(false)} />}
             {isComposeModalOpen && playerUser && (
                 <ComposeXPostModal 
@@ -1075,7 +1075,7 @@ const XView: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-grow overflow-hidden h-full pb-20">
+            <main className="flex-1 overflow-hidden w-full relative">
                  {isActiveUserSuspended && xSuspensionStatus && (
                     <div className="bg-black p-4 border-b border-zinc-700">
                         <h2 className="text-2xl font-bold text-white">Your account is suspended</h2>

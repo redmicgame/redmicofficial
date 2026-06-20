@@ -230,8 +230,8 @@ Based on all this detailed information, write a comprehensive, neutral, and ency
     if (!release || !artist) return <div className="bg-white text-black min-h-screen p-4">Loading article...</div>;
 
     return (
-        <div className="bg-white text-black min-h-screen font-sans">
-            <header className="p-4 border-b border-zinc-200">
+        <div className="bg-white text-black h-screen w-full overflow-y-auto pb-24 font-sans">
+            <header className="p-4 border-b border-zinc-200 sticky top-0 bg-white z-10">
                  <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'catalog'})} className="flex items-center gap-2 text-blue-700 hover:underline">
                     <ArrowLeftIcon className="w-5 h-5" />
                     Back to Catalog

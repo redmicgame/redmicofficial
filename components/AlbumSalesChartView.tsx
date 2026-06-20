@@ -50,11 +50,21 @@ const AlbumSalesChartView: React.FC = () => {
 
                     return total + songStreams;
                 }, 0);
-                const units = Math.floor(releaseStreams / 1500) + (release.preorderSales || 0);
+                
+                const releaseSales = release.songIds.reduce((total, songId) => {
+                    const song = songs.find(s => s.id === songId);
+                    return total + (song?.sales || 0);
+                }, 0);
+
+                const merchUnits = activeArtistData.merch
+                    .filter(m => m.releaseId === release.id || (release.originalReleaseId && m.releaseId === release.originalReleaseId))
+                    .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
+
+                const units = Math.floor(releaseStreams / 1500) + releaseSales + merchUnits + (release.preorderSales || 0);
                 return { ...release, units };
             })
             .sort((a, b) => b.units - a.units);
-    }, [releases, songs]);
+    }, [releases, songs, activeArtistData.merch]);
 
     const totalUnits = useMemo(() => {
         return albumsWithSales.reduce((sum, album) => sum + album.units, 0);
