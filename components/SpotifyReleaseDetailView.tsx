@@ -84,7 +84,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
     const release = useMemo(() => releases.find(r => r.id === releaseId), [releases, releaseId]);
     const releaseSongs = useMemo(() => {
         if (!release) return [];
-        return release.songIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as Song[];
+        return release.songIds.map(id => songs.find(s => s.id === id)).filter((s): s is Song => !!s && s.isAvailableOnStreaming === true);
     }, [release, songs]);
 
     useEffect(() => {

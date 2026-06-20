@@ -1212,11 +1212,13 @@ export interface GameState {
 
 export interface EncounterChoice {
     label: string;
-    tweetTemplate: string;
-    authorName: string;
-    isTMZ: boolean;
+    tweetTemplate?: string;
+    authorName?: string;
+    isTMZ?: boolean;
     publicImageEffect: number;
     hypeEffect: number;
+    popularityEffect?: number;
+    moneyEffect?: number;
 }
 
 export interface ActiveEncounter {

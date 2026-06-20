@@ -11,8 +11,6 @@ const AscapView: React.FC = () => {
         if (!activeArtistData) return [];
         return activeArtistData.songs.filter(s => 
             s.isReleased && 
-            s.releaseDate && 
-            s.releaseDate.year < 2008 && 
             s.isAvailableOnStreaming !== true
         );
     }, [activeArtistData]);
@@ -72,8 +70,8 @@ const AscapView: React.FC = () => {
                     <h2 className="text-2xl font-bold mb-2">Digital Streaming Rights Management</h2>
                     <p className="text-sm text-gray-700">
                         In the modern era, music generates revenue primarily through streaming services like Spotify and Apple Music. 
-                        Songs released on CD or Vinyl before 2008 are NOT automatically available on streaming platforms. 
-                        You must negotiate back-catalog clearances and pay server hosting fees to distribute your legacy music digitally.
+                        Songs are NOT automatically available on streaming platforms. 
+                        You must negotiate back-catalog clearances and pay server hosting fees to distribute your music digitally.
                     </p>
                 </div>
                 

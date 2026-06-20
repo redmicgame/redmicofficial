@@ -13,8 +13,8 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
     const releaseSongs = release.songIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as Song[];
     
     const totalStreams = releaseSongs.reduce((acc, song) => acc + (song.streams || 0), 0);
-    const totalWeeklyStreams = releaseSongs.reduce((acc, song) => acc + (song.actualLastWeekStreams || song.lastWeekStreams || 0), 0);
-    const totalPrevWeeklyStreams = releaseSongs.reduce((acc, song) => acc + (song.actualPrevWeekStreams || song.prevWeekStreams || 0), 0);
+    const totalWeeklyStreams = releaseSongs.reduce((acc, song) => acc + (song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0)), 0);
+    const totalPrevWeeklyStreams = releaseSongs.reduce((acc, song) => acc + (song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0)), 0);
 
     let totalChangeDisplay = '-';
     if (totalPrevWeeklyStreams > 0) {
@@ -54,8 +54,8 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                         <tbody>
                             {releaseSongs.map((song, index) => {
                                 let changeDisplay = '-';
-                                const weekStreams = song.actualLastWeekStreams || song.lastWeekStreams || 0;
-                                const prevStreams = song.actualPrevWeekStreams || song.prevWeekStreams || 0;
+                                const weekStreams = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
+                                const prevStreams = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
                                 if (prevStreams > 0) {
                                     const change = ((weekStreams - prevStreams) / prevStreams) * 100;
                                     changeDisplay = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;

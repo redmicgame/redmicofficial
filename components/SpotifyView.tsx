@@ -225,7 +225,7 @@ const SpotifyView: React.FC = () => {
     }, [songs, activeArtist, gameState.artistsData]);
 
     const topSongs = allSongs
-        .filter(s => s.isReleased && !s.isTakenDown)
+        .filter(s => s.isReleased && !s.isTakenDown && s.isAvailableOnStreaming === true)
         .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
         .slice(0, 10);
         
@@ -233,7 +233,7 @@ const SpotifyView: React.FC = () => {
 
     const popularReleases = (() => {
         const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc);
-        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r));
+        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
 
         if (availableReleases.length === 0) {
             return [];

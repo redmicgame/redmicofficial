@@ -54,7 +54,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
         );
     }
     
-    const releaseSongs = release.songIds.map(id => songs.find(s => s.id === id)).filter((s): s is Song => !!s);
+    const releaseSongs = release.songIds.map(id => songs.find(s => s.id === id)).filter((s): s is Song => !!s && s.isAvailableOnStreaming === true);
     const totalDuration = Math.round(releaseSongs.reduce((sum, s) => sum + s.duration, 0) / 60);
 
     const isSingle = release.type === 'Single';
@@ -326,14 +326,14 @@ const AppleMusicView: React.FC = () => {
 
         const { songs, releases, videos } = activeArtistData;
         const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc);
-        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r));
+        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
 
         const latestRelease = [...availableReleases]
             .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation')
             .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
 
         const topSongs = [...songs]
-            .filter(s => s.isReleased)
+            .filter(s => s.isReleased && s.isAvailableOnStreaming === true)
             .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
             .slice(0, 5);
         

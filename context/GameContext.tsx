@@ -1461,14 +1461,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                                 publicImageEffect: 30,
                                                 hypeEffect: 10,
                                                 popularityEffect: 5,
-                                                moneyEffect: -(ticketsSold * actualTicketPrice * 0.5)
+                                                moneyEffect: -(ticketsSold * actualTicketPrice * 0.5),
+                                                tweetTemplate: "{artist} apologizes for the crazy dynamic pricing and refunds fans. Huge respect!",
+                                                authorName: "Music Daily",
+                                                isTMZ: true
                                             },
                                             {
                                                 label: "Blame Ticketmaster and move on. (PR hit, keep the cash)",
                                                 publicImageEffect: -20,
                                                 hypeEffect: -5,
                                                 popularityEffect: -5,
-                                                moneyEffect: 0
+                                                moneyEffect: 0,
+                                                tweetTemplate: "Fans furious as {artist} blames Ticketmaster for the ridiculous dynamic pricing...",
+                                                authorName: "TMZ",
+                                                isTMZ: true
                                             }
                                         ]
                                     };
@@ -2267,7 +2273,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         const streamingGrossPerUnit = 0.004; // stream
                         
                         const songReleaseYear = song.releaseDate?.year || 2000;
-                        const hasStreamingRights = song.isAvailableOnStreaming !== false && (songReleaseYear >= 2008 || song.isAvailableOnStreaming === true);
+                        const hasStreamingRights = song.isAvailableOnStreaming === true;
                         const effectiveStreamingShare = hasStreamingRights ? eraConfig.marketShare.streaming : 0;
                         
                         const physicalGross = weeklyStreams * eraConfig.marketShare.physical * physicalGrossPerUnit;
@@ -3892,7 +3898,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const eraConfigTemp = getEraConfiguration(state.date.year);
                 
                 const songReleaseYear = song.releaseDate?.year || 2000;
-                const hasStreamingRights = song.isAvailableOnStreaming !== false && (songReleaseYear >= 2008 || song.isAvailableOnStreaming === true);
+                const hasStreamingRights = song.isAvailableOnStreaming === true;
                 const effectiveStreamingShare = hasStreamingRights ? eraConfigTemp.marketShare.streaming : 0;
                 
                 const streamPoints = (song.weeklyStreams * effectiveStreamingShare) * 0.5;
@@ -4373,7 +4379,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     if (isEligible && song.lastWeekStreams > (song.peakWeeklyStreams || 0)) {
                         // Generate daily streams mockup
                         const dailyStreams = [];
-                        const actualSongStreams = Math.floor(song.lastWeekStreams * Math.max(0, getEraConfiguration(newDate.year).marketShare.streaming));
+                        const actualSongStreams = song.actualLastWeekStreams || 0;
+                        if (actualSongStreams === 0) return; // Hide snapshots for taken-down or un-streamable songs
                         let remain = actualSongStreams;
                         for(let i=0; i<6; i++) {
                             const val = Math.floor(actualSongStreams / 7 * (0.8 + Math.random() * 0.4));
@@ -4415,14 +4422,15 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 artistData.releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').forEach(release => {
                     const albumSongs = release.songIds.map(id => artistData.songs.find(s => s.id === id)).filter((s): s is Song => !!s);
                     const weeklyAlbumStreams = albumSongs.reduce((sum, s) => sum + s.lastWeekStreams, 0);
-                    const eraConfigTmpAlbum = getEraConfiguration(newDate.year);
-                    const actualWeeklyAlbumStreams = Math.floor(weeklyAlbumStreams * Math.max(0, eraConfigTmpAlbum.marketShare.streaming));
+                    const actualWeeklyAlbumStreams = albumSongs.reduce((sum, s) => sum + (s.actualLastWeekStreams || 0), 0);
                     
                     if (release.isReleased && weeklyAlbumStreams >= 500000 && weeklyAlbumStreams > (release.peakWeeklyStreams || 0)) {
+                        if (actualWeeklyAlbumStreams === 0) return; // Hide snapshots for taken-down albums
+                        
                         const tracks = albumSongs.map(s => ({
                            title: s.title,
                            totalStreams: s.streams,
-                           dailyStreams: Math.floor(s.lastWeekStreams * Math.max(0, eraConfigTmpAlbum.marketShare.streaming)), 
+                           dailyStreams: s.actualLastWeekStreams || 0, // Using weekly streams for daily display since snapshot chart uses daily, but mock here is fine
                         }));
                         
                         const jsonStr = JSON.stringify({
@@ -10436,7 +10444,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 (state.group?.id === state.activeArtistId ? state.group : state.group?.members.find(m => m.id === state.activeArtistId) || state.extraPlayableArtists?.find(a => a.id === state.activeArtistId));
                 
             let newPosts = activeData.xPosts || [];
-            if (activeArtist) {
+            if (activeArtist && choice.tweetTemplate) {
                 const tweetText = choice.tweetTemplate.replace(/\{artist\}/g, activeArtist.name);
                 const pop = (activeData.popularity || 50);
                 const newPost: XPost = {

@@ -69,9 +69,9 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
 
     const sortedReleases = useMemo(() => {
         return [...releases]
-            .filter(r => !r.soundtrackInfo)
+            .filter(r => !r.soundtrackInfo && r.songIds.some(id => activeArtistData.songs.find(s => s.id === id)?.isAvailableOnStreaming === true))
             .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
-    }, [releases]);
+    }, [releases, activeArtistData.songs]);
 
     const latestRelease = sortedReleases.length > 0 ? sortedReleases[0] : null;
 
