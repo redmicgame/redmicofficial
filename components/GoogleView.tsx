@@ -15,7 +15,11 @@ export const GoogleView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'All' | 'Images' | 'News'>('All');
     const [readingArticle, setReadingArticle] = useState<{title: string, url: string, content: string, type?: 'wikipedia' | 'tmz' | 'generic' | 'reddit' | 'vogue' | 'rollingstone' | 'popcrave' | 'news', extraData?: any} | null>(null);
 
-    const allPlayerArtistsAndGroups: (Artist | Group)[] = gameState.careerMode === 'solo' && gameState.soloArtist ? [gameState.soloArtist] : (gameState.group ? [gameState.group, ...gameState.group.members] : []);
+    const allPlayerArtistsAndGroups: (Artist | Group)[] = [
+        ...(gameState.soloArtist ? [gameState.soloArtist] : []),
+        ...(gameState.extraPlayableArtists || []),
+        ...(gameState.group ? [gameState.group, ...gameState.group.members] : [])
+    ];
     const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === gameState.activeArtistId);
 
     if (!activeArtistData || !artistProfile) return null;

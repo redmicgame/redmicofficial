@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { Tour } from '../types';
+import { VENUES } from '../constants';
 
 const TourDetailView: React.FC = () => {
     const { dispatch, gameState, activeArtistData } = useGame();
@@ -23,9 +24,14 @@ const TourDetailView: React.FC = () => {
     const progress = (tour.currentVenueIndex / tour.venues.length) * 100;
 
     const handleStartTour = () => {
-        if (tour.status === 'planning') {
+        if (tour.status === 'planning' || tour.status === 'presale') {
             dispatch({ type: 'START_TOUR', payload: { tourId: tour.id }});
         }
+    };
+
+    const handleCancelTour = () => {
+        dispatch({ type: 'CANCEL_TOUR', payload: { tourId: tour.id }});
+        dispatch({ type: 'CHANGE_VIEW', payload: 'tours' });
     };
     
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,24 +46,65 @@ const TourDetailView: React.FC = () => {
     };
 
 
-    return (
-        <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
-            <header className="relative h-48">
-                <img src={tour.bannerImage} className="w-full h-full object-cover"/>
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent"/>
-                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'tours'})} className="absolute top-4 left-4 p-2 bg-black/50 rounded-full hover:bg-black/70">
-                    <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-                <h1 className="absolute bottom-4 left-4 text-4xl font-black">{tour.name}</h1>
-            </header>
-            <main className="p-4 space-y-6">
+        const handleCollectPresale = () => {
+            dispatch({ type: 'COLLECT_PRESALE', payload: { tourId: tour.id }});
+        };
+
+        const handleAddPresaleAllocation = () => {
+            dispatch({ type: 'ADD_PRESALE_ALLOCATION', payload: { tourId: tour.id, percentage: 10 }});
+        };
+
+        return (
+            <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
+                <header className="relative h-48">
+                    <img src={tour.bannerImage} className="w-full h-full object-cover"/>
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent"/>
+                    <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'tours'})} className="absolute top-4 left-4 p-2 bg-black/50 rounded-full hover:bg-black/70">
+                        <ArrowLeftIcon className="w-6 h-6" />
+                    </button>
+                    <h1 className="absolute bottom-4 left-4 text-4xl font-black">{tour.name}</h1>
+                </header>
+                <main className="p-4 space-y-6">
+                    {tour.status === 'cancelled' && (
+                        <div className="bg-red-900/50 text-red-100 p-4 rounded-xl border border-red-500 text-center font-medium">
+                            This tour was cancelled.
+                        </div>
+                    )}
+                    {tour.status === 'presale' && (
+                        <div className="bg-blue-900/20 border border-blue-500/50 p-4 flex flex-col gap-4 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                            <div className="flex justify-between items-center border-b border-blue-500/20 pb-3">
+                                <h2 className="text-xl font-bold text-blue-400">Presale Dashboard</h2>
+                                <span className="text-sm bg-blue-600 px-2 py-1 rounded text-white font-bold">Allocation: {tour.presalePercentage || 0}%</span>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-3xl font-black text-white">{tour.presaleDemand || 0}%</h3>
+                                <p className="text-blue-300 text-sm font-medium">Estimated Ticket Demand</p>
+                            </div>
+                            <p className="text-sm text-gray-400 text-center">
+                                Collect presale revenue upfront.
+                            </p>
+                            <div className="flex flex-col gap-2 pt-2 border-t border-blue-500/20">
+                                { (tour.presalePercentage || 0) - (tour.presaleCollectedPercentage || 0) > 0 && (
+                                    <button onClick={handleCollectPresale} className="bg-green-600 hover:bg-green-500 text-white p-3 rounded-lg font-bold transition-colors">Collect Presale Funds (-{(tour.presalePercentage || 0) - (tour.presaleCollectedPercentage || 0)}%)</button>
+                                )}
+                                { (tour.presalePercentage || 0) <= 90 && (
+                                    <button onClick={handleAddPresaleAllocation} className="bg-blue-800 hover:bg-blue-700 text-blue-200 p-2 rounded-lg font-medium transition-colors border border-blue-500">+10% Presale Tickets</button>
+                                )}
+                            </div>
+                            <div className="flex gap-2 pt-2 border-t border-blue-500/20">
+                                <button onClick={handleCancelTour} className="flex-1 border border-red-500/50 text-red-400 hover:bg-red-500/10 p-3 rounded-lg font-bold transition-colors">Cancel Tour</button>
+                                <button onClick={handleStartTour} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg font-bold transition-colors">Start Tour</button>
+                            </div>
+                        </div>
+                    )}
+
                 {tour.status === 'planning' && (
-                    <button onClick={handleStartTour} className="w-full bg-green-600 p-3 rounded-lg font-bold">Start Tour</button>
+                    <button onClick={handleStartTour} className="w-full bg-green-600 p-3 rounded-lg font-bold hover:bg-green-500 transition-colors">Start Tour</button>
                 )}
                 
                 <div>
                     <div className="flex justify-between text-sm mb-1"><p>Progress</p><p>{tour.currentVenueIndex} / {tour.venues.length}</p></div>
-                    <div className="w-full bg-zinc-700 h-3 rounded-full"><div className="bg-red-500 h-3 rounded-full" style={{width: `${progress}%`}}></div></div>
+                    <div className="w-full bg-zinc-700 h-3 rounded-full"><div className="bg-red-500 h-3 rounded-full transition-all" style={{width: `${progress}%`}}></div></div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -66,14 +113,53 @@ const TourDetailView: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                    <h2 className="text-xl font-bold">Shows</h2>
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Shows</h2>
+                        {(tour.status === 'planning' || tour.status === 'presale' || tour.status === 'active') && (
+                            <button 
+                                onClick={() => {
+                                    if(tour.venues.length > 0) {
+                                        const cap = tour.venues[0].capacity;
+                                        let tierKey: keyof typeof VENUES = 'Small Halls';
+                                        if (cap > 23500) tierKey = 'Stadiums';
+                                        else if (cap > 8400) tierKey = 'Arenas';
+                                        else if (cap > 2600) tierKey = 'Large Halls';
+
+                                        const possibleVenues = VENUES[tierKey];
+                                        const selected = [...possibleVenues].sort(() => 0.5 - Math.random()).slice(0, 3);
+                                        
+                                        const sampleVenues = selected.map(v => ({
+                                            ...v, 
+                                            id: crypto.randomUUID(), 
+                                            ticketPrice: tour.venues[0].ticketPrice,
+                                            ticketsSold: 0, 
+                                            revenue: 0, 
+                                            soldOut: false
+                                        }));
+                                        dispatch({ type: 'ADD_TOUR_LEG', payload: { tourId: tour.id, venues: sampleVenues }});
+                                    }
+                                }} 
+                                className="bg-zinc-700 hover:bg-zinc-600 text-xs px-3 py-1 rounded-full font-bold transition-colors"
+                            >
+                                + Add Leg
+                            </button>
+                        )}
+                    </div>
                     {tour.venues.map((v, i) => {
                         const isCompleted = i < tour.currentVenueIndex;
                         const isCurrent = i === tour.currentVenueIndex && tour.status === 'active';
+                        
+                        // Show mock map for sold out states as per Ticketmaster request
+                        const fillPercent = isCompleted ? (v.ticketsSold / v.capacity) * 100 : (tour.presaleDemand || Math.random() * 100);
+                        const isSoldOutUI = fillPercent >= 98;
+                        
                         return (
-                            <div key={v.id} className={`p-3 rounded-lg ${isCurrent ? 'bg-blue-900/50' : 'bg-zinc-800'}`}>
-                                <div className="flex justify-between">
-                                    <div><p className="font-semibold">{v.name}</p><p className="text-xs text-zinc-400">{v.city}</p></div>
+                            <div key={v.id} className={`p-4 rounded-xl shadow-md ${isCurrent ? 'bg-blue-900/30 border border-blue-500/30' : 'bg-zinc-800'}`}>
+                                <div className="flex justify-between items-center mb-2">
+                                    <div>
+                                        <p className="font-bold text-lg">{v.name}</p>
+                                        <p className="text-sm text-zinc-400">{v.city}</p>
+                                    </div>
                                     {isCompleted && (
                                         <div className="text-right">
                                             <p className={`font-semibold ${v.soldOut ? 'text-yellow-400' : 'text-green-400'}`}>${formatNumber(v.revenue)}</p>
@@ -81,29 +167,49 @@ const TourDetailView: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                                
+                                {!isCompleted && (
+                                    <div className="mt-4 pt-3 border-t border-zinc-700/50 flex gap-4 items-center">
+                                         <div className="w-12 h-12 flex-shrink-0 bg-zinc-900 rounded-full flex items-center justify-center p-2 relative overflow-hidden">
+                                            {/* Mock Map UI */}
+                                            <div className="absolute bottom-0 left-0 right-0 bg-blue-500 opacity-80" style={{height: `${fillPercent}%`, filter: isSoldOutUI ? 'brightness(0.6)' : 'none'}}></div>
+                                            <svg className="w-full h-full relative z-10 text-white/50 mix-blend-overlay" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                         </div>
+                                         <div className="flex-grow">
+                                             {isSoldOutUI ? (
+                                                <p className="text-sm font-bold text-blue-400">Sold Out</p>
+                                             ) : (
+                                                <p className="text-sm font-bold text-green-400">Tickets Available</p>
+                                             )}
+                                             <p className="text-xs text-zinc-400 mt-1">
+                                                {isSoldOutUI ? `Resale: $${Math.floor(v.ticketPrice * 1.62)}` : `Standard: $${Math.floor(v.ticketPrice * 0.95)} - $${v.ticketPrice}`}
+                                             </p>
+                                         </div>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
                 </div>
                 
-                 <div className="space-y-3">
-                    <h2 className="text-xl font-bold">Setlist</h2>
+                 <div className="space-y-3 pt-4">
+                    <h2 className="text-xl font-bold">Setlist Details</h2>
                     <div className="grid grid-cols-2 gap-2">
                     {setlistSongs.map(song => song && (
                         <div key={song.id} className="bg-zinc-800 p-2 rounded-md flex items-center gap-2">
-                             <img src={song.coverArt} className="w-8 h-8 rounded-sm"/>
+                             <img src={song.coverArt} className="w-8 h-8 rounded-sm object-cover"/>
                              <p className="text-sm font-semibold truncate">{song.title}</p>
                         </div>
                     ))}
                     </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 pt-4">
                     <h2 className="text-xl font-bold">Tour Photos</h2>
                      <div className="grid grid-cols-3 gap-2">
-                         {tourPhotos.map((photo, i) => <img key={i} src={photo} className="w-full aspect-square object-cover rounded-md"/>)}
+                         {tourPhotos.map((photo, i) => <img key={i} src={photo} className="w-full aspect-square object-cover rounded-md shadow-sm"/>)}
                          {tourPhotos.length < 9 && (
-                            <label htmlFor="photo-upload" className="w-full aspect-square bg-zinc-800 rounded-md flex items-center justify-center cursor-pointer">
+                            <label htmlFor="photo-upload" className="w-full aspect-square bg-zinc-800 rounded-md flex items-center justify-center cursor-pointer hover:bg-zinc-700 transition-colors">
                                 <span className="text-3xl text-zinc-500">+</span>
                             </label>
                          )}

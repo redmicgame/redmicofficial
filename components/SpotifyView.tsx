@@ -17,16 +17,25 @@ import SpotifyReleaseDetailView from './SpotifyReleaseDetailView';
 import SpotifyPlaylistDetailView from './SpotifyPlaylistDetailView';
 import { SpotifyPlaylistCover } from './SpotifyPlaylistCover';
 
-const PopularSongItem: React.FC<{ song: Song; index: number }> = ({ song, index }) => {
+const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boolean }> = ({ song, index, hasMusicVideo }) => {
     return (
         <div className="flex items-center gap-4 group cursor-pointer p-2 -mx-2 rounded-md hover:bg-white/10">
             <div className="text-zinc-400 font-semibold w-5 text-right">{index + 1}</div>
             <img src={song.coverArt} alt={song.title} className="w-10 h-10 rounded-sm object-cover" />
             <div className="flex-grow">
                 <p className="font-semibold text-white">{song.title}</p>
-                <div className="flex items-center gap-2">
-                    {song.explicit && <span className="text-xs w-4 h-4 bg-zinc-600/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center">E</span>}
-                    <p className="text-sm text-zinc-400">{song.streams.toLocaleString()}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                    {song.explicit && <span className="text-[10px] w-3.5 h-3.5 bg-zinc-400 text-zinc-900 font-bold rounded-sm flex-shrink-0 flex items-center justify-center">E</span>}
+                    {hasMusicVideo && (
+                        <span className="flex items-center text-[13px] text-zinc-400 gap-1 flex-shrink-0">
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                <path d="M20,4H4C2.89,4,2,4.89,2,6v12c0,1.1,0.89,2,2,2h16c1.1,0,2-0.9,2-2V6C22,4.89,21.1,4,20,4z M20,18H4V6h16V18z"/>
+                                <path d="M9.5,8.5v7l7-3.5L9.5,8.5z"/>
+                            </svg>
+                            Video &bull; 
+                        </span>
+                    )}
+                    <p className="text-sm text-zinc-400 truncate">{song.streams.toLocaleString()}</p>
                 </div>
             </div>
             <DotsHorizontalIcon className="w-5 h-5 text-zinc-300 invisible group-hover:visible" />
@@ -450,9 +459,10 @@ const SpotifyView: React.FC = () => {
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold">Popular</h2>
                         <div className="space-y-2">
-                            {popularSongsToShow.map((song, index) => (
-                                <PopularSongItem key={song.id} song={song} index={index} />
-                            ))}
+                            {popularSongsToShow.map((song, index) => {
+                                const hasMusicVideo = activeArtistData.videos?.some(v => v.songId === song.id && v.type === 'Music Video');
+                                return <PopularSongItem key={song.id} song={song} index={index} hasMusicVideo={hasMusicVideo} />;
+                            })}
                         </div>
                         {topSongs.length > 5 && (
                              <div className="pt-2">

@@ -896,6 +896,7 @@ export interface Venue {
     name: string;
     city: string;
     capacity: number;
+    region?: string;
     ticketPrice: number;
     soldOut: boolean;
     revenue: number;
@@ -909,12 +910,17 @@ export interface Tour {
     bannerImage: string;
     venues: Venue[];
     setlist: string[];
-    status: 'planning' | 'active' | 'finished';
+    status: 'planning' | 'presale' | 'active' | 'finished' | 'cancelled';
     currentVenueIndex: number;
     totalRevenue: number;
     ticketsSold: number;
     useDynamicPricing?: boolean;
     useVipPackages?: boolean;
+    presalePercentage?: number;
+    presaleCollectedPercentage?: number;
+    presaleCollectionQueue?: { weeksRemaining: number, amount: number }[];
+    presaleDemand?: number; // Estimated demand
+    isSetlistMissingHits?: boolean; // Flag to apply -50% penalty
 }
 
 export interface Manager {
@@ -1219,6 +1225,7 @@ export interface EncounterChoice {
     hypeEffect: number;
     popularityEffect?: number;
     moneyEffect?: number;
+    tourAction?: { action: 'CANCEL'; tourId: string };
 }
 
 export interface ActiveEncounter {
@@ -1387,6 +1394,10 @@ export type GameAction =
     | { type: 'CREATE_FEATURE_SONG', payload: { songTitle: string, coverArt: string, releaseDate: GameDate } }
     | { type: 'CREATE_TOUR'; payload: Tour }
     | { type: 'START_TOUR'; payload: { tourId: string } }
+    | { type: 'CANCEL_TOUR'; payload: { tourId: string } }
+    | { type: 'COLLECT_PRESALE'; payload: { tourId: string } }
+    | { type: 'ADD_PRESALE_ALLOCATION'; payload: { tourId: string, percentage: number } }
+    | { type: 'ADD_TOUR_LEG'; payload: { tourId: string, venues: Venue[] } }
     | { type: 'UPLOAD_TOUR_PHOTO'; payload: string }
     | { type: 'SELECT_SOUNDTRACK'; payload: string | null }
     | { type: 'SELECT_TOUR'; payload: string | null }

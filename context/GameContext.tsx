@@ -1257,6 +1257,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             let leakEncounterThisWeek: ActiveEncounter | null = null;
             let tiktokEncounterThisWeek: ActiveEncounter | null = null;
             let tourDynamicPricingEncounter: ActiveEncounter | null = null;
+            let tourArrestEncounter: ActiveEncounter | null = null;
 
             for (const artistId in updatedArtistsData) {
                 const artistData = updatedArtistsData[artistId];
@@ -1424,6 +1425,36 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 
                 // --- TOUR LOGIC ---
                 artistData.tours = artistData.tours.map(tour => {
+                    // Process Presale Queue
+                    if (tour.presaleCollectionQueue && tour.presaleCollectionQueue.length > 0) {
+                        let newlyCollected = 0;
+                        const newQueue: typeof tour.presaleCollectionQueue = [];
+                        tour.presaleCollectionQueue.forEach(item => {
+                            if (item.weeksRemaining <= 1) {
+                                newlyCollected += item.amount;
+                            } else {
+                                newQueue.push({ weeksRemaining: item.weeksRemaining - 1, amount: item.amount });
+                            }
+                        });
+                        
+                        if (newlyCollected > 0) {
+                            artistData.money += newlyCollected;
+                            
+                            if (artistProfileForEmail) {
+                                newEmails.push({
+                                    id: crypto.randomUUID(),
+                                    sender: 'Ticketmaster/Live Nation',
+                                    subject: `Presale Funds Disbursed ($${formatNumber(newlyCollected)})`,
+                                    body: `Hi ${artistProfileForEmail.name},\n\nYour presale funds for ${tour.name} of $${formatNumber(newlyCollected)} have finished processing and were deposited into your account.\n\nThanks,\nLive Nation`,
+                                    date: newDate,
+                                    isRead: false,
+                                    senderIcon: 'default',
+                                });
+                            }
+                        }
+                        tour.presaleCollectionQueue = newQueue;
+                    }
+
                     if (tour.status === 'active') {
                         if (tour.currentVenueIndex < tour.venues.length) {
                             const venue = tour.venues[tour.currentVenueIndex];
@@ -1441,7 +1472,11 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             // Random flux
                             demand = demand * (0.8 + Math.random() * 0.4);
 
-                            let ticketsSold = Math.floor(Math.min(venue.capacity, demand));
+                            if (tour.isSetlistMissingHits) {
+                                demand = demand * 0.5; // -50% penalty
+                            }
+
+                            let newTicketsSold = Math.floor(Math.min(venue.capacity - (venue.ticketsSold || 0), demand));
                             
                             let actualTicketPrice = venue.ticketPrice;
                             if (tour.useDynamicPricing) {
@@ -1461,7 +1496,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                                 publicImageEffect: 30,
                                                 hypeEffect: 10,
                                                 popularityEffect: 5,
-                                                moneyEffect: -(ticketsSold * actualTicketPrice * 0.5),
+                                                moneyEffect: -(newTicketsSold * actualTicketPrice * 0.5),
                                                 tweetTemplate: "{artist} apologizes for the crazy dynamic pricing and refunds fans. Huge respect!",
                                                 authorName: "Music Daily",
                                                 isTMZ: true
@@ -1481,18 +1516,53 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                 }
                             }
 
-                            let revenue = ticketsSold * actualTicketPrice;
+                            // Arrest check
+                            if (!tourArrestEncounter && (venue.region === 'Middle East' || venue.region === 'Asia' || venue.region === 'Africa')) {
+                                if (Math.random() < 0.05) { // 5% chance
+                                    const bailAmount = Math.floor(100000 + Math.random() * 900000);
+                                    tourArrestEncounter = {
+                                        id: `arrest-${tour.id}-${newDate.year}-${newDate.week}`,
+                                        text: `BREAKING: You were arrested in ${venue.city} (${venue.region}) for allegedly breaking strict conduct/dress code policies! You are detained, and TMZ has already dropped the article. You can pay a heavy bond to get released or cancel the tour leg.`,
+                                        requiresImage: false,
+                                        choices: [
+                                            {
+                                                label: `Pay the bond ($${formatNumber(bailAmount)}) and continue the tour. (Money lost, PR mixed)`,
+                                                publicImageEffect: -10,
+                                                hypeEffect: 20, // Infamous
+                                                popularityEffect: 0,
+                                                moneyEffect: -bailAmount,
+                                                tweetTemplate: `TMZ EXCLUSIVE: {artist} ARRESTED in ${venue.city}! Bail set at $${formatNumber(bailAmount)}... #Free{artist}`,
+                                                authorName: "TMZ",
+                                                isTMZ: true
+                                            },
+                                            {
+                                                label: "Refuse to pay, spend the night in jail, and CANCEL the rest of the tour. (Massive PR hit, huge hype drop)",
+                                                publicImageEffect: -30,
+                                                hypeEffect: -25,
+                                                popularityEffect: -10,
+                                                moneyEffect: 0,
+                                                tourAction: { action: 'CANCEL', tourId: tour.id },
+                                                tweetTemplate: `TMZ EXCLUSIVE: {artist} stays in jail in ${venue.city} and cancels the remaining tour dates. Fans are furious.`,
+                                                authorName: "TMZ",
+                                                isTMZ: true
+                                            }
+                                        ]
+                                    };
+                                }
+                            }
+
+                            let revenue = newTicketsSold * actualTicketPrice;
 
                             if (tour.useVipPackages) {
-                                const vipTickets = Math.floor(ticketsSold * 0.05); // 5% buy VIP
+                                const vipTickets = Math.floor(newTicketsSold * 0.05); // 5% buy VIP
                                 revenue += vipTickets * (actualTicketPrice * 4); // VIP is an extra 4x
                             }
                             
                             const updatedVenue = {
                                 ...venue,
-                                ticketsSold,
-                                revenue,
-                                soldOut: ticketsSold >= venue.capacity
+                                ticketsSold: (venue.ticketsSold || 0) + newTicketsSold,
+                                revenue: (venue.revenue || 0) + revenue,
+                                soldOut: ((venue.ticketsSold || 0) + newTicketsSold) >= venue.capacity
                             };
                             
                             const newVenues = [...tour.venues];
@@ -1516,9 +1586,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                     id: crypto.randomUUID(),
                                     authorId: artistProfileForEmail.id,
                                     content: postContent,
-                                    likes: Math.floor(ticketsSold * 0.5),
-                                    retweets: Math.floor(ticketsSold * 0.1),
-                                    views: Math.floor(ticketsSold * 10),
+                                    likes: Math.floor(newTicketsSold * 0.5),
+                                    retweets: Math.floor(newTicketsSold * 0.1),
+                                    views: Math.floor(newTicketsSold * 10),
                                     date: newDate
                                  });
                             }
@@ -1527,7 +1597,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                                 ...tour,
                                 venues: newVenues,
                                 currentVenueIndex: nextIndex,
-                                ticketsSold: tour.ticketsSold + ticketsSold,
+                                ticketsSold: tour.ticketsSold + newTicketsSold,
                                 totalRevenue: tour.totalRevenue + revenue,
                                 status: isFinished ? 'finished' : 'active'
                             };
@@ -5346,7 +5416,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 };
             }
 
-            if (tourDynamicPricingEncounter && !finalState.disableEncounters) {
+            if (tourArrestEncounter && !finalState.disableEncounters) {
+                finalState.activeEncounter = tourArrestEncounter;
+            } else if (tourDynamicPricingEncounter && !finalState.disableEncounters) {
                 finalState.activeEncounter = tourDynamicPricingEncounter;
             } else if (tiktokEncounterThisWeek && !finalState.disableEncounters) {
                 finalState.activeEncounter = tiktokEncounterThisWeek;
@@ -9563,8 +9635,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const activeData = state.artistsData[state.activeArtistId];
             const updatedTours = activeData.tours.map(tour => {
                 if (tour.id === action.payload.tourId) {
-                    // Only start a tour if it's in 'planning' status
-                    return tour.status === 'planning' ? { ...tour, status: 'active' as 'active' } : tour;
+                    if (tour.status === 'planning' || tour.status === 'presale') {
+                        return { ...tour, status: 'active' as 'active' };
+                    }
                 }
                 return tour;
             });
@@ -9579,6 +9652,139 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 },
                 activeTourId: action.payload.tourId,
             };
+        }
+        case 'CANCEL_TOUR': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedTours = activeData.tours.map(tour => {
+                if (tour.id === action.payload.tourId) {
+                    return { ...tour, status: 'cancelled' as 'cancelled' };
+                }
+                return tour;
+            });
+            // If they cancel during presale with revenue already collected? Could deduct bond, or just refund
+            let totalRefund = 0;
+            const tourToCancel = activeData.tours.find(t => t.id === action.payload.tourId);
+            if (tourToCancel && tourToCancel.totalRevenue > 0) {
+                 totalRefund = tourToCancel.totalRevenue; // Have to pay it back
+            }
+
+            return {
+                ...state,
+                activeTourId: state.activeTourId === action.payload.tourId ? null : state.activeTourId,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money - totalRefund, // Deduct the collected revenue since they cancelled
+                        tours: updatedTours,
+                    }
+                }
+            }
+        }
+        case 'COLLECT_PRESALE': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+
+            const updatedTours = activeData.tours.map(tour => {
+                if (tour.id === action.payload.tourId && tour.status === 'presale') {
+                    // Collect presale demand percentage
+                    let tourPresaleRevenue = 0;
+                    let tourPresaleTickets = 0;
+                    
+                    const totalAlloc = tour.presalePercentage || 0;
+                    const alreadyCollected = tour.presaleCollectedPercentage || 0;
+                    const pctToCollect = (totalAlloc - alreadyCollected) / 100;
+                    
+                    if (pctToCollect <= 0) return tour;
+                    
+                    const demandScore = tour.presaleDemand || 0; // 0-100
+
+                    const updatedVenues = tour.venues.map(venue => {
+                        const allocation = Math.floor(venue.capacity * pctToCollect);
+                        let wantToBuy = Math.floor(allocation * (demandScore / 100));
+                        
+                        const remaining = venue.capacity - venue.ticketsSold;
+                        const actualSold = Math.min(wantToBuy, remaining);
+                        
+                        const rev = actualSold * venue.ticketPrice;
+                        tourPresaleRevenue += rev;
+                        tourPresaleTickets += actualSold;
+                        
+                        return {
+                            ...venue,
+                            ticketsSold: venue.ticketsSold + actualSold,
+                            revenue: venue.revenue + rev
+                        }
+                    });
+
+                    // Weeks to process depends on popularity
+                    const weeksToWait = Math.max(1, 4 - Math.floor((activeData.popularity || 0) / 33));
+
+                    const currentQueue = tour.presaleCollectionQueue || [];
+                    
+                    return {
+                        ...tour,
+                        venues: updatedVenues,
+                        totalRevenue: tour.totalRevenue + tourPresaleRevenue,
+                        ticketsSold: tour.ticketsSold + tourPresaleTickets,
+                        presaleCollectedPercentage: totalAlloc, 
+                        presaleCollectionQueue: [...currentQueue, { weeksRemaining: weeksToWait, amount: tourPresaleRevenue }]
+                    };
+                }
+                return tour;
+            });
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        tours: updatedTours,
+                    }
+                }
+            }
+        }
+        case 'ADD_PRESALE_ALLOCATION': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedTours = activeData.tours.map(tour => {
+                if (tour.id === action.payload.tourId && tour.status === 'presale') {
+                    return { ...tour, presalePercentage: Math.min(100, (tour.presalePercentage || 0) + action.payload.percentage) };
+                }
+                return tour;
+            });
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        tours: updatedTours,
+                    }
+                }
+            }
+        }
+        case 'ADD_TOUR_LEG': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const updatedTours = activeData.tours.map(tour => {
+                if (tour.id === action.payload.tourId && (tour.status === 'active' || tour.status === 'presale' || tour.status === 'planning')) {
+                    return { ...tour, venues: [...tour.venues, ...action.payload.venues] };
+                }
+                return tour;
+            });
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        tours: updatedTours,
+                    }
+                }
+            }
         }
         case 'UPLOAD_TOUR_PHOTO': {
             if (!state.activeArtistId) return state;
@@ -10460,9 +10666,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 newPosts = [newPost, ...newPosts];
             }
 
+            let updatedTours = activeData.tours;
+            if (choice.tourAction && choice.tourAction.action === 'CANCEL') {
+                updatedTours = activeData.tours.map(tour => {
+                    if (tour.id === choice.tourAction?.tourId) {
+                        return { ...tour, status: 'cancelled' };
+                    }
+                    return tour;
+                });
+            }
+
             return {
                 ...state,
                 activeEncounter: null,
+                activeTourId: (choice.tourAction && choice.tourAction.action === 'CANCEL' && state.activeTourId === choice.tourAction.tourId) ? null : state.activeTourId,
                 artistsData: {
                     ...state.artistsData,
                     [state.activeArtistId]: {
@@ -10472,7 +10689,8 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         publicImage: Math.max(0, Math.min(100, (activeData.publicImage || 50) + choice.publicImageEffect)),
                         hype: Math.max(0, Math.min(100, (activeData.hype || 50) + choice.hypeEffect)),
                         xPosts: newPosts,
-                        xUnreadMentions: (activeData.xUnreadMentions || 0) + 1
+                        xUnreadMentions: (activeData.xUnreadMentions || 0) + 1,
+                        tours: updatedTours,
                     }
                 }
             };
