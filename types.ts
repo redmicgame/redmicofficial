@@ -50,6 +50,7 @@ export interface Song {
     firstWeekStreams?: number;
     removedStreams?: number;
     playlistBoostWeeks?: number;
+    purchasedPlaylists?: { playlistId: string, position: number, weeksRemaining: number }[];
     tourBoostWeeks?: number;
     promoBoostWeeks?: number;
     itunesVersions?: ITunesVersion[];
@@ -102,6 +103,7 @@ export interface Song {
     lastWeekRadioPlays?: number;
     weeksOnRadio?: number;
     radioFormat?: string;
+    hasTweetedBillionStreams?: boolean;
 }
 
 export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)' | 'Compilation';
@@ -697,6 +699,7 @@ export interface XPost {
     authorId: string;
     content: string;
     image?: string;
+    image2?: string;
     video?: string;
     poll?: {
         options: XPollOption[];
@@ -1001,6 +1004,8 @@ export interface ArtistData {
     money: number;
     hype: number;
     peakHype?: number;
+    numberOneDebuts?: number;
+    hasTweetedBillionTotalStreams?: boolean;
     publicImage: number;
     popularity: number;
     songs: Song[];
@@ -1148,6 +1153,9 @@ export interface GameState {
     chartHistory: ChartHistory;
     spotifyGlobal: ChartEntry[];
     hotPopSongs: ChartEntry[];
+    biggestSalesWeekByYear?: { [year: number]: { artist: string; album: string; sales: number; coverArt: string } };
+    mostNumberOneDebutsRecord?: { artist: string; count: number; image: string };
+    npcNumberOneDebuts?: Record<string, number>;
     hotRapRnb: ChartEntry[];
     electronicChart: ChartEntry[];
     countryChart: ChartEntry[];
@@ -1401,7 +1409,8 @@ export type GameAction =
     | { type: 'UPLOAD_TOUR_PHOTO'; payload: string }
     | { type: 'SELECT_SOUNDTRACK'; payload: string | null }
     | { type: 'SELECT_TOUR'; payload: string | null }
-    | { type: 'HIRE_MANAGER'; payload: { managerId: string } }
+    | { type: 'HIRE_MANAGER'; payload: { managerId: string; contractYears: number } }
+    | { type: 'BUY_PLAYLIST_ENTRY'; payload: { songId: string; playlistId: string; position: number; cost: number } }
     | { type: 'FIRE_MANAGER' }
     | { type: 'HIRE_SECURITY'; payload: { teamId: string } }
     | { type: 'FIRE_SECURITY' }

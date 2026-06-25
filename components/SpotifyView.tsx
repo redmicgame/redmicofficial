@@ -28,9 +28,9 @@ const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boo
                     {song.explicit && <span className="text-[10px] w-3.5 h-3.5 bg-zinc-400 text-zinc-900 font-bold rounded-sm flex-shrink-0 flex items-center justify-center">E</span>}
                     {hasMusicVideo && (
                         <span className="flex items-center text-[13px] text-zinc-400 gap-1 flex-shrink-0">
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                <path d="M20,4H4C2.89,4,2,4.89,2,6v12c0,1.1,0.89,2,2,2h16c1.1,0,2-0.9,2-2V6C22,4.89,21.1,4,20,4z M20,18H4V6h16V18z"/>
-                                <path d="M9.5,8.5v7l7-3.5L9.5,8.5z"/>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-[18px] h-[18px] -ml-0.5">
+                                <rect width="18" height="14" x="3" y="5" rx="2.5" />
+                                <path d="M10 9.5l4.5 2.5-4.5 2.5z" strokeLinejoin="round" />
                             </svg>
                             Video &bull; 
                         </span>

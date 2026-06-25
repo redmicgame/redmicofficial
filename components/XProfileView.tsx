@@ -30,6 +30,11 @@ const Post: React.FC<{ post: XPost; author: XUser; onQuote?: (post: XPost) => vo
                 <p className="text-white whitespace-pre-wrap">{post.content}</p>
                 {post.video ? (
                     <video src={post.video} className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto w-full object-cover" autoPlay loop muted playsInline />
+                ) : post.image && post.image2 ? (
+                    <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
+                        <img src={post.image} alt="Post image 1" className="w-1/2 h-full object-cover border-r border-zinc-700" />
+                        <img src={post.image2} alt="Post image 2" className="w-1/2 h-full object-cover" />
+                    </div>
                 ) : post.image && !post.image.startsWith('chart:') && (
                     <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />
                 )}

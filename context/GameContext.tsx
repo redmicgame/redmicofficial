@@ -408,28 +408,44 @@ import { getEraConfiguration } from '../utils/eraUtils';
 const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
     { id: 'tth', name: "Today's Top Hits", description: "Top hits right now.", followers: 34000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=500&fit=crop', tracks: [] },
     { id: 'megahit', name: "Mega Hit Mix", description: "A mega mix of 75 favorites from the last few years!", followers: 11000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1493225457124-a1a2a5fa51cc?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'global50', name: "Global Top 50", description: "The most played tracks in the world.", followers: 18000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1526478806334-5fd488fcaabc?w=500&h=500&fit=crop', tracks: [] },
     { id: 'rapcaviar', name: "RapCaviar", description: "New est hip hop.", followers: 15000000, type: 'genre', genre: 'Hip Hop/Rap', coverArt: 'https://images.unsplash.com/photo-1544785349-c4a5301826fd?w=500&h=500&fit=crop', tracks: [] },
     { id: 'hiphopcentral', name: "Hip-Hop Central", description: "The center of Hip-Hop.", followers: 8000000, type: 'genre', genre: 'Hip Hop/Rap', coverArt: 'https://images.unsplash.com/photo-1549497554-46328dbbd4f7?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'getturnt', name: "Get Turnt", description: "Mode: Turnt.", followers: 6500000, type: 'genre', genre: 'Hip Hop/Rap', coverArt: 'https://images.unsplash.com/photo-1517230878791-229b4bb7db64?w=500&h=500&fit=crop', tracks: [] },
     { id: 'poprising', name: "Pop Rising", description: "The hits of tomorrow.", followers: 3000000, type: 'genre', genre: 'Pop', coverArt: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop', tracks: [] },
     { id: 'pophits', name: "Soft Pop Hits", description: "Listen to easy songs from your favorite artists!", followers: 7000000, type: 'genre', genre: 'Pop', coverArt: 'https://images.unsplash.com/photo-1518098042468-208169123863?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'teenparty', name: "Teen Party", description: "Turn it up.", followers: 4500000, type: 'genre', genre: 'Pop', coverArt: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=500&h=500&fit=crop', tracks: [] },
     { id: 'newmusicfriday', name: "New Music Friday", description: "New music.", followers: 4000000, type: 'new', coverArt: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'justhits', name: "Just Hits", description: "Current favorites and exciting new music.", followers: 3500000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=500&h=500&fit=crop', tracks: [] },
     { id: 'mint', name: "mint", description: "Electronic.", followers: 6000000, type: 'genre', genre: 'Dance/Electronic', coverArt: 'https://images.unsplash.com/photo-1570535921867-0c7f711f185c?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'danceparty', name: "Dance Party", description: "Get ready to dance.", followers: 4000000, type: 'genre', genre: 'Dance/Electronic', coverArt: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop', tracks: [] },
     { id: 'hotcountry', name: "Hot Country", description: "Country.", followers: 7000000, type: 'genre', genre: 'Country', coverArt: 'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'countrycoffeehouse', name: "Country Coffeehouse", description: "A little acoustic country.", followers: 2000000, type: 'genre', genre: 'Country', coverArt: 'https://images.unsplash.com/photo-1522881451255-f59ad836fdfb?w=500&h=500&fit=crop', tracks: [] },
     { id: 'rnb', name: "Are & Be", description: "R&B.", followers: 6000000, type: 'genre', genre: 'R&B', coverArt: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'chilledrnb', name: "Chilled R&B", description: "Chill out with the best R&B.", followers: 3000000, type: 'genre', genre: 'R&B', coverArt: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=500&h=500&fit=crop', tracks: [] },
     { id: 'rockthis', name: "Rock This", description: "Rock.", followers: 5000000, type: 'genre', genre: 'Rock', coverArt: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'rockclassics', name: "Rock Classics", description: "Rock legends.", followers: 11000000, type: 'genre', genre: 'Rock', coverArt: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=500&fit=crop', tracks: [] },
     { id: 'latin', name: "Viva Latino", description: "Today's top Latin hits.", followers: 14000000, type: 'genre', genre: 'Latin', coverArt: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'bailareggaeton', name: "Baila Reggaeton", description: "Reggaeton hits.", followers: 11000000, type: 'genre', genre: 'Latin', coverArt: 'https://images.unsplash.com/photo-1533174000265-e8bb438b9bb2?w=500&h=500&fit=crop', tracks: [] },
     { id: 'kpop', name: "K-Pop ON!", description: "The best K-Pop songs.", followers: 5000000, type: 'genre', genre: 'K-Pop', coverArt: 'https://images.unsplash.com/photo-1598363650965-0ae09efbd3da?w=500&h=500&fit=crop', tracks: [] },
     { id: 'viral50', name: "Viral 50 - Global", description: "Viral.", followers: 2000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&h=500&fit=crop', tracks: [] },
     { id: 'viralhits', name: "Viral Hits", description: "Viral.", followers: 3000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=500&h=500&fit=crop', tracks: [] },
     { id: 'bighit', name: "Big on the Internet", description: "Currently trending tracks across the internet.", followers: 4000000, type: 'viral', coverArt: 'https://images.unsplash.com/photo-1494232410401-ad00d5433cfa?w=500&h=500&fit=crop', tracks: [] },
     { id: 'chillhits', name: "Chill Hits", description: "Kick back to the best new and recent chill hits.", followers: 6000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1499557404179-880945952db5?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'moodbooster', name: "Mood Booster", description: "Get happy.", followers: 5500000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'goodvibes', name: "Good Vibes", description: "Positive energy.", followers: 4000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1490260400179-d656f04de423?w=500&h=500&fit=crop', tracks: [] },
     { id: 'singcar', name: "Songs to Sing in the Car", description: "Sing along and enjoy the drive.", followers: 10000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=500&h=500&fit=crop', tracks: [] },
     { id: 'coffeetable', name: "Coffee Table Jazz", description: "Relaxing.", followers: 1500000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'beastmode', name: "Beast Mode", description: "Get your beast mode on!", followers: 9500000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'workout', name: "Workout", description: "Pop workout hits.", followers: 6000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&h=500&fit=crop', tracks: [] },
     { id: 'christmas', name: "Christmas Hits", description: "The biggest Christmas songs of all time.", followers: 5000000, type: 'genre', genre: 'Christmas', coverArt: 'https://images.unsplash.com/photo-1543589077-47d81606c1ec?w=500&h=500&fit=crop', tracks: [] },
     { id: 'indie', name: "Lorem", description: "Indie songs.", followers: 2000000, type: 'genre', genre: 'Indie', coverArt: 'https://images.unsplash.com/photo-1482855549413-2a62884c7be6?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'essentialindie', name: "Essential Indie", description: "The best indie tracks.", followers: 3500000, type: 'genre', genre: 'Indie', coverArt: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=500&fit=crop', tracks: [] },
     { id: 'afrobeats', name: "African Heat", description: "Top Afrobeats.", followers: 2500000, type: 'genre', genre: 'Afrobeats', coverArt: 'https://images.unsplash.com/photo-1601616858063-4f9e1e765507?w=500&h=500&fit=crop', tracks: [] },
     { id: 'reggae', name: "Dancehall Official", description: "Top Reggae.", followers: 1500000, type: 'genre', genre: 'Reggae', coverArt: 'https://images.unsplash.com/photo-1520696989433-2ba37a90fdd2?w=500&h=500&fit=crop', tracks: [] },
-    { id: 'throwback', name: "All Out 2010s", description: "The biggest hits of the 2010s.", followers: 8000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=500&h=500&fit=crop', tracks: [] }
+    { id: 'throwback', name: "All Out 2010s", description: "The biggest hits of the 2010s.", followers: 8000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'allout00s', name: "All Out 00s", description: "The biggest hits of the 2000s.", followers: 10000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1493225457124-a1a2a5fa51cc?w=500&h=500&fit=crop', tracks: [] },
+    { id: 'allout90s', name: "All Out 90s", description: "The biggest hits of the 1990s.", followers: 7000000, type: 'global', coverArt: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop', tracks: [] }
 ];
 
 const initialState: GameState = {
@@ -2277,7 +2293,25 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         spotifyPlaylists.forEach(playlist => {
                             const trackIndex = playlist.tracks.findIndex(t => t.songId === song.id);
                             if (trackIndex !== -1) {
-                                const percentage = Math.max(0.001, 0.03 - (trackIndex * 0.0006));
+                                let percentage = 0.001;
+                                const position = trackIndex + 1;
+                                if (position === 1) percentage = 0.0735 + Math.random() * 0.0441;
+                                else if (position === 2) percentage = 0.0588 + Math.random() * 0.0353;
+                                else if (position === 3) percentage = 0.0529 + Math.random() * 0.0294;
+                                else if (position === 4) percentage = 0.0441 + Math.random() * 0.0294;
+                                else if (position === 5) percentage = 0.0382 + Math.random() * 0.0265;
+                                else if (position === 6) percentage = 0.0323 + Math.random() * 0.0235;
+                                else if (position === 7) percentage = 0.0294 + Math.random() * 0.0206;
+                                else if (position === 8) percentage = 0.0264 + Math.random() * 0.0177;
+                                else if (position === 9) percentage = 0.0235 + Math.random() * 0.0147;
+                                else if (position === 10) percentage = 0.0205 + Math.random() * 0.0147;
+                                else {
+                                    const baseMin = 0.0205;
+                                    const baseMax = 0.0352;
+                                    const decay = Math.pow(0.95, position - 10);
+                                    percentage = (baseMin + Math.random() * (baseMax - baseMin)) * decay;
+                                }
+
                                 const pStreams = Math.floor(playlist.followers * percentage);
                                 playlistStreams += pStreams;
 
@@ -2296,6 +2330,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         let newPlaylistBoostWeeks = song.playlistBoostWeeks;
                         if (typeof song.playlistBoostWeeks === 'number' && song.playlistBoostWeeks > 0) {
                             newPlaylistBoostWeeks = song.playlistBoostWeeks - 1;
+                        }
+
+                        let newPurchasedPlaylists = song.purchasedPlaylists;
+                        if (newPurchasedPlaylists) {
+                            newPurchasedPlaylists = newPurchasedPlaylists
+                                .map(p => ({ ...p, weeksRemaining: p.weeksRemaining - 1 }))
+                                .filter(p => p.weeksRemaining > 0);
                         }
 
                         const songPromo = artistData.promotions.find(p => p.itemId === song.id && p.itemType === 'song');
@@ -2379,6 +2420,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             actualLastWeekStreams: actualStreamsThisWeek,
                             ...firstWeekStreamsData,
                             playlistBoostWeeks: newPlaylistBoostWeeks,
+                            purchasedPlaylists: newPurchasedPlaylists,
                             promoBoostWeeks: newPromoBoostWeeks,
                             dailyStreams: newDailyStreams,
                             revenue: (song.revenue || Math.floor((song.streams || 0) / 150) * STREAM_INCOME_MULTIPLIER) + generatedGross, // Wait, revenue formula wasn't precise before, but whatever
@@ -4385,9 +4427,87 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             });
 
             // --- NPC Pop Base #1 Debut Posts ---
+            let finalState: GameState = { ...state };
             const npcPopBasePosts: XPost[] = [];
             const hot100One = newBillboardHot100[0];
             const topAlbumsOne = newBillboardTopAlbums[0];
+
+            // Biggest Sales Week Record (Billboard 200)
+            const currentBiggestSales = finalState.biggestSalesWeekByYear?.[newDate.year];
+            if (topAlbumsOne && topAlbumsOne.weeklyActivity) {
+                const isDebut = newAlbumChartHistory[topAlbumsOne.uniqueId]?.weeksOnChart === 1;
+                if (!currentBiggestSales || topAlbumsOne.weeklyActivity > currentBiggestSales.sales) {
+                    if (currentBiggestSales && isDebut) {
+                        const surpassingText = currentBiggestSales.artist === topAlbumsOne.artist 
+                            ? `surpassing their own '${currentBiggestSales.album}'`
+                            : `surpassing ${currentBiggestSales.artist}'s '${currentBiggestSales.album}'`;
+
+                        npcPopBasePosts.push({
+                            id: crypto.randomUUID(), authorId: 'chartdata',
+                            content: `${topAlbumsOne.artist}'s '${topAlbumsOne.title}' earns the biggest sales week for an album on the Billboard 200 in ${newDate.year}, ${surpassingText}.`,
+                            image: topAlbumsOne.coverArt,
+                            image2: currentBiggestSales.coverArt,
+                            likes: Math.floor(Math.random() * 80000) + 30000,
+                            retweets: Math.floor(Math.random() * 20000) + 5000,
+                            views: Math.floor(Math.random() * 1500000) + 500000,
+                            date: newDate
+                        });
+                    }
+                    if (!finalState.biggestSalesWeekByYear) finalState.biggestSalesWeekByYear = {};
+                    finalState.biggestSalesWeekByYear[newDate.year] = {
+                        artist: topAlbumsOne.artist,
+                        album: topAlbumsOne.title,
+                        sales: topAlbumsOne.weeklyActivity,
+                        coverArt: topAlbumsOne.coverArt
+                    };
+                }
+            }
+
+            // Most #1 Debuts Record (Hot 100)
+            if (hot100One && hot100One.lastWeek === null && newChartHistory[hot100One.uniqueId]?.weeksOnChart === 1) {
+                // Determine if it's player or NPC
+                let debutCount = 0;
+                let artistImage = '';
+                if (hot100One.isPlayerSong && hot100One.songId) {
+                    const song = allPlayerSongsFlat.find(s => s.id === hot100One.songId);
+                    if (song) {
+                        const artistData = updatedArtistsData[song.artistId];
+                        artistData.numberOneDebuts = (artistData.numberOneDebuts || 0) + 1;
+                        debutCount = artistData.numberOneDebuts;
+                        artistImage = allPlayerArtistsAndGroups.find(a => a.id === song.artistId)?.imageUrl || hot100One.coverArt;
+                    }
+                } else {
+                    if (!finalState.npcNumberOneDebuts) finalState.npcNumberOneDebuts = {};
+                    finalState.npcNumberOneDebuts[hot100One.artist] = (finalState.npcNumberOneDebuts[hot100One.artist] || 0) + 1;
+                    debutCount = finalState.npcNumberOneDebuts[hot100One.artist];
+                    artistImage = state.npcImages?.[hot100One.artist] || hot100One.coverArt;
+                }
+
+                const currentMostDebuts = finalState.mostNumberOneDebutsRecord;
+                if (!currentMostDebuts || debutCount > currentMostDebuts.count) {
+                    if (currentMostDebuts) {
+                        const surpassingText = currentMostDebuts.artist === hot100One.artist
+                            ? `breaking their own record`
+                            : `surpassing ${currentMostDebuts.artist} (${currentMostDebuts.count})`;
+
+                        npcPopBasePosts.push({
+                            id: crypto.randomUUID(), authorId: 'chartdata',
+                            content: `${hot100One.artist} now has the most #1 debuts for an artist in Hot 100 history, ${surpassingText}.`,
+                            image: artistImage,
+                            image2: currentMostDebuts.image,
+                            likes: Math.floor(Math.random() * 80000) + 30000,
+                            retweets: Math.floor(Math.random() * 20000) + 5000,
+                            views: Math.floor(Math.random() * 1500000) + 500000,
+                            date: newDate
+                        });
+                    }
+                    finalState.mostNumberOneDebutsRecord = {
+                        artist: hot100One.artist,
+                        count: debutCount,
+                        image: artistImage
+                    };
+                }
+            }
 
             if (hot100One && hot100One.lastWeek === null && !hot100One.isPlayerSong) {
                 npcPopBasePosts.push({
@@ -4431,7 +4551,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             }
             
             // --- AWARDS LOGIC ---
-            let finalState: GameState = { ...state };
             
             // --- OSCARS LOGIC ---
             let newOscarNominations: GameState['oscarCurrentYearNominations'] = state.oscarCurrentYearNominations;
@@ -5318,7 +5437,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     return { ...c, score };
                 }).sort((a,b) => b.score - a.score).slice(0, 50);
                 
-                const newTracks: SpotifyPlaylistTrack[] = scoredContenders.map((c, index) => {
+                let newTracks: SpotifyPlaylistTrack[] = scoredContenders.map((c, index) => {
                     const existingTrack = playlist.tracks.find(t => t.songId === c.uniqueId);
                     return {
                         songId: c.uniqueId,
@@ -5330,6 +5449,40 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         addedDate: existingTrack ? existingTrack.addedDate : newDate,
                     }
                 });
+                
+                // Apply purchased playlist positions
+                allPlayerSongsFlat.forEach(playerSong => {
+                    const artistData = updatedArtistsData[playerSong.artistId];
+                    if (artistData) {
+                        const songWithData = artistData.songs.find(s => s.id === playerSong.id);
+                        if (songWithData && songWithData.purchasedPlaylists) {
+                            const purchased = songWithData.purchasedPlaylists.find(p => p.playlistId === playlist.id && p.weeksRemaining > 0);
+                            if (purchased) {
+                                const contender = allContendersRaw.find(c => c.isPlayerSong && c.songId === playerSong.id);
+                                if (contender) {
+                                    const existingIdx = newTracks.findIndex(t => t.songId === contender.uniqueId);
+                                    if (existingIdx !== -1) {
+                                        newTracks.splice(existingIdx, 1);
+                                    }
+                                    
+                                    const insertIdx = Math.max(0, Math.min(newTracks.length, purchased.position - 1));
+                                    const trackEntry: SpotifyPlaylistTrack = {
+                                        songId: contender.uniqueId,
+                                        artistName: contender.artist,
+                                        artistId: playerSong.artistId,
+                                        title: contender.title,
+                                        coverArt: contender.coverArt,
+                                        position: insertIdx + 1,
+                                        addedDate: newDate,
+                                    };
+                                    newTracks.splice(insertIdx, 0, trackEntry);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                newTracks = newTracks.slice(0, 50).map((t, i) => ({ ...t, position: i + 1 }));
                 
                 return { ...playlist, tracks: newTracks };
             });
@@ -9811,7 +9964,9 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
             const manager = MANAGERS.find(m => m.id === action.payload.managerId);
-            if (!manager || activeData.money < manager.yearlyCost) return state;
+            const contractYears = action.payload.contractYears || 1;
+            const totalCost = manager ? manager.yearlyCost * contractYears : 0;
+            if (!manager || activeData.money < totalCost) return state;
         
             return {
                 ...state,
@@ -9819,14 +9974,46 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     ...state.artistsData,
                     [state.activeArtistId]: {
                         ...activeData,
-                        money: activeData.money - manager.yearlyCost,
+                        money: activeData.money - totalCost,
                         popularity: Math.min(100, activeData.popularity + manager.popularityBoost),
                         manager: {
                             id: manager.id,
-                            contractEndDate: { week: state.date.week, year: state.date.year + 1 }
+                            contractEndDate: { week: state.date.week, year: state.date.year + contractYears }
                         }
                     }
                 },
+            };
+        }
+        case 'BUY_PLAYLIST_ENTRY': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const { songId, playlistId, position, cost } = action.payload;
+
+            if (activeData.money < cost) return state;
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        money: activeData.money - cost,
+                        songs: activeData.songs.map(s => {
+                            if (s.id === songId) {
+                                const currentPurchased = s.purchasedPlaylists || [];
+                                const existingIndex = currentPurchased.findIndex(p => p.playlistId === playlistId);
+                                const newPurchased = [...currentPurchased];
+                                if (existingIndex !== -1) {
+                                    newPurchased[existingIndex] = { playlistId, position, weeksRemaining: 4 };
+                                } else {
+                                    newPurchased.push({ playlistId, position, weeksRemaining: 4 });
+                                }
+                                return { ...s, purchasedPlaylists: newPurchased };
+                            }
+                            return s;
+                        })
+                    }
+                }
             };
         }
         case 'FIRE_MANAGER': {

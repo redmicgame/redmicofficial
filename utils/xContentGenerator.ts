@@ -464,6 +464,58 @@ export const generateWeeklyXContent = (
          }
     }
     
+    // Pre-order / Expected Debut Post
+    const upcomingAlbums = artistData.labelSubmissions?.filter(sub => 
+        sub.status === 'scheduled' && 
+        sub.isProjectAnnounced && 
+        sub.release.type === 'Album' && 
+        sub.projectReleaseDate && 
+        ((sub.projectReleaseDate.year * 52 + sub.projectReleaseDate.week) > (date.year * 52 + date.week))
+    ) || [];
+
+    for (const sub of upcomingAlbums) {
+        const preorders = sub.preorderSales || 0;
+        if (preorders > 0) {
+            // Units range
+            const minUnits = Math.max(1, Math.floor(preorders * 0.95));
+            const maxUnits = Math.floor(preorders * 1.1) + 1000;
+            const avgUnits = (minUnits + maxUnits) / 2;
+
+            // Find chart position
+            let expectedPos = 200;
+            if (gameState.billboardTopAlbums) {
+                const chart = [...gameState.billboardTopAlbums].sort((a, b) => b.weeklyActivity - a.weeklyActivity);
+                const posIndex = chart.findIndex(entry => entry.weeklyActivity < avgUnits);
+                expectedPos = posIndex === -1 ? (chart.length < 200 ? chart.length + 1 : 200) : posIndex + 1;
+            }
+
+            // format units
+            const formatUnits = (num: number) => {
+                if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+                if (num >= 1000) return `${Math.floor(num / 1000)}K`;
+                return `${num}`;
+            };
+
+            const unitsText = `${formatUnits(minUnits)}-${formatUnits(maxUnits)}`;
+
+            // Check biggest debut
+            const currentBiggestSales = gameState.biggestSalesWeekByYear?.[date.year];
+            const isBiggest = !currentBiggestSales || maxUnits > currentBiggestSales.sales;
+            const biggestText = isBiggest ? `\n\nIt will be the biggest debut of the year.` : '';
+
+            newPosts.push({
+                id: crypto.randomUUID(), authorId: 'chartdata',
+                content: `${artistName}'s '${sub.release.title}' aiming for #${expectedPos} debut on the Billboard 200 with ${unitsText} units first week (via @HITSDD).${biggestText}`,
+                image: sub.release.coverArt,
+                image2: artistProfile?.imageUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470',
+                likes: Math.floor(Math.random() * 20000) + 10000, 
+                retweets: Math.floor(Math.random() * 5000) + 1000, 
+                views: Math.floor(Math.random() * 500000) + 100000, 
+                date
+            });
+        }
+    }
+    
     // TMZ Post Logic
     const tmzAccount = artistData.xUsers.find(u => u.id === 'tmz');
     if (tmzAccount && paparazziPhotos.length > 0 && Math.random() < 0.5) { // 50% chance
@@ -927,6 +979,39 @@ export const generateWeeklyXContent = (
                 date
             });
         }
+    }
+
+    // 2.6 1 Billion Streams for a single song
+    for (const song of artistData.songs) {
+        if (song.streams >= 1_000_000_000 && !song.hasTweetedBillionStreams) {
+            song.hasTweetedBillionStreams = true;
+            newPosts.push({
+                id: crypto.randomUUID(),
+                authorId: 'chartdata',
+                content: `${artistName}'s "${song.title}" has now surpassed 1 billion streams on Spotify.`,
+                image: song.coverArt,
+                likes: Math.floor(Math.random() * 60000) + 20000,
+                retweets: Math.floor(Math.random() * 15000) + 5000,
+                views: Math.floor(Math.random() * 800000) + 200000,
+                date
+            });
+        }
+    }
+
+    // 2.7 1 Billion Streams Total Across All Credits
+    const totalArtistStreams = artistData.songs.reduce((acc, s) => acc + s.streams, 0);
+    if (totalArtistStreams >= 1_000_000_000 && !artistData.hasTweetedBillionTotalStreams) {
+        artistData.hasTweetedBillionTotalStreams = true;
+        newPosts.push({
+            id: crypto.randomUUID(),
+            authorId: 'chartdata',
+            content: `${artistName} has now surpassed 1 billion streams worldwide.`,
+            image: artistProfile?.imageUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470',
+            likes: Math.floor(Math.random() * 80000) + 30000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 1000000) + 300000,
+            date
+        });
     }
 
      // 3. PopBase post if song is doing well (and not a debut, to avoid duplicate posts)

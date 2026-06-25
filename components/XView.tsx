@@ -284,6 +284,11 @@ const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: (post: 
                     </div>
                 ) : post.video ? (
                     <video src={post.video} className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto w-full object-cover" autoPlay loop muted playsInline />
+                ) : post.image && post.image2 ? (
+                    <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
+                        <img src={post.image} alt="Post image 1" className="w-1/2 h-full object-cover border-r border-zinc-700" />
+                        <img src={post.image2} alt="Post image 2" className="w-1/2 h-full object-cover" />
+                    </div>
                 ) : post.image ? (
                     <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />
                 ) : null}
@@ -420,6 +425,11 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) =>
             id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
             avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFkMWQxZCIvPjxwYXRoIGQ9Ik00Ni41MzIgNDYuNTMyQzQ2LjUzMiA0Ni41MzIgNDYuNTMy...IiBmaWxsPSIjMThEMzRFIi8+PC9zdmc+',
             isVerified: true, bio: 'Real-time Spotify numbers for your favorite artists.', followersCount: 1100000, followingCount: 0,
+        },
+        'chartdata': {
+            id: 'chartdata', name: 'chart data', username: 'chartdata',
+            avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+',
+            isVerified: true, bio: 'facts & stats', followersCount: 2300000, followingCount: 1,
         }
     };
 
@@ -483,6 +493,11 @@ const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote })
             id: 'spotifysnapshot', name: 'Spotify Snapshot', username: 'SnapshotSpotify',
             avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFkMWQxZCIvPjxwYXRoIGQ9Ik00Ni41MzIgNDYuNTMyQzQ2LjUzMiA0Ni41MzIgNDYuNTMy...IiBmaWxsPSIjMThEMzRFIi8+PC9zdmc+',
             isVerified: true, bio: 'Real-time Spotify numbers for your favorite artists.', followersCount: 1100000, followingCount: 0,
+        },
+        'chartdata': {
+            id: 'chartdata', name: 'chart data', username: 'chartdata',
+            avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+',
+            isVerified: true, bio: 'facts & stats', followersCount: 2300000, followingCount: 1,
         }
     };
     const findUser = (id: string) => xUsers.find(u => u.id === id) || SYSTEM_USERS_FALLBACK[id];
