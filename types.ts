@@ -427,6 +427,7 @@ export interface Email {
 }
 
 export interface GameDate {
+    day?: number;
     week: number;
     year: number;
 }
@@ -929,6 +930,7 @@ export interface Tour {
 export interface Manager {
     id: string;
     name: string;
+    bio: string;
     yearlyCost: number;
     popularityBoost: number;
     autoGigsPerWeek: number;
@@ -1051,7 +1053,14 @@ export interface ArtistData {
     tours: Tour[];
     pastRedCarpetLooks: RedCarpetLook[];
     streamsRemovedThisWeek?: number;
-    manager: { id: string; contractEndDate: GameDate } | null;
+    manager: { 
+        id: string; 
+        contractEndDate: GameDate;
+        autoDistributeAscap?: boolean;
+        autoSubmitAwards?: boolean;
+        autoSubmitCoachella?: boolean;
+        autoMakeOfficialAudio?: boolean;
+    } | null;
     requestedPromoInterview?: boolean;
     lastPushToItunesWeek?: number;
     lastPushedSongId?: string;
@@ -1119,6 +1128,7 @@ export interface RedCarpetLook {
 }
 
 export interface GameState {
+    timeMode?: 'weekly' | 'daily';
     disableEncounters?: boolean;
     activeEncounter?: ActiveEncounter | null;
     activeTmzPost?: XPost | null;
@@ -1247,8 +1257,8 @@ export type GameAction =
     | { type: 'SET_ACTIVE_TMZ_POST'; payload: XPost | null }
     | { type: 'RESOLVE_ENCOUNTER'; payload: { choice: EncounterChoice; imageUrl: string } }
     | { type: 'TOGGLE_ENCOUNTERS' }
-    | { type: 'START_SOLO_GAME'; payload: { artist: Artist; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme' } }
-    | { type: 'START_GROUP_GAME'; payload: { group: Group; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme' } }
+    | { type: 'START_SOLO_GAME'; payload: { artist: Artist; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme'; timeMode?: 'weekly' | 'daily' } }
+    | { type: 'START_GROUP_GAME'; payload: { group: Group; startYear: number; difficultyMode?: 'easy' | 'normal' | 'hard' | 'extreme'; timeMode?: 'weekly' | 'daily' } }
     | { type: 'SUBSCRIBE_CHART_PREDICTIONS'; payload: { cost: number } }
     | { type: 'RELEASE_ITUNES_VERSION'; payload: { songId: string; title: string; coverArt: string } }
     | { type: 'CHANGE_VIEW'; payload: GameView }
@@ -1410,6 +1420,7 @@ export type GameAction =
     | { type: 'SELECT_SOUNDTRACK'; payload: string | null }
     | { type: 'SELECT_TOUR'; payload: string | null }
     | { type: 'HIRE_MANAGER'; payload: { managerId: string; contractYears: number } }
+    | { type: 'TOGGLE_MANAGER_SETTING'; payload: { setting: 'autoDistributeAscap' | 'autoSubmitAwards' | 'autoSubmitCoachella' | 'autoMakeOfficialAudio' } }
     | { type: 'BUY_PLAYLIST_ENTRY'; payload: { songId: string; playlistId: string; position: number; cost: number } }
     | { type: 'FIRE_MANAGER' }
     | { type: 'HIRE_SECURITY'; payload: { teamId: string } }

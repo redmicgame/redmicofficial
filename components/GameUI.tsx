@@ -41,7 +41,9 @@ const GameUI: React.FC = () => {
             <button 
               onClick={handleProgressWeek}
               className="absolute z-20 bottom-24 right-4 bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center hover:bg-red-700 transition-all transform hover:scale-105 shadow-red-600/30">
-              <span className="font-bold text-sm text-center leading-tight">Next Week</span>
+              <span className="font-bold text-sm text-center leading-tight">
+                  {gameState.timeMode === 'daily' ? 'Next Day' : 'Next Week'}
+              </span>
             </button>
             <BottomNav />
         </div>

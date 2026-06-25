@@ -31,10 +31,48 @@ export const ChartPredictionsView: React.FC = () => {
             aData.songs.filter(s => s.isReleased && !s.remixOfSongId && !s.isTakenDown).forEach(song => {
                 let totalWeeklyStreams = song.lastWeekStreams || 0;
                 
+                // Add estimated streams from active purchased playlists
+                if (song.purchasedPlaylists && gameState.spotifyPlaylists) {
+                    song.purchasedPlaylists.forEach(purchased => {
+                        if (purchased.weeksRemaining > 0) {
+                            const playlist = gameState.spotifyPlaylists!.find(p => p.id === purchased.playlistId);
+                            if (playlist) {
+                                let percentage = 0.001;
+                                const position = purchased.position;
+                                if (position === 1) percentage = 0.0735;
+                                else if (position === 2) percentage = 0.0588;
+                                else if (position === 3) percentage = 0.0529;
+                                else if (position === 4) percentage = 0.0441;
+                                else if (position === 5) percentage = 0.0382;
+                                else if (position === 6) percentage = 0.0323;
+                                else if (position === 7) percentage = 0.0294;
+                                else if (position === 8) percentage = 0.0264;
+                                else if (position === 9) percentage = 0.0235;
+                                else if (position === 10) percentage = 0.0205;
+                                else {
+                                    const baseMin = 0.0205;
+                                    const baseMax = 0.0352;
+                                    const decay = Math.pow(0.95, position - 10);
+                                    percentage = ((baseMin + baseMax) / 2) * decay;
+                                }
+                                totalWeeklyStreams += Math.floor(playlist.followers * percentage);
+                            }
+                        }
+                    });
+                }
+
                 const remixes = aData.songs.filter(r => r.isReleased && r.remixOfSongId === song.id && !r.isTakenDown);
                 remixes.forEach(remix => {
                     totalWeeklyStreams += remix.lastWeekStreams || 0;
                 });
+
+                if (totalWeeklyStreams === 0) {
+                    // New release estimation
+                    const baseStreams = Math.max(1000, Math.floor(Math.pow(aData.popularity || 0, 3) * 0.5));
+                    let hypeMultiplier = 1 + (aData.hype / 100);
+                    let labelMultiplier = aData.contract ? 1.5 : 1.0;
+                    totalWeeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * 1.5);
+                }
 
                 allContenders.push({
                     title: song.title,

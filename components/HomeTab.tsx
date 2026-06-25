@@ -187,7 +187,7 @@ const HomeTab: React.FC = () => {
             )}
             <header className="flex justify-between items-center flex-shrink-0">
                 <div>
-                    <p className="text-lg font-bold">Week {date.week}, {date.year}</p>
+                    <p className="text-lg font-bold">Week {date.week}, {date.year}{gameState.timeMode === 'daily' ? ` (Day ${date.day || 1})` : ''}</p>
                     <p className="text-sm text-zinc-400">{getWeekDate(date)}</p>
                     <p className="text-3xl font-bold text-green-400 mt-1">${formatNumber(money)}</p>
                 </div>

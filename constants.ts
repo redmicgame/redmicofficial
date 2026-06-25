@@ -373,9 +373,9 @@ export const VENUES = {
 
 // Business Constants
 export const MANAGERS: Manager[] = [
-    { id: 'm1', name: 'Local Booker', yearlyCost: 150000, popularityBoost: 2, autoGigsPerWeek: 1, unlocksTier: 5 },
-    { id: 'm2', name: 'Industry Veteran', yearlyCost: 500000, popularityBoost: 5, autoGigsPerWeek: 2, unlocksTier: 6 },
-    { id: 'm3', name: 'Power Broker', yearlyCost: 2000000, popularityBoost: 10, autoGigsPerWeek: 3, unlocksTier: 7 },
+    { id: 'm1', name: 'Tara Keys', bio: 'Sweet but serious during business', yearlyCost: 150000, popularityBoost: 2, autoGigsPerWeek: 1, unlocksTier: 5 },
+    { id: 'm2', name: 'Leanna Almanzar', bio: 'An experienced hand who knows everybody and gets things done efficiently.', yearlyCost: 500000, popularityBoost: 5, autoGigsPerWeek: 2, unlocksTier: 6 },
+    { id: 'm3', name: 'OJ Kingston', bio: "Fierce negotiator who doesn't take no for an answer, bringing you to the top.", yearlyCost: 2000000, popularityBoost: 10, autoGigsPerWeek: 3, unlocksTier: 7 },
 ];
 
 export const SECURITY_TEAMS: SecurityTeam[] = [

@@ -1158,6 +1158,42 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 activeArtistId: action.payload,
             };
         case 'PROGRESS_WEEK': {
+            const isDailyMode = state.timeMode === 'daily';
+            let autoGrammySubmissions: GameState['grammySubmissions'] = [];
+            let autoAmaSubmissions: any[] = [];
+            let newDay = state.date.day || 7;
+            let newWeek = state.date.week;
+            let newYear = state.date.year;
+            
+            let isWeeklyUpdate = true;
+            
+            if (isDailyMode) {
+                newDay++;
+                if (newDay > 7) {
+                    newDay = 1;
+                    newWeek++;
+                    isWeeklyUpdate = true;
+                } else {
+                    isWeeklyUpdate = false;
+                }
+            } else {
+                newWeek++;
+            }
+            
+            if (newWeek > 52) {
+                newWeek = 1;
+                newYear++;
+            }
+            
+            const newDate = { day: newDay, week: newWeek, year: newYear };
+
+            if (!isWeeklyUpdate) {
+                return {
+                    ...state,
+                    date: newDate
+                };
+            }
+
             // NPC Churn Logic: Simulate new songs releasing
             let newNpcsList = [...state.npcs];
             const CHURN_COUNT = 350;
@@ -1184,10 +1220,6 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             const newlyGeneratedAlbums = generateNpcAlbums(ALBUM_CHURN_COUNT, newestSongsForAlbums, state.npcImages);
             newNpcAlbums.unshift(...newlyGeneratedAlbums); // Add new albums to the top
 
-
-            const newWeek = state.date.week + 1;
-            const newYear = state.date.year + (newWeek > 52 ? 1 : 0);
-            const newDate = { week: newWeek > 52 ? 1 : newWeek, year: newYear };
 
             // --- NEW MUSIC FRIDAY TWEET LOGIC ---
             let popBaseNewMusicPost: XPost | null = null;
@@ -1279,6 +1311,39 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 const artistData = updatedArtistsData[artistId];
                 let newEmails: Email[] = [];
                 const artistProfileForEmail = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+
+                // --- MANAGER AUTOMATIONS ---
+                if (artistData.manager?.autoDistributeAscap && artistData.currentLabel !== 'Independent') {
+                    artistData.songs.forEach(song => {
+                        if (song.isReleased && !song.isAvailableOnStreaming && !song.isTakenDown) {
+                            song.isAvailableOnStreaming = true;
+                        }
+                    });
+                }
+                
+                if (artistData.manager?.autoMakeOfficialAudio) {
+                    const defaultThumbnail = artistData.artistVideoThumbnails.length > 0 ? artistData.artistVideoThumbnails[0] : '';
+                    artistData.songs.forEach(song => {
+                        if (song.isReleased && !song.isTakenDown) {
+                            const hasAudio = artistData.videos.some(v => v.songId === song.id && v.type === 'Custom' && v.title.includes('Official Audio'));
+                            if (!hasAudio) {
+                                const release = artistData.releases.find(r => r.songIds.includes(song.id));
+                                const thumbnail = release?.coverArt || defaultThumbnail;
+                                artistData.videos.push({
+                                    id: crypto.randomUUID(),
+                                    songId: song.id,
+                                    title: `${song.title} (Official Audio)`,
+                                    type: 'Custom',
+                                    views: 0,
+                                    thumbnail: thumbnail,
+                                    releaseDate: newDate,
+                                    artistId: artistId,
+                                    channelId: artistId,
+                                });
+                            }
+                        }
+                    });
+                }
 
                 if (popBaseNewMusicPost) {
                     artistData.xPosts.unshift(popBaseNewMusicPost);
@@ -3208,21 +3273,84 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 );
 
                 if (newDate.week === 40 && artistProfileForEmail && !hasGrammyEmailThisYear) {
+                    const autoSubmit = !!artistData.manager?.autoSubmitAwards;
                     const emailId = crypto.randomUUID();
                     newEmails.push({
                         id: emailId,
                         sender: 'Recording Academy',
                         senderIcon: 'grammys',
                         subject: `Submit Your Music for the ${newDate.year + 1} GRAMMY Awards`,
-                        body: `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in a few weeks.\n\n- The Recording Academy`,
+                        body: autoSubmit
+                            ? `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Your manager has automatically selected your best work from this year and submitted it for consideration.\n\n- The Recording Academy`
+                            : `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in a few weeks.\n\n- The Recording Academy`,
                         date: newDate,
-                        isRead: false,
+                        isRead: autoSubmit,
                         offer: {
                             type: 'grammySubmission',
                             emailId: emailId,
-                            isSubmitted: false
+                            isSubmitted: autoSubmit
                         }
                     });
+
+                    if (autoSubmit) {
+                        const thisYearReleases = artistData.releases.filter(r => r.releaseDate.year === newDate.year);
+                        const eligibleAlbums = thisYearReleases.filter(r => ['Album', 'EP', 'Album (Deluxe)', 'Compilation'].includes(r.type));
+                        const songIds = new Set(thisYearReleases.flatMap(r => r.songIds));
+                        const eligibleSongs = artistData.songs.filter(s => songIds.has(s.id));
+                        
+                        const bestAlbum = [...eligibleAlbums].sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
+                        const bestSong = [...eligibleSongs].sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
+                        const bestPopSong = [...eligibleSongs].filter(s => s.genre === 'Pop').sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
+                        const bestRapSong = [...eligibleSongs].filter(s => s.genre === 'Hip Hop').sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
+                        const bestRnbSong = [...eligibleSongs].filter(s => s.genre === 'R&B').sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
+                        
+                        const bestPopAlbum = [...eligibleAlbums].filter(a => {
+                            const releaseSongs = a.songIds.map(id => artistData.songs.find(s => s.id === id)).filter(s => !!s);
+                            if (releaseSongs.length === 0) return false;
+                            const genreCounts = releaseSongs.reduce((acc, song) => { acc[song!.genre] = (acc[song!.genre] || 0) + 1; return acc; }, {} as {[genre: string]: number});
+                            return Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b) === 'Pop';
+                        }).sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
+                        
+                        const bestRapAlbum = [...eligibleAlbums].filter(a => {
+                            const releaseSongs = a.songIds.map(id => artistData.songs.find(s => s.id === id)).filter(s => !!s);
+                            if (releaseSongs.length === 0) return false;
+                            const genreCounts = releaseSongs.reduce((acc, song) => { acc[song!.genre] = (acc[song!.genre] || 0) + 1; return acc; }, {} as {[genre: string]: number});
+                            return Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b) === 'Hip Hop';
+                        }).sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
+                        
+                        const bestRnbAlbum = [...eligibleAlbums].filter(a => {
+                            const releaseSongs = a.songIds.map(id => artistData.songs.find(s => s.id === id)).filter(s => !!s);
+                            if (releaseSongs.length === 0) return false;
+                            const genreCounts = releaseSongs.reduce((acc, song) => { acc[song!.genre] = (acc[song!.genre] || 0) + 1; return acc; }, {} as {[genre: string]: number});
+                            return Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b) === 'R&B';
+                        }).sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
+
+                        const firstReleaseYear = Math.min(...artistData.releases.map(r => r.releaseDate.year), newDate.year);
+                        const isBnaEligible = !artistData.hasSubmittedForBestNewArtist && firstReleaseYear === newDate.year;
+
+                        const submissions: GameState['grammySubmissions'] = [];
+                        if (bestSong) {
+                            submissions.push({ artistId: artistId, category: 'Record of the Year', itemId: bestSong.id, itemName: bestSong.title });
+                            submissions.push({ artistId: artistId, category: 'Song of the Year', itemId: bestSong.id, itemName: bestSong.title });
+                        }
+                        if (bestAlbum) {
+                            submissions.push({ artistId: artistId, category: 'Album of the Year', itemId: bestAlbum.id, itemName: bestAlbum.title });
+                        }
+                        if (isBnaEligible) {
+                            submissions.push({ artistId: artistId, category: 'Best New Artist', itemId: artistId, itemName: artistProfileForEmail.name });
+                        }
+                        if (bestPopSong) submissions.push({ artistId: artistId, category: 'Best Pop Song', itemId: bestPopSong.id, itemName: bestPopSong.title });
+                        if (bestRapSong) submissions.push({ artistId: artistId, category: 'Best Rap Song', itemId: bestRapSong.id, itemName: bestRapSong.title });
+                        if (bestRnbSong) submissions.push({ artistId: artistId, category: 'Best R&B Song', itemId: bestRnbSong.id, itemName: bestRnbSong.title });
+                        
+                        if (bestPopAlbum) submissions.push({ artistId: artistId, category: 'Pop Album', itemId: bestPopAlbum.id, itemName: bestPopAlbum.title });
+                        if (bestRapAlbum) submissions.push({ artistId: artistId, category: 'Rap Album', itemId: bestRapAlbum.id, itemName: bestRapAlbum.title });
+                        if (bestRnbAlbum) submissions.push({ artistId: artistId, category: 'R&B Album', itemId: bestRnbAlbum.id, itemName: bestRnbAlbum.title });
+
+                        // I will add an autoGrammySubmissions array!
+                        autoGrammySubmissions.push(...submissions);
+                        artistData.hasSubmittedForBestNewArtist = isBnaEligible ? true : artistData.hasSubmittedForBestNewArtist;
+                    }
                 }
                 
                 const hasAmaEmailThisYear = artistData.inbox.some(e => 
@@ -3230,21 +3358,53 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 );
 
                 if (newDate.week === 20 && artistProfileForEmail && !hasAmaEmailThisYear) {
+                    const autoSubmit = !!artistData.manager?.autoSubmitAwards;
                     const emailId = crypto.randomUUID();
                     newEmails.push({
                         id: emailId,
                         sender: 'American Music Awards',
                         senderIcon: 'amas',
                         subject: `Submit Your Music for the ${newDate.year} American Music Awards`,
-                        body: `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year} American Music Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in week 23.\n\n- AMAs`,
+                        body: autoSubmit
+                            ? `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year} American Music Awards is now open. Your manager has automatically selected your best work from this year and submitted it for consideration.\n\n- AMAs`
+                            : `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year} American Music Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in week 23.\n\n- AMAs`,
                         date: newDate,
-                        isRead: false,
+                        isRead: autoSubmit,
                         offer: {
                             type: 'amaSubmission',
                             emailId: emailId,
-                            isSubmitted: false
+                            isSubmitted: autoSubmit
                         }
                     });
+
+                    if (autoSubmit) {
+                        const thisYearReleases = artistData.releases.filter(r => r.releaseDate.year === newDate.year);
+                        const eligibleAlbums = thisYearReleases.filter(r => ['Album', 'EP', 'Album (Deluxe)', 'Compilation'].includes(r.type));
+                        const songIds = new Set(thisYearReleases.flatMap(r => r.songIds));
+                        const eligibleSongs = artistData.songs.filter(s => songIds.has(s.id));
+
+                        const bestAlbum = [...eligibleAlbums].sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
+                        const bestSong = [...eligibleSongs].sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
+
+                        const firstReleaseYear = Math.min(...artistData.releases.map(r => r.releaseDate.year), newDate.year);
+                        const isNewArtistEligible = !artistData.hasSubmittedForAmaNewArtist && firstReleaseYear === newDate.year;
+
+                        const submissions: any[] = [];
+                        submissions.push({ artistId: artistId, category: 'Artist of the Year', itemId: artistId, itemName: artistProfileForEmail.name });
+                        
+                        if (isNewArtistEligible) {
+                            submissions.push({ artistId: artistId, category: 'New Artist of the Year', itemId: artistId, itemName: artistProfileForEmail.name });
+                        }
+                        if (bestAlbum) {
+                            submissions.push({ artistId: artistId, category: 'Album of the Year', itemId: bestAlbum.id, itemName: bestAlbum.title });
+                        }
+                        if (bestSong) {
+                            submissions.push({ artistId: artistId, category: 'Song of the Year', itemId: bestSong.id, itemName: bestSong.title });
+                        }
+                        
+                        autoAmaSubmissions.push(...submissions);
+                        artistData.hasSubmittedForAmaNewArtist = isNewArtistEligible ? true : artistData.hasSubmittedForAmaNewArtist;
+                    }
                 }
                 
                 if (artistData.fanWarStatus) {
@@ -4827,17 +4987,20 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
                     
                     if (artistProfile && (artistData.contract || artistData.monthlyListeners >= 10000000)) {
-                        artistData.coachella = { year: newDate.year, status: 'invited' };
+                        const autoSubmit = !!artistData.manager?.autoSubmitCoachella;
+                        artistData.coachella = { year: newDate.year, status: autoSubmit ? 'submitted' : 'invited' };
                         const emailId = crypto.randomUUID();
                         artistData.inbox.push({
                             id: emailId,
                             sender: 'Coachella Booking',
                             senderIcon: 'coachella',
                             subject: `Coachella ${newDate.year} Lineup Submissions`,
-                            body: `Hi ${artistProfile.name},\n\nWe are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Based on your recent numbers, we would like to invite you to submit for a spot on the lineup.\n\nPlease note: This is not a guarantee of placement, but a request for consideration.\n\n- Coachella Team`,
+                            body: autoSubmit 
+                                ? `Hi ${artistProfile.name},\n\nWe are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Your manager has automatically submitted your materials for a spot on the lineup.\n\nPlease note: This is not a guarantee of placement, but a request for consideration.\n\n- Coachella Team`
+                                : `Hi ${artistProfile.name},\n\nWe are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Based on your recent numbers, we would like to invite you to submit for a spot on the lineup.\n\nPlease note: This is not a guarantee of placement, but a request for consideration.\n\n- Coachella Team`,
                             date: newDate,
-                            isRead: false,
-                            offer: { type: 'coachellaOffer', emailId, isSubmitted: false }
+                            isRead: autoSubmit,
+                            offer: { type: 'coachellaOffer', emailId, isSubmitted: autoSubmit }
                         });
                     }
                 }
@@ -5588,6 +5751,13 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         }
                     }
                 }
+            }
+
+            if (autoGrammySubmissions.length > 0) {
+                finalState.grammySubmissions = [...finalState.grammySubmissions, ...autoGrammySubmissions];
+            }
+            if (autoAmaSubmissions.length > 0) {
+                finalState.amaSubmissions = [...(finalState.amaSubmissions || []), ...autoAmaSubmissions];
             }
 
             return {
@@ -9984,6 +10154,25 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 },
             };
         }
+        case 'TOGGLE_MANAGER_SETTING': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            if (!activeData.manager) return state;
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        manager: {
+                            ...activeData.manager,
+                            [action.payload.setting]: !activeData.manager[action.payload.setting]
+                        }
+                    }
+                }
+            };
+        }
         case 'BUY_PLAYLIST_ENTRY': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -9991,8 +10180,41 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
             if (activeData.money < cost) return state;
 
+            const updatedPlaylists = [...(state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS)];
+            const playlistIndex = updatedPlaylists.findIndex(p => p.id === playlistId);
+            
+            if (playlistIndex !== -1) {
+                const playlist = { ...updatedPlaylists[playlistIndex] };
+                const newTracks = [...playlist.tracks];
+                
+                const existingIndex = newTracks.findIndex(t => t.songId === songId);
+                if (existingIndex !== -1) {
+                    newTracks.splice(existingIndex, 1);
+                }
+
+                const insertIndex = Math.max(0, Math.min(newTracks.length, position - 1));
+                const song = activeData.songs.find(s => s.id === songId);
+                const artistProfile = state.allPlayerArtists?.find(a => a.id === state.activeArtistId) || state.soloArtist || state.group;
+                if (song && artistProfile) {
+                    newTracks.splice(insertIndex, 0, { 
+                        songId: song.id, 
+                        artistName: artistProfile.name,
+                        artistId: state.activeArtistId,
+                        title: song.title,
+                        coverArt: song.coverArt,
+                        position: insertIndex + 1,
+                        addedDate: state.date 
+                    });
+                }
+                
+                if (newTracks.length > 50) newTracks.pop();
+                playlist.tracks = newTracks.map((t, i) => ({ ...t, position: i + 1 }));
+                updatedPlaylists[playlistIndex] = playlist;
+            }
+
             return {
                 ...state,
+                spotifyPlaylists: updatedPlaylists,
                 artistsData: {
                     ...state.artistsData,
                     [state.activeArtistId]: {

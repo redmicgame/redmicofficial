@@ -170,17 +170,18 @@ const ManagementView: React.FC = () => {
                 </header>
                 <main className="p-4 space-y-6">
                     {currentManager ? (
-                         <div className="bg-zinc-800 p-4 rounded-lg">
+                        <div className="bg-zinc-800 p-4 rounded-lg">
                             <h2 className="text-xl font-bold">Your Manager</h2>
                             <div className="mt-4 text-center">
                                 <h3 className="text-2xl font-bold">{currentManager.name}</h3>
+                                <p className="text-sm italic text-zinc-300 mt-1">"{currentManager.bio}"</p>
                                 <p className="text-zinc-400 mt-2">Contract ends: W{manager!.contractEndDate.week}, {manager!.contractEndDate.year}</p>
                                 <button onClick={() => setConfirmFire(true)} className="mt-4 bg-red-600/20 text-red-400 font-bold px-4 py-2 rounded-md text-sm hover:bg-red-600/40">
                                     Fire Manager
                                 </button>
                             </div>
                             <div className="mt-6 pt-4 border-t border-zinc-700">
-                                <h3 className="font-bold mb-2">Manager Actions</h3>
+                                <h3 className="font-bold mb-4">Manager Actions</h3>
                                 <button
                                     onClick={() => dispatch({type: 'REQUEST_PROMO_INTERVIEW'})}
                                     disabled={activeArtistData.requestedPromoInterview}
@@ -191,13 +192,33 @@ const ManagementView: React.FC = () => {
                                 <button
                                     onClick={() => setIsBuyingPlaylist(true)}
                                     disabled={!currentManager}
-                                    className="w-full bg-green-600 font-bold p-2 text-sm rounded-lg hover:bg-green-500 disabled:bg-zinc-600 disabled:text-zinc-400"
+                                    className="w-full bg-green-600 font-bold p-2 text-sm rounded-lg hover:bg-green-500 disabled:bg-zinc-600 disabled:text-zinc-400 mb-6"
                                 >
                                     {currentManager ? 'Buy Playlist Placement' : 'Requires a Manager'}
                                 </button>
                                 {activeArtistData.requestedPromoInterview && (
-                                    <p className="text-xs text-zinc-400 mt-2 text-center">Your manager is looking for opportunities. Check your inbox next week.</p>
+                                    <p className="text-xs text-zinc-400 mt-2 text-center mb-6">Your manager is looking for opportunities. Check your inbox next week.</p>
                                 )}
+
+                                <h3 className="font-bold mb-3">Automation Settings</h3>
+                                <div className="space-y-3">
+                                    <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg cursor-pointer hover:bg-zinc-700">
+                                        <span className="text-sm font-medium">Auto-distribute free songs from ASCAP</span>
+                                        <input type="checkbox" checked={!!manager!.autoDistributeAscap} onChange={() => dispatch({ type: 'TOGGLE_MANAGER_SETTING', payload: { setting: 'autoDistributeAscap' }})} className="w-5 h-5 accent-red-600" />
+                                    </label>
+                                    <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg cursor-pointer hover:bg-zinc-700">
+                                        <span className="text-sm font-medium">Auto-submit best work to Awards</span>
+                                        <input type="checkbox" checked={!!manager!.autoSubmitAwards} onChange={() => dispatch({ type: 'TOGGLE_MANAGER_SETTING', payload: { setting: 'autoSubmitAwards' }})} className="w-5 h-5 accent-red-600" />
+                                    </label>
+                                    <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg cursor-pointer hover:bg-zinc-700">
+                                        <span className="text-sm font-medium">Auto-submit to Coachella</span>
+                                        <input type="checkbox" checked={!!manager!.autoSubmitCoachella} onChange={() => dispatch({ type: 'TOGGLE_MANAGER_SETTING', payload: { setting: 'autoSubmitCoachella' }})} className="w-5 h-5 accent-red-600" />
+                                    </label>
+                                    <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg cursor-pointer hover:bg-zinc-700">
+                                        <span className="text-sm font-medium">Auto-make official audio (Custom video)</span>
+                                        <input type="checkbox" checked={!!manager!.autoMakeOfficialAudio} onChange={() => dispatch({ type: 'TOGGLE_MANAGER_SETTING', payload: { setting: 'autoMakeOfficialAudio' }})} className="w-5 h-5 accent-red-600" />
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     ) : (
@@ -212,6 +233,7 @@ const ManagementView: React.FC = () => {
                                         <div key={m.id} className="bg-zinc-800 p-4 rounded-lg flex flex-col gap-3">
                                             <div>
                                                 <h3 className="text-xl font-bold">{m.name}</h3>
+                                                <p className="text-sm italic text-zinc-300 mb-1">"{m.bio}"</p>
                                                 <p className={`font-bold text-lg ${money >= m.yearlyCost ? 'text-green-400' : 'text-red-500'}`}>${formatNumber(m.yearlyCost)}<span className="text-sm font-normal text-zinc-400">/year</span></p>
                                                 <ul className="list-disc list-inside text-sm text-zinc-300 mt-2 space-y-1">
                                                     <li>+{m.popularityBoost} yearly popularity</li>
