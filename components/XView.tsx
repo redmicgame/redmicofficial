@@ -506,8 +506,33 @@ export const Post: React.FC<{ post: XPost; author: XUser | undefined; onQuote?: 
 };
 
 const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) => {
-    const { activeArtistData } = useGame();
-    const { xPosts, xUsers } = activeArtistData!;
+    const { gameState, activeArtistData } = useGame();
+    
+    // If playing as a member of a group, combine group and member posts
+    let xPosts = [...(activeArtistData?.xPosts || [])];
+    let xUsers = [...(activeArtistData?.xUsers || [])];
+    
+    if (gameState.group && gameState.group.members.some(m => m.id === gameState.activeArtistId)) {
+        const groupData = gameState.artistsData[gameState.group.id];
+        if (groupData) {
+            const groupPostsIds = new Set(xPosts.map(p => p.id));
+            const groupUsersIds = new Set(xUsers.map(u => u.id));
+            
+            groupData.xPosts.forEach(p => {
+                if (!groupPostsIds.has(p.id)) {
+                    xPosts.push(p);
+                    groupPostsIds.add(p.id);
+                }
+            });
+            
+            groupData.xUsers.forEach(u => {
+                if (!groupUsersIds.has(u.id)) {
+                    xUsers.push(u);
+                    groupUsersIds.add(u.id);
+                }
+            });
+        }
+    }
 
     const [displayCount, setDisplayCount] = useState(20);
 
@@ -568,8 +593,45 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) =>
 };
 
 const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({ onQuote }) => {
-    const { activeArtistData, dispatch } = useGame();
-    const { xTrends, xUsers, xPosts } = activeArtistData!;
+    const { gameState, activeArtistData, dispatch } = useGame();
+    
+    // If playing as a member of a group, combine group and member posts
+    let xPosts = [...(activeArtistData?.xPosts || [])];
+    let xUsers = [...(activeArtistData?.xUsers || [])];
+    let xTrends = [...(activeArtistData?.xTrends || [])];
+    
+    if (gameState.group && gameState.group.members.some(m => m.id === gameState.activeArtistId)) {
+        const groupData = gameState.artistsData[gameState.group.id];
+        if (groupData) {
+            const groupPostsIds = new Set(xPosts.map(p => p.id));
+            const groupUsersIds = new Set(xUsers.map(u => u.id));
+            
+            groupData.xPosts.forEach(p => {
+                if (!groupPostsIds.has(p.id)) {
+                    xPosts.push(p);
+                    groupPostsIds.add(p.id);
+                }
+            });
+            
+            groupData.xUsers.forEach(u => {
+                if (!groupUsersIds.has(u.id)) {
+                    xUsers.push(u);
+                    groupUsersIds.add(u.id);
+                }
+            });
+            // Trends don't have IDs but can just be merged (they are usually the same or similar)
+            // But let's just use the group's trends as well to enrich the list. We'll take top 10 unique ones by title.
+            const trendTitles = new Set(xTrends.map(t => t.title));
+            groupData.xTrends.forEach(t => {
+                if (!trendTitles.has(t.title)) {
+                    xTrends.push(t);
+                    trendTitles.add(t.title);
+                }
+            });
+        }
+    }
+    xTrends = xTrends.sort((a, b) => b.postCount - a.postCount);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<{users: XUser[], posts: XPost[]}>({users: [], posts: []});
 

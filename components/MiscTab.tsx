@@ -284,6 +284,69 @@ const MiscTab: React.FC = () => {
                     )}
                 </div>
 
+                {gameState.group && (
+                    <div className="bg-zinc-800 p-4 rounded-lg">
+                        <h3 className="font-bold text-lg mb-2 text-green-500">Transfer Funds</h3>
+                        <p className="text-sm text-zinc-400 mb-4">Transfer money between yourself, the group account, or other members.</p>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-1">Transfer To</label>
+                                <select 
+                                    id="transfer-recipient"
+                                    className="w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm h-10 px-3 text-white"
+                                >
+                                    <option value="">Select Recipient...</option>
+                                    {gameState.group.id !== gameState.activeArtistId && (
+                                        <option value={gameState.group.id}>{gameState.group.name} (Group Account)</option>
+                                    )}
+                                    {gameState.group.members.filter(m => m.id !== gameState.activeArtistId).map(m => (
+                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-1">Amount ($)</label>
+                                <input 
+                                    type="number" 
+                                    id="transfer-amount"
+                                    min="1" 
+                                    max={activeArtistData.money}
+                                    placeholder={`Max: $${formatNumber(activeArtistData.money)}`}
+                                    className="w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm h-10 px-3 text-white"
+                                />
+                            </div>
+                            
+                            <button 
+                                onClick={() => {
+                                    const recipientId = (document.getElementById('transfer-recipient') as HTMLSelectElement).value;
+                                    const amountStr = (document.getElementById('transfer-amount') as HTMLInputElement).value;
+                                    const amount = parseInt(amountStr);
+                                    
+                                    if (recipientId && amount && amount > 0 && amount <= activeArtistData.money) {
+                                        dispatch({
+                                            type: 'TRANSFER_MONEY',
+                                            payload: {
+                                                fromId: gameState.activeArtistId,
+                                                toId: recipientId,
+                                                amount: amount
+                                            }
+                                        });
+                                        (document.getElementById('transfer-amount') as HTMLInputElement).value = '';
+                                        alert(`Successfully transferred $${formatNumber(amount)}.`);
+                                    } else {
+                                        alert('Invalid amount or recipient.');
+                                    }
+                                }}
+                                className="w-full h-10 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+                            >
+                                Send Money
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                  <div className="bg-zinc-800 p-4 rounded-lg">
                     <h3 className="font-bold text-lg mb-2">X Fan Content (Images)</h3>
                     <p className="text-sm text-zinc-400 mb-4">Upload images of your artist here. Fan accounts on X will randomly use them in their posts about you.</p>

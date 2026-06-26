@@ -917,6 +917,29 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     id: member.id, name: member.name, username: member.name.replace(/\s/g, '').toLowerCase(),
                     avatar: member.image, isVerified: true, isPlayer: true, bio: `member of ${group.name}`, followersCount: 0, followingCount: 0,
                 };
+                
+                const memberAddictionUser: XUser = {
+                    id: `addiction_fan_${member.id}`,
+                    name: `addiction to ${member.name}`,
+                    username: `addiction${member.name.replace(/\s/g, '').toLowerCase()}`,
+                    avatar: member.image,
+                    isVerified: false,
+                    bio: `the very best of ${member.name}`,
+                    followersCount: Math.floor(Math.random() * 50000) + 10000,
+                    followingCount: 1,
+                };
+                
+                const memberChartsUser: XUser = {
+                    id: `charts_${member.id}`,
+                    name: `${member.name} Charts`,
+                    username: `${member.name.replace(/\s/g, '').toLowerCase()}charts`,
+                    avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFEQTFGMiIvPjxyZWN0IHg9IjE2IiB5PSIzMiIgd2lkdGg9IjgiIGhlaWdodD0iMTYiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iMjgiIHk9IjI0IiB3aWR0aD0iOCIgaGVpZHRoPSIyNCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSI0MCIgeT0iMTYiIHdpZHRoPSI4IiBoZWlnaHQ9IjMyIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==',
+                    isVerified: false,
+                    bio: `stats & updates for ${member.name}`,
+                    followersCount: Math.floor(Math.random() * 10000) + 2000,
+                    followingCount: 1,
+                };
+
                  newArtistsData[member.id] = {
                     ...initialArtistData,
                     money: 25000, // Members start with less personal cash
@@ -926,7 +949,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                     tiktokFollowers: Math.floor(Math.random() * 4000) + 1000,
                     instagramFollowers: Math.floor(Math.random() * 5000) + 1000,
                     inbox: [createWelcomeEmail(member.name)],
-                    xUsers: [memberXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, addictionUser, chartsFanUser],
+                    xUsers: [memberXUser, popBaseUser, radioUpdaterUser, chartDataUser, spotifySnapshotUser, tmzUser, memberAddictionUser, memberChartsUser],
                     xPosts: initialXPosts,
                     xTrends: initialTrends,
                     xFollowingIds: [],
@@ -1175,6 +1198,25 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 ...state,
                 activeArtistId: action.payload,
             };
+        case 'TRANSFER_MONEY': {
+            const { fromId, toId, amount } = action.payload;
+            const newArtistsData = { ...state.artistsData };
+            
+            if (newArtistsData[fromId] && newArtistsData[toId] && newArtistsData[fromId].money >= amount) {
+                newArtistsData[fromId] = {
+                    ...newArtistsData[fromId],
+                    money: newArtistsData[fromId].money - amount
+                };
+                newArtistsData[toId] = {
+                    ...newArtistsData[toId],
+                    money: newArtistsData[toId].money + amount
+                };
+            }
+            return {
+                ...state,
+                artistsData: newArtistsData
+            };
+        }
         case 'PROGRESS_WEEK': {
             const isDailyMode = state.timeMode === 'daily';
             let autoGrammySubmissions: GameState['grammySubmissions'] = [];
@@ -1324,6 +1366,19 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             let tiktokEncounterThisWeek: ActiveEncounter | null = null;
             let tourDynamicPricingEncounter: ActiveEncounter | null = null;
             let tourArrestEncounter: ActiveEncounter | null = null;
+
+            if (state.group) {
+                const groupData = updatedArtistsData[state.group.id];
+                if (groupData) {
+                    state.group.members.forEach(m => {
+                        const mData = updatedArtistsData[m.id];
+                        if (mData) {
+                            mData.hype = groupData.hype;
+                            mData.popularity = Math.max(0, Math.floor(groupData.popularity * 0.75));
+                        }
+                    });
+                }
+            }
 
             for (const artistId in updatedArtistsData) {
                 const artistData = updatedArtistsData[artistId];

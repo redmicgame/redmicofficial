@@ -36,6 +36,9 @@ const StudioView: React.FC = () => {
     const [feature1, setFeature1] = useState<{ artistName: string; cost: number } | null>(null);
     const [feature2, setFeature2] = useState<{ artistName: string; cost: number } | null>(null);
 
+    const [isSoloMemberSong, setIsSoloMemberSong] = useState(false);
+    const [soloMemberId, setSoloMemberId] = useState<string>('');
+
     const REMIX_TYPES = [
         'Sped Up',
         'Slowed Down',
@@ -186,7 +189,28 @@ const StudioView: React.FC = () => {
         const quality = (Math.floor(Math.random() * (max - min + 1)) + min) + qualityBoost;
         const finalQuality = Math.min(100, quality);
         
-        const songTitle = collaboration ? `${title.trim()} (feat. ${collaboration.artistName})` : title.trim();
+        let songTitle = title.trim();
+        let currentCollaboration = collaboration;
+        
+        if (isSoloMemberSong && soloMemberId && gameState.group) {
+            const member = gameState.group.members.find(m => m.id === soloMemberId);
+            if (member) {
+                songTitle = `${songTitle} (${member.name} Solo)`;
+                // If they also picked a feature, we can just keep currentCollaboration as is,
+                // but the user said "and will feature the solo member on the song".
+                // We could set currentCollaboration to the member, but then we lose the feature.
+                // If we want to strictly follow "will feature the solo member on the song", we override it:
+                if (!currentCollaboration) {
+                     currentCollaboration = { artistName: member.name, cost: 0 };
+                } else {
+                     // If they picked a feature, it's (Member Solo) (feat. Collaborator). 
+                     // They already get the benefit. But let's just make it clear.
+                     songTitle = `${songTitle} (feat. ${currentCollaboration.artistName})`;
+                }
+            }
+        } else if (currentCollaboration) {
+            songTitle = `${songTitle} (feat. ${currentCollaboration.artistName})`;
+        }
 
         const CONTROVERSIAL_PRODUCERS = ["Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"];
         const controversialContributors = [
@@ -217,7 +241,7 @@ const StudioView: React.FC = () => {
             explicit: isExplicit,
             artistId: activeArtist.id,
             removedStreams: 0,
-            collaboration: collaboration ? { ...collaboration, qualityBoost } : undefined,
+            collaboration: currentCollaboration ? { ...currentCollaboration, qualityBoost } : undefined,
             remixOfSongId: isRemix ? remixOfSongId : undefined,
             dailyStreams: [],
             producers,
@@ -505,6 +529,23 @@ const StudioView: React.FC = () => {
                             <input id="cover-art" type="file" accept="image/*" className="hidden" onChange={handleCoverArtUpload} />
                         </div>
                         
+                        {gameState.group && activeArtist.id === gameState.group.id && (
+                            <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={isSoloMemberSong} onChange={e => setIsSoloMemberSong(e.target.checked)} className="rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700"/>
+                                    <span className="text-sm font-bold text-white">Solo Song (By Member)</span>
+                                </label>
+                                {isSoloMemberSong && (
+                                    <select value={soloMemberId} onChange={e => setSoloMemberId(e.target.value)} className="mt-3 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                        <option value="">Select Member...</option>
+                                        {gameState.group.members.map(m => (
+                                            <option key={m.id} value={m.id}>{m.name}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                        )}
+
                         <div>
                             <label htmlFor="song-title" className="block text-sm font-medium text-zinc-300">Song Title</label>
                             <input type="text" id="song-title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>

@@ -1296,6 +1296,7 @@ export type GameAction =
     | { type: 'SWITCH_YOUTUBE_CHANNEL'; payload: 'artist' | 'label' }
     | { type: 'APPLY_YOUTUBE_PARTNER' }
     | { type: 'CHANGE_ACTIVE_ARTIST'; payload: string }
+    | { type: 'TRANSFER_MONEY'; payload: { fromId: string; toId: string; amount: number } }
     | { type: 'PROGRESS_WEEK' }
     | { type: 'RECORD_SONG'; payload: { song: Song; cost: number } }
     | { type: 'CREATE_REMIX_PACK'; payload: { songs: Song[]; cost: number } }
