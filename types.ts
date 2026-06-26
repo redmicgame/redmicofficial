@@ -666,6 +666,19 @@ export interface XUser {
     bio?: string;
     followersCount: number;
     followingCount: number;
+    xMonetization?: {
+        subscriptions: {
+            isActive: boolean;
+            perks: string[];
+            price: number;
+            subscribers: number;
+        };
+        revenueSharing: {
+            isActive: boolean;
+            eligibleViewsThisMonth: number;
+            lifetimeEarnings: number;
+        };
+    };
 }
 
 export interface XPollOption {
@@ -838,7 +851,7 @@ export interface OscarCategory {
     winner?: OscarContender;
 }
 
-export type GameView = 'game' | 'myspace' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'xCreateSpace' | 'xActiveSpace' | 'xAnalytics' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent' | 'radioDash' | 'radioCharts' | 'promoInterview' | 'chartPredictions' | 'limewire' | 'ascap';
+export type GameView = 'game' | 'myspace' | 'spotify' | 'studio' | 'release' | 'pitchfork' | 'youtube' | 'createVideo' | 'merchStore' | 'inbox' | 'catalog' | 'promote' | 'billboard' | 'spotifyChart' | 'youtubeVideoDetail' | 'youtubeStudio' | 'gigs' | 'labelReleasePlan' | 'createGeniusInterview' | 'x' | 'xProfile' | 'xChatDetail' | 'xCreateSpace' | 'xActiveSpace' | 'xAnalytics' | 'xCreatorStudio' | 'spotifyForArtists' | 'createFallonPerformance' | 'createFallonInterview' | 'spotifyAlbumCountdown' | 'createLabel' | 'manageLabel' | 'albumPromo' | 'billboardAlbums' | 'achievements' | 'redMicProUnlock' | 'redMicProDashboard' | 'wikipedia' | 'grammys' | 'submitForGrammys' | 'createGrammyPerformance' | 'grammyRedCarpet' | 'contractRenewal' | 'itunes' | 'onlyfansSetup' | 'onlyfans' | 'createOnlyFansPost' | 'chartHistory' | 'albumSalesChart' | 'labels' | 'releaseHub' | 'createSoundtrack' | 'spotifySoundtrackDetail' | 'gameGuide' | 'tours' | 'createTour' | 'tourDetail' | 'management' | 'security' | 'spotifyTopSongs' | 'spotifyTopAlbums' | 'createVogueFeature' | 'spotifyWrapped' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'createFeature' | 'createFeatureVideo' | 'createOnTheRadarPerformance' | 'createTrshdPerformance' | 'appleMusic' | 'oscars' | 'submitForOscars' | 'createOscarPerformance' | 'oscarRedCarpet' | 'switchSave' | 'redCarpetHistory' | 'amas' | 'submitForAmas' | 'createAmaPerformance' | 'amaRedCarpet' | 'dating' | 'google' | 'tiktok' | 'instagram' | 'tmzArticle' | 'riaa' | 'attendEvent' | 'radioDash' | 'radioCharts' | 'promoInterview' | 'chartPredictions' | 'limewire' | 'ascap';
 
 export type Tab = 'Home' | 'Apps' | 'Charts' | 'Misc' | 'Business';
 
@@ -1028,6 +1041,11 @@ export interface ArtistData {
     lastFourWeeksStreams: number[];
     lastFourWeeksViews: number[];
     youtubeSubscribers: number;
+    youtubePartnerProgram?: {
+        isActive: boolean;
+        eligibleViewsThisQuarter: number;
+        lifetimeEarnings: number;
+    };
     tiktokFollowers: number;
     tiktokVideos: TikTokVideo[];
     instagramFollowers?: number;
@@ -1276,6 +1294,7 @@ export type GameAction =
     | { type: 'SUBMIT_COACHELLA'; payload: { emailId: string } }
     | { type: 'CHANGE_TAB'; payload: Tab }
     | { type: 'SWITCH_YOUTUBE_CHANNEL'; payload: 'artist' | 'label' }
+    | { type: 'APPLY_YOUTUBE_PARTNER' }
     | { type: 'CHANGE_ACTIVE_ARTIST'; payload: string }
     | { type: 'PROGRESS_WEEK' }
     | { type: 'RECORD_SONG'; payload: { song: Song; cost: number } }
@@ -1353,6 +1372,8 @@ export type GameAction =
     | { type: 'UNFOLLOW_X_USER'; payload: string }
     | { type: 'SEND_X_MESSAGE'; payload: { chatId: string; message: XMessage; } }
     | { type: 'APPEAL_X_SUSPENSION' }
+    | { type: 'ENABLE_X_SUBSCRIPTIONS'; payload: { price: number; perks: string[] } }
+    | { type: 'ENABLE_X_REVENUE_SHARING' }
     | { type: 'SET_ARTIST_PICK'; payload: { itemId: string; itemType: 'song' | 'release'; message: string; } }
     | { type: 'PITCH_TO_PLAYLIST'; payload: { songId: string } }
     | { type: 'CREATE_CUSTOM_LABEL'; payload: { label: CustomLabel; cost: number; membersToSign: string[] } }

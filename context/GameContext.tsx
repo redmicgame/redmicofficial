@@ -1011,6 +1011,24 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 ...state,
                 activeYoutubeChannel: action.payload,
             };
+        case 'APPLY_YOUTUBE_PARTNER': {
+            if (!state.activeArtistId) return state;
+            const artistData = state.artistsData[state.activeArtistId];
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...artistData,
+                        youtubePartnerProgram: {
+                            isActive: true,
+                            eligibleViewsThisQuarter: 0,
+                            lifetimeEarnings: 0
+                        }
+                    }
+                }
+            };
+        }
         case 'SUBSCRIBE_CHART_PREDICTIONS': {
             if (!state.activeArtistId) return state;
             const activeData = state.artistsData[state.activeArtistId];
@@ -2349,6 +2367,12 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             weeklyStreams = Math.floor(weeklyStreams * christmasMultiplier);
                         }
 
+                        // Single Permanent Boost
+                        const isSingle = artistData.releases.some(r => r.type === 'Single' && r.songIds.includes(song.id));
+                        if (isSingle) {
+                            weeklyStreams = Math.floor(weeklyStreams * 1.10); // 10% boost
+                        }
+
                         if (song.pitchforkBoost) {
                             weeklyStreams = Math.floor(weeklyStreams * (Math.random() * 2 + 2));
                         }
@@ -2582,7 +2606,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                 const updatedLastFourWeeksViews = [totalWeeklyViews, ...artistData.lastFourWeeksViews].slice(0, 4);
 
-                const newSubscribersGained = Math.floor(totalWeeklyViews / (350 - Math.min(300, artistData.youtubeSubscribers / 4000)));
+                const newSubscribersGained = Math.floor(totalWeeklyViews / (450 - Math.min(350, artistData.youtubeSubscribers / 4000)));
                 const newYoutubeSubscribers = artistData.youtubeSubscribers + newSubscribersGained;
 
                 const streamIncome = totalWeeklyStreams * STREAM_INCOME_MULTIPLIER;
@@ -2847,6 +2871,69 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
                 const artistProfile = state.soloArtist || state.group?.members.find(m => m.id === artistId) || state.group;
 
+                if (newDate.week % 4 === 0) {
+                    let totalXMonetizationEarnings = 0;
+                    const playerUserId = artistData.selectedPlayerXUserId || artistData.xUsers?.find(u => u.isPlayer)?.id;
+                    if (playerUserId && artistData.xUsers) {
+                        artistData.xUsers = artistData.xUsers.map(u => {
+                            if (u.id === playerUserId && u.xMonetization) {
+                                let earnings = 0;
+                                let updatedRevenueSharing = { ...u.xMonetization.revenueSharing };
+                                let updatedSubscriptions = { ...u.xMonetization.subscriptions };
+
+                                if (u.xMonetization.revenueSharing?.isActive) {
+                                    const fourWeeksAgoYear = newDate.week > 4 ? newDate.year : newDate.year - 1;
+                                    const fourWeeksAgoWeek = newDate.week > 4 ? newDate.week - 4 : 52 - (4 - newDate.week);
+                                    
+                                    const eligiblePosts = (artistData.xPosts || []).filter(p => p.authorId === playerUserId && 
+                                        ((p.date.year === newDate.year && p.date.week > fourWeeksAgoWeek && p.date.week <= newDate.week) ||
+                                         (p.date.year === fourWeeksAgoYear && p.date.week > fourWeeksAgoWeek))
+                                    );
+                                    
+                                    const totalViews = eligiblePosts.reduce((sum, p) => sum + (p.views || 0), 0);
+                                    updatedRevenueSharing.eligibleViewsThisMonth = totalViews;
+                                    
+                                    if (totalViews > 0) {
+                                        const cpm = 0.00012 + (Math.random() * 0.000055); 
+                                        const rev = Math.floor(totalViews * cpm);
+                                        earnings += rev;
+                                        updatedRevenueSharing.lifetimeEarnings += rev;
+                                    }
+                                }
+
+                                if (u.xMonetization.subscriptions?.isActive) {
+                                    const baseSubscribers = Math.max(0, Math.floor(u.followersCount * 0.001)); // 0.1% of followers might subscribe
+                                    const newSubscribers = Math.floor(baseSubscribers * (0.8 + Math.random() * 0.4));
+                                    updatedSubscriptions.subscribers = newSubscribers;
+                                    const rev = Math.floor(newSubscribers * updatedSubscriptions.price);
+                                    earnings += rev;
+                                }
+                                
+                                totalXMonetizationEarnings += earnings;
+                                
+                                return {
+                                    ...u,
+                                    xMonetization: {
+                                        ...u.xMonetization,
+                                        subscriptions: updatedSubscriptions,
+                                        revenueSharing: updatedRevenueSharing
+                                    }
+                                };
+                            }
+                            return u;
+                        });
+                    }
+                    
+                    if (totalXMonetizationEarnings > 0 && artistId === state.activeArtistId) {
+                        artistData.money += totalXMonetizationEarnings;
+                        newEmails.push({
+                            id: crypto.randomUUID(), sender: 'X', subject: 'Your Creator Earnings',
+                            body: `Hi ${artistProfile?.name},\n\nYour X monetization earnings for the last month have been processed.\n\nYou earned $${totalXMonetizationEarnings.toLocaleString()} from revenue sharing and subscriptions.\n\nKeep creating!\n- X Team`,
+                            date: newDate, isRead: false, senderIcon: 'x'
+                        });
+                    }
+                }
+
                 const eraConfTemp = getEraConfiguration(newDate.year);
                 if (newDate.week % 4 === 0 && newStreamsThisMonth > 0 && artistProfile && eraConfTemp.streamingActive) {
                     newEmails.push({
@@ -2857,9 +2944,23 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 }
 
                 if (newDate.week > 1 && newDate.week % 13 === 0 && (newViewsThisQuarter > 0 || newSubsThisQuarter > 0) && artistProfile && eraConfTemp.youtubeAvailable) {
+                    let yppEarnings = 0;
+                    let extraText = '';
+                    
+                    if (artistData.youtubePartnerProgram?.isActive) {
+                        const ratePerView = (Math.random() * (0.005 - 0.003)) + 0.003;
+                        yppEarnings = Math.floor(newViewsThisQuarter * ratePerView);
+                        
+                        if (yppEarnings > 0 && artistId === state.activeArtistId) {
+                            artistData.money += yppEarnings;
+                            artistData.youtubePartnerProgram.lifetimeEarnings += yppEarnings;
+                        }
+                        extraText = `\n\nAs a YouTube Partner, you've earned $${yppEarnings.toLocaleString()} from your channel's viewership this quarter!`;
+                    }
+
                     newEmails.push({
                         id: crypto.randomUUID(), sender: 'YouTube', subject: 'Your Quarterly Channel Recap',
-                        body: `Dear ${artistProfile.name},\n\nLet's check out your channel's growth over the last 3 months. You've gained ${newSubsThisQuarter.toLocaleString()} subscribers and your videos received ${newViewsThisQuarter.toLocaleString()} views.\n\nKeep creating!\n- The YouTube Team`,
+                        body: `Dear ${artistProfile.name},\n\nLet's check out your channel's growth over the last 3 months. You've gained ${newSubsThisQuarter.toLocaleString()} subscribers and your videos received ${newViewsThisQuarter.toLocaleString()} views.${extraText}\n\nKeep creating!\n- The YouTube Team`,
                         date: newDate, isRead: false, senderIcon: 'youtube'
                     });
                 }
@@ -8064,6 +8165,77 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 };
             }
             return state;
+        }
+        case 'ENABLE_X_SUBSCRIPTIONS': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const playerUserId = activeData.selectedPlayerXUserId || activeData.xUsers.find(u => u.isPlayer)?.id;
+            if (!playerUserId) return state;
+
+            const updatedUsers = activeData.xUsers.map(u => {
+                if (u.id === playerUserId) {
+                    return {
+                        ...u,
+                        xMonetization: {
+                            ...u.xMonetization,
+                            subscriptions: {
+                                isActive: true,
+                                perks: action.payload.perks,
+                                price: action.payload.price,
+                                subscribers: 0
+                            },
+                            revenueSharing: u.xMonetization?.revenueSharing || { isActive: false, eligibleViewsThisMonth: 0, lifetimeEarnings: 0 }
+                        }
+                    };
+                }
+                return u;
+            });
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xUsers: updatedUsers
+                    }
+                }
+            };
+        }
+        case 'ENABLE_X_REVENUE_SHARING': {
+            if (!state.activeArtistId) return state;
+            const activeData = state.artistsData[state.activeArtistId];
+            const playerUserId = activeData.selectedPlayerXUserId || activeData.xUsers.find(u => u.isPlayer)?.id;
+            if (!playerUserId) return state;
+
+            const updatedUsers = activeData.xUsers.map(u => {
+                if (u.id === playerUserId) {
+                    return {
+                        ...u,
+                        xMonetization: {
+                            ...u.xMonetization,
+                            subscriptions: u.xMonetization?.subscriptions || { isActive: false, perks: [], price: 0, subscribers: 0 },
+                            revenueSharing: {
+                                isActive: true,
+                                eligibleViewsThisMonth: 0,
+                                lifetimeEarnings: u.xMonetization?.revenueSharing?.lifetimeEarnings || 0
+                            }
+                        }
+                    };
+                }
+                return u;
+            });
+
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xUsers: updatedUsers
+                    }
+                }
+            };
         }
         case 'SET_ARTIST_PICK': {
             if (!state.activeArtistId) return state;

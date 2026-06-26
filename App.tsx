@@ -29,6 +29,7 @@ import XChatView from './components/XChatView';
 import XCreateSpaceView from './components/XCreateSpaceView';
 import XActiveSpaceView from './components/XActiveSpaceView';
 import XAnalyticsView from './components/XAnalyticsView';
+import XCreatorStudioView from './components/XCreatorStudioView';
 import SpotifyForArtistsView from './components/SpotifyForArtistsView';
 import AppleMusicForArtistsView from './components/AppleMusicForArtistsView';
 import './utils/xContentGenerator';
@@ -233,6 +234,8 @@ const AppContent: React.FC = () => {
                 return <XActiveSpaceView />;
             case 'xAnalytics':
                 return <XAnalyticsView />;
+            case 'xCreatorStudio':
+                return <XCreatorStudioView />;
             case 'xChatDetail':
                 return <XChatView />;
             case 'redMicProUnlock':
