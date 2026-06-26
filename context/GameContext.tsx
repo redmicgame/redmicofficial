@@ -3615,7 +3615,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         return { ...s, chartRank: chartInfo?.rank };
                     });
 
-                    const { newPosts, newUsers, newTrends, newChats, newMessages } = generateWeeklyXContent(artistData, { ...state, date: newDate }, artistProfile.name, playerChartSongs, leakedSongThisWeek);
+                    const { newPosts, newUsers, newTrends, newChats, newMessages, newComments } = generateWeeklyXContent(artistData, { ...state, date: newDate }, artistProfile.name, playerChartSongs, leakedSongThisWeek);
 
                     const existingUsernames = new Set(artistData.xUsers.map(u => u.username));
                     const uniqueNewUsers = newUsers.filter(u => !existingUsernames.has(u.username));
@@ -3653,6 +3653,18 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
 
                     artistData.xPosts.unshift(...newPosts);
+                    
+                    if (newComments && newComments.length > 0) {
+                        for (const { postId, comment } of newComments) {
+                            const pIndex = artistData.xPosts.findIndex(p => p.id === postId);
+                            if (pIndex !== -1) {
+                                artistData.xPosts[pIndex] = {
+                                    ...artistData.xPosts[pIndex],
+                                    comments: [...(artistData.xPosts[pIndex].comments || []), comment]
+                                };
+                            }
+                        }
+                    }
                     
                     // Billions Club buzz
                     const billionsClubSongs = artistData.songs.filter(s => s.hasBillionsClubPerformance);
@@ -3798,17 +3810,21 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                             img = artistData.artistImages[Math.floor(Math.random() * artistData.artistImages.length)];
                         } else if (!img && Math.random() > 0.6) {
                             const stanGifs = [
-                                'https://media.tenor.com/J1yR7XQh7a8AAAAd/stan-twitter-nicki-minaj.gif',
-                                'https://media.tenor.com/B7c908-i1R8AAAAC/stan-twitter-reaction.gif',
-                                'https://media.tenor.com/nJ2uUeI_gP4AAAAC/stan-twitter-nicki-minaj.gif',
-                                'https://media.tenor.com/mYlC9g-5A9wAAAAC/stan-twitter-reaction.gif',
-                                'https://media.tenor.com/AByF925u22UAAAAC/stan-twitter.gif',
-                                'https://media.tenor.com/e2oBstC8p50AAAAC/stan-twitter-reaction.gif',
-                                'https://media.tenor.com/GzBqN-jRpyoAAAAC/stan-twitter-reaction.gif',
-                                'https://media.tenor.com/k6w7100e4AIAAAAC/stan-twitter-reaction.gif',
-                                'https://media.tenor.com/K_r9k914_J0AAAAM/new-york-ny-tiffany-pollard.gif',
-                                'https://media.tenor.com/xH5-J9A9o_QAAAAC/stan-twitter.gif',
-                                'https://media.tenor.com/bO0yN0b2KQsAAAAd/floptok.gif'
+                                'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PhmLpPVdZu69KCLp2m/giphy.gif',
+                                'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ehcOA2WtivMSBmZaH2/giphy.gif',
+                                'https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iH8zxeDtg7kftgGkjE/giphy.gif',
+                                'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/FZUEj5vJn1bMM9Xp6I/giphy.gif',
+                                'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YNOy0YQR8P45ejaiaE/giphy.gif',
+                                'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/anmCO7MaRD6QunWAYj/giphy.gif',
+                                'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6lGMLGCYMGWTm/giphy.gif',
+                                'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YO4Of2Fl6LBbW/giphy.gif',
+                                'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/FvpGW6mTAkHeSSbczy/giphy.gif',
+                                'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TjGFDxbbZRYjv9vpTZ/giphy.gif',
+                                'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cIMm3xWwxCF3xhuGpZ/giphy.gif',
+                                'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/XJoq16NyVYoqbZHVUe/giphy.gif',
+                                'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/gKHJbTk10M7bahpUvR/giphy.gif',
+                                'https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/fa1AV8UvZvfBFOIt7F/giphy.gif',
+                                'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ff5sfZPmr9OPV5dtNi/giphy.gif'
                             ];
                             img = stanGifs[Math.floor(Math.random() * stanGifs.length)];
                         }

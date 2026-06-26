@@ -8,77 +8,7 @@ import CommentIcon from './icons/CommentIcon';
 import RetweetIcon from './icons/RetweetIcon';
 import HeartIcon from './icons/HeartIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
-import { ComposeXPostModal } from './XView';
-
-const Post: React.FC<{ post: XPost; author: XUser; onQuote?: (post: XPost) => void }> = ({ post, author, onQuote }) => {
-    const { activeArtistData } = useGame();
-    const timeAgo = (postDate: { week: number, year: number }) => `${postDate.week}w`;
-
-    const isSuspended = activeArtistData!.xSuspensionStatus?.isSuspended && activeArtistData!.xSuspensionStatus.accountId === (activeArtistData!.selectedPlayerXUserId || activeArtistData!.xUsers.find(u => u.isPlayer)?.id);
-
-    return (
-        <div className="flex gap-3 p-3 border-b border-zinc-700/70">
-            <img src={author.avatar} alt={author.name} className="w-10 h-10 rounded-full flex-shrink-0 object-cover" />
-            <div className="w-full">
-                <div className="flex items-center gap-1 text-sm">
-                    <span className="font-bold">{author.name}</span>
-                    <UserVerifiedBadge isVerified={author.isVerified} className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-zinc-500">@{author.username}</span>
-                    <span className="text-zinc-500">·</span>
-                    <span className="text-zinc-500">{timeAgo(post.date)}</span>
-                </div>
-                <p className="text-white whitespace-pre-wrap">{post.content}</p>
-                {post.video ? (
-                    <video src={post.video} className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto w-full object-cover" autoPlay loop muted playsInline />
-                ) : post.image && post.image2 ? (
-                    <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
-                        <img src={post.image} alt="Post image 1" className="w-1/2 h-full object-cover border-r border-zinc-700" />
-                        <img src={post.image2} alt="Post image 2" className="w-1/2 h-full object-cover" />
-                    </div>
-                ) : post.image && !post.image.startsWith('chart:') && (
-                    <img src={post.image} alt="Post image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto" />
-                )}
-                
-                {post.quoteOf && (
-                    <div className="mt-2 border border-zinc-700 rounded-xl p-3">
-                        <div className="flex items-center gap-1 text-sm mb-1">
-                            <span className="font-bold">{activeArtistData?.xUsers.find(u => u.id === post.quoteOf?.authorId)?.name || 'User'}</span>
-                            <span className="text-zinc-500">@{activeArtistData?.xUsers.find(u => u.id === post.quoteOf?.authorId)?.username || 'user'}</span>
-                            <span className="text-zinc-500 flex-shrink-0">·</span>
-                            <span className="text-zinc-500 flex-shrink-0">{timeAgo(post.quoteOf.date)}</span>
-                        </div>
-                        <p className="text-sm text-white whitespace-pre-wrap">{post.quoteOf.content}</p>
-                        {post.quoteOf.video ? (
-                            <video src={post.quoteOf.video} className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 w-full object-cover" autoPlay loop muted playsInline />
-                        ) : post.quoteOf.image && !post.quoteOf.image.startsWith('chart:') ? (
-                            <img src={post.quoteOf.image} alt="Quoted image" className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 object-cover" />
-                        ) : null}
-                    </div>
-                )}
-
-                 <div className="flex justify-between items-center mt-3 text-zinc-500 max-w-sm">
-                    <div className="flex items-center gap-1 group">
-                        <button disabled={isSuspended} className="p-1.5 group-hover:bg-blue-500/10 rounded-full disabled:cursor-not-allowed"><CommentIcon className="w-5 h-5 group-hover:text-blue-500" /></button>
-                        <span className="text-xs group-hover:text-blue-500">0</span>
-                    </div>
-                     <div className="flex items-center gap-1 group">
-                        <button disabled={isSuspended} onClick={() => onQuote && onQuote(post)} className="p-1.5 group-hover:bg-green-500/10 rounded-full disabled:cursor-not-allowed"><RetweetIcon className="w-5 h-5 group-hover:text-green-500" /></button>
-                        <span className="text-xs group-hover:text-green-500">{formatNumber(post.retweets)}</span>
-                    </div>
-                     <div className="flex items-center gap-1 group">
-                        <button disabled={isSuspended} className="p-1.5 group-hover:bg-pink-500/10 rounded-full disabled:cursor-not-allowed"><HeartIcon className="w-5 h-5 group-hover:text-pink-500" /></button>
-                        <span className="text-xs group-hover:text-pink-500">{formatNumber(post.likes)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <ChartBarIcon className="w-5 h-5" />
-                        <span className="text-xs">{formatNumber(post.views)}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
+import { ComposeXPostModal, Post } from './XView';
 
 const XProfileView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
