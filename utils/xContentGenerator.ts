@@ -2,6 +2,7 @@
 import { ArtistData, GameState, XPost, XUser, XTrend, Song, Video, XChat, XMessage } from '../types';
 import { formatNumber } from '../context/GameContext';
 import { LABELS } from '../constants';
+import { ARTIST_GIFS } from '../data/artistGifs';
 
 type PlayerSongWithChart = Song & { chartRank?: number };
 
@@ -744,11 +745,17 @@ export const generateWeeklyXContent = (
                 ];
                 content = pickRandom(randomTemplates);
             }
+            
+            let postImage: string | undefined = undefined;
+            if (ARTIST_GIFS[randomArtist] && ARTIST_GIFS[randomArtist].length > 0 && Math.random() > 0.4) {
+                postImage = pickRandom(ARTIST_GIFS[randomArtist]);
+            }
 
             newPosts.push({
                 id: crypto.randomUUID(),
                 authorId: npcUser.id,
                 content,
+                image: postImage,
                 likes: Math.floor(Math.random() * 100000) + 20000,
                 retweets: Math.floor(Math.random() * 20000) + 5000,
                 views: Math.floor(Math.random() * 2000000) + 500000,
@@ -1053,106 +1060,36 @@ export const generateWeeklyXContent = (
                 let commentTemplates: string[] = [];
                 let commentImage: string | undefined = undefined;
                 
-                if (postText.includes('nicki minaj') || postText.includes('nicki')) {
-                    const nickiGifs = [
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6lGMLGCYMGWTm/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YO4Of2Fl6LBbW/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Wy3A1PfumRWso/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/kUNsQfWhz2Ly1KzAbE/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/tT9AgcGfqrAt2/giphy.gif'
+                let mentionedArtist = Object.keys(ARTIST_GIFS).find(a => postText.includes(a.toLowerCase()));
+                if (!mentionedArtist) {
+                    if (postText.includes('nicki')) mentionedArtist = 'Nicki Minaj';
+                    else if (postText.includes('cardi')) mentionedArtist = 'Cardi B';
+                    else if (postText.includes('megan') || postText.includes('meg')) mentionedArtist = 'Megan Thee Stallion';
+                    else if (postText.includes('chappell')) mentionedArtist = 'Chappell Roan';
+                    else if (postText.includes('tate')) mentionedArtist = 'Tate McRae';
+                    else if (postText.includes('gaga')) mentionedArtist = 'Lady Gaga';
+                    else if (postText.includes('taylor')) mentionedArtist = 'Taylor Swift';
+                    else if (postText.includes('ariana') || postText.includes('ari')) mentionedArtist = 'Ariana Grande';
+                    else if (postText.includes('billie')) mentionedArtist = 'Billie Eilish';
+                    else if (postText.includes('ice spice') || postText.includes('ice')) mentionedArtist = 'Ice Spice';
+                    else if (postText.includes('flo milli')) mentionedArtist = 'Flo Milli';
+                    else if (postText.includes('stunna') || postText.includes('sandy')) mentionedArtist = 'Stunna Sandy';
+                    else if (postText.includes('kai') || postText.includes('cenat')) mentionedArtist = 'Kai Cenat';
+                }
+
+                if (mentionedArtist && ARTIST_GIFS[mentionedArtist] && ARTIST_GIFS[mentionedArtist].length > 0) {
+                    const gifs = ARTIST_GIFS[mentionedArtist];
+                    commentTemplates = [
+                        `${mentionedArtist.toLowerCase()} ended u mind u`,
+                        `don't play with ${mentionedArtist.toLowerCase()}`,
+                        `${mentionedArtist.toLowerCase()} is mother`,
+                        `we love ${mentionedArtist.toLowerCase()}`,
+                        `${mentionedArtist.toLowerCase()} >>>>`,
+                        `stan ${mentionedArtist.toLowerCase()}`,
+                        `${mentionedArtist.toLowerCase()} cleared`,
+                        `leave ${mentionedArtist.toLowerCase()} alone`
                     ];
-                    commentTemplates = ['why you mention the queen?', 'Girl don\'t start with nicki', 'nicki ended u mind u', 'don\'t play with nicki', 'nicki is mother'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(nickiGifs);
-                } else if (postText.includes('cardi b') || postText.includes('cardi')) {
-                    const cardiGifs = [
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d3VuNW81cXB3dW80bm82ZmJmcWNscmwxY3plbnJrdzJweHAzc3d1dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/9dxECMprFLvXq4aOrd/giphy.gif',
-                        'https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d3VuNW81cXB3dW80bm82ZmJmcWNscmwxY3plbnJrdzJweHAzc3d1dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/SvcIZouMTdCPlT2IL3/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d3VuNW81cXB3dW80bm82ZmJmcWNscmwxY3plbnJrdzJweHAzc3d1dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/lK21Pdc50AWIA6MnxC/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d3VuNW81cXB3dW80bm82ZmJmcWNscmwxY3plbnJrdzJweHAzc3d1dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3o751Yxe9UjX26BZbG/giphy.gif',
-                        'https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d3VuNW81cXB3dW80bm82ZmJmcWNscmwxY3plbnJrdzJweHAzc3d1dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZwAMBcRByxSGWht1kH/giphy.gif'
-                    ];
-                    commentTemplates = ['Cardi ended you', 'don\'t come for cardi', 'cardi b is the queen of rap', 'mind your business', 'purr'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(cardiGifs);
-                } else if (postText.includes('tate mcrae') || postText.includes('tate')) {
-                    const tateGifs = [
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/FvpGW6mTAkHeSSbczy/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/SAbaDqeY5S57qQNOJo/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/BZnEPc7uhH89mlxITa/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/RJ2d4CpjMlbI7CNd3I/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bmThPHgDqQIJwQUjvd/giphy.gif'
-                    ];
-                    commentTemplates = ['tate is a dancer!!', 'greedy was SOTY', 'leave tate alone', 'she ate this up', 'exes was better anyway'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(tateGifs);
-                } else if (postText.includes('lady gaga') || postText.includes('gaga')) {
-                    const gagaGifs = [
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TjGFDxbbZRYjv9vpTZ/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xT0xePvkJ8FziEFTW0/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/WnIDDQcuGqoJXUhgDz/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l2YWtd1MSLBaOWoo0/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/9Rw9SVRlTNe5SFUyQw/giphy.gif'
-                    ];
-                    commentTemplates = ['gaga is the blueprint', 'mother monster', 'she gave us everything', 'chromatica was a cultural reset'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(gagaGifs);
-                } else if (postText.includes('taylor swift') || postText.includes('taylor')) {
-                    const taylorGifs = [
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/dXKiD8XysOuhFAJB1f/giphy.gif',
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3otWpxGR3xQLnlQb5e/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cIMm3xWwxCF3xhuGpZ/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/OiU4E2Y8tSU0/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/AGvA6VxtmrZycbhJV5/giphy.gif'
-                    ];
-                    commentTemplates = ['taylor is the music industry', 'swifties rise up', 'she\'s a mastermind', '1989 tv coming to end careers'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(taylorGifs);
-                } else if (postText.includes('blackpink')) {
-                    const bpGifs = [
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xT3i1cvbSQSXENS9rO/giphy.gif',
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/XJoq16NyVYoqbZHVUe/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/CdA5O47k3QFqZgmigM/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l2YWCEiqRzdS57W00/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/wbq8A1mqjbIlvyxnyN/giphy.gif'
-                    ];
-                    commentTemplates = ['blackpink in your area', 'jennie ate', 'lisa main dancer', 'jisoo visual queen', 'rosé main vocal'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(bpGifs);
-                } else if (postText.includes('flo milli')) {
-                    const floGifs = [
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Y1YKbrrvgcJYvVjPRH/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Xzpg7MmMdjCEXi51Z7/giphy.gif',
-                        'https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/IzRCW0rnefwsFeZ8dd/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TjkIHReSKnKKxYUgQf/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/gKHJbTk10M7bahpUvR/giphy.gif'
-                    ];
-                    commentTemplates = ['flo milli shit', 'she never misses', 'underrated queen', 'conceited!!!'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(floGifs);
-                } else if (postText.includes('ice spice') || postText.includes('ice')) {
-                    const iceGifs = [
-                        'https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/fa1AV8UvZvfBFOIt7F/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/dL3sbnucwHpjtGRrQ0/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Ey0647AFsXlCw3m048/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Zd91bOXvbuml0eVpIS/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/SaZMWWLbDmPMSLEsVI/giphy.gif'
-                    ];
-                    commentTemplates = ['you thought I was feeling you?', 'munch', 'princess diana', 'she so thick', 'like?'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(iceGifs);
-                } else if (postText.includes('stunna') || postText.includes('sandy')) {
-                    const stunnaGifs = [
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ff5sfZPmr9OPV5dtNi/giphy.gif',
-                        'https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3Ij5ZloiNLmgtiwbgN/giphy.gif',
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/d90aWSJ5puhZpyxP4j/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/lJPYsyHwE8n3HahnyX/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/hDk4N16eiaDZQCI7fX/giphy.gif'
-                    ];
-                    commentTemplates = ['runaway', 'stunna girl', 'she ate', 'like duh', 'baddies'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(stunnaGifs);
-                } else if (postText.includes('kai') || postText.includes('cenat')) {
-                    const kaiGifs = [
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ifAgSzpSf3fgAjcIJM/giphy.gif',
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/r1fRGzCbNzyyDIKoNR/giphy.gif',
-                        'https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xT9KVkXBB874UPs0Ss/giphy.gif',
-                        'https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ZABkH4y6f8WvC/giphy.gif',
-                        'https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/Zq04tkbKoC7dKPabrl/giphy.gif'
-                    ];
-                    commentTemplates = ['W rizz', 'kai cenat', 'L take', 'bro is wilding', 'amp'];
-                    if (Math.random() > 0.3) commentImage = pickRandom(kaiGifs);
+                    if (Math.random() > 0.3) commentImage = pickRandom(gifs);
                 } else if (isHater) {
                     commentTemplates = [
                         `we don't care`,
