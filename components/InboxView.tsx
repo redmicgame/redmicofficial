@@ -20,6 +20,7 @@ import OnTheRadarIcon from './icons/OnTheRadarIcon';
 import TrshdIcon from './icons/TrshdIcon';
 import OscarAwardIcon from './icons/OscarAwardIcon';
 import AmaAwardIcon from './icons/AmaAwardIcon';
+import CheckCircleIcon from './icons/CheckCircleIcon';
 
 const SenderAvatar: React.FC<{ email: Email }> = ({ email }) => {
     const { sender, senderIcon } = email;
@@ -165,6 +166,7 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
     const { dispatch } = useGame();
     const [reply, setReply] = useState('');
     const [showSoundtrackConfirm, setShowSoundtrackConfirm] = useState(false);
+    const [billionsClubPreviewUrl, setBillionsClubPreviewUrl] = useState<string | null>(null);
 
     const formattedDate = useMemo(() => {
         if (!email.date) return 'Unknown Date';
@@ -261,6 +263,80 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
 
     const renderOffer = () => {
         if (!email.offer) return null;
+
+        if (email.offer.type === 'billionsClub') {
+            const offer = email.offer;
+            return (
+                <div className="mt-6 pt-4 border-t border-zinc-700">
+                    {!offer.hasUploadedImage ? (
+                        <div className="space-y-4 text-center p-6 bg-zinc-800 rounded-xl border border-zinc-700">
+                            {billionsClubPreviewUrl ? (
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-lg text-white">Preview Image</h3>
+                                    <div className="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-green-500">
+                                        <img src={billionsClubPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex gap-2 justify-center">
+                                        <button 
+                                            onClick={() => setBillionsClubPreviewUrl(null)}
+                                            className="bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                                        >
+                                            Change Image
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                dispatch({ type: 'UPLOAD_BILLIONS_CLUB_IMAGE', payload: { emailId: email.id, songId: offer.songId, imageUrl: billionsClubPreviewUrl }});
+                                            }}
+                                            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                                        >
+                                            Submit Photo
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="w-16 h-16 mx-auto bg-green-500 rounded-full flex items-center justify-center mb-4">
+                                        <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.44-.539.18-1.08-.12-1.26-.66-.18-.54.12-1.08.66-1.26 4.32-1.26 9.72-.6 13.5 1.74.48.3.66.84.36 1.32zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.66.18-1.32-.18-1.5-.84-.18-.66.18-1.32.84-1.5 4.08-1.26 11.16-1.02 16.02 1.92.6.36.78 1.14.42 1.74-.36.6-1.14.78-1.74.42z"/>
+                                        </svg>
+                                    </div>
+                                    <h3 className="font-bold text-lg text-white">Upload Plaque Photo</h3>
+                                    <p className="text-sm text-zinc-400">Select an image to be featured on your Spotify Billions Club plaque and official playlist cover.</p>
+                                    <label className="block w-full cursor-pointer bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                                        Choose Image
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    const file = e.target.files[0];
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        if (reader.result) {
+                                                            setBillionsClubPreviewUrl(reader.result as string);
+                                                        }
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center font-semibold p-4 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl">
+                            <div className="flex items-center justify-center space-x-2 mb-2">
+                                <CheckCircleIcon className="w-6 h-6" />
+                                <span>Image Uploaded Successfully!</span>
+                            </div>
+                            <p className="text-xs text-green-500/70">Your plaque is being generated.</p>
+                        </div>
+                    )}
+                </div>
+            )
+        }
 
         if (email.offer.type === 'popBaseInterview' || email.offer.type === 'popBaseClarification') {
             const offer = email.offer;
@@ -570,7 +646,8 @@ const InboxView: React.FC = () => {
     }, [inbox, searchQuery]);
 
     if (selectedEmail) {
-        return <EmailDetailView email={selectedEmail} onBack={() => setSelectedEmail(null)} />;
+        const currentEmail = inbox.find(e => e.id === selectedEmail.id) || selectedEmail;
+        return <EmailDetailView email={currentEmail} onBack={() => setSelectedEmail(null)} />;
     }
 
     return (

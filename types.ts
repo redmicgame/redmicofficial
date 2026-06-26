@@ -104,6 +104,8 @@ export interface Song {
     weeksOnRadio?: number;
     radioFormat?: string;
     hasTweetedBillionStreams?: boolean;
+    hasBillionsClubEmail?: boolean;
+    hasBillionsClubPerformance?: boolean;
 }
 
 export type ReleaseType = 'Single' | 'EP' | 'Album' | 'Album (Deluxe)' | 'Compilation';
@@ -220,6 +222,14 @@ export interface PopBaseOffer {
     question?: string;
     originalPostContent?: string;
     isControversial?: boolean;
+}
+
+export interface BillionsClubOffer {
+    type: 'billionsClub';
+    emailId: string;
+    songId: string;
+    hasUploadedImage: boolean;
+    image?: string;
 }
 
 export interface AmaSubmissionOffer {
@@ -423,7 +433,7 @@ export interface Email {
     content?: string;
     date: GameDate;
     isRead: boolean;
-    offer?: GeniusOffer | FallonOffer | PopBaseOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer | NpcContractRenewalOffer | PromoInterviewOffer;
+    offer?: GeniusOffer | FallonOffer | PopBaseOffer | BillionsClubOffer | GrammySubmissionOffer | GrammyNominationOffer | GrammyRedCarpetOffer | LeakNotification | XSuspensionEmail | XAppealResultEmail | OnlyFansOffer | SoundtrackOffer | TouringDataUpdate | VogueOffer | FeatureOffer | FeatureReleaseNotification | FeatureVideoOffer | OnTheRadarOffer | TrshdOffer | OscarsSubmissionOffer | OscarsNominationOffer | OscarRedCarpetOffer | CoachellaOffer | AmaSubmissionOffer | AmaNominationOffer | AmaRedCarpetOffer | CheatingScandalEmail | GiveBirthEmail | EventInvitationOffer | NpcContractRenewalOffer | PromoInterviewOffer;
 }
 
 export interface GameDate {
@@ -718,6 +728,7 @@ export interface XPost {
         songIdPromoted?: string;
         isEnded?: boolean;
     };
+    billionsClubSongTitle?: string;
 }
 
 export interface XMessage {
@@ -1303,6 +1314,7 @@ export type GameAction =
     | { type: 'EDIT_SUBMISSION_DATE'; payload: { submissionId: string; newDate: GameDate } }
     | { type: 'GO_TO_LABEL_PLAN'; payload: { submissionId: string } }
     | { type: 'PLAN_LABEL_RELEASE'; payload: { submissionId: string; singles: { songId: string; releaseDate: GameDate }[]; projectReleaseDate: GameDate; } }
+    | { type: 'UPLOAD_BILLIONS_CLUB_IMAGE'; payload: { emailId: string; songId: string; imageUrl: string } }
     | { type: 'ACCEPT_GENIUS_OFFER'; payload: { songId: string; emailId: string } }
     | { type: 'CREATE_GENIUS_INTERVIEW'; payload: { video: Video } }
     | { type: 'CANCEL_GENIUS_OFFER' }

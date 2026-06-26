@@ -3418,7 +3418,7 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                 if (artistProfile) {
                     const newCertificationPosts: XPost[] = [];
             
-                    // Song Certifications
+                    // Song Certifications and Billions Club
                     artistData.songs = artistData.songs.map(song => {
                         if (!song.isReleased) return song;
             
@@ -3442,8 +3442,29 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
             
                             const newCertRecords = [...(song.certifications || [])];
                             newCertRecords.push({ level: currentCertString, date: newDate });
-                            return { ...song, lastCertification: currentCertString, certifications: newCertRecords };
+                            song = { ...song, lastCertification: currentCertString, certifications: newCertRecords };
                         }
+
+                        if (song.streams >= 1000000000 && !song.hasBillionsClubEmail) {
+                            const emailId = crypto.randomUUID();
+                            newEmails.push({
+                                id: emailId,
+                                sender: 'Spotify',
+                                senderIcon: 'spotify',
+                                subject: `Welcome to the Billions Club: ${song.title}`,
+                                body: `Hi ${artistProfile.name},\n\nCongratulations! "${song.title}" has officially surpassed 1 BILLION streams on Spotify.\n\nWe would like to invite you to perform at a special Spotify Billions Club concert. Please upload a high-quality image of yourself to be used for the official Billions Club plaque announcement and playlist cover.\n\n- Spotify Team`,
+                                date: newDate,
+                                isRead: false,
+                                offer: {
+                                    type: 'billionsClub',
+                                    emailId: emailId,
+                                    songId: song.id,
+                                    hasUploadedImage: false
+                                }
+                            });
+                            song = { ...song, hasBillionsClubEmail: true };
+                        }
+
                         return song;
                     });
             
@@ -3531,6 +3552,56 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
 
 
                     artistData.xPosts.unshift(...newPosts);
+                    
+                    // Billions Club buzz
+                    const billionsClubSongs = artistData.songs.filter(s => s.hasBillionsClubPerformance);
+                    if (billionsClubSongs.length > 0) {
+                        billionsClubSongs.forEach(song => {
+                            // ~30% chance each week to get some buzz for about a month (we'll just use a small chance instead of strictly tracking a month, or we can check date diff but random chance is fine and keeps it alive longer)
+                            // The user requested "for a month", so we can check if it crossed 1B recently, but wait, `hasTweetedBillionStreams` is for when it FIRST crossed.
+                            // We can just add a 10% chance per week for any song with a billions club performance.
+                            if (Math.random() < 0.20) {
+                                const isHater = Math.random() > 0.7;
+                                const content = isHater
+                                    ? `spotify billions club is a joke now tbh. how did ${song.title} even get there? payola is real.`
+                                    : `still thinking about ${artistProfile.name}'s billions club performance for ${song.title} 😍`;
+                                
+                                const fanAccount = artistData.xUsers.find(u => u.username.toLowerCase().includes('fan') || u.username.toLowerCase().includes('stan'));
+                                const authorId = isHater ? 'hater' : (fanAccount?.id || 'fan');
+                                
+                                if (authorId === 'hater' && !artistData.xUsers.some(u => u.id === 'hater')) {
+                                    artistData.xUsers.push({
+                                        id: 'hater',
+                                        username: 'popmusiccritic',
+                                        displayName: 'Pop Critic',
+                                        followersCount: 154,
+                                        followingCount: 300
+                                    });
+                                }
+                                
+                                if (authorId === 'fan' && !artistData.xUsers.some(u => u.id === 'fan')) {
+                                    artistData.xUsers.push({
+                                        id: 'fan',
+                                        username: `${artistProfile.name.replace(/\s/g, '').toLowerCase()}fan`,
+                                        displayName: `${artistProfile.name} Updates`,
+                                        followersCount: 1540,
+                                        followingCount: 300
+                                    });
+                                }
+
+                                artistData.xPosts.unshift({
+                                    id: crypto.randomUUID(),
+                                    authorId: authorId,
+                                    content: content,
+                                    likes: Math.floor(Math.random() * 5000) + 1000,
+                                    retweets: Math.floor(Math.random() * 500) + 100,
+                                    views: Math.floor(Math.random() * 10000) + 5000,
+                                    date: newDate
+                                });
+                            }
+                        });
+                    }
+
                     artistData.xTrends = newTrends;
 
                     // Handle new chats and messages
@@ -6929,6 +7000,91 @@ const gameReducerInternal = (state: GameState, action: GameAction): GameState =>
                         tiktokVideos: [newTiktok, ...(activeData.tiktokVideos || [])],
                         hype: Math.min(100, activeData.hype + hypeGained),
                         tiktokFollowers: followers + Math.floor(views * 0.01)
+                    }
+                }
+            };
+        }
+        case 'UPLOAD_BILLIONS_CLUB_IMAGE': {
+            if (!state.activeArtistId) return state;
+            const { emailId, songId, imageUrl } = action.payload;
+            const activeData = state.artistsData[state.activeArtistId];
+            
+            const artistProfile = [state.soloArtist, ...(state.group?.members || []), state.group, ...(state.extraPlayableArtists || [])].find(a => a?.id === state.activeArtistId);
+            const song = activeData.songs.find(s => s.id === songId);
+            
+            if (!artistProfile || !song) return state;
+
+            const updatedInbox = activeData.inbox.map(email => {
+                if (email.id === emailId && email.offer?.type === 'billionsClub') {
+                    return {
+                        ...email,
+                        offer: { ...email.offer, hasUploadedImage: true, image: imageUrl }
+                    };
+                }
+                return email;
+            });
+            
+            updatedInbox.unshift({
+                id: crypto.randomUUID(),
+                sender: 'Spotify',
+                senderIcon: 'spotify',
+                subject: `Your Billions Club Plaque & Concert Details`,
+                body: `Hi ${artistProfile.name},\n\nWe have successfully received your image and generated your Billions Club plaque for "${song.title}"!\n\nThe concert in Paris was an absolute success, and the fans loved your performance. The plaque has been shipped to your management team.\n\nKeep breaking records.\n\n- Spotify Team`,
+                date: state.date,
+                isRead: false
+            });
+            
+            // Pop Crave / Pop Base Posts
+            const newPosts: XPost[] = [];
+            
+            newPosts.push({
+                id: crypto.randomUUID(),
+                authorId: 'popcrave',
+                content: `${artistProfile.name} delivers gorgeous performance of "${song.title}" at their Spotify Billions Club concert in Paris.`,
+                image: imageUrl,
+                likes: Math.floor(Math.random() * 50000) + 20000,
+                retweets: Math.floor(Math.random() * 10000) + 5000,
+                views: Math.floor(Math.random() * 2000000) + 500000,
+                date: state.date,
+            });
+
+            newPosts.push({
+                id: crypto.randomUUID(),
+                authorId: 'popbase',
+                content: `${artistProfile.name} receives their Spotify Billions Club plaque for "${song.title}" surpassing 1 BILLION streams on the platform.`,
+                image: imageUrl,
+                likes: Math.floor(Math.random() * 60000) + 25000,
+                retweets: Math.floor(Math.random() * 12000) + 6000,
+                views: Math.floor(Math.random() * 3000000) + 800000,
+                date: state.date,
+            });
+
+            // Update song to track performance done
+            const updatedSongs = activeData.songs.map(s => s.id === songId ? { ...s, hasBillionsClubPerformance: true } : s);
+
+            const tmzPostToSet: XPost = {
+                id: crypto.randomUUID(),
+                authorId: 'tmz',
+                content: `BILLIONS CLUB: ${artistProfile.name.toUpperCase()} is officially a Spotify Billions Club member as "${song.title}" crosses 1B streams!`,
+                image: imageUrl, // we'll use a template UI for TMZ article with profile pic in the component
+                likes: Math.floor(Math.random() * 10000) + 5000,
+                retweets: Math.floor(Math.random() * 2000) + 1000,
+                views: Math.floor(Math.random() * 1000000) + 200000,
+                date: state.date,
+                billionsClubSongTitle: song.title // add some extra info
+            };
+
+            return {
+                ...state,
+                activeTmzPost: tmzPostToSet,
+                currentView: 'tmzArticle',
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        inbox: updatedInbox,
+                        xPosts: [...newPosts, tmzPostToSet, ...activeData.xPosts],
+                        songs: updatedSongs
                     }
                 }
             };
