@@ -3266,7 +3266,7 @@ const gameReducerInternal = (
             );
           }
           // Check for new leaks
-          else if (!song.isReleased) {
+          else if (!song.isReleased && !song.isVaulted) {
             let leakChance = newHype / 5000; // 2% chance at 100 hype, 20% at 1000 hype
             if (artistData.securityTeamId) {
               const team = SECURITY_TEAMS.find(
@@ -4025,7 +4025,13 @@ const gameReducerInternal = (
           (sum, streams) => sum + streams,
           0,
         );
-        artistData.monthlyListeners = Math.floor(totalStreamsLastMonth * 0.1);
+        const calculatedListeners = Math.floor(totalStreamsLastMonth * 0.1);
+        const maxListeners =
+          148000000 + (artistData.id.charCodeAt(0) % 2000000);
+        artistData.monthlyListeners = Math.min(
+          calculatedListeners,
+          maxListeners,
+        );
         artistData.peakMonthlyListeners = Math.max(
           artistData.monthlyListeners,
           artistData.peakMonthlyListeners || 0,
@@ -6197,7 +6203,15 @@ const gameReducerInternal = (
             (sum, s) => sum + s,
             0,
           );
-          featData.monthlyListeners = Math.floor(totalStreamsLastMonth * 0.1);
+          const featCalculatedListeners = Math.floor(
+            totalStreamsLastMonth * 0.1,
+          );
+          const featMaxListeners =
+            148000000 + (featData.id.charCodeAt(0) % 2000000);
+          featData.monthlyListeners = Math.min(
+            featCalculatedListeners,
+            featMaxListeners,
+          );
           featData.peakMonthlyListeners = Math.max(
             featData.monthlyListeners,
             featData.peakMonthlyListeners || 0,
@@ -11522,16 +11536,43 @@ const gameReducerInternal = (
         },
       };
     }
+    case "REVEAL_SINGLE_TRACK_COUNTDOWN": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
+        if (sub.id === action.payload.submissionId) {
+          const newRelease = {
+            ...sub.release,
+            revealedTrackIds: [
+              ...(sub.release.revealedTrackIds || []),
+              action.payload.songId,
+            ],
+          };
+          return { ...sub, release: newRelease };
+        }
+        return sub;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            labelSubmissions: updatedSubmissions,
+          },
+        },
+      };
+    }
     case "REVEAL_TRACKLIST": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
       const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
         if (sub.id === action.payload.submissionId) {
+          const newRelease = { ...sub.release, isTracklistRevealed: true };
           if (action.payload.tracklistImageUrl) {
-            sub.release.tracklistImageUrl = action.payload.tracklistImageUrl;
+            newRelease.tracklistImageUrl = action.payload.tracklistImageUrl;
           }
-          sub.release.isTracklistRevealed = true;
-          return sub;
+          return { ...sub, release: newRelease };
         }
         return sub;
       });
@@ -11583,8 +11624,11 @@ const gameReducerInternal = (
       const activeData = state.artistsData[state.activeArtistId];
       const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
         if (sub.id === action.payload.submissionId) {
-          sub.release.countdownImageUrl = action.payload.imageUrl;
-          return sub;
+          const newRelease = {
+            ...sub.release,
+            countdownImageUrl: action.payload.imageUrl,
+          };
+          return { ...sub, release: newRelease };
         }
         return sub;
       });
@@ -12175,6 +12219,25 @@ const gameReducerInternal = (
       const activeData = state.artistsData[state.activeArtistId];
       const updatedSongs = activeData.songs.filter(
         (song) => song.id !== action.payload.songId,
+      );
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: updatedSongs,
+          },
+        },
+      };
+    }
+    case "TOGGLE_VAULT_SONG": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedSongs = activeData.songs.map((song) =>
+        song.id === action.payload.songId
+          ? { ...song, isVaulted: !song.isVaulted }
+          : song,
       );
       return {
         ...state,

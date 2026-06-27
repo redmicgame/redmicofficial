@@ -43,10 +43,10 @@ const ReleaseView: React.FC = () => {
         });
 
         if (releaseType === 'Compilation') {
-            return songs.filter(s => s.isReleased);
+            return songs.filter(s => s.isReleased && !s.isVaulted);
         }
 
-        return songs.filter(s => !s.isReleased || !songsInEPOrAlbum.has(s.id));
+        return songs.filter(s => (!s.isReleased || !songsInEPOrAlbum.has(s.id)) && !s.isVaulted);
     }, [songs, releases, releaseType]);
 
     const coverArt = useMemo(() => {

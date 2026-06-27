@@ -34,6 +34,7 @@ export interface Song {
   quality: number;
   coverArt: string;
   isReleased: boolean;
+  isVaulted?: boolean;
   releaseId?: string;
   streams: number;
   lastWeekStreams: number;
@@ -125,11 +126,7 @@ export interface Song {
 }
 
 export type ReleaseType =
-  | "Single"
-  | "EP"
-  | "Album"
-  | "Album (Deluxe)"
-  | "Compilation";
+  "Single" | "EP" | "Album" | "Album (Deluxe)" | "Compilation";
 
 export interface Review {
   publication: "Pitchfork";
@@ -150,6 +147,7 @@ export interface Release {
   countdownVideoUrl?: string; // For upcoming albums
   countdownImageUrl?: string;
   isTracklistRevealed?: boolean;
+  revealedTrackIds?: string[];
   tracklistImageUrl?: string;
   standardEditionId?: string;
   isAppleMusicExpandedCover?: boolean;
@@ -881,10 +879,7 @@ export interface XTrend {
 }
 
 export type PaparazziPhotoCategory =
-  | "Spotted"
-  | "Scandal"
-  | "Fashion"
-  | "Candid";
+  "Spotted" | "Scandal" | "Fashion" | "Candid";
 
 export interface PaparazziPhoto {
   id: string;
@@ -1841,6 +1836,10 @@ export type GameAction =
     }
   | { type: "REQUEST_SPOTIFY_VERIFICATION" }
   | {
+      type: "REVEAL_SINGLE_TRACK_COUNTDOWN";
+      payload: { submissionId: string; songId: string };
+    }
+  | {
       type: "REVEAL_TRACKLIST";
       payload: {
         submissionId: string;
@@ -1894,6 +1893,7 @@ export type GameAction =
       };
     }
   | { type: "DELETE_SONG"; payload: { songId: string } }
+  | { type: "TOGGLE_VAULT_SONG"; payload: { songId: string } }
   | { type: "CANCEL_SCHEDULED_RELEASE"; payload: { submissionId: string } }
   | { type: "GO_TO_ALBUM_PROMO"; payload: { submissionId: string } }
   | {
