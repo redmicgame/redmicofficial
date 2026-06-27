@@ -101,6 +101,7 @@ import AttendEventView from './components/AttendEventView';
 
 import MySpaceView from './components/MySpaceView';
 import { ChartPredictionsView } from './components/ChartPredictionsView';
+import KalshiView from './components/KalshiView';
 import { getEraConfiguration } from './utils/eraUtils';
 
 const AppContent: React.FC = () => {
@@ -304,6 +305,8 @@ const AppContent: React.FC = () => {
                 return <TmzArticleView />;
             case 'riaa':
                 return <RiaaView />;
+            case 'kalshi':
+                return <KalshiView />;
             case 'game':
             default:
                 return <GameUI />;
