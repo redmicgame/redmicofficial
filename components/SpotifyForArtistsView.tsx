@@ -291,12 +291,11 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
   const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File is too large! Please upload a video smaller than 5MB to prevent game lag.");
-        return;
-      }
-      const videoUrl = URL.createObjectURL(file);
-      setCanvasVideoUrl(videoUrl);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCanvasVideoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -434,6 +433,156 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
                 className="flex-1 bg-white text-black font-bold py-3 rounded-full hover:bg-gray-200 transition"
               >
                 Save Canvas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- RELEASE DETAIL VIEW ---
+const S4AReleaseDetailView: React.FC<{ release: Release; onBack: () => void }> = ({
+  release,
+  onBack,
+}) => {
+  const { activeArtistData, dispatch } = useGame();
+  const [isCanvasModalOpen, setIsCanvasModalOpen] = useState(false);
+  const [canvasVideoUrl, setCanvasVideoUrl] = useState("");
+  const [canvasHashtags, setCanvasHashtags] = useState("");
+
+  if (!activeArtistData) return null;
+
+  const releaseDateString = new Date(
+    release.releaseDate.year,
+    0,
+    (release.releaseDate.week - 1) * 7 + 1,
+  ).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCanvasVideoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadCanvas = () => {
+    dispatch({
+      type: "UPLOAD_ALBUM_CANVAS",
+      payload: { releaseId: release.id, videoUrl: canvasVideoUrl, hashtags: [] },
+    });
+    setIsCanvasModalOpen(false);
+    setCanvasVideoUrl("");
+  };
+
+  const tracks = release.songIds.map(id => activeArtistData.songs.find(s => s.id === id)).filter(Boolean) as Song[];
+  const totalStreams = tracks.reduce((sum, song) => sum + (song.streams || 0), 0);
+  const hasAnyCanvas = tracks.some(t => t.canvasVideo);
+
+  return (
+    <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white min-h-full p-4 flex flex-col relative pb-20">
+      <header className="flex justify-between items-center flex-shrink-0">
+        <button onClick={onBack} className="p-2 -m-2">
+          <ArrowLeftIcon className="w-6 h-6" />
+        </button>
+      </header>
+      <main className="flex-grow flex flex-col items-center justify-start text-center space-y-4 pt-4">
+        <img
+          src={release.coverArt}
+          alt={release.title}
+          className="w-48 h-48 sm:w-64 sm:h-64 rounded-lg shadow-2xl shadow-black/50"
+        />
+        <div>
+          <h1 className="text-3xl font-black tracking-tight">{release.title}</h1>
+          <p className="text-zinc-400 mt-1 capitalize">{release.type} · Released: {releaseDateString}</p>
+        </div>
+        <div className="pt-4 w-full max-w-sm">
+          <div className="flex items-center gap-2 justify-center mb-6">
+            <MusicNoteIcon className="w-5 h-5 text-zinc-400" />
+            <p className="text-4xl font-bold">{formatNumber(totalStreams)}</p>
+            <span className="text-sm text-zinc-400 self-end mb-1">total streams</span>
+          </div>
+
+          <button
+            onClick={() => setIsCanvasModalOpen(true)}
+            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 px-4 rounded-full flex items-center justify-center gap-2 transition-colors mb-4 border border-zinc-700"
+          >
+            <span>
+              {hasAnyCanvas ? "Edit Album Canvas (Applies to all tracks)" : "Add Album Canvas Video"}
+            </span>
+          </button>
+          
+          <div className="text-left mt-6">
+            <h3 className="font-bold mb-3 border-b border-zinc-800 pb-2">Tracklist</h3>
+            <div className="space-y-3">
+              {tracks.map((track, idx) => (
+                <div key={track.id} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-zinc-500 w-4">{idx + 1}</span>
+                    <span className="font-semibold">{track.title}</span>
+                  </div>
+                  <span className="text-zinc-400">{formatNumber(track.streams)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Canvas Modal */}
+      {isCanvasModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 rounded-xl p-6 w-full max-w-sm border border-zinc-800">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-xl">Album Canvas Studio</h3>
+              <button
+                onClick={() => setIsCanvasModalOpen(false)}
+                className="text-zinc-400 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  Upload Video for all tracks in {release.title}
+                </label>
+                <input
+                  type="file"
+                  accept="video/mp4,video/quicktime,image/gif"
+                  onChange={handleVideoFileChange}
+                  className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700"
+                />
+                {canvasVideoUrl && (
+                  <div className="mt-2">
+                    <video
+                      className="w-24 h-40 object-cover rounded shadow"
+                      src={canvasVideoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                    />
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleUploadCanvas}
+                disabled={!canvasVideoUrl}
+                className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold py-3 rounded-full"
+              >
+                Apply to Album
               </button>
             </div>
           </div>
@@ -595,8 +744,9 @@ const S4AHome: React.FC = () => {
 // --- MUSIC TAB ---
 const S4AMusic: React.FC<{
   onSelectSong: (song: Song) => void;
+  onSelectRelease: (release: Release) => void;
   onSelectUpcomingRelease: (submissionId: string) => void;
-}> = ({ onSelectSong, onSelectUpcomingRelease }) => {
+}> = ({ onSelectSong, onSelectRelease, onSelectUpcomingRelease }) => {
   const { activeArtistData, gameState, allPlayerArtists } = useGame();
   const [musicTab, setMusicTab] = useState<
     "Songs" | "Releases" | "Playlists" | "Upcoming"
@@ -820,8 +970,36 @@ const S4AMusic: React.FC<{
       )}
 
       {musicTab === "Releases" && (
-        <div className="p-8 text-center text-zinc-500">
-          Feature coming soon.
+        <div className="p-4 space-y-3">
+          {activeArtistData.releases
+            .filter((r) => {
+              const rDate = r.releaseDate.year * 52 + r.releaseDate.week;
+              const gDate = gameState.date.year * 52 + gameState.date.week;
+              return rDate <= gDate;
+            })
+            .sort((a, b) => {
+              const aDate = a.releaseDate.year * 52 + a.releaseDate.week;
+              const bDate = b.releaseDate.year * 52 + b.releaseDate.week;
+              return bDate - aDate;
+            })
+            .map((release) => (
+              <button
+                key={release.id}
+                onClick={() => onSelectRelease(release)}
+                className="w-full text-left flex items-center gap-3 hover:bg-zinc-100 p-2 -m-2 rounded-md transition-colors"
+              >
+                <img
+                  src={release.coverArt}
+                  alt={release.title}
+                  className="w-16 h-16 object-cover rounded-md shadow-sm"
+                />
+                <div className="flex-grow min-w-0">
+                  <p className="font-bold text-lg truncate">{release.title}</p>
+                  <p className="text-zinc-500 text-sm capitalize">{release.type}</p>
+                </div>
+                <ChevronRightIcon className="w-5 h-5 text-zinc-400 flex-shrink-0" />
+              </button>
+            ))}
         </div>
       )}
       {musicTab === "Playlists" && (
@@ -1573,9 +1751,10 @@ const SpotifyForArtistsView: React.FC = () => {
   const { dispatch, activeArtist } = useGame();
   const [activeTab, setActiveTab] = useState<S4ATab>("Home");
   const [view, setView] = useState<
-    "tabs" | "songDetail" | "upcomingReleaseDetail"
+    "tabs" | "songDetail" | "upcomingReleaseDetail" | "releaseDetail"
   >("tabs");
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<
     string | null
   >(null);
@@ -1602,9 +1781,25 @@ const SpotifyForArtistsView: React.FC = () => {
     setView("tabs");
   };
 
+  const handleSelectRelease = (release: Release) => {
+    setSelectedRelease(release);
+    setView("releaseDetail");
+  };
+
+  const handleBackFromReleaseDetail = () => {
+    setSelectedRelease(null);
+    setView("tabs");
+  };
+
   if (view === "songDetail" && selectedSong) {
     return (
       <S4ASongDetailView song={selectedSong} onBack={handleBackFromDetail} />
+    );
+  }
+
+  if (view === "releaseDetail" && selectedRelease) {
+    return (
+      <S4AReleaseDetailView release={selectedRelease} onBack={handleBackFromReleaseDetail} />
     );
   }
 
@@ -1625,6 +1820,7 @@ const SpotifyForArtistsView: React.FC = () => {
         return (
           <S4AMusic
             onSelectSong={handleSelectSong}
+            onSelectRelease={handleSelectRelease}
             onSelectUpcomingRelease={handleSelectUpcomingRelease}
           />
         );

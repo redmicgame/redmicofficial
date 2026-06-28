@@ -1316,6 +1316,7 @@ export interface ArtistData {
   tiktokFollowers: number;
   tiktokVideos: TikTokVideo[];
   instagramFollowers?: number;
+  spotifyFollowers?: number;
   instagramPosts?: InstagramPost[];
   videos: Video[];
   youtubeStoreUnlocked: boolean;
@@ -2176,6 +2177,10 @@ export type GameAction =
   | {
       type: "UPLOAD_CANVAS";
       payload: { songId: string; videoUrl: string; hashtags: string[] };
+    }
+  | {
+      type: "UPLOAD_ALBUM_CANVAS";
+      payload: { releaseId: string; videoUrl: string; hashtags: string[] };
     }
   | { type: "SUBMIT_TO_RADIO"; payload: { songId: string; format: string } }
   | {
