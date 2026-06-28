@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { db, getActiveSaveId } from "../db/db";
+import { db, getActiveSaveId, separateMediaFromState, injectMediaIntoState } from "../db/db";
 import { useFirebase } from "./FirebaseContext";
 import { loadGameFromCloud, saveGameToCloud } from "../firebase";
 import type {
@@ -2366,6 +2366,15 @@ const gameReducerInternal = (
         const artistProfileForEmail = allPlayerArtistsAndGroups.find(
           (a) => a.id === artistId,
         );
+
+        // Prune X messages older than 24 weeks
+        const currentAbsoluteWeek = newDate.year * 52 + newDate.week;
+        artistData.xChats.forEach(chat => {
+            chat.messages = chat.messages.filter(msg => {
+                const msgAbsoluteWeek = msg.date.year * 52 + msg.date.week;
+                return currentAbsoluteWeek - msgAbsoluteWeek <= 24;
+            });
+        });
 
         // --- MANAGER AUTOMATIONS ---
         if (
@@ -5856,8 +5865,8 @@ const gameReducerInternal = (
 
           // Grow Spotify followers passively (boosted based on user request)
           const spotifyPassiveGain =
-            Math.floor((totalWeeklyStreams / 8000) * tikTokPopMult) +
-            Math.floor(Math.random() * 150);
+            Math.floor((totalWeeklyStreams / 2000) * tikTokPopMult) +
+            Math.floor(Math.random() * 500);
           artistData.spotifyFollowers = 
             (artistData.spotifyFollowers || 0) + spotifyPassiveGain;
 
@@ -11425,13 +11434,19 @@ const gameReducerInternal = (
       const activeData = state.artistsData[state.activeArtistId];
       if (activeData.artistImages.length >= 100) return state;
 
+      const newMedia = {
+        id: crypto.randomUUID(),
+        url: action.payload,
+        year: state.date.year,
+      };
+
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
-            artistImages: [...activeData.artistImages, action.payload],
+            artistImages: [...activeData.artistImages, newMedia],
           },
         },
       };
@@ -11440,6 +11455,12 @@ const gameReducerInternal = (
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
       if (activeData.artistVideoThumbnails.length >= 10) return state;
+      
+      const newMedia = {
+        id: crypto.randomUUID(),
+        url: action.payload,
+        year: state.date.year,
+      };
 
       return {
         ...state,
@@ -11449,7 +11470,7 @@ const gameReducerInternal = (
             ...activeData,
             artistVideoThumbnails: [
               ...activeData.artistVideoThumbnails,
-              action.payload,
+              newMedia,
             ],
           },
         },
@@ -11458,6 +11479,12 @@ const gameReducerInternal = (
     case "ADD_PAPARAZZI_PHOTO": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      
+      const newPhoto = {
+        ...action.payload.photo,
+        year: state.date.year,
+      };
+      
       return {
         ...state,
         artistsData: {
@@ -11466,10 +11493,52 @@ const gameReducerInternal = (
             ...activeData,
             paparazziPhotos: [
               ...activeData.paparazziPhotos,
-              action.payload.photo,
+              newPhoto,
             ],
           },
         },
+      };
+    }
+    case "DELETE_ARTIST_IMAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            artistImages: activeData.artistImages.filter(img => typeof img === 'string' ? img !== action.payload : img.id !== action.payload),
+          }
+        }
+      };
+    }
+    case "DELETE_ARTIST_VIDEO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            artistVideoThumbnails: activeData.artistVideoThumbnails.filter(vid => typeof vid === 'string' ? vid !== action.payload : vid.id !== action.payload),
+          }
+        }
+      };
+    }
+    case "DELETE_PAPARAZZI_PHOTO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            paparazziPhotos: activeData.paparazziPhotos.filter(p => p.id !== action.payload),
+          }
+        }
       };
     }
     case "ANSWER_POPBASE_QUESTION": {
@@ -16370,7 +16439,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (stateToLoad) {
-          dispatch({ type: "LOAD_GAME", payload: stateToLoad });
+          const fullyLoadedState = await injectMediaIntoState(stateToLoad);
+          dispatch({ type: "LOAD_GAME", payload: fullyLoadedState });
         }
       } catch (err) {
         console.error("Could not load game state", err);
@@ -16387,7 +16457,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
     if (!isLoading && !isAuthLoading && gameState.careerMode) {
       const saveGameToDB = async () => {
         try {
-          await db.saves.put({ id: getActiveSaveId(), state: gameState });
+          const processedState = await separateMediaFromState(gameState);
+          await db.saves.put({ id: getActiveSaveId(), state: processedState });
         } catch (err) {
           console.error("Could not save game state to local DB", err);
         }

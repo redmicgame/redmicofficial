@@ -881,10 +881,17 @@ export interface XTrend {
 export type PaparazziPhotoCategory =
   "Spotted" | "Scandal" | "Fashion" | "Candid";
 
+export interface XMedia {
+  id: string;
+  url: string;
+  year: number;
+}
+
 export interface PaparazziPhoto {
   id: string;
   image: string;
   category: PaparazziPhotoCategory;
+  year?: number;
 }
 
 export interface GrammyAward {
@@ -1337,7 +1344,7 @@ export interface ArtistData {
   contractHistory: Contract[];
   labelSubmissions: LabelSubmission[];
   customLabels: CustomLabel[];
-  artistImages: string[];
+  artistImages: any[]; // legacy string[], now XMedia[]
   coachella?: {
     year: number;
     status:
@@ -1351,7 +1358,7 @@ export interface ArtistData {
     openingFor?: string;
     payoutSize?: number;
   };
-  artistVideoThumbnails: string[];
+  artistVideoThumbnails: any[]; // legacy string[], now XMedia[]
   paparazziPhotos: PaparazziPhoto[];
   tourPhotos: string[];
   tours: Tour[];
@@ -1805,8 +1812,11 @@ export type GameAction =
   | { type: "CREATE_FALLON_VIDEO"; payload: { video: Video; songId?: string } }
   | { type: "CANCEL_FALLON_OFFER" }
   | { type: "ADD_ARTIST_IMAGE"; payload: string }
+  | { type: "DELETE_ARTIST_IMAGE"; payload: string }
   | { type: "ADD_ARTIST_VIDEO"; payload: string }
+  | { type: "DELETE_ARTIST_VIDEO"; payload: string }
   | { type: "ADD_PAPARAZZI_PHOTO"; payload: { photo: PaparazziPhoto } }
+  | { type: "DELETE_PAPARAZZI_PHOTO"; payload: string }
   | {
       type: "ANSWER_POPBASE_QUESTION";
       payload: { emailId: string; answer: string };

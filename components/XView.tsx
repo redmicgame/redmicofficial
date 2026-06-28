@@ -791,13 +791,15 @@ const FeedView: React.FC<{
   const findUser = (id: string) =>
     xUsers.find((u) => u.id === id) || SYSTEM_USERS_FALLBACK[id];
 
+  const [postsToShow, setPostsToShow] = useState(10);
+
   const sortedPosts = [...xPosts].sort((a, b) => {
     const dateA = a.date.year * 52 + a.date.week;
     const dateB = b.date.year * 52 + b.date.week;
     return dateB - dateA;
   });
 
-  const displayedPosts = sortedPosts;
+  const displayedPosts = sortedPosts.slice(0, postsToShow);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     // Kept for backward compatibility if ever needed
@@ -849,6 +851,17 @@ const FeedView: React.FC<{
           onQuoteHold={onQuoteHold}
         />
       ))}
+      
+      {postsToShow < sortedPosts.length && (
+        <div className="p-4 flex justify-center border-t border-zinc-700/70">
+           <button 
+             onClick={() => setPostsToShow(p => p + 10)}
+             className="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-full font-bold text-sm transition-colors"
+           >
+             Load More
+           </button>
+        </div>
+      )}
     </div>
   );
 };

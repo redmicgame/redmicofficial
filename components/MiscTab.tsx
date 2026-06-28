@@ -351,9 +351,18 @@ const MiscTab: React.FC = () => {
                     <h3 className="font-bold text-lg mb-2">X Fan Content (Images)</h3>
                     <p className="text-sm text-zinc-400 mb-4">Upload images of your artist here. Fan accounts on X will randomly use them in their posts about you.</p>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-4">
-                        {activeArtistData.artistImages.map((img, index) => (
-                            <img key={index} src={img} className="w-full aspect-square object-cover rounded-md bg-zinc-700"/>
-                        ))}
+                        {activeArtistData.artistImages.map((img, index) => {
+                            const url = typeof img === 'string' ? img : img.url;
+                            const year = typeof img === 'string' ? '' : img.year;
+                            const id = typeof img === 'string' ? img : img.id;
+                            return (
+                              <div key={index} className="relative group">
+                                <img src={url} className="w-full aspect-square object-cover rounded-md bg-zinc-700"/>
+                                {year && <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1 rounded">{year}</div>}
+                                <button onClick={() => dispatch({type: 'DELETE_ARTIST_IMAGE', payload: id})} className="absolute top-1 right-1 bg-red-600/90 text-white w-5 h-5 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 flex items-center justify-center z-10">×</button>
+                              </div>
+                            );
+                        })}
                          {activeArtistData.artistImages.length < 100 && (
                             <label htmlFor="image-upload" className="w-full aspect-square bg-zinc-700 rounded-md border-2 border-dashed border-zinc-500 flex items-center justify-center cursor-pointer hover:border-red-500">
                                 <span className="text-3xl text-zinc-500">+</span>
@@ -368,14 +377,21 @@ const MiscTab: React.FC = () => {
                     <h3 className="font-bold text-lg mb-2">X Fan Content (Videos)</h3>
                     <p className="text-sm text-zinc-400 mb-4">Upload short video clips. Fan accounts will post them. A thumbnail will be generated automatically.</p>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-4">
-                        {activeArtistData.artistVideoThumbnails.map((thumb, index) => (
-                            <div key={index} className="w-full aspect-square object-cover rounded-md bg-zinc-700 relative">
-                                <img src={thumb} className="w-full h-full object-cover rounded-md"/>
-                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        {activeArtistData.artistVideoThumbnails.map((thumb, index) => {
+                            const url = typeof thumb === 'string' ? thumb : thumb.url;
+                            const year = typeof thumb === 'string' ? '' : thumb.year;
+                            const id = typeof thumb === 'string' ? thumb : thumb.id;
+                            return (
+                            <div key={index} className="w-full aspect-square object-cover rounded-md bg-zinc-700 relative group">
+                                <img src={url} className="w-full h-full object-cover rounded-md"/>
+                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                                 </div>
+                                {year && <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1 rounded pointer-events-none">{year}</div>}
+                                <button onClick={() => dispatch({type: 'DELETE_ARTIST_VIDEO', payload: id})} className="absolute top-1 right-1 bg-red-600/90 text-white w-5 h-5 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 flex items-center justify-center z-10">×</button>
                             </div>
-                        ))}
+                            );
+                        })}
                          {activeArtistData.artistVideoThumbnails.length < 10 && (
                             <label htmlFor="video-upload" className="w-full aspect-square bg-zinc-700 rounded-md border-2 border-dashed border-zinc-500 flex items-center justify-center cursor-pointer hover:border-red-500">
                                 <span className="text-3xl text-zinc-500">+</span>
@@ -412,6 +428,8 @@ const MiscTab: React.FC = () => {
                                 <div key={photo.id} className="relative group">
                                     <img src={photo.image} className="w-full aspect-square object-cover rounded-md bg-zinc-700"/>
                                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs text-center p-1 rounded-b-md">{photo.category}</div>
+                                    {photo.year && <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1 rounded pointer-events-none">{photo.year}</div>}
+                                    <button onClick={() => dispatch({type: 'DELETE_PAPARAZZI_PHOTO', payload: photo.id})} className="absolute top-1 right-1 bg-red-600/90 text-white w-5 h-5 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 flex items-center justify-center z-10">×</button>
                                 </div>
                             ))}
                         </div>
