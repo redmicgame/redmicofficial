@@ -291,11 +291,12 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
   const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCanvasVideoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File is too large! Please upload a video smaller than 5MB to prevent game lag.");
+        return;
+      }
+      const videoUrl = URL.createObjectURL(file);
+      setCanvasVideoUrl(videoUrl);
     }
   };
 

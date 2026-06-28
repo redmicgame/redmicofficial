@@ -5805,14 +5805,27 @@ const gameReducerInternal = (
             state.kalshiAlbumChance = newKalshiChance;
           }
 
-          const existingUsernames = new Set(
-            artistData.xUsers.map((u) => u.username),
-          );
-          const uniqueNewUsers = newUsers.filter(
-            (u) => !existingUsernames.has(u.username),
-          );
+          const existingIds = new Set(artistData.xUsers.map((u) => u.id));
+          const uniqueNewUsers = newUsers.filter((u) => {
+             if (existingIds.has(u.id)) return false;
+             existingIds.add(u.id); // prevent duplicates within newUsers itself
+             return true;
+          });
 
           artistData.xUsers.push(...uniqueNewUsers);
+          
+          // Cap xUsers
+          if (artistData.xUsers.length > 250) {
+             const activeAuthors = new Set(artistData.xPosts?.map(p => p.authorId) || []);
+             const specialIds = new Set(["tmz", "popbase", "popcrave", "chartdata"]);
+             artistData.xUsers = artistData.xUsers.filter(u => 
+                 u.isPlayer || 
+                 specialIds.has(u.id) || 
+                 u.id.startsWith("npc_") || 
+                 activeAuthors.has(u.id) ||
+                 u.id.startsWith("fan_leak_video")
+             );
+          }
 
           // Grow followers for X users
           const weeklyXPop = artistData.popularity / 100; // 0 to 1
@@ -5945,9 +5958,23 @@ const gameReducerInternal = (
               const chat = artistData.xChats.find((c) => c.id === chatId);
               if (chat) {
                 chat.messages.push(message);
+                
+                // Cap messages per chat to prevent memory bloat
+                if (chat.messages.length > 50) {
+                  chat.messages = chat.messages.slice(-50);
+                }
+                
                 chat.isRead = false;
               }
             });
+          }
+          
+          // Cap total chats
+          if (artistData.xChats.length > 30) {
+            const groupChats = artistData.xChats.filter(c => c.isGroup);
+            const dms = artistData.xChats.filter(c => !c.isGroup);
+            // keep all group chats, but only the 20 most recently active DMs
+            artistData.xChats = [...groupChats, ...dms.slice(-20)];
           }
 
           // Cap the number of posts to prevent performance degradation over time
@@ -16336,6 +16363,53 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (stateToLoad) {
+          // Clean up legacy bloated Base64 canvas videos to un-brick saves and prevent lag
+          if (stateToLoad.artistsData) {
+            Object.keys(stateToLoad.artistsData).forEach((artistId) => {
+              const aData = stateToLoad!.artistsData[artistId];
+              if (aData && aData.songs) {
+                aData.songs = aData.songs.map(song => {
+                   if (song.canvasVideo && song.canvasVideo.length > 500000 && song.canvasVideo.startsWith("data:")) {
+                      return { ...song, canvasVideo: undefined };
+                   }
+                   return song;
+                });
+              }
+              // Clean up duplicate or bloated xUsers 
+              if (aData && aData.xUsers) {
+                 const uniqueUsers = new Map();
+                 aData.xUsers.forEach(u => uniqueUsers.set(u.id, u));
+                 aData.xUsers = Array.from(uniqueUsers.values());
+                 
+                 // Cap users if there are too many (e.g. infinite fan/hater generation)
+                 if (aData.xUsers.length > 250) {
+                     const activeAuthors = new Set(aData.xPosts?.map(p => p.authorId) || []);
+                     const specialIds = new Set(["tmz", "popbase", "popcrave", "chartdata"]);
+                     aData.xUsers = aData.xUsers.filter(u => 
+                         u.isPlayer || 
+                         specialIds.has(u.id) || 
+                         u.id.startsWith("npc_") || 
+                         activeAuthors.has(u.id) ||
+                         u.id.startsWith("fan_leak_video")
+                     );
+                 }
+              }
+
+              // Deduplicate xPosts by ID just in case
+              if (aData && aData.xPosts) {
+                 const uniquePosts = new Map();
+                 aData.xPosts.forEach(p => uniquePosts.set(p.id, p));
+                 aData.xPosts = Array.from(uniquePosts.values());
+              }
+              
+              // Deduplicate xTrends by id
+              if (aData && aData.xTrends) {
+                 const uniqueTrends = new Map();
+                 aData.xTrends.forEach(t => uniqueTrends.set(t.id, t));
+                 aData.xTrends = Array.from(uniqueTrends.values());
+              }
+            });
+          }
           dispatch({ type: "LOAD_GAME", payload: stateToLoad });
         }
       } catch (err) {
