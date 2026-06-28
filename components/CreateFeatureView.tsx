@@ -92,16 +92,16 @@ const CreateFeatureView: React.FC = () => {
                         <label className="text-sm text-zinc-400">W:</label>
                         <input 
                             type="number" 
-                            value={releaseDate.week} 
-                            onChange={e => handleDateChange('week', parseInt(e.target.value))} 
+                            value={releaseDate.week || ''} 
+                            onChange={e => handleDateChange('week', parseInt(e.target.value) || 0)} 
                             min="1" max="52" 
                             className="w-20 bg-zinc-700 p-2 rounded-md text-center" 
                         />
                         <label className="text-sm text-zinc-400">Y:</label>
                         <input 
                             type="number" 
-                            value={releaseDate.year} 
-                            onChange={e => handleDateChange('year', parseInt(e.target.value))} 
+                            value={releaseDate.year || ''} 
+                            onChange={e => handleDateChange('year', parseInt(e.target.value) || 0)} 
                             min={currentDate.year} 
                             className="w-24 bg-zinc-700 p-2 rounded-md text-center" 
                         />

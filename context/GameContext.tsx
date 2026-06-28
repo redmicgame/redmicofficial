@@ -3649,12 +3649,33 @@ const gameReducerInternal = (
         let artistStreamIncome = 0;
         const updatedSongs = artistData.songs.map((song) => {
           if (song.isReleased && !song.isTakenDown) {
-            const baseStreams = song.quality ** 2 * 50;
+            let baseStreams = song.quality ** 2 * 50;
             const difficulty = state.difficultyMode || "normal";
             let diffMultiplier = 1;
             if (difficulty === "easy") diffMultiplier = 2.0;
             else if (difficulty === "hard") diffMultiplier = 0.6;
             else if (difficulty === "extreme") diffMultiplier = 0.3;
+
+            let careerStageMultiplier = 1;
+            if (difficulty !== "easy" && artistData.careerStage) {
+              const rDate =
+                song.releaseDate ||
+                artistData.releases.find((r) => r.id === song.releaseId)
+                  ?.releaseDate;
+              if (rDate) {
+                const ageWeeks =
+                  newDate.year * 52 +
+                  newDate.week -
+                  (rDate.year * 52 + rDate.week);
+                if (ageWeeks <= 26) {
+                  if (artistData.careerStage === "flop")
+                    careerStageMultiplier = 0.2;
+                  else if (artistData.careerStage === "smash")
+                    careerStageMultiplier = 1.3;
+                }
+              }
+            }
+            baseStreams *= careerStageMultiplier;
 
             // ---- Sound Trends & Era Multipliers ----
             let trendMultiplier = 1.0;
@@ -4017,6 +4038,105 @@ const gameReducerInternal = (
           return release;
         });
 
+        let newCareerStage = artistData.careerStage || "neutral";
+        if (state.difficultyMode !== "easy") {
+          const newlyEvaluatedRelease = artistData.releases.find(
+            (r) =>
+              r.isReleased &&
+              r.releaseDate &&
+              newDate.year * 52 +
+                newDate.week -
+                (r.releaseDate.year * 52 + r.releaseDate.week) ===
+              1,
+          );
+          if (newlyEvaluatedRelease) {
+            let isFlop = false;
+            let isSmash = false;
+            if (newlyEvaluatedRelease.type === "Single") {
+              const pastSingles = artistData.releases
+                .filter(
+                  (r) =>
+                    r.type === "Single" &&
+                    r.firstWeekStreams !== undefined &&
+                    r.id !== newlyEvaluatedRelease.id,
+                )
+                .sort(
+                  (a, b) =>
+                    b.releaseDate!.year * 52 +
+                    b.releaseDate!.week -
+                    (a.releaseDate!.year * 52 + a.releaseDate!.week),
+                );
+              const priorSingle = pastSingles[0];
+              const previousPrior = pastSingles[1];
+              const currentStreams =
+                newlyEvaluatedRelease.firstWeekStreams || 0;
+              if (
+                priorSingle &&
+                currentStreams < (priorSingle.firstWeekStreams || 0)
+              ) {
+                if (
+                  previousPrior &&
+                  (priorSingle.firstWeekStreams || 0) <
+                    (previousPrior.firstWeekStreams || 0)
+                ) {
+                  isFlop = true;
+                } else if (!previousPrior) {
+                  isFlop = true; // Flop if it's the second single ever and it flopped
+                }
+              }
+              if (pastSingles.length >= 1) {
+                const lastThree = pastSingles.slice(0, 3);
+                const avg =
+                  lastThree.reduce(
+                    (sum, s) => sum + (s.firstWeekStreams || 0),
+                    0,
+                  ) / lastThree.length;
+                if (currentStreams >= avg * 1.5) {
+                  isSmash = true;
+                }
+              }
+            } else {
+              const pastAlbums = artistData.releases
+                .filter(
+                  (r) =>
+                    (r.type === "Album" || r.type === "EP") &&
+                    r.firstWeekStreams !== undefined &&
+                    r.id !== newlyEvaluatedRelease.id,
+                )
+                .sort(
+                  (a, b) =>
+                    b.releaseDate!.year * 52 +
+                    b.releaseDate!.week -
+                    (a.releaseDate!.year * 52 + a.releaseDate!.week),
+                );
+              const priorAlbum = pastAlbums[0];
+              const currentStreams =
+                newlyEvaluatedRelease.firstWeekStreams || 0;
+              if (
+                priorAlbum &&
+                currentStreams >= (priorAlbum.firstWeekStreams || 0) * 1.2
+              ) {
+                isSmash = true;
+              }
+            }
+
+            if (
+              newlyEvaluatedRelease.review &&
+              newlyEvaluatedRelease.review.score < 7.0
+            ) {
+              isFlop = true;
+            }
+
+            if (isSmash) {
+              if (newCareerStage === "flop") newCareerStage = "neutral";
+              else if (newCareerStage === "neutral") newCareerStage = "smash";
+            } else if (isFlop) {
+              if (newCareerStage === "smash") newCareerStage = "neutral";
+              else if (newCareerStage === "neutral") newCareerStage = "flop";
+            }
+          }
+        }
+
         const updatedLastFourWeeksStreams = [
           totalWeeklyStreams,
           ...artistData.lastFourWeeksStreams,
@@ -4026,12 +4146,12 @@ const gameReducerInternal = (
           0,
         );
         const calculatedListeners = Math.floor(totalStreamsLastMonth * 0.1);
-        const maxListeners =
-          148000000 + (artistData.id.charCodeAt(0) % 2000000);
+        const maxListeners = 148000000 + (artistId.charCodeAt(0) % 2000000);
         artistData.monthlyListeners = Math.min(
           calculatedListeners,
           maxListeners,
         );
+        artistData.careerStage = newCareerStage;
         artistData.peakMonthlyListeners = Math.max(
           artistData.monthlyListeners,
           artistData.peakMonthlyListeners || 0,
@@ -6206,8 +6326,7 @@ const gameReducerInternal = (
           const featCalculatedListeners = Math.floor(
             totalStreamsLastMonth * 0.1,
           );
-          const featMaxListeners =
-            148000000 + (featData.id.charCodeAt(0) % 2000000);
+          const featMaxListeners = 148000000 + (featId.charCodeAt(0) % 2000000);
           featData.monthlyListeners = Math.min(
             featCalculatedListeners,
             featMaxListeners,
@@ -7690,6 +7809,211 @@ const gameReducerInternal = (
               release.peakWeeklyStreams = weeklyAlbumStreams;
             }
           });
+
+        artistData.labelSubmissions.forEach((sub) => {
+          if (
+            sub.status === "scheduled" &&
+            sub.release.type.includes("Album")
+          ) {
+            const preSaves = sub.preSaves || 0;
+            if (preSaves > 10000) {
+              const surge = Math.floor(Math.random() * 40) + 5;
+              const d1 = Math.floor(preSaves * 0.1);
+              const d2 = Math.floor(preSaves * 0.12);
+              const d3 = Math.floor(preSaves * 0.15);
+
+              const jsonStr = JSON.stringify({
+                type: "presave",
+                albumName: sub.release.title,
+                artistName: artistProfile?.name || "Unknown",
+                coverArt: sub.release.coverArt,
+                preSaves: preSaves,
+                surge,
+                d1,
+                d2,
+                d3,
+                date: newDate,
+                releaseDate: sub.projectReleaseDate,
+              });
+
+              snapshotCandidates.push({
+                artistId,
+                streams: preSaves * 10,
+                post: {
+                  id: crypto.randomUUID(),
+                  authorId: "spotifysnapshot",
+                  content: `"${sub.release.title}" by ${artistProfile?.name} has now surpassed ${formatNumber(preSaves)} pre-saves on Spotify, including a ${surge}% surge yesterday!`,
+                  image: `snapshot:${jsonStr}`,
+                  likes: Math.floor(Math.random() * 20000) + 5000,
+                  retweets: Math.floor(Math.random() * 5000) + 1000,
+                  views: Math.floor(Math.random() * 500000) + 100000,
+                  date: newDate,
+                },
+              });
+            }
+
+            if (sub.singlesToRelease && sub.singlesToRelease.length > 0) {
+              const preReleaseSongs = sub.singlesToRelease
+                .map((s) => artistData.songs.find((xs) => xs.id === s.songId))
+                .filter((s): s is Song => !!s && s.isReleased);
+              if (preReleaseSongs.length > 0) {
+                const topPreRelease = [...preReleaseSongs].sort(
+                  (a, b) => b.lastWeekStreams - a.lastWeekStreams,
+                )[0];
+                if (topPreRelease && topPreRelease.lastWeekStreams > 100000) {
+                  const jsonStr = JSON.stringify({
+                    type: "prerelease_streams",
+                    albumName: sub.release.title,
+                    songName: topPreRelease.title,
+                    artistName: artistProfile?.name || "Unknown",
+                    coverArt: topPreRelease.coverArt,
+                    streams: topPreRelease.lastWeekStreams,
+                    totalStreams: topPreRelease.streams,
+                    tracks: preReleaseSongs.map((s) => ({
+                      title: s.title,
+                      streams: s.streams,
+                      weekly: s.lastWeekStreams,
+                    })),
+                    date: newDate,
+                  });
+
+                  snapshotCandidates.push({
+                    artistId,
+                    streams: topPreRelease.lastWeekStreams,
+                    post: {
+                      id: crypto.randomUUID(),
+                      authorId: "spotifysnapshot",
+                      content: `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(topPreRelease.lastWeekStreams)} streams on Spotify yesterday.\n\nIt was the #1 most streamed pre-release on Spotify.`,
+                      image: `snapshot:${jsonStr}`,
+                      likes: Math.floor(Math.random() * 50000) + 10000,
+                      retweets: Math.floor(Math.random() * 10000) + 2000,
+                      views: Math.floor(Math.random() * 1000000) + 200000,
+                      date: newDate,
+                    },
+                  });
+                }
+              }
+            }
+          }
+        });
+
+        // Custom Artist Spotify Data account
+        const spotifyDataId = `${artistProfile?.name?.toLowerCase().replace(/[^a-z0-9]/g, "") || "artist"}spotifydata`;
+        if (
+          artistProfile &&
+          !artistData.xUsers.some((u) => u.id === spotifyDataId)
+        ) {
+          artistData.xUsers.push({
+            id: spotifyDataId,
+            name: `${artistProfile.name} Spotify Data`,
+            username: `${artistProfile.name.replace(/\s+/g, "")}Spotify`,
+            followers: Math.floor(Math.random() * 50000) + 10000,
+            avatar: artistProfile.imageUrl || "https://via.placeholder.com/150",
+            bio: `Tracking all Spotify data and charts for ${artistProfile.name}.`,
+            isVerified: "blue",
+          });
+        }
+
+        if (artistData.releases.length > 0) {
+          const topRelease = [...artistData.releases]
+            .filter((r) => r.isReleased && r.type.includes("Album"))
+            .sort((a, b) => {
+              const aStreams = a.songIds.reduce(
+                (sum, id) =>
+                  sum +
+                  (artistData.songs.find((s) => s.id === id)?.lastWeekStreams ||
+                    0),
+                0,
+              );
+              const bStreams = b.songIds.reduce(
+                (sum, id) =>
+                  sum +
+                  (artistData.songs.find((s) => s.id === id)?.lastWeekStreams ||
+                    0),
+                0,
+              );
+              return bStreams - aStreams;
+            })[0];
+
+          if (topRelease) {
+            const topReleaseSongs = topRelease.songIds
+              .map((id) => artistData.songs.find((s) => s.id === id))
+              .filter((s): s is Song => !!s);
+            const weeklyStreams = topReleaseSongs.reduce(
+              (sum, s) => sum + s.lastWeekStreams,
+              0,
+            );
+            if (weeklyStreams > 100000) {
+              const jsonStr = JSON.stringify({
+                type: "album_weekly",
+                albumName: topRelease.title,
+                artistName: artistProfile?.name || "Unknown",
+                coverArt: topRelease.coverArt,
+                streams: weeklyStreams,
+                totalStreams: topReleaseSongs.reduce(
+                  (sum, s) => sum + s.streams,
+                  0,
+                ),
+                tracks: topReleaseSongs.map((s) => ({
+                  title: s.title,
+                  streams: s.streams,
+                  weekly: s.lastWeekStreams,
+                })),
+                date: newDate,
+              });
+              snapshotCandidates.push({
+                artistId,
+                streams: weeklyStreams,
+                post: {
+                  id: crypto.randomUUID(),
+                  authorId: spotifyDataId,
+                  content: `'${topRelease.title}' by ${artistProfile?.name} received ${formatNumber(weeklyStreams)} streams on Spotify yesterday.`,
+                  image: `snapshot:${jsonStr}`,
+                  likes: Math.floor(Math.random() * 10000) + 2000,
+                  retweets: Math.floor(Math.random() * 2000) + 500,
+                  views: Math.floor(Math.random() * 200000) + 50000,
+                  date: newDate,
+                },
+              });
+            }
+          }
+
+          // Popular tracks crossover
+          const popularTracks = [...artistData.songs]
+            .filter((s) => s.isReleased)
+            .sort((a, b) => b.lastWeekStreams - a.lastWeekStreams)
+            .slice(0, 10);
+          if (
+            popularTracks.length >= 2 &&
+            popularTracks[0].lastWeekStreams > 100000
+          ) {
+            const jsonStr = JSON.stringify({
+              type: "popular_tracks",
+              artistName: artistProfile?.name || "Unknown",
+              tracks: popularTracks.map((s) => ({
+                title: s.title,
+                coverArt: s.coverArt,
+                weekly: s.lastWeekStreams,
+                streams: s.streams,
+              })),
+              date: newDate,
+            });
+            snapshotCandidates.push({
+              artistId,
+              streams: popularTracks[0].lastWeekStreams,
+              post: {
+                id: crypto.randomUUID(),
+                authorId: spotifyDataId,
+                content: `'${popularTracks[0].title}' is the #1 most popular song by ${artistProfile?.name} on Spotify.\n\nDaily streams:\n#1. ${popularTracks[0].title} - ${formatNumber(popularTracks[0].lastWeekStreams)}\n#2. ${popularTracks[1].title} - ${formatNumber(popularTracks[1].lastWeekStreams)}`,
+                image: `snapshot:${jsonStr}`,
+                likes: Math.floor(Math.random() * 15000) + 3000,
+                retweets: Math.floor(Math.random() * 3000) + 500,
+                views: Math.floor(Math.random() * 300000) + 60000,
+                date: newDate,
+              },
+            });
+          }
+        }
       }
 
       // Cap Snapshot posts top 3 per week

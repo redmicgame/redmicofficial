@@ -364,6 +364,62 @@ const HomeTab: React.FC = () => {
       </header>
 
       <div>
+        {gameState.difficultyMode !== "easy" && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-xl font-bold uppercase tracking-widest text-zinc-500 text-sm">
+                Career Stage
+              </h2>
+            </div>
+            <div
+              className={`p-4 rounded-xl border ${
+                activeArtistData.careerStage === "flop"
+                  ? "bg-red-500/10 border-red-500/30"
+                  : activeArtistData.careerStage === "smash"
+                    ? "bg-green-500/10 border-green-500/30"
+                    : "bg-zinc-800/50 border-zinc-700"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {activeArtistData.careerStage === "flop" && (
+                  <div className="text-3xl">📉</div>
+                )}
+                {activeArtistData.careerStage === "smash" && (
+                  <div className="text-3xl">🚀</div>
+                )}
+                {(!activeArtistData.careerStage ||
+                  activeArtistData.careerStage === "neutral") && (
+                  <div className="text-3xl">⚖️</div>
+                )}
+                <div>
+                  <h3
+                    className={`font-black text-xl uppercase tracking-wider ${
+                      activeArtistData.careerStage === "flop"
+                        ? "text-red-400"
+                        : activeArtistData.careerStage === "smash"
+                          ? "text-green-400"
+                          : "text-zinc-300"
+                    }`}
+                  >
+                    {activeArtistData.careerStage === "flop"
+                      ? "Flop Era"
+                      : activeArtistData.careerStage === "smash"
+                        ? "Smash Era"
+                        : "Neutral Era"}
+                  </h3>
+                  <p className="text-sm text-zinc-400 mt-1">
+                    {activeArtistData.careerStage === "flop"
+                      ? "-80% on all streams and physical sales on new releases."
+                      : activeArtistData.careerStage === "smash"
+                        ? "+30% on all streams and physical sales on new releases."
+                        : "Your career is currently stable."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-4">
           <button
             onClick={() => setIsPopularityExpanded(!isPopularityExpanded)}

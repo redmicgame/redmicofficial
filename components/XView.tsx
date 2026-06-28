@@ -19,6 +19,7 @@ import ArrowLeftIcon from "./icons/ArrowLeftIcon";
 import ImageIcon from "./icons/ImageIcon";
 import ConfirmationModal from "./ConfirmationModal";
 import XPremiumModal from "./XPremiumModal";
+import { SpotifySnapshotCard } from "./SpotifySnapshotCard";
 
 // Sub-component for the Year End Chart visualization
 const YearEndChart: React.FC<{ dataString: string }> = ({ dataString }) => {
@@ -119,141 +120,12 @@ const YearEndChart: React.FC<{ dataString: string }> = ({ dataString }) => {
   }
 };
 
-const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
-  dataString,
-}) => {
-  try {
-    const jsonStr = dataString.replace("snapshot:", "");
-    const data = JSON.parse(jsonStr);
-
-    return (
-      <div className="mt-2 rounded-xl bg-zinc-900 border border-zinc-800 p-4 text-white font-sans max-w-full overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <svg
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-24 h-24 text-[#1DB954]"
-          >
-            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-          </svg>
-        </div>
-
-        <div className="flex gap-4 items-center mb-4 z-10 relative">
-          <img
-            src={data.coverArt}
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-md shadow-lg object-cover flex-shrink-0"
-          />
-          <div className="min-w-0 overflow-hidden">
-            <p
-              className="text-lg sm:text-xl font-bold leading-tight line-clamp-2"
-              title={data.type === "album" ? data.albumName : data.songName}
-            >
-              {data.type === "album" ? data.albumName : data.songName}
-            </p>
-            <p
-              className="text-zinc-400 text-sm truncate"
-              title={data.artistName}
-            >
-              {data.artistName}
-            </p>
-            <p className="text-[#1DB954] text-xs sm:text-sm mt-1 font-bold">
-              BEST WEEK EVER
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-zinc-800/50 rounded-lg p-3 z-10 relative mb-4">
-          <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wider">
-            Weekly Streams
-          </div>
-          <div className="text-2xl font-black">
-            {data.streams.toLocaleString()}
-          </div>
-        </div>
-
-        {data.type === "song" && data.dailyStreams && (
-          <div className="space-y-1.5 z-10 relative text-sm sm:text-base font-mono">
-            {data.dailyStreams.map((steams: number, i: number) => {
-              const date = new Date();
-              date.setDate(date.getDate() - (6 - i));
-              const dateStr = `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
-              const prev =
-                i === 0 ? data.dailyStreams[0] : data.dailyStreams[i - 1];
-              const diff = steams - prev;
-              const percent = prev > 0 ? (diff / prev) * 100 : 0;
-              const percentStr =
-                percent > 0
-                  ? `[+${percent.toFixed(2)}%]`
-                  : percent < 0
-                    ? `[${percent.toFixed(2)}%]`
-                    : "[+0.00%]";
-
-              return (
-                <div
-                  key={i}
-                  className="flex justify-between items-center bg-black/20 px-3 py-1.5 rounded"
-                >
-                  <span className="text-zinc-400">{dateStr}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold">{steams.toLocaleString()}</span>
-                    <span
-                      className={
-                        percent > 0
-                          ? "text-green-400 text-xs sm:text-sm min-w-[65px] text-right"
-                          : percent < 0
-                            ? "text-red-400 text-xs sm:text-sm min-w-[65px] text-right"
-                            : "text-zinc-500 text-xs sm:text-sm min-w-[65px] text-right"
-                      }
-                    >
-                      {percentStr}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {data.type === "album" && data.tracks && (
-          <div className="z-10 relative font-mono">
-            <div className="text-xs text-zinc-400 mb-2 uppercase tracking-wider font-sans">
-              Tracklist Performance
-            </div>
-            <div
-              className={`space-y-1 overflow-y-auto max-h-[250px] scrollbar-hide ${data.tracks.length > 8 ? "text-xs" : "text-sm sm:text-base"}`}
-            >
-              {data.tracks.map((track: any, i: number) => (
-                <div
-                  key={i}
-                  className={`flex justify-between items-center bg-black/20 px-2 ${data.tracks.length > 8 ? "py-1" : "py-1.5"} rounded`}
-                >
-                  <span
-                    className="text-zinc-300 truncate mr-2"
-                    style={{ maxWidth: "65%" }}
-                    title={track.title}
-                  >
-                    {i + 1}. {track.title}
-                  </span>
-                  <span className="font-bold whitespace-nowrap">
-                    {track.dailyStreams.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  } catch (e) {
-    return null;
-  }
-};
-
 export const Post: React.FC<{
   post: XPost;
   author: XUser | undefined;
   onQuote?: (post: XPost) => void;
-}> = ({ post, author, onQuote }) => {
+  onQuoteHold?: (post: XPost) => void;
+}> = ({ post, author, onQuote, onQuoteHold }) => {
   const { dispatch, activeArtistData } = useGame();
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -688,6 +560,10 @@ export const Post: React.FC<{
             <button
               disabled={isSuspended}
               onClick={() => onQuote && onQuote(post)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onQuoteHold && onQuoteHold(post);
+              }}
               className="p-1.5 group-hover:bg-green-500/10 rounded-full disabled:cursor-not-allowed"
             >
               <RetweetIcon className="w-5 h-5 group-hover:text-green-500" />
@@ -850,9 +726,10 @@ export const Post: React.FC<{
   );
 };
 
-const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({
-  onQuote,
-}) => {
+const FeedView: React.FC<{
+  onQuote?: (post: XPost) => void;
+  onQuoteHold?: (post: XPost) => void;
+}> = ({ onQuote, onQuoteHold }) => {
   const { gameState, activeArtistData } = useGame();
 
   // If playing as a member of a group, combine group and member posts
@@ -969,15 +846,17 @@ const FeedView: React.FC<{ onQuote?: (post: XPost) => void }> = ({
           post={post}
           author={findUser(post.authorId)}
           onQuote={onQuote}
+          onQuoteHold={onQuoteHold}
         />
       ))}
     </div>
   );
 };
 
-const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({
-  onQuote,
-}) => {
+const ExploreView: React.FC<{
+  onQuote?: (post: XPost) => void;
+  onQuoteHold?: (post: XPost) => void;
+}> = ({ onQuote, onQuoteHold }) => {
   const { gameState, activeArtistData, dispatch } = useGame();
 
   // If playing as a member of a group, combine group and member posts
@@ -1134,6 +1013,7 @@ const ExploreView: React.FC<{ onQuote?: (post: XPost) => void }> = ({
                   post={p}
                   author={findUser(p.authorId)}
                   onQuote={onQuote}
+                  onQuoteHold={onQuoteHold}
                 />
               ))}
             </div>
@@ -1968,6 +1848,9 @@ const XView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<XViewTab>("For you");
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
   const [quotePostTarget, setQuotePostTarget] = useState<XPost | null>(null);
+  const [viewingQuotesForId, setViewingQuotesForId] = useState<string | null>(
+    null,
+  );
   const [showAppealConfirm, setShowAppealConfirm] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
 
@@ -1997,23 +1880,62 @@ const XView: React.FC = () => {
     setIsComposeModalOpen(true);
   };
 
+  const handleQuoteHold = (post: XPost) => {
+    setViewingQuotesForId(post.id);
+  };
+
   const isAlreadyPremium =
     playerUser?.isVerified === true ||
     playerUser?.isVerified === "blue" ||
     playerUser?.isVerified === "gold";
 
   const renderContent = () => {
+    if (viewingQuotesForId) {
+      const allPosts = activeArtistData.xPosts;
+      const quotePosts = allPosts
+        .filter((p) => p.quoteOf?.id === viewingQuotesForId)
+        .sort((a, b) => b.likes - a.likes);
+      return (
+        <div className="h-full overflow-y-auto">
+          <div className="sticky top-0 bg-black/80 backdrop-blur z-10 border-b border-zinc-800 p-3 flex items-center gap-4">
+            <button
+              onClick={() => setViewingQuotesForId(null)}
+              className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
+            >
+              <ArrowLeftIcon className="w-5 h-5 text-white" />
+            </button>
+            <h2 className="font-bold text-lg">Quotes</h2>
+          </div>
+          {quotePosts.length > 0 ? (
+            quotePosts.map((post) => (
+              <Post
+                key={post.id}
+                post={post}
+                author={xUsers.find((u) => u.id === post.authorId)}
+                onQuote={handleQuote}
+                onQuoteHold={handleQuoteHold}
+              />
+            ))
+          ) : (
+            <div className="text-center p-8 text-zinc-500">No quotes yet.</div>
+          )}
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case "For you":
-        return <FeedView onQuote={handleQuote} />;
+        return <FeedView onQuote={handleQuote} onQuoteHold={handleQuoteHold} />;
       case "Explore":
-        return <ExploreView onQuote={handleQuote} />;
+        return (
+          <ExploreView onQuote={handleQuote} onQuoteHold={handleQuoteHold} />
+        );
       case "Messages":
         return <MessagesView />;
       case "Accounts":
         return <AccountsView />;
       default:
-        return <FeedView onQuote={handleQuote} />;
+        return <FeedView onQuote={handleQuote} onQuoteHold={handleQuoteHold} />;
     }
   };
 

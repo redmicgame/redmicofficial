@@ -18,8 +18,8 @@ const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
             <p className="flex-grow font-semibold">{song.title}</p>
             <input 
                 type="number" 
-                value={quality} 
-                onChange={e => setQuality(parseInt(e.target.value))}
+                value={quality || ''} 
+                onChange={e => setQuality(parseInt(e.target.value) || 0)}
                 onBlur={handleUpdate}
                 min="0" max="100"
                 className="w-20 bg-zinc-700 p-1 rounded-md text-center"
@@ -141,8 +141,8 @@ const RedMicProDashboardView: React.FC = () => {
                         <div className="flex gap-2">
                             <input
                                 type="number"
-                                value={newHype}
-                                onChange={e => setNewHype(parseInt(e.target.value))}
+                                value={newHype || ''}
+                                onChange={e => setNewHype(parseInt(e.target.value) || 0)}
                                 min="0"
                                 className="w-full bg-zinc-700 p-2 rounded-md"
                             />
@@ -189,7 +189,7 @@ const RedMicProDashboardView: React.FC = () => {
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
                     <h2 className="text-lg font-bold">Edit Money</h2>
                     <div className="flex gap-2">
-                        <input type="number" value={newMoney} onChange={e => setNewMoney(parseInt(e.target.value))} className="w-full bg-zinc-700 p-2 rounded-md" />
+                        <input type="number" value={newMoney || ''} onChange={e => setNewMoney(parseInt(e.target.value) || 0)} className="w-full bg-zinc-700 p-2 rounded-md" />
                         <button onClick={() => dispatch({ type: 'SET_MONEY', payload: { newAmount: newMoney }})} className="bg-zinc-600 font-bold px-4 rounded-md">Set</button>
                     </div>
                 </div>
@@ -199,8 +199,8 @@ const RedMicProDashboardView: React.FC = () => {
                     <div className="flex gap-2">
                         <input 
                             type="number" 
-                            value={newPopularity} 
-                            onChange={e => setNewPopularity(parseInt(e.target.value))} 
+                            value={newPopularity || ''} 
+                            onChange={e => setNewPopularity(parseInt(e.target.value) || 0)} 
                             min="1" 
                             max="100" 
                             className="w-full bg-zinc-700 p-2 rounded-md" 
@@ -212,7 +212,7 @@ const RedMicProDashboardView: React.FC = () => {
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
                     <h2 className="text-lg font-bold">Edit Merch Sales Boost (%)</h2>
                     <div className="flex gap-2">
-                        <input type="number" value={newBoost} onChange={e => setNewBoost(parseInt(e.target.value))} className="w-full bg-zinc-700 p-2 rounded-md" />
+                        <input type="number" value={newBoost || ''} onChange={e => setNewBoost(parseInt(e.target.value) || 0)} className="w-full bg-zinc-700 p-2 rounded-md" />
                         <button onClick={() => dispatch({ type: 'SET_SALES_BOOST', payload: { newBoost: newBoost }})} className="bg-zinc-600 font-bold px-4 rounded-md">Set</button>
                     </div>
                 </div>

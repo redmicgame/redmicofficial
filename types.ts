@@ -1289,6 +1289,7 @@ export interface RedditPost {
 export interface ArtistData {
   aboutBio?: string;
   aboutImages?: string[];
+  careerStage?: 'neutral' | 'flop' | 'smash';
   money: number;
   hype: number;
   peakHype?: number;

@@ -82,7 +82,7 @@ const StudioView: React.FC = () => {
             .filter(a => a.id !== activeArtist.id)
             .map(a => a.name)
             .sort();
-        return [...otherPlayerArtists, ...npcs];
+        return Array.from(new Set([...otherPlayerArtists, ...npcs]));
     }, [allPlayerArtists, activeArtist]);
 
     const potentialProducers = useMemo(() => {
@@ -92,7 +92,11 @@ const StudioView: React.FC = () => {
     const generateRandomNames = (count: number) => {
         const FIRST_NAMES = ["James", "Michael", "Robert", "John", "David", "William", "Richard", "Joseph", "Thomas", "Charles", "Christopher", "Daniel", "Matthew", "Anthony", "Mark", "Donald", "Steven", "Paul", "Andrew", "Joshua", "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen"];
         const LAST_NAMES = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"];
-        return Array.from({length: count}).map(() => `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`);
+        const names = new Set<string>();
+        while(names.size < count) {
+            names.add(`${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`);
+        }
+        return Array.from(names);
     };
 
     const potentialEngineers = useMemo(() => generateRandomNames(15).sort(), []);

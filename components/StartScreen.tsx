@@ -311,7 +311,7 @@ const StartScreen: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label htmlFor="artist-age" className="block text-sm font-medium text-zinc-300">Age</label>
-                                        <input type="number" id="artist-age" value={soloAge} onChange={e => setSoloAge(parseInt(e.target.value))} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
+                                        <input type="number" id="artist-age" value={soloAge || ''} onChange={e => setSoloAge(parseInt(e.target.value) || 0)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
                                     </div>
                                     <div>
                                     <label htmlFor="pronouns" className="block text-sm font-medium text-zinc-300">Pronouns</label>
@@ -382,7 +382,7 @@ const StartScreen: React.FC = () => {
 
                         <div>
                              <label htmlFor="start-year" className="block text-sm font-medium text-zinc-300">Start Year</label>
-                             <input type="number" id="start-year" min="1980" max="2024" value={startYear} onChange={e => setStartYear(parseInt(e.target.value))} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
+                             <input type="number" id="start-year" min="1980" max="2024" value={startYear || ''} onChange={e => setStartYear(parseInt(e.target.value) || 2024)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
                         </div>
                         <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-700/50">
                             <p className="text-xs text-zinc-400 font-semibold mb-1">

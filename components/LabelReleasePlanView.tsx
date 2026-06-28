@@ -136,9 +136,9 @@ const LabelReleasePlanView: React.FC = () => {
                                         <p className="font-semibold flex-grow">{song?.title}</p>
                                         <div className="flex items-center gap-2">
                                             <label className="text-sm text-zinc-400">W:</label>
-                                            <input type="number" value={releaseDate.week} onChange={e => handleSingleDateChange(songId, 'week', parseInt(e.target.value))} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
+                                            <input type="number" value={releaseDate.week || ''} onChange={e => handleSingleDateChange(songId, 'week', parseInt(e.target.value) || 0)} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
                                             <label className="text-sm text-zinc-400">Y:</label>
-                                            <input type="number" value={releaseDate.year} onChange={e => handleSingleDateChange(songId, 'year', parseInt(e.target.value))} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
+                                            <input type="number" value={releaseDate.year || ''} onChange={e => handleSingleDateChange(songId, 'year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
                                         </div>
                                     </div>
                                 );
@@ -153,9 +153,9 @@ const LabelReleasePlanView: React.FC = () => {
                         <p className="font-semibold flex-grow">{submission.release.title} ({submission.release.type.replace(" (Deluxe)", "")})</p>
                         <div className="flex items-center gap-2">
                             <label className="text-sm text-zinc-400">W:</label>
-                            <input type="number" value={projectDate.week} onChange={e => handleProjectDateChange('week', parseInt(e.target.value))} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
+                            <input type="number" value={projectDate.week || ''} onChange={e => handleProjectDateChange('week', parseInt(e.target.value) || 0)} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
                             <label className="text-sm text-zinc-400">Y:</label>
-                            <input type="number" value={projectDate.year} onChange={e => handleProjectDateChange('year', parseInt(e.target.value))} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
+                            <input type="number" value={projectDate.year || ''} onChange={e => handleProjectDateChange('year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
                         </div>
                     </div>
                 </div>
