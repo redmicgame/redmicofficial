@@ -86,8 +86,8 @@ export const generateWeeklyXContent = (
   const newMessages: { chatId: string; message: XMessage }[] = [];
   const { date } = gameState;
   const {
-    artistImages,
-    artistVideoThumbnails,
+    artistImages: rawArtistImages,
+    artistVideoThumbnails: rawArtistVideoThumbnails,
     releases,
     streamsRemovedThisWeek,
     paparazziPhotos,
@@ -98,6 +98,9 @@ export const generateWeeklyXContent = (
     popularity,
     xChats,
   } = artistData;
+
+  const artistImages = (rawArtistImages || []).map((img: any) => typeof img === 'string' ? img : img.url);
+  const artistVideoThumbnails = (rawArtistVideoThumbnails || []).map((img: any) => typeof img === 'string' ? img : img.url);
 
   const artistProfile = [
     gameState.soloArtist,
@@ -454,7 +457,7 @@ export const generateWeeklyXContent = (
           const avatarSources = [
             playerUser.avatar,
             leakedSong.coverArt,
-            ...(artistData.artistImages || []),
+            ...artistImages,
           ];
           const fanAvatar = pickRandom(avatarSources);
           fanUser = {
@@ -474,7 +477,7 @@ export const generateWeeklyXContent = (
         const thumbnailSources = [
           leakedSong.coverArt,
           playerUser.avatar,
-          ...(artistData.artistImages || []),
+          ...artistImages,
         ];
         const thumbnail = pickRandom(thumbnailSources);
 

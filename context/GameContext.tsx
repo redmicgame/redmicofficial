@@ -5823,6 +5823,10 @@ const gameReducerInternal = (
 
           artistData.xUsers.push(...uniqueNewUsers);
 
+          // Prepare recent images for fan avatar updates
+          const validImages = (artistData.artistImages || []).map(img => typeof img === 'string' ? {url: img, year: 0} : img);
+          const recentImages = [...validImages].sort((a, b) => (b.year || 0) - (a.year || 0));
+
           // Grow followers for X users
           const weeklyXPop = artistData.popularity / 100; // 0 to 1
           artistData.xUsers.forEach((u) => {
@@ -5845,6 +5849,19 @@ const gameReducerInternal = (
             if (!u.isVerified && !u.isPlayer && Math.random() > 0.5) {
               u.followingCount =
                 (u.followingCount || 0) + Math.floor(Math.random() * 3);
+            }
+
+            // Randomly update fan avatars to recent images
+            if (u.id.includes("fan") || (u.bio && (u.bio.includes("stan") || u.bio.includes("updates")))) {
+               // 5% chance each week to update avatar if there are images available
+               if (recentImages.length > 0 && Math.random() < 0.05) {
+                   // heavily prefer recent years
+                   const poolSize = Math.max(1, Math.ceil(recentImages.length * 0.3));
+                   const pickedImg = recentImages[Math.floor(Math.random() * poolSize)];
+                   if (pickedImg && pickedImg.url) {
+                       u.avatar = pickedImg.url;
+                   }
+               }
             }
           });
 
