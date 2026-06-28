@@ -416,7 +416,7 @@ export const generateWeeklyXContent = (
 
     // Hater Post
     const haterUsername = generateHaterUsername();
-    const haterId = `hater_${haterUsername}`;
+    const haterId = `hater_${haterUsername}_${crypto.randomUUID()}`;
     newUsers.push({
       id: haterId,
       name: haterUsername,
@@ -997,24 +997,31 @@ export const generateWeeklyXContent = (
     // chance for a fan post, chance for a hater
     if (postType > haterChance && topSong) {
       // Fan Post
-      const fanUsername = generateFanUsername(artistName);
-      const fanId = `fan_${fanUsername}`;
+      let fanUser: XUser | undefined = undefined;
+      const existingFans = artistData.xUsers.filter((u) => u.id.startsWith("fan_"));
+      if (existingFans.length > 0 && Math.random() < 0.7) {
+        fanUser = pickRandom(existingFans);
+      } else {
+        const fanUsername = generateFanUsername(artistName);
+        const fanId = `fan_${fanUsername}_${crypto.randomUUID()}`;
 
-      const fanAvatar =
-        artistImages.length > 0
-          ? pickRandom(artistImages)
-          : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2FlYWVhZSIvPjxwYXRoIGQ9Ik0zMiA0Ni4zMDRjLTUuNjcgMC0xMC44MDQtMi4zMjItMTQuNDA0LTYuMTYyLTMuNjA0LTMuODQtNS41OTYtOC45OTYtNS41OTYtMTQuMzk2aDYuODE2Yy4wMDQgNC4yNDQgMS41NjQgOC4yMzIgNC40MDQgMTEuMjc2IDIuODQgMy4wNDQgNi42ODQgNC42NzggMTAuOTMyIDQuNjc4djYuMTYyem0tMTUuNS0xMS41djBoLjAwNHptLjc1Ni0xNC40MDhjLjg0NC0zLjA0OCAzLjEyOC01LjQ4IDUuOTcyLTguMTY0IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTMyIDQ2LjMwNGM1LjY3IDAgMTAuODA0LTIuMzIyIDE0LjQwNC02LjE2MiAzLjYwNC0zLjggNTEuNTk2LTguOTk2IDUuNTk2LTE0LjM5NmgtNi44MTZjLS4wMDQgNC4yNDQtMS41NjQgOC4yMzItNC40MDQgMTEuMjc2LTIuODQgMy4wNDQtNi42ODQgNC42NzgtMTAuOTMyIDQuNjc4djYuMTYyem0xNS41LTExLjV2MGgtLjAwNHptLS43NTYtMTQuNDA4YzAtNC4zMjQtMy4wNC03LjQ4OC03LjI0OC03LjQ4OHM3LjI0OC0uNDggNy4yNDggNy40ODgiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJfid2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==";
+        const fanAvatar =
+          artistImages.length > 0
+            ? pickRandom(artistImages)
+            : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2FlYWVhZSIvPjxwYXRoIGQ9Ik0zMiA0Ni4zMDRjLTUuNjcgMC0xMC44MDQtMi4zMjItMTQuNDA0LTYuMTYyLTMuNjA0LTMuODQtNS41OTYtOC45OTYtNS41OTYtMTQuMzk2aDYuODE2Yy4wMDQgNC4yNDQgMS41NjQgOC4yMzIgNC40MDQgMTEuMjc2IDIuODQgMy4wNDQgNi42ODQgNC42NzggMTAuOTMyIDQuNjc4djYuMTYyem0tMTUuNS0xMS41djBoLjAwNHptLjc1Ni0xNC40MDhjLjg0NC0zLjA0OCAzLjEyOC01LjQ4IDUuOTcyLTguMTY0IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTMyIDQ2LjMwNGM1LjY3IDAgMTAuODA0LTIuMzIyIDE0LjQwNC02LjE2MiAzLjYwNC0zLjggNTEuNTk2LTguOTk2IDUuNTk2LTE0LjM5NmgtNi44MTZjLS4wMDQgNC4yNDQtMS41NjQgOC4yMzItNC40MDQgMTEuMjc2LTIuODQgMy4wNDQtNi42ODQgNC42NzgtMTAuOTMyIDQuNjc4djYuMTYyem0xNS41LTExLjV2MGgtLjAwNHptLS43NTYtMTQuNDA4YzAtNC4zMjQtMy4wNC03LjQ4OC03LjI0OC03LjQ4OHM3LjI0OC0uNDggNy4yNDggNy40ODgiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJfid2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==";
 
-      newUsers.push({
-        id: fanId,
-        name: fanUsername,
-        username: fanUsername,
-        avatar: fanAvatar,
-        isVerified: false,
-        bio: `stan account for the one and only ${artistName}`,
-        followersCount: Math.floor(Math.random() * 5000) + 100,
-        followingCount: Math.floor(Math.random() * 500) + 50,
-      });
+        fanUser = {
+          id: fanId,
+          name: fanUsername,
+          username: fanUsername,
+          avatar: fanAvatar,
+          isVerified: false,
+          bio: `stan account for the one and only ${artistName}`,
+          followersCount: Math.floor(Math.random() * 5000) + 100,
+          followingCount: Math.floor(Math.random() * 500) + 50,
+        };
+        newUsers.push(fanUser);
+      }
 
       const fanTemplates = [
         `STREAMING ${topSong.title.toUpperCase()} ALL DAY!! Let's get it to #1.`,
@@ -1164,7 +1171,7 @@ export const generateWeeklyXContent = (
 
       newPosts.push({
         id: crypto.randomUUID(),
-        authorId: fanId,
+        authorId: fanUser!.id,
         content: pickRandom(fanTemplates),
         image,
         quoteOf: quoteTarget,

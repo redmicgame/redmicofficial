@@ -4,6 +4,7 @@ import { useGame, formatNumber } from '../context/GameContext';
 import { Song, Label, XUser } from '../types';
 import { LABELS } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { CustomAwardShowBuilder } from './CustomAwardShowBuilder';
 
 const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
     const { dispatch } = useGame();
@@ -218,6 +219,90 @@ const RedMicProDashboardView: React.FC = () => {
                 </div>
 
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <h2 className="text-lg font-bold">Career Stage & Lock</h2>
+                    <div className="flex gap-2 mb-2">
+                        <button 
+                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'smash' }})} 
+                            className={`flex-1 font-bold px-4 py-2 rounded-md ${activeArtistData.careerStage === 'smash' ? 'bg-red-500 text-white' : 'bg-zinc-700'}`}
+                        >
+                            Smash Era
+                        </button>
+                        <button 
+                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'neutral' }})} 
+                            className={`flex-1 font-bold px-4 py-2 rounded-md ${activeArtistData.careerStage === 'neutral' ? 'bg-gray-500 text-white' : 'bg-zinc-700'}`}
+                        >
+                            Neutral Era
+                        </button>
+                        <button 
+                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'flop' }})} 
+                            className={`flex-1 font-bold px-4 py-2 rounded-md ${activeArtistData.careerStage === 'flop' ? 'bg-blue-500 text-white' : 'bg-zinc-700'}`}
+                        >
+                            Flop Era
+                        </button>
+                    </div>
+                    <div className="flex items-center justify-between bg-zinc-700/50 p-3 rounded-lg border border-zinc-600">
+                        <div>
+                            <p className="font-bold">Flop Era Lock</p>
+                            <p className="text-xs text-zinc-400">Prevent ever entering a flop era.</p>
+                        </div>
+                        <button
+                            onClick={() => dispatch({ type: 'TOGGLE_FLOP_ERA_LOCK' })}
+                            className={`w-14 h-8 rounded-full p-1 transition-colors ${activeArtistData.flopEraLock ? 'bg-red-500' : 'bg-zinc-600'}`}
+                        >
+                            <span className={`block w-6 h-6 rounded-full bg-white transform transition-transform ${activeArtistData.flopEraLock ? 'translate-x-6' : ''}`} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <h2 className="text-lg font-bold text-red-400">Contract Shredder</h2>
+                    <p className="text-sm text-zinc-400">Instantly get out of your current label contract without paying breach penalties.</p>
+                    <button
+                        onClick={() => {
+                            if (confirm("Are you sure you want to instantly end your contract?")) {
+                                dispatch({ type: 'SHRED_CONTRACT' });
+                            }
+                        }}
+                        disabled={!activeArtistData.contract}
+                        className={`w-full py-3 font-bold rounded-md ${activeArtistData.contract ? 'bg-red-600 hover:bg-red-500' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}
+                    >
+                        {activeArtistData.contract ? 'SHRED CONTRACT' : 'NO ACTIVE CONTRACT'}
+                    </button>
+                </div>
+
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <h2 className="text-lg font-bold">Pitchfork Score Editor</h2>
+                    <p className="text-sm text-zinc-400">Edit the Pitchfork review score for your releases.</p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        {activeArtistData.releases.filter(r => r.review).map(release => (
+                            <div key={release.id} className="flex items-center justify-between bg-zinc-700 p-2 rounded-md">
+                                <span className="font-semibold truncate w-1/2">{release.title}</span>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="number" 
+                                        step="0.1" 
+                                        min="0" 
+                                        max="10"
+                                        defaultValue={release.review?.score || 0}
+                                        onBlur={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            if (!isNaN(val)) {
+                                                dispatch({ type: 'UPDATE_RELEASE_REVIEW_SCORE', payload: { releaseId: release.id, score: val }});
+                                            }
+                                        }}
+                                        className="w-16 bg-zinc-800 p-1 rounded text-center font-mono"
+                                    />
+                                    <span className="text-zinc-400 text-xs">/ 10</span>
+                                </div>
+                            </div>
+                        ))}
+                        {activeArtistData.releases.filter(r => r.review).length === 0 && (
+                            <p className="text-sm text-zinc-500">No reviewed releases yet.</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
                     <h2 className="text-lg font-bold">Edit NPC Album/Song Covers</h2>
                     <p className="text-sm text-zinc-400">Change the cover art for NPC artists. This will apply to their new releases and some charts.</p>
                     <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
@@ -333,6 +418,9 @@ const RedMicProDashboardView: React.FC = () => {
                         ))}
                     </div>
                 </div>
+
+                <CustomAwardShowBuilder />
+
                 <div className="bg-zinc-900/50 border-2 border-purple-500/30 p-4 rounded-lg space-y-3">
                     <h2 className="text-lg font-bold text-purple-400">Admin Panel</h2>
                     {isAdminUnlocked ? (

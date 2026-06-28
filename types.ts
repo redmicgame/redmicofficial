@@ -1290,6 +1290,7 @@ export interface ArtistData {
   aboutBio?: string;
   aboutImages?: string[];
   careerStage?: 'neutral' | 'flop' | 'smash';
+  flopEraLock?: boolean;
   money: number;
   hype: number;
   peakHype?: number;
@@ -1570,6 +1571,29 @@ export interface GameState {
     emailId: string;
     source: PromoInterviewSource;
   } | null;
+  // Custom Award Show
+  customAwardShow?: {
+    name: string;
+    submissionWeek: number;
+    nominationWeek: number;
+    ceremonyWeek: number;
+    categories: {
+      id: string;
+      name: string;
+      eligibility: "album" | "song" | "artist";
+      genreFilter?: string;
+    }[];
+  };
+  customAwardSubmissions?: {
+    artistId: string;
+    categoryId: string;
+    itemId: string;
+    itemName: string;
+  }[];
+  customAwardNominations?: {
+    categoryId: string;
+    nominees: { itemId: string; itemName: string; artistName: string; isWinner?: boolean; points?: number; }[];
+  }[] | null;
   // GRAMMYs
   grammySubmissions: {
     artistId: string;
@@ -1612,6 +1636,13 @@ export interface ActiveEncounter {
 }
 
 export type GameAction =
+  | { type: "UPDATE_RELEASE_REVIEW_SCORE"; payload: { releaseId: string; score: number } }
+  | { type: "SHRED_CONTRACT" }
+  | { type: "SET_CAREER_STAGE"; payload: { stage: 'neutral' | 'flop' | 'smash' } }
+  | { type: "TOGGLE_FLOP_ERA_LOCK" }
+  | { type: "CREATE_CUSTOM_AWARD_SHOW"; payload: { customAwardShow: NonNullable<GameState['customAwardShow']> } }
+  | { type: "SUBMIT_CUSTOM_AWARDS"; payload: { submissions: NonNullable<GameState['customAwardSubmissions']> } }
+  | { type: "JUDGE_CUSTOM_AWARDS"; payload: { nominations: NonNullable<GameState['customAwardNominations']> } }
   | { type: "SET_ACTIVE_TMZ_POST"; payload: XPost | null }
   | {
       type: "RESOLVE_ENCOUNTER";

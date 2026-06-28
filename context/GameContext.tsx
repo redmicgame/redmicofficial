@@ -4130,7 +4130,7 @@ const gameReducerInternal = (
             if (isSmash) {
               if (newCareerStage === "flop") newCareerStage = "neutral";
               else if (newCareerStage === "neutral") newCareerStage = "smash";
-            } else if (isFlop) {
+            } else if (isFlop && !artistData.flopEraLock) {
               if (newCareerStage === "smash") newCareerStage = "neutral";
               else if (newCareerStage === "neutral") newCareerStage = "flop";
             }
@@ -8719,6 +8719,113 @@ const gameReducerInternal = (
         finalState.amaCurrentYearNominations = null;
       }
 
+      // --- CUSTOM AWARD SHOW LOGIC ---
+      if (state.customAwardShow) {
+        // Handle Submissions
+        if (newDate.week === state.customAwardShow.submissionWeek) {
+           const allSubmissions: NonNullable<GameState['customAwardSubmissions']> = [];
+           Object.keys(updatedArtistsData).forEach(artistId => {
+              const aData = updatedArtistsData[artistId];
+              state.customAwardShow!.categories.forEach(cat => {
+                 let bestItem: any = null;
+                 if (cat.eligibility === 'song') {
+                    bestItem = aData.songs.filter(s => s.releaseDate && s.releaseDate.year === newDate.year).sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
+                    if (bestItem) allSubmissions.push({ artistId, categoryId: cat.id, itemId: bestItem.id, itemName: bestItem.title });
+                 } else if (cat.eligibility === 'album') {
+                    bestItem = aData.releases.filter(r => r.releaseDate && r.releaseDate.year === newDate.year && (r.type === 'Album' || r.type === 'EP')).sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
+                    if (bestItem) allSubmissions.push({ artistId, categoryId: cat.id, itemId: bestItem.id, itemName: bestItem.title });
+                 } else if (cat.eligibility === 'artist') {
+                    allSubmissions.push({ artistId, categoryId: cat.id, itemId: artistId, itemName: "Artist" });
+                 }
+              });
+           });
+           finalState.customAwardSubmissions = allSubmissions;
+           
+           if (state.activeArtistId) {
+             const aData = updatedArtistsData[state.activeArtistId];
+             if (aData) {
+               aData.inbox.push({
+                 id: crypto.randomUUID(),
+                 sender: state.customAwardShow.name,
+                 senderIcon: "trophy",
+                 subject: `Submissions processed`,
+                 body: `Your submissions for the ${state.customAwardShow.name} have been processed!`,
+                 date: newDate,
+                 isRead: false,
+               });
+             }
+           }
+        }
+
+        // Handle Nominations
+        if (newDate.week === state.customAwardShow.nominationWeek && state.customAwardSubmissions && state.customAwardSubmissions.length > 0) {
+          const nominations = state.customAwardShow.categories.map(cat => {
+            const subs = state.customAwardSubmissions!.filter(s => s.categoryId === cat.id);
+            const nominees = subs.map(s => {
+               const aData = updatedArtistsData[s.artistId];
+               const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === s.artistId);
+               const points = aData?.songs.find(so => so.id === s.itemId)?.streams || aData?.releases.find(r => r.id === s.itemId)?.firstWeekStreams || (Math.random() * 100000);
+               return { itemId: s.itemId, itemName: s.itemName, artistName: artistProfile?.name || 'Unknown', points };
+            }).sort((a,b) => (b.points || 0) - (a.points || 0)).slice(0, 5).map(n => ({ ...n, isWinner: false }));
+            return { categoryId: cat.id, nominees };
+          });
+          finalState.customAwardNominations = nominations;
+          
+          if (state.activeArtistId) {
+             const aData = updatedArtistsData[state.activeArtistId];
+             if (aData) {
+               aData.inbox.push({
+                 id: crypto.randomUUID(),
+                 sender: state.customAwardShow.name,
+                 senderIcon: "trophy",
+                 subject: `Nominations are out!`,
+                 body: `The nominations for the ${state.customAwardShow.name} have been announced! Check the Red Mic Pro dashboard to see the nominees and pick the winners before Week ${state.customAwardShow.ceremonyWeek}.`,
+                 date: newDate,
+                 isRead: false,
+               });
+             }
+          }
+        }
+
+        // Handle Ceremony
+        if (newDate.week === state.customAwardShow.ceremonyWeek && state.customAwardNominations) {
+           const showName = state.customAwardShow.name;
+           
+           // Ensure at least one winner is picked per category if missing (auto-pick highest points)
+           const finalizedNoms = state.customAwardNominations.map(catNoms => {
+              if (catNoms.nominees.length > 0 && !catNoms.nominees.some(n => n.isWinner)) {
+                 catNoms.nominees[0].isWinner = true; // auto-pick top points
+              }
+              return catNoms;
+           });
+
+           let winText = `${showName} 🏆\n\nThe winners for the ${newDate.year} ${showName} have been announced!`;
+           finalizedNoms.forEach(catNom => {
+              const cat = state.customAwardShow!.categories.find(c => c.id === catNom.categoryId);
+              const winner = catNom.nominees.find(n => n.isWinner);
+              if (cat && winner) {
+                  winText += `\n${cat.name}: ${winner.itemName} - ${winner.artistName}`;
+              }
+           });
+
+           Object.values(updatedArtistsData).forEach((d) =>
+              d.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content: winText,
+                likes: Math.floor(Math.random() * 80000) + 15000,
+                retweets: Math.floor(Math.random() * 20000) + 5000,
+                views: Math.floor(Math.random() * 2000000) + 1000000,
+                date: newDate,
+              }),
+            );
+
+           // reset
+           finalState.customAwardNominations = null;
+           finalState.customAwardSubmissions = [];
+        }
+      }
+
       // --- GRAMMYS LOGIC ---
       let newGrammyNominations: GameState["grammyCurrentYearNominations"] =
         state.grammyCurrentYearNominations;
@@ -12953,6 +13060,72 @@ const gameReducerInternal = (
           ...state.artistsData,
           [state.activeArtistId]: { ...activeData, songs: updatedSongs },
         },
+      };
+    }
+    case "UPDATE_RELEASE_REVIEW_SCORE": {
+      if (!state.activeArtistId) return state;
+      const { releaseId, score } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedReleases = activeData.releases.map(r => r.id === releaseId && r.review ? { ...r, review: { ...r.review, score } } : r);
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, releases: updatedReleases },
+        },
+      };
+    }
+    case "SHRED_CONTRACT": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, contract: null },
+        },
+      };
+    }
+    case "SET_CAREER_STAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, careerStage: action.payload.stage },
+        },
+      };
+    }
+    case "TOGGLE_FLOP_ERA_LOCK": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, flopEraLock: !activeData.flopEraLock },
+        },
+      };
+    }
+    case "CREATE_CUSTOM_AWARD_SHOW": {
+      return {
+        ...state,
+        customAwardShow: action.payload.customAwardShow,
+        customAwardSubmissions: [],
+        customAwardNominations: null,
+      };
+    }
+    case "SUBMIT_CUSTOM_AWARDS": {
+      return {
+        ...state,
+        customAwardSubmissions: action.payload.submissions,
+      };
+    }
+    case "JUDGE_CUSTOM_AWARDS": {
+      return {
+        ...state,
+        customAwardNominations: action.payload.nominations,
       };
     }
     case "SET_MONEY": {
