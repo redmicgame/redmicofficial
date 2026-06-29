@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -7,14 +7,52 @@ import PlusCircleIcon from './icons/PlusCircleIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import ShareIcon from './icons/ShareIcon';
 
-const SpotifyNowPlayingView: React.FC<{ song: Song; onBack: () => void; }> = ({ song, onBack }) => {
+const SpotifyNowPlayingView: React.FC<{ songs: Song[]; initialSongIndex: number; onBack: () => void; }> = ({ songs, initialSongIndex, onBack }) => {
     const { activeArtist, activeArtistData, allPlayerArtists } = useGame();
     const [isMuted, setIsMuted] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(initialSongIndex);
 
-    if (!activeArtist || !activeArtistData) {
+    const touchStartY = useRef(0);
+    const touchEndY = useRef(0);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartY.current = e.targetTouches[0].clientY;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        touchEndY.current = e.targetTouches[0].clientY;
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStartY.current || !touchEndY.current) return;
+        const distance = touchStartY.current - touchEndY.current;
+        const isUpSwipe = distance > 50;
+        const isDownSwipe = distance < -50;
+        
+        if (isUpSwipe) {
+            setCurrentIndex(c => (c + 1) % songs.length);
+        } else if (isDownSwipe) {
+            setCurrentIndex(c => (c - 1 + songs.length) % songs.length);
+        }
+        
+        touchStartY.current = 0;
+        touchEndY.current = 0;
+    };
+
+    const handleWheel = (e: React.WheelEvent) => {
+        if (e.deltaY > 50) {
+            setCurrentIndex(c => (c + 1) % songs.length);
+        } else if (e.deltaY < -50) {
+            setCurrentIndex(c => (c - 1 + songs.length) % songs.length);
+        }
+    };
+
+    if (!activeArtist || !activeArtistData || !songs || songs.length === 0) {
         onBack();
         return null;
     }
+
+    const song = songs[currentIndex];
 
     const artistsToDisplay = [{ name: activeArtist.name, image: activeArtist.image }];
     
@@ -34,11 +72,18 @@ const SpotifyNowPlayingView: React.FC<{ song: Song; onBack: () => void; }> = ({ 
     const artistNamesStr = artistsToDisplay.map(a => a.name).join(', ');
 
     return (
-        <div className="fixed inset-0 bg-black text-white z-50">
+        <div 
+            className="fixed inset-0 bg-black text-white z-50 transition-transform duration-300 ease-in-out"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onWheel={handleWheel}
+        >
             {/* Background */}
             <div className="absolute inset-0">
                 {song.canvasVideo ? (
                     <video 
+                        key={song.id}
                         src={song.canvasVideo} 
                         className="w-full h-full object-cover" 
                         autoPlay 
@@ -48,7 +93,7 @@ const SpotifyNowPlayingView: React.FC<{ song: Song; onBack: () => void; }> = ({ 
                     />
                 ) : (
                     <>
-                        <img src={song.coverArt} alt="" className="w-full h-full object-cover filter blur-2xl scale-110 opacity-70" />
+                        <img key={song.id} src={song.coverArt} alt="" className="w-full h-full object-cover filter blur-2xl scale-110 opacity-70 transition-all duration-500" />
                         <div className="absolute inset-0 bg-black/60"></div>
                     </>
                 )}

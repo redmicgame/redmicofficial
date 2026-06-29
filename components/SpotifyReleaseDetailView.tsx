@@ -100,7 +100,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
     }, [releaseSongs]);
 
     if (nowPlayingSong) {
-        return <SpotifyNowPlayingView song={nowPlayingSong} onBack={() => setNowPlayingSong(null)} />;
+        return <SpotifyNowPlayingView songs={releaseSongs} initialSongIndex={releaseSongs.findIndex(s => s.id === nowPlayingSong.id)} onBack={() => setNowPlayingSong(null)} />;
     }
 
     if (!release || !activeArtist) {

@@ -1962,6 +1962,50 @@ const gameReducerInternal = (
         pendingRadioPromoSpins: (song.pendingRadioPromoSpins || 0) + spinsGained,
       };
 
+      // Add a prediction post if it's gaining radio traction
+      const newXPosts = [...(activeData.xPosts || [])];
+      
+      const artistName = state.soloArtist?.name || state.group?.name || "Artist";
+      const artistHandle = activeData.xUsers.find((u) => u.name === artistName)?.username || "artist";
+      
+      const totalRadio = (song.radioPlays || 0) + spinsGained;
+      const mRadio = (totalRadio * 5000 / 1000000).toFixed(1);
+      const mStreams = ((song.weeklyStreams || 0) / 1000000).toFixed(1);
+      const eSales = Math.floor((song.weeklyStreams || 0) / 800) + 1500;
+      
+      let rankPredNum = 95;
+      if ((song.weeklyStreams || 0) > 25000000) rankPredNum = Math.floor(Math.random() * 5) + 1; // 1-5
+      else if ((song.weeklyStreams || 0) > 15000000) rankPredNum = Math.floor(Math.random() * 5) + 6; // 6-10
+      else if ((song.weeklyStreams || 0) > 10000000) rankPredNum = Math.floor(Math.random() * 10) + 11; // 11-20
+      else if ((song.weeklyStreams || 0) > 5000000) rankPredNum = Math.floor(Math.random() * 20) + 21; // 21-40
+      else rankPredNum = Math.floor(Math.random() * 40) + 50; // 50-90
+
+      let isReEntry = (song.lastWeekStreams || 0) === 0 && (song.streams || 0) > (song.weeklyStreams || 0);
+      let isDebut = (song.lastWeekStreams || 0) === 0 && (song.streams || 0) <= (song.weeklyStreams || 0);
+
+      let content = "";
+      if (isReEntry) {
+        let rankBucket = rankPredNum <= 10 ? 10 : rankPredNum <= 20 ? 20 : rankPredNum <= 30 ? 30 : rankPredNum <= 40 ? 40 : rankPredNum <= 50 ? 50 : 100;
+        content = `"${song.title}" by ${artistName} is challenging to re-enter the top ${rankBucket} on the next Billboard Hot 100.`;
+      } else {
+        let actionWord = isDebut ? "debut" : "rise";
+        if (!isDebut && (song.weeklyStreams || 0) < (song.lastWeekStreams || 0)) {
+           actionWord = "drop";
+        }
+        content = `"${song.title}" by @${artistHandle} is predicted to ${actionWord} at #${rankPredNum} on the Hot 100 with ${mStreams}M streams, ${eSales.toLocaleString()} sales, and ${mRadio}M radio.`;
+      }
+      
+      newXPosts.push({
+        id: crypto.randomUUID(),
+        authorId: "talkofthecharts",
+        date: state.date,
+        content: content,
+        likes: Math.floor(Math.random() * 10000) + 1000,
+        retweets: Math.floor(Math.random() * 2000) + 200,
+        views: Math.floor(Math.random() * 200000) + 50000,
+        image: song.coverArt,
+      });
+
       return {
         ...state,
         artistsData: {
@@ -1971,6 +2015,7 @@ const gameReducerInternal = (
             money: newMoney,
             contract: newContract,
             songs: updatedSongs,
+            xPosts: newXPosts,
           },
         },
       };
@@ -6744,29 +6789,26 @@ const gameReducerInternal = (
                     : 3.0
                   : 1.0;
 
-              let targetPlays = Math.floor(
-                song.weeklyStreams *
-                  0.005 *
-                  (qualityBoost / 100) *
-                  labelBoost *
-                  formatMultiplier *
-                  radioEraBoost,
-              );
-              // Instead of capping rPlays, we cap targetPlays so it smoothly decays down to the cap
-              if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
-
               const previousPlays = s.radioPlays || 0;
-              let dropLimit = -1000;
-              // If they have massive plays from payola, let it decay a bit faster but not instantly
-              if (previousPlays > targetPlays * 2) {
-                dropLimit = -Math.floor(previousPlays * 0.15); 
+              
+              const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
+              let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
+              
+              targetPlays += song.weeklyStreams * 0.0005; // tiny stream impact
+              
+              const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost;
+              if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
+
+              let dropLimit = -500;
+              if (previousPlays > targetPlays * 1.5) {
+                dropLimit = -Math.floor(previousPlays * 0.1); 
               }
 
               rPlays =
                 previousPlays +
                 Math.max(
                   dropLimit,
-                  Math.floor((targetPlays - previousPlays) * 0.3),
+                  Math.floor((targetPlays - previousPlays) * 0.2),
                 );
 
               let promoSpins = 0;
@@ -16406,6 +16448,62 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
       // Public Image suppression
       const publicImageVal = data.publicImage ?? 80;
+
+      // Talk of the Charts Prediction Tweet
+      if (
+        action.type === "PROGRESS_WEEK" && 
+        data.xUsers.some((u) => u.id === "talkofthecharts") && 
+        data.songs.length > 0 &&
+        Math.random() < 0.4 // Only 40% chance per week to not spam
+      ) {
+        // Find best performing song based on current weekly streams
+        const bestSong = [...data.songs]
+          .filter(s => s.isReleased && s.weeklyStreams > 500000)
+          .sort((a, b) => b.weeklyStreams - a.weeklyStreams)[0];
+
+        if (bestSong) {
+          const mStreams = (bestSong.weeklyStreams / 1000000).toFixed(1);
+          const mRadio = ((bestSong.radioPlays || 0) * 5000 / 1000000).toFixed(1);
+          const eSales = Math.floor(bestSong.weeklyStreams / 800) + 1500;
+          
+          let rankPredNum = 95;
+          if (bestSong.weeklyStreams > 25000000) rankPredNum = Math.floor(Math.random() * 5) + 1; // 1-5
+          else if (bestSong.weeklyStreams > 15000000) rankPredNum = Math.floor(Math.random() * 5) + 6; // 6-10
+          else if (bestSong.weeklyStreams > 10000000) rankPredNum = Math.floor(Math.random() * 10) + 11; // 11-20
+          else if (bestSong.weeklyStreams > 5000000) rankPredNum = Math.floor(Math.random() * 20) + 21; // 21-40
+          else rankPredNum = Math.floor(Math.random() * 40) + 50; // 50-90
+
+          let artistHandle = data.xUsers.find((u) => u.name === (state.soloArtist?.name || state.group?.name))?.username || "artist";
+
+          let isReEntry = bestSong.lastWeekStreams === 0 && bestSong.streams > bestSong.weeklyStreams; 
+          let isDebut = bestSong.lastWeekStreams === 0 && bestSong.streams <= bestSong.weeklyStreams;
+          
+          let content = "";
+          
+          if (isReEntry) {
+            let rankBucket = rankPredNum <= 10 ? 10 : rankPredNum <= 20 ? 20 : rankPredNum <= 30 ? 30 : rankPredNum <= 40 ? 40 : rankPredNum <= 50 ? 50 : 100;
+            content = `"${bestSong.title}" by ${state.soloArtist?.name || state.group?.name || "Artist"} is challenging to re-enter the top ${rankBucket} on the next Billboard Hot 100.`;
+          } else {
+            let actionWord = isDebut ? "debut" : "rise";
+            if (!isDebut && bestSong.weeklyStreams < bestSong.lastWeekStreams) {
+               actionWord = "drop";
+            }
+            content = `"${bestSong.title}" by @${artistHandle} is predicted to ${actionWord} at #${rankPredNum} on the Hot 100 with ${mStreams}M streams, ${eSales.toLocaleString()} sales, and ${mRadio}M radio.`;
+          }
+
+          const predictionPost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: "talkofthecharts",
+            content: content,
+            likes: Math.floor(Math.random() * 20000) + 5000,
+            retweets: Math.floor(Math.random() * 5000) + 1000,
+            views: Math.floor(Math.random() * 500000) + 50000,
+            date: nextState.date,
+            image: bestSong.coverArt
+          };
+          finalNewPosts.push(predictionPost);
+        }
+      }
 
       // Generate generic NPC quotes
       if (oldData.xPosts.length > 0 && Math.random() < 0.8) {

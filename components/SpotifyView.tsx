@@ -16,10 +16,11 @@ import SpotifyDiscographyView from './SpotifyDiscographyView';
 import SpotifyReleaseDetailView from './SpotifyReleaseDetailView';
 import SpotifyPlaylistDetailView from './SpotifyPlaylistDetailView';
 import { SpotifyPlaylistCover } from './SpotifyPlaylistCover';
+import SpotifyNowPlayingView from './SpotifyNowPlayingView';
 
-const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boolean }> = ({ song, index, hasMusicVideo }) => {
+const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boolean; onClick?: () => void; }> = ({ song, index, hasMusicVideo, onClick }) => {
     return (
-        <div className="flex items-center gap-4 group cursor-pointer p-2 -mx-2 rounded-md hover:bg-white/10">
+        <div onClick={onClick} className="flex items-center gap-4 group cursor-pointer p-2 -mx-2 rounded-md hover:bg-white/10">
             <div className="text-zinc-400 font-semibold w-5 text-right">{index + 1}</div>
             <img src={song.coverArt} alt={song.title} className="w-10 h-10 rounded-sm object-cover" />
             <div className="flex-grow">
@@ -193,6 +194,7 @@ const SpotifyView: React.FC = () => {
     const [isPopularExpanded, setIsPopularExpanded] = useState(false);
     const [showVerifiedModal, setShowVerifiedModal] = useState(false);
     const [showAboutModal, setShowAboutModal] = useState(false);
+    const [nowPlayingSongIndex, setNowPlayingSongIndex] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!activeArtist || !activeArtistData) return null;
@@ -233,10 +235,13 @@ const SpotifyView: React.FC = () => {
         return [...songs, ...playerFeatureSongs];
     }, [songs, activeArtist, gameState.artistsData]);
 
-    const topSongs = allSongs
-        .filter(s => s.isReleased && !s.isTakenDown && s.isAvailableOnStreaming === true)
-        .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
-        .slice(0, 10);
+    const streamingSongs = useMemo(() => {
+        return allSongs
+            .filter(s => s.isReleased && !s.isTakenDown && s.isAvailableOnStreaming === true)
+            .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0));
+    }, [allSongs]);
+
+    const topSongs = streamingSongs.slice(0, 10);
         
     const popularSongsToShow = isPopularExpanded ? topSongs : topSongs.slice(0, 5);
 
@@ -373,6 +378,9 @@ const SpotifyView: React.FC = () => {
         return <SpotifyPlaylistDetailView playlistId={selectedPlaylistId} onBack={handleBack} />;
     }
 
+    if (nowPlayingSongIndex !== null) {
+        return <SpotifyNowPlayingView songs={streamingSongs} initialSongIndex={streamingSongs.findIndex(s => s.id === popularSongsToShow[nowPlayingSongIndex].id)} onBack={() => setNowPlayingSongIndex(null)} />;
+    }
 
     return (
         <div className="bg-[#121212] text-white h-full overflow-y-auto pb-24">
@@ -461,7 +469,7 @@ const SpotifyView: React.FC = () => {
                         <div className="space-y-2">
                             {popularSongsToShow.map((song, index) => {
                                 const hasMusicVideo = activeArtistData.videos?.some(v => v.songId === song.id && v.type === 'Music Video');
-                                return <PopularSongItem key={song.id} song={song} index={index} hasMusicVideo={hasMusicVideo} />;
+                                return <PopularSongItem key={song.id} song={song} index={index} hasMusicVideo={hasMusicVideo} onClick={() => setNowPlayingSongIndex(index)} />;
                             })}
                         </div>
                         {topSongs.length > 5 && (

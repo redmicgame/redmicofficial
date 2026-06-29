@@ -786,6 +786,16 @@ const FeedView: React.FC<{
       followersCount: 2300000,
       followingCount: 1,
     },
+    talkofthecharts: {
+      id: "talkofthecharts",
+      name: "Talk of the Charts",
+      username: "talkofthecharts",
+      avatar: "https://ui-avatars.com/api/?name=Talk+Of+The+Charts&background=000&color=fff",
+      isVerified: true,
+      bio: "Predictions, charts, and news.",
+      followersCount: 850000,
+      followingCount: 0,
+    },
   };
 
   const findUser = (id: string) =>
@@ -921,7 +931,7 @@ const ExploreView: React.FC<{
   // Find latest posts from PopBase/TMZ for news
   const newsPosts = [...xPosts]
     .filter((p) =>
-      ["popbase", "tmz", "chartdata", "spotifysnapshot"].includes(p.authorId),
+      ["popbase", "tmz", "chartdata", "spotifysnapshot", "talkofthecharts"].includes(p.authorId),
     )
     .slice(0, 3);
 
@@ -947,6 +957,16 @@ const ExploreView: React.FC<{
       bio: "facts & stats",
       followersCount: 2300000,
       followingCount: 1,
+    },
+    talkofthecharts: {
+      id: "talkofthecharts",
+      name: "Talk of the Charts",
+      username: "talkofthecharts",
+      avatar: "https://ui-avatars.com/api/?name=Talk+Of+The+Charts&background=000&color=fff",
+      isVerified: true,
+      bio: "Predictions, charts, and news.",
+      followersCount: 850000,
+      followingCount: 0,
     },
   };
   const findUser = (id: string) =>

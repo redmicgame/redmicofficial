@@ -198,17 +198,21 @@ export const ChartPredictionsView: React.FC = () => {
                             const formatMultiplier = isFormatCompatible(s.genre || 'pop', rFormat);
                             const radioEraBoost = gameState.date.year < 2010 ? (gameState.date.year < 2000 ? 5.0 : 3.0) : 1.0;
                             
-                            let targetPlays = Math.floor((song.weeklyStreams * 0.005) * (qualityBoost / 100) * labelBoost * formatMultiplier * radioEraBoost);
-                            // Instead of capping rPlays, we cap targetPlays so it smoothly decays down to the cap
-                            if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
-                            
                             const previousPlays = s.radioPlays || 0;
-                            let dropLimit = -1000;
-                            if (previousPlays > targetPlays * 2) {
-                                dropLimit = -Math.floor(previousPlays * 0.15); 
+                            const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
+                            let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
+                            
+                            targetPlays += song.weeklyStreams * 0.0005; 
+                            
+                            const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost;
+                            if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
+                            
+                            let dropLimit = -500;
+                            if (previousPlays > targetPlays * 1.5) {
+                                dropLimit = -Math.floor(previousPlays * 0.1); 
                             }
 
-                            let rPlays = previousPlays + Math.max(dropLimit, Math.floor((targetPlays - previousPlays) * 0.3));
+                            let rPlays = previousPlays + Math.max(dropLimit, Math.floor((targetPlays - previousPlays) * 0.2));
                             
                             let promoSpins = 0;
                             if (s.pendingRadioPromoSpins) {
