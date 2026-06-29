@@ -120,6 +120,7 @@ export interface Song {
   lastWeekRadioPlays?: number;
   weeksOnRadio?: number;
   radioFormat?: string;
+  pendingRadioPromoSpins?: number;
   hasTweetedBillionStreams?: boolean;
   hasBillionsClubEmail?: boolean;
   hasBillionsClubPerformance?: boolean;
@@ -568,6 +569,7 @@ export interface NpcSong {
   lastWeekRadioPlays?: number;
   weeksOnRadio?: number;
   radioFormat?: string;
+  pendingRadioPromoSpins?: number;
 }
 
 export interface NpcAlbum {
@@ -2196,4 +2198,8 @@ export type GameAction =
   | {
       type: "WITHDRAW_FROM_RADIO";
       payload: { songId: string; format: string };
+    }
+  | {
+      type: "PROMOTE_RADIO";
+      payload: { songId: string; format: string; amount: number; source: "personal" | "label" };
     };

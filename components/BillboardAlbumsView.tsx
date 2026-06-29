@@ -58,8 +58,8 @@ const BillboardAlbumsView: React.FC = () => {
                  <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="absolute top-1/2 left-4 -translate-y-1/2 p-2 rounded-full hover:bg-zinc-100">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
-                <h1 className="text-2xl font-black tracking-tight font-anton uppercase">TOP 50 ALBUMS</h1>
-                <p className="text-xs font-medium text-zinc-500 mt-1">The week's most popular albums.</p>
+                <h1 className="text-2xl font-black tracking-tight font-anton uppercase">BILLBOARD 200</h1>
+                <p className="text-xs font-medium text-zinc-500 mt-1">The week's 200 most popular albums.</p>
             </header>
             
             <main className="max-w-3xl mx-auto px-4">

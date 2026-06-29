@@ -199,12 +199,24 @@ export const ChartPredictionsView: React.FC = () => {
                             const radioEraBoost = gameState.date.year < 2010 ? (gameState.date.year < 2000 ? 5.0 : 3.0) : 1.0;
                             
                             let targetPlays = Math.floor((song.weeklyStreams * 0.005) * (qualityBoost / 100) * labelBoost * formatMultiplier * radioEraBoost);
+                            // Instead of capping rPlays, we cap targetPlays so it smoothly decays down to the cap
                             if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
                             
                             const previousPlays = s.radioPlays || 0;
-                            let rPlays = previousPlays + Math.max(-1000, Math.floor((targetPlays - previousPlays) * 0.3));
+                            let dropLimit = -1000;
+                            if (previousPlays > targetPlays * 2) {
+                                dropLimit = -Math.floor(previousPlays * 0.15); 
+                            }
+
+                            let rPlays = previousPlays + Math.max(dropLimit, Math.floor((targetPlays - previousPlays) * 0.3));
+                            
+                            let promoSpins = 0;
+                            if (s.pendingRadioPromoSpins) {
+                                promoSpins = s.pendingRadioPromoSpins;
+                                rPlays += promoSpins;
+                            }
+
                             if (rPlays < 0) rPlays = 0;
-                            if (rPlays > maxPlaysForRank) rPlays = maxPlaysForRank;
 
                             currentRadioPlays = rPlays;
                         }
@@ -229,7 +241,10 @@ export const ChartPredictionsView: React.FC = () => {
             const streamPoints = (song.weeklyStreams * effectiveStreamingShare) * 0.5;
             const digitalPoints = (sales * eraConfigTemp.marketShare.digital) * 150 * 0.2;
             const physicalPoints = (sales * eraConfigTemp.marketShare.physical + additionalPhysicalSales) * 150 * 0.2;
-            const radioPoints = currentRadioPlays * eraConfigTemp.marketShare.radio * 80 * 0.3;
+            
+            // Approximate impressions based on plays
+            const currentRadioImpressions = currentRadioPlays * 5000;
+            const radioPoints = currentRadioImpressions * eraConfigTemp.marketShare.radio * 0.25;
             
             const points = streamPoints + digitalPoints + physicalPoints + radioPoints;
             

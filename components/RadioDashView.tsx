@@ -5,6 +5,9 @@ const RadioDashView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const [selectedTab, setSelectedTab] = useState<'manage' | 'charts'>('manage');
     const [selectedChart, setSelectedChart] = useState<'overall' | 'pop' | 'urban' | 'rhythmic' | 'country' | 'christmas'>('overall');
+    const [promoSongId, setPromoSongId] = useState<string | null>(null);
+    const [promoAmount, setPromoAmount] = useState<number>(10000);
+    const [promoSource, setPromoSource] = useState<'personal' | 'label'>('personal');
 
     const activeArtistData = gameState.activeArtistId ? gameState.artistsData[gameState.activeArtistId] : null;
 
@@ -18,18 +21,13 @@ const RadioDashView: React.FC = () => {
         if (labelId === 'island' || labelId === 'atlantic' || labelId === 'tde') return 1;
         if (labelId === 'rca' || labelId === 'columbia' || labelId === 'quality_control') return 2;
         if (labelId === 'umg' || labelId === 'republic' || labelId === 'interscope' || labelId === 'epic' || labelId === 'roc_nation') return 3;
-        // Assume petty labels handle up to 5 songs? Wait, the user said "petty labels can do up to 5 songs at a time".
-        // But what defines a petty label? In GameContext, it's contractType === 'petty' or tier === 'Low'.
         if (labelId.includes('custom_')) return 5; 
-        return 3; // fallback for any other standard label
+        return 3; 
     };
 
     const labelId = getActiveLabel();
     const maxSongs = getMaxRadioSongs(labelId);
     
-    // Check if player has distro deal? Independent exception is if they have distribution deal...
-    // Let's assume custom_ labels are the only other option so they get 5. If NO label, then 0.
-
     const songsOnRadioCount = activeArtistData?.songs.filter(s => s.isOnRadio).length || 0;
 
     const handleWithdraw = (songId: string, format: string) => {
@@ -42,6 +40,20 @@ const RadioDashView: React.FC = () => {
             return;
         }
         dispatch({ type: 'SUBMIT_TO_RADIO', payload: { songId, format } });
+    };
+
+    const handlePromote = (songId: string, format: string) => {
+        if (promoSource === 'personal' && (activeArtistData?.money || 0) < promoAmount) {
+            alert("Not enough personal funds.");
+            return;
+        }
+        if (promoSource === 'label' && (!activeArtistData?.contract || activeArtistData.contract.marketingBudget < promoAmount)) {
+            alert("Not enough label marketing budget.");
+            return;
+        }
+        dispatch({ type: 'PROMOTE_RADIO', payload: { songId, format, amount: promoAmount, source: promoSource } });
+        setPromoSongId(null);
+        alert(`Successfully invested $${formatNumber(promoAmount)} in radio promotion!`);
     };
 
     const renderManage = () => {
@@ -62,17 +74,65 @@ const RadioDashView: React.FC = () => {
                     <h2 className="text-xl font-bold mb-2">My Airplay</h2>
                     <p className="text-sm text-zinc-500 mb-4">Capacity: {songsOnRadioCount} / {maxSongs} active campaigns</p>
                     {activeArtistData.songs.filter(s => s.isOnRadio).map(song => (
-                        <div key={song.id} className="bg-white p-3 rounded-lg border border-black shadow mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <img src={song.coverArt} className="w-12 h-12 object-cover border border-black" />
-                                <div>
-                                    <p className="font-bold text-sm truncate w-40">{song.title}</p>
-                                    <p className="text-xs text-zinc-500 pt-1">
-                                        Plays: {formatNumber(song.radioPlays || 0)} TW • Format: {song.radioFormat?.toUpperCase()}
-                                    </p>
+                        <div key={song.id} className="bg-white p-3 rounded-lg border border-black shadow mb-3 flex flex-col">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <img src={song.coverArt} className="w-12 h-12 object-cover border border-black" />
+                                    <div>
+                                        <p className="font-bold text-sm truncate w-40">{song.title}</p>
+                                        <p className="text-xs text-zinc-500 pt-1">
+                                            Plays: {formatNumber(song.radioPlays || 0)} TW • Format: {song.radioFormat?.toUpperCase()}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <button onClick={() => setPromoSongId(promoSongId === song.id ? null : song.id)} className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">
+                                        {promoSongId === song.id ? 'Cancel' : 'Promote'}
+                                    </button>
+                                    <button onClick={() => handleWithdraw(song.id, song.radioFormat || 'pop')} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">Withdraw</button>
                                 </div>
                             </div>
-                            <button onClick={() => handleWithdraw(song.id, song.radioFormat || 'pop')} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">Withdraw</button>
+                            {promoSongId === song.id && (
+                                <div className="mt-4 pt-4 border-t border-zinc-200">
+                                    <h4 className="font-bold text-sm mb-2 text-blue-800">Radio Promotion (Payola)</h4>
+                                    <p className="text-xs text-zinc-600 mb-4">Invest money to boost spins and impressions this week.</p>
+                                    <div className="mb-4">
+                                        <label className="text-xs font-bold text-zinc-700">Amount: ${formatNumber(promoAmount)}</label>
+                                        <input 
+                                            type="range" 
+                                            min="1000" 
+                                            max="1000000" 
+                                            step="1000"
+                                            value={promoAmount} 
+                                            onChange={(e) => setPromoAmount(parseInt(e.target.value))}
+                                            className="w-full accent-blue-600 h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer mt-2" 
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 mb-4">
+                                        <button 
+                                            onClick={() => setPromoSource('personal')} 
+                                            className={`flex-1 py-2 text-xs font-bold rounded ${promoSource === 'personal' ? 'bg-black text-white' : 'bg-zinc-200 text-black'}`}
+                                        >
+                                            Personal Funds<br/>
+                                            <span className="text-[10px] opacity-80">${formatNumber(activeArtistData.money)}</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => setPromoSource('label')} 
+                                            disabled={!activeArtistData.contract}
+                                            className={`flex-1 py-2 text-xs font-bold rounded disabled:opacity-50 ${promoSource === 'label' ? 'bg-black text-white' : 'bg-zinc-200 text-black'}`}
+                                        >
+                                            Label Budget<br/>
+                                            <span className="text-[10px] opacity-80">{activeArtistData.contract ? `$${formatNumber(activeArtistData.contract.marketingBudget)}` : 'N/A'}</span>
+                                        </button>
+                                    </div>
+                                    <button 
+                                        onClick={() => handlePromote(song.id, song.radioFormat || 'pop')} 
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded shadow text-sm uppercase tracking-wide transition-colors"
+                                    >
+                                        Confirm Campaign
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ))}
                     {songsOnRadioCount === 0 && <p className="text-zinc-400 text-sm italic">No active radio campaigns.</p>}
@@ -80,7 +140,7 @@ const RadioDashView: React.FC = () => {
 
                 <div>
                     <h2 className="text-xl font-bold mb-4 pt-4 border-t border-zinc-200">Submit New Track</h2>
-                    {activeArtistData.songs.filter(s => !s.isOnRadio && s.isReleased).map(song => (
+                    {activeArtistData.songs.filter(s => !s.isOnRadio && s.isReleased && !s.remixOfSongId).map(song => (
                         <div key={song.id} className="bg-white p-3 rounded border border-zinc-300 mb-3 flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div className="flex items-center w-full gap-3">
                                 <img src={song.coverArt} className="w-10 h-10 object-cover border border-zinc-200" />

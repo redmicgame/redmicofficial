@@ -1928,6 +1928,53 @@ const gameReducerInternal = (
         },
       };
     }
+    case "PROMOTE_RADIO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { songId, format, amount, source } = action.payload;
+
+      const songIndex = activeData.songs.findIndex((s) => s.id === songId);
+      if (songIndex === -1) return state;
+
+      let newMoney = activeData.money;
+      let newContract = activeData.contract ? { ...activeData.contract } : null;
+
+      if (source === "personal") {
+        if (newMoney < amount) return state;
+        newMoney -= amount;
+      } else if (source === "label") {
+        if (!newContract || newContract.marketingBudget < amount) return state;
+        newContract.marketingBudget -= amount;
+      }
+
+      const updatedSongs = [...activeData.songs];
+      const song = updatedSongs[songIndex];
+
+      // Conversion from money to spins (payola/promotion efficiency)
+      // Every $1000 could add around 50-100 spins immediately or slowly?
+      // Since it's a one-time promo, we add an immediate boost to radioPlays,
+      // and maybe a popularity boost? Let's give them immediate radioPlays.
+      const spinsGained = Math.floor(amount / 10) * (Math.random() * 0.5 + 0.8);
+      const impressionsGained = spinsGained * 5000;
+
+      updatedSongs[songIndex] = {
+        ...song,
+        pendingRadioPromoSpins: (song.pendingRadioPromoSpins || 0) + spinsGained,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            contract: newContract,
+            songs: updatedSongs,
+          },
+        },
+      };
+    }
     case "SWITCH_YOUTUBE_CHANNEL":
       return {
         ...state,
@@ -2168,7 +2215,7 @@ const gameReducerInternal = (
 
       // NPC Churn Logic: Simulate new songs releasing
       let newNpcsList = [...state.npcs];
-      const CHURN_COUNT = 350;
+      const CHURN_COUNT = 600;
       // Remove NPCs from the bottom of the list.
       if (newNpcsList.length >= CHURN_COUNT) {
         newNpcsList.splice(newNpcsList.length - CHURN_COUNT, CHURN_COUNT);
@@ -2192,8 +2239,9 @@ const gameReducerInternal = (
 
       // NPC Album Churn Logic
       let newNpcAlbums = [...state.npcAlbums];
-      const ALBUM_CHURN_COUNT = 25;
-      if (newNpcAlbums.length > ALBUM_CHURN_COUNT) {
+      const ALBUM_CHURN_COUNT = 50;
+      const MAX_ALBUMS = 500;
+      if (newNpcAlbums.length > MAX_ALBUMS) {
         newNpcAlbums.splice(
           newNpcAlbums.length - ALBUM_CHURN_COUNT,
           ALBUM_CHURN_COUNT,
@@ -6704,17 +6752,31 @@ const gameReducerInternal = (
                   formatMultiplier *
                   radioEraBoost,
               );
+              // Instead of capping rPlays, we cap targetPlays so it smoothly decays down to the cap
               if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
 
               const previousPlays = s.radioPlays || 0;
+              let dropLimit = -1000;
+              // If they have massive plays from payola, let it decay a bit faster but not instantly
+              if (previousPlays > targetPlays * 2) {
+                dropLimit = -Math.floor(previousPlays * 0.15); 
+              }
+
               rPlays =
                 previousPlays +
                 Math.max(
-                  -1000,
+                  dropLimit,
                   Math.floor((targetPlays - previousPlays) * 0.3),
                 );
+
+              let promoSpins = 0;
+              if (s.pendingRadioPromoSpins) {
+                promoSpins = s.pendingRadioPromoSpins;
+                rPlays += promoSpins;
+                s.pendingRadioPromoSpins = 0;
+              }
+
               if (rPlays < 0) rPlays = 0;
-              if (rPlays > maxPlaysForRank) rPlays = maxPlaysForRank;
 
               // Handle radio removal
               let removedReason = null;
@@ -6902,7 +6964,7 @@ const gameReducerInternal = (
           150 *
           0.2;
         const radioPoints =
-          (song.radioPlays || 0) * eraConfigTemp.marketShare.radio * 80 * 0.3;
+          (song.radioImpressions || 0) * eraConfigTemp.marketShare.radio * 0.25;
 
         const points =
           streamPoints + digitalPoints + physicalPoints + radioPoints;
@@ -7447,9 +7509,12 @@ const gameReducerInternal = (
 
         const eraConfigTmp3 = getEraConfiguration(state.date.year);
 
-        const streamActivity = Math.floor(
+        let streamActivity = Math.floor(
           (totalWeeklyStreams / 1500) * eraConfigTmp3.marketShare.streaming,
         );
+
+        // Add a baseline boost to ensure Billboard 200 bottom stays around 7000+ units
+        streamActivity += 6000 + (Math.random() * 4000);
 
         // Use the sales potential to guarantee higher chart positions
         // Sales potential (14k+) ensures chart relevance.
@@ -7491,14 +7556,14 @@ const gameReducerInternal = (
       ];
       allAlbumContenders.sort((a, b) => b.weeklyActivity - a.weeklyActivity);
 
-      const top50Albums = allAlbumContenders.slice(0, 50);
+      const top200Albums = allAlbumContenders.slice(0, 200);
       const newAlbumChartHistory: ChartHistory = { ...state.albumChartHistory };
       const newBillboardTopAlbums: AlbumChartEntry[] = [];
       const prevBillboardAlbumsMap = new Map(
         state.billboardTopAlbums.map((entry) => [entry.uniqueId, entry]),
       );
 
-      top50Albums.forEach((album, index) => {
+      top200Albums.forEach((album, index) => {
         const rank = index + 1;
         const history = newAlbumChartHistory[album.uniqueId];
         const prevChartEntry = prevBillboardAlbumsMap.get(album.uniqueId);
@@ -9289,7 +9354,7 @@ const gameReducerInternal = (
             }
 
             if (playerAlbumEntries.length > 0) {
-              body += `\n**Billboard Top 50 Albums**\n`;
+              body += `\n**Billboard 200**\n`;
               playerAlbumEntries.forEach((entry) => {
                 body += `#${entry.rank} "${entry.title}"\n`;
               });
