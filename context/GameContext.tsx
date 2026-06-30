@@ -12718,6 +12718,32 @@ const gameReducerInternal = (
         },
       };
     }
+    case "PITCH_TO_APPLE_MUSIC_PLAYLIST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (activeData.money < PLAYLIST_PITCH_COST) return state;
+
+      let updatedSongs = [...activeData.songs];
+
+      updatedSongs = updatedSongs.map((song) => {
+        if (song.id === action.payload.songId) {
+          return { ...song, appleMusicPlaylistBoostWeeks: PLAYLIST_BOOST_WEEKS };
+        }
+        return song;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - PLAYLIST_PITCH_COST,
+            songs: updatedSongs,
+          },
+        },
+      };
+    }
     case "SET_EXCLUSIVE_LICENSE": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];

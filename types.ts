@@ -49,6 +49,7 @@ export interface Song {
   firstWeekStreams?: number;
   removedStreams?: number;
   playlistBoostWeeks?: number;
+  appleMusicPlaylistBoostWeeks?: number;
   purchasedPlaylists?: {
     playlistId: string;
     position: number;
@@ -1926,6 +1927,7 @@ export type GameAction =
       };
     }
   | { type: "PITCH_TO_PLAYLIST"; payload: { songId: string } }
+  | { type: "PITCH_TO_APPLE_MUSIC_PLAYLIST"; payload: { songId: string } }
   | {
       type: "CREATE_CUSTOM_LABEL";
       payload: { label: CustomLabel; cost: number; membersToSign: string[] };

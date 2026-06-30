@@ -1313,13 +1313,8 @@ const S4AProfile: React.FC = () => {
   };
 
   const pitchedSongIds = useMemo(
-    () =>
-      new Set(
-        promotions
-          .filter((p) => p.promoType === "Spotify Editorial Playlist")
-          .map((p) => p.itemId),
-      ),
-    [promotions],
+    () => new Set(songs.filter(s => s.playlistBoostWeeks && s.playlistBoostWeeks > 0).map(s => s.id)),
+    [songs]
   );
 
   const pitchableSongs = useMemo(() => {

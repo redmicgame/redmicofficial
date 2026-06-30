@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGame } from '../context/GameContext';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
@@ -17,16 +17,26 @@ interface AppleMusicBrowseViewProps {
 const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView, setBrowseView, selectedPlaylist, setSelectedPlaylist, onExit }) => {
     const { gameState, activeArtistData } = useGame();
 
+    const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
+    const [showGenreMenu, setShowGenreMenu] = useState(false);
+
+    const topSongsSource = useMemo(() => {
+        if (selectedGenre === 'Pop') return gameState.hotPopSongs || [];
+        if (selectedGenre === 'Hip-Hop/R&B') return gameState.hotRapRnb || [];
+        if (selectedGenre === 'Country') return gameState.countryChart || [];
+        if (selectedGenre === 'Electronic') return gameState.electronicChart || [];
+        return gameState.billboardHot100 || [];
+    }, [gameState, selectedGenre]);
+
     const topSongs = useMemo(() => {
-        const sorted = [...(gameState.billboardHot100 || [])].map((song, i) => {
-            // deterministic pseudo-random offset based on id length or char codes
+        const sorted = [...topSongsSource].map((song, i) => {
             const hash = [...song.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const variation = (hash % 11) - 5; // -5 to +5
+            const variation = (hash % 11) - 5;
             return { ...song, appleScore: i + variation };
         }).sort((a, b) => a.appleScore - b.appleScore);
         
         return sorted.slice(0, 100);
-    }, [gameState.billboardHot100]);
+    }, [topSongsSource]);
 
     const topAlbums = useMemo(() => {
         const sorted = [...(gameState.billboardTopAlbums || [])].map((album, i) => {
@@ -100,10 +110,27 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
     if (browseView === 'topSongs') {
         return (
             <div className="bg-black h-full overflow-y-auto text-white pb-24">
-                <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 flex items-center justify-between">
+                <header className="sticky top-0 bg-black/80 backdrop-blur-md z-20 p-4 flex items-center justify-between">
                     <button onClick={() => setBrowseView('home')} className="bg-zinc-800/80 p-2 rounded-full"><ChevronLeftIcon className="w-5 h-5" /></button>
                     <h1 className="font-bold">Top Songs</h1>
-                    <button className="bg-zinc-800 px-3 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1">All Genres <ChevronRightIcon className="w-4 h-4 rotate-90" /></button>
+                    <div className="relative">
+                        <button onClick={() => setShowGenreMenu(!showGenreMenu)} className="bg-zinc-800 px-3 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1 z-30">
+                            {selectedGenre} <ChevronRightIcon className={`w-4 h-4 transition-transform ${showGenreMenu ? '-rotate-90' : 'rotate-90'}`} />
+                        </button>
+                        {showGenreMenu && (
+                            <div className="absolute top-full right-0 mt-2 bg-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 w-40 z-30">
+                                {['All Genres', 'Pop', 'Hip-Hop/R&B', 'Electronic', 'Country'].map(g => (
+                                    <button 
+                                        key={g} 
+                                        onClick={() => { setSelectedGenre(g); setShowGenreMenu(false); }}
+                                        className={`w-full text-left px-4 py-2 text-sm hover:bg-zinc-700 ${selectedGenre === g ? 'text-[#fa243c] font-bold' : 'text-white'}`}
+                                    >
+                                        {g}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </header>
                 <div className="px-4 pb-4">
                     <div className="divide-y divide-zinc-800/50">
@@ -209,6 +236,17 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
     if (browseView === 'playlistDetail' && selectedPlaylist) {
         const playlist = topPlaylists.find(p => p.id === selectedPlaylist) || topPlaylists[0];
         
+        let playlistSongsSource = gameState.billboardHot100 || [];
+        if (playlist.id === 'todays-country') playlistSongsSource = gameState.countryChart || [];
+        if (playlist.id === 'rap-life') playlistSongsSource = gameState.hotRapRnb || [];
+        if (playlist.id === 'essentials') playlistSongsSource = gameState.hotPopSongs || [];
+
+        const playlistTracks = [...playlistSongsSource].slice(0, 50).sort((a, b) => {
+            const hashA = [...a.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100;
+            const hashB = [...b.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100;
+            return hashB - hashA; // pseudo random based on id
+        });
+        
         return (
             <div className="bg-black h-full overflow-y-auto text-white pb-24 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-[#bda641] to-black opacity-30 pointer-events-none" />
@@ -254,8 +292,9 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                 </div>
 
                 <div className="px-4 relative z-10 pt-2 divide-y divide-zinc-800/50">
-                    {topSongs.map((song) => (
-                        <div key={song.uniqueId} className="flex items-center gap-3 py-3">
+                    {playlistTracks.map((song, index) => (
+                        <div key={`${song.uniqueId}-${index}`} className="flex items-center gap-3 py-3">
+                            <div className="w-5 text-center text-zinc-500 text-sm font-semibold">{index + 1}</div>
                             <img src={song.coverArt} className="w-12 h-12 rounded object-cover" alt={song.title} />
                             <div className="flex-grow min-w-0 flex flex-col justify-center">
                                 <div className="flex items-center gap-2">

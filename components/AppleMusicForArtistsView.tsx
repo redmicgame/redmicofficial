@@ -2,10 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber, getFutureDate } from '../context/GameContext';
 import { Song, Release } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
+import { PLAYLIST_PITCH_COST } from '../constants';
 
 const AppleMusicForArtistsView: React.FC = () => {
     const { gameState, dispatch, activeArtist } = useGame();
     const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+    const [showPitchModal, setShowPitchModal] = useState<Song | null>(null);
 
     const activeArtistData = activeArtist ? gameState.artistsData[activeArtist.id] : null;
 
@@ -37,6 +39,28 @@ const AppleMusicForArtistsView: React.FC = () => {
             alert(`Release date changed to ${newDate.year} Week ${newDate.week}`);
         }
     };
+
+    const handlePitchSong = (songId: string) => {
+        dispatch({ type: "PITCH_TO_APPLE_MUSIC_PLAYLIST", payload: { songId } });
+        setShowPitchModal(null);
+    };
+
+    const pitchedSongIds = useMemo(
+        () => new Set(activeArtistData.songs.filter(s => s.appleMusicPlaylistBoostWeeks && s.appleMusicPlaylistBoostWeeks > 0).map(s => s.id)),
+        [activeArtistData.songs]
+    );
+
+    const pitchableSongs = useMemo(() => {
+        return activeArtistData.songs.filter((s) => {
+            const release = activeArtistData.releases.find((r) => r.id === s.releaseId);
+            if (!release || pitchedSongIds.has(s.id)) return false;
+            const weeksSinceRelease =
+                gameState.currentDate.year * 52 +
+                gameState.currentDate.week -
+                (release.releaseDate.year * 52 + release.releaseDate.week);
+            return weeksSinceRelease <= 4; // Can pitch songs released in the last 4 weeks
+        });
+    }, [activeArtistData.songs, activeArtistData.releases, gameState.currentDate, pitchedSongIds]);
 
     if (selectedSong) {
         return <AppleMusicSongDetail song={selectedSong} onBack={handleBack} />;
@@ -75,6 +99,42 @@ const AppleMusicForArtistsView: React.FC = () => {
                     </div>
                 )}
                 
+                <div className="mt-8">
+                    <div className="bg-zinc-100 p-4 rounded-lg space-y-3 mb-8">
+                        <h2 className="font-bold">Pitch to Apple Music Editors</h2>
+                        <p className="text-sm text-zinc-600">
+                        Pitch a song from an upcoming or recent release for placement on Today's Hits, A-List Pop, and more.
+                        </p>
+                        {pitchableSongs.length > 0 ? (
+                        <div className="space-y-2">
+                            {pitchableSongs.map((song) => (
+                            <button
+                                key={song.id}
+                                onClick={() => setShowPitchModal(song)}
+                                className="w-full text-left flex items-center gap-3 p-2 bg-white rounded-md hover:bg-zinc-200"
+                            >
+                                <img
+                                src={song.coverArt}
+                                className="w-10 h-10 rounded shadow-sm object-cover"
+                                alt=""
+                                />
+                                <div>
+                                <p className="font-semibold">{song.title}</p>
+                                <p className="text-xs text-zinc-500">
+                                    Eligible for pitching
+                                </p>
+                                </div>
+                            </button>
+                            ))}
+                        </div>
+                        ) : (
+                        <p className="text-sm text-zinc-500">
+                            No songs eligible for pitching right now.
+                        </p>
+                        )}
+                    </div>
+                </div>
+
                 <h2 className="text-2xl font-bold mb-4">Your Songs</h2>
                 <div className="space-y-4">
                     {songs.map(song => (
@@ -147,6 +207,44 @@ const AppleMusicForArtistsView: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {showPitchModal && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                    onClick={() => setShowPitchModal(null)}
+                >
+                    <div
+                        className="bg-white rounded-lg w-full max-w-md p-6 text-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-xl font-bold">
+                            Pitch "{showPitchModal.title}" to Apple Music?
+                        </h2>
+                        <p className="text-zinc-600 my-4">
+                            This will cost{" "}
+                            <span className="font-bold text-black">
+                                ${formatNumber(PLAYLIST_PITCH_COST)}
+                            </span>
+                            . Success is not guaranteed, but a successful pitch can significantly boost streams.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowPitchModal(null)}
+                                className="w-full bg-zinc-200 py-2 rounded-full font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handlePitchSong(showPitchModal.id)}
+                                disabled={activeArtistData.money < PLAYLIST_PITCH_COST}
+                                className="w-full bg-[#fa243c] text-white py-2 rounded-full font-semibold disabled:bg-zinc-400"
+                            >
+                                Confirm Pitch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
