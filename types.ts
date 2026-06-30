@@ -813,8 +813,24 @@ export interface TikTokVideo {
 
 export interface InstagramPost {
   id: string;
-  imageUrl: string;
+  imageUrls: string[];
   caption: string;
+  likes: number;
+  comments: number;
+  date: GameDate;
+}
+
+export interface InstagramStory {
+  id: string;
+  imageUrl: string;
+  date: GameDate;
+}
+
+export interface InstagramReel {
+  id: string;
+  videoUrl: string;
+  caption: string;
+  views: number;
   likes: number;
   comments: number;
   date: GameDate;
@@ -1326,8 +1342,15 @@ export interface ArtistData {
   tiktokFollowers: number;
   tiktokVideos: TikTokVideo[];
   instagramFollowers?: number;
-  spotifyFollowers?: number;
+  instagramBio?: string;
+  instagramLink?: string;
+  instagramCommunityName?: string;
+  instagramCommunityMembers?: number;
   instagramPosts?: InstagramPost[];
+  instagramStories?: InstagramStory[];
+  instagramReels?: InstagramReel[];
+  instagramVerified?: boolean;
+  spotifyFollowers?: number;
   videos: Video[];
   youtubeStoreUnlocked: boolean;
   merch: MerchProduct[];
@@ -2033,7 +2056,23 @@ export type GameAction =
   | { type: "UPDATE_ONLYFANS_SETTINGS"; payload: { price: number } }
   | {
       type: "CREATE_INSTAGRAM_POST";
-      payload: { imageUrl: string; caption: string };
+      payload: { imageUrls: string[]; caption: string };
+    }
+  | {
+      type: "CREATE_INSTAGRAM_STORY";
+      payload: { imageUrl: string };
+    }
+  | {
+      type: "CREATE_INSTAGRAM_REEL";
+      payload: { videoUrl: string; caption: string };
+    }
+  | {
+      type: "EDIT_INSTAGRAM_PROFILE";
+      payload: { bio: string; link: string };
+    }
+  | {
+      type: "CREATE_INSTAGRAM_COMMUNITY";
+      payload: { name: string };
     }
   | { type: "CREATE_ONLYFANS_POST"; payload: { post: OnlyFansPost } }
   | {

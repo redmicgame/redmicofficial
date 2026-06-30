@@ -11032,7 +11032,7 @@ const gameReducerInternal = (
 
       const newPost: InstagramPost = {
         id: crypto.randomUUID(),
-        imageUrl: action.payload.imageUrl,
+        imageUrls: action.payload.imageUrls,
         caption: action.payload.caption,
         likes,
         comments,
@@ -11050,6 +11050,92 @@ const gameReducerInternal = (
             instagramPosts: [newPost, ...(activeData.instagramPosts || [])],
             hype: Math.min(100, activeData.hype + hypeGained),
             instagramFollowers: followers + Math.floor(likes * 0.05),
+          },
+        },
+      };
+    }
+    case "CREATE_INSTAGRAM_STORY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const newStory: InstagramStory = {
+        id: crypto.randomUUID(),
+        imageUrl: action.payload.imageUrl,
+        date: state.date,
+      };
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramStories: [newStory, ...(activeData.instagramStories || [])],
+          },
+        },
+      };
+    }
+    case "CREATE_INSTAGRAM_REEL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      
+      const followers = activeData.instagramFollowers || 0;
+      const popFactor = Math.pow(activeData.popularity || 0, 1.5) * 100;
+      const hypeFactor = ((activeData.hype || 0) / 100) * 0.3 + 1;
+
+      const baseViews = (1000 + followers * 0.5 + popFactor) * hypeFactor;
+      const viewVariance = baseViews * 0.8 * (Math.random() - 0.5);
+      let views = Math.floor(Math.max(100, baseViews + viewVariance));
+      const likes = Math.floor(views * (Math.random() * 0.1 + 0.05)); // 5% to 15% of views
+      const comments = Math.floor(likes * (Math.random() * 0.05 + 0.01));
+
+      const newReel: InstagramReel = {
+        id: crypto.randomUUID(),
+        videoUrl: action.payload.videoUrl,
+        caption: action.payload.caption,
+        views,
+        likes,
+        comments,
+        date: state.date,
+      };
+      
+      const hypeGained = Math.floor((views / 100000) * 1.2);
+      
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramReels: [newReel, ...(activeData.instagramReels || [])],
+            hype: Math.min(100, activeData.hype + hypeGained),
+            instagramFollowers: followers + Math.floor(views * 0.02),
+          },
+        },
+      };
+    }
+    case "EDIT_INSTAGRAM_PROFILE": {
+      if (!state.activeArtistId) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...state.artistsData[state.activeArtistId],
+            instagramBio: action.payload.bio,
+            instagramLink: action.payload.link,
+          },
+        },
+      };
+    }
+    case "CREATE_INSTAGRAM_COMMUNITY": {
+      if (!state.activeArtistId) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...state.artistsData[state.activeArtistId],
+            instagramCommunityName: action.payload.name,
+            instagramCommunityMembers: Math.floor((state.artistsData[state.activeArtistId].instagramFollowers || 0) * 0.02)
           },
         },
       };
