@@ -31,7 +31,7 @@ const AppleMusicForArtistsView: React.FC = () => {
     const handleChangeDate = (submissionId: string) => {
         const weeks = parseInt(prompt("How many weeks from now do you want this to release? (e.g. 4)", "4") || "", 10);
         if (!isNaN(weeks) && weeks > 0) {
-            const newDate = getFutureDate(gameState.currentDate, weeks);
+            const newDate = getFutureDate(gameState.date, weeks);
             dispatch({
                 type: 'EDIT_SUBMISSION_DATE',
                 payload: { submissionId, newDate }
@@ -55,12 +55,12 @@ const AppleMusicForArtistsView: React.FC = () => {
             const release = activeArtistData.releases.find((r) => r.id === s.releaseId);
             if (!release || pitchedSongIds.has(s.id)) return false;
             const weeksSinceRelease =
-                gameState.currentDate.year * 52 +
-                gameState.currentDate.week -
+                gameState.date.year * 52 +
+                gameState.date.week -
                 (release.releaseDate.year * 52 + release.releaseDate.week);
             return weeksSinceRelease <= 4; // Can pitch songs released in the last 4 weeks
         });
-    }, [activeArtistData.songs, activeArtistData.releases, gameState.currentDate, pitchedSongIds]);
+    }, [activeArtistData.songs, activeArtistData.releases, gameState.date, pitchedSongIds]);
 
     if (selectedSong) {
         return <AppleMusicSongDetail song={selectedSong} onBack={handleBack} />;
