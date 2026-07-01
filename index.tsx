@@ -1,3 +1,5 @@
+import { patchFileReaderForImageCompression } from './utils/imageCompression';
+patchFileReaderForImageCompression();
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
