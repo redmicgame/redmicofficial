@@ -4384,11 +4384,10 @@ const gameReducerInternal = (
             // Scale demand by price (higher price = lower demand)
             const recommendedPrice =
               item.type === "Vinyl" ? 39.98 : item.type === "CD" ? 12.98 : 2.99;
-            if (item.price > recommendedPrice) {
-              weeklySales = Math.floor(
-                weeklySales * (recommendedPrice / item.price),
-              );
-            }
+            const safePrice = Math.max(0.5, item.price);
+            weeklySales = Math.floor(
+              weeklySales * Math.pow(recommendedPrice / safePrice, 1.5),
+            );
 
             if (item.type === "Ringtone") {
               // Ringtones demand scales massively based on hype
@@ -10438,6 +10437,7 @@ const gameReducerInternal = (
                 ? {
                     ...s,
                     isTakenDown: false,
+                    isAvailableOnStreaming: true,
                     rightsSoldPercent: 0,
                     rightsOwnerLabelId: undefined,
                   }
@@ -10467,10 +10467,38 @@ const gameReducerInternal = (
         },
       };
     }
+    case "REMASTER_SONG": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (activeData.money < action.payload.cost) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - action.payload.cost,
+            songs: activeData.songs.map((s) =>
+              s.id === action.payload.songId
+                ? {
+                    ...s,
+                    quality: Math.min(100, s.quality + action.payload.qualityBoost),
+                    isReleased: false,
+                    releaseDate: undefined,
+                    releaseId: undefined,
+                    isAvailableOnStreaming: undefined,
+                    isTakenDown: false
+                  }
+                : s,
+            ),
+          },
+        },
+      };
+    }
     case "BUY_BACK_RELEASE": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.funds < action.payload.cost) return state;
+      if (activeData.money < action.payload.cost) return state;
 
       return {
         ...state,
@@ -10478,7 +10506,7 @@ const gameReducerInternal = (
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
-            funds: activeData.funds - action.payload.cost,
+            money: activeData.money - action.payload.cost,
             releases: activeData.releases.map((r) =>
               r.id === action.payload.releaseId
                 ? {
@@ -10494,6 +10522,7 @@ const gameReducerInternal = (
                 ? {
                     ...s,
                     isTakenDown: false,
+                    isAvailableOnStreaming: true,
                     rightsSoldPercent: 0,
                     rightsOwnerLabelId: undefined,
                   }

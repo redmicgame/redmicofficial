@@ -9,7 +9,8 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 const StudioView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, group, allPlayerArtists } = useGame();
     
-    const [mode, setMode] = useState<'single' | 'remixPack' | 'rerecord'>('single');
+    const [mode, setMode] = useState<'single' | 'remixPack' | 'rerecord' | 'remaster'>('single');
+    const [remasterTargetId, setRemasterTargetId] = useState('');
 
     const [title, setTitle] = useState('');
     const [genre, setGenre] = useState(GENRES[0]);
@@ -66,6 +67,10 @@ const StudioView: React.FC = () => {
     const potentialReRecordTargets = useMemo(() => {
         return songs.filter(s => s.isTakenDown);
     }, [songs]);
+
+    const potentialRemasterTargets = useMemo(() => {
+        return songs.filter(s => s.isReleased && s.isAvailableOnStreaming !== true && s.releaseDate && (gameState.date.year - s.releaseDate.year >= 5));
+    }, [songs, gameState.date.year]);
 
     const handleRemixToggle = (checked: boolean) => {
         setIsRemix(checked);
@@ -338,6 +343,26 @@ const StudioView: React.FC = () => {
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
 
+    const handleRemaster = () => {
+        setError('');
+        if (!remasterTargetId) {
+            setError('You must select a song to remaster.');
+            return;
+        }
+        if (money < totalCost) {
+            setError("You don't have enough money for this session.");
+            return;
+        }
+
+        const targetSong = songs.find(s => s.id === remasterTargetId);
+        if (!targetSong) return;
+
+        const qualityBoost = Math.floor(Math.random() * 5) + 1; // +1 to +5
+
+        dispatch({ type: 'REMASTER_SONG', payload: { songId: targetSong.id, qualityBoost, cost: totalCost } });
+        dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
+    };
+
     const handleCreateRemixPack = () => {
         setError('');
         if (!remixPackTargetId) {
@@ -513,6 +538,12 @@ const StudioView: React.FC = () => {
                         className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors shrink-0 ${mode === 'rerecord' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
                     >
                         Re-record Song
+                    </button>
+                    <button
+                        onClick={() => { setMode('remaster'); setError(''); }}
+                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors shrink-0 ${mode === 'remaster' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                        Remaster
                     </button>
                 </div>
             </header>
@@ -860,6 +891,53 @@ const StudioView: React.FC = () => {
                                     
                                     <button onClick={handleReRecord} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none" disabled={money < selectedStudio.cost}>
                                         Re-record Song (-${selectedStudio.cost.toLocaleString()})
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </>
+                )}
+                {mode === 'remaster' && (
+                    <>
+                        <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-xl space-y-6">
+                            <h2 className="text-lg font-bold mb-4">Remaster Legacy Track</h2>
+                            <p className="text-sm text-zinc-400 mb-6">Take an unstreamed song that was released at least 5 years ago and put it back into the studio for remastering. This will permanently boost its quality (+1 to +5) and put it back into your vault as an unreleased track, so you can re-release it. The track will retain its original name.</p>
+                            
+                            <div>
+                                <label htmlFor="remaster-target" className="block text-sm font-medium text-zinc-300">Select Track to Remaster</label>
+                                <select 
+                                    id="remaster-target" 
+                                    value={remasterTargetId} 
+                                    onChange={e => { 
+                                        setRemasterTargetId(e.target.value); 
+                                    }} 
+                                    className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                                >
+                                    <option value="">Select a song</option>
+                                    {potentialRemasterTargets.map(song => (
+                                        <option key={song.id} value={song.id}>{song.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            {remasterTargetId && (
+                                <>
+                                    <div>
+                                        <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {STUDIOS.map((studio, index) => (
+                                                <button key={studio.name} onClick={() => setStudioIndex(index)} className={`p-4 rounded-lg text-left transition-all border-2 ${studioIndex === index ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
+                                                    <p className="font-bold">{studio.name}</p>
+                                                    <p className="text-sm text-green-400">-${studio.cost.toLocaleString()}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                                    
+                                    <button onClick={handleRemaster} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none" disabled={money < selectedStudio.cost}>
+                                        Remaster Song (-${selectedStudio.cost.toLocaleString()})
                                     </button>
                                 </>
                             )}

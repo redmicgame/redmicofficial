@@ -131,6 +131,10 @@ const AscapView: React.FC = () => {
                                         </div>
                                         <button 
                                             onClick={() => {
+                                                if (activeArtistData.money < cost) {
+                                                    alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+                                                    return;
+                                                }
                                                 setConfirmAction({
                                                     title: 'Buy Back Release',
                                                     message: `Are you sure you want to buy back "${release.title}" for $${formatNumber(cost)}? It will be 100% owned by you and distributed immediately.`,
@@ -159,6 +163,10 @@ const AscapView: React.FC = () => {
                                         </div>
                                         <button 
                                             onClick={() => {
+                                                if (activeArtistData.money < cost) {
+                                                    alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+                                                    return;
+                                                }
                                                 setConfirmAction({
                                                     title: 'Buy Back Song',
                                                     message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you and distributed immediately.`,

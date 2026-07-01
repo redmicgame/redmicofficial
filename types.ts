@@ -1758,6 +1758,7 @@ export type GameAction =
   | { type: "BUY_BACK_SONG"; payload: { songId: string; cost: number } }
   | { type: "BUY_BACK_RELEASE"; payload: { releaseId: string; cost: number } }
   | { type: "UPLOAD_TO_STREAMING"; payload: { songId: string; cost: number } }
+  | { type: "REMASTER_SONG"; payload: { songId: string; qualityBoost: number; cost: number } }
   | {
       type: "SELL_RIGHTS";
       payload: {

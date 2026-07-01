@@ -535,6 +535,10 @@ const CatalogView: React.FC = () => {
                                                                     return sum + (s?.revenue || 0);
                                                                 }, 0);
                                                                 const cost = Math.floor(Math.max(2500000, totalRev * 5 + (activeArtistData.popularity * 100000)));
+                                                                if (activeArtistData.money < cost) {
+                                                                    alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+                                                                    return;
+                                                                }
                                                                 setConfirmAction({
                                                                     title: 'Buy Back Release',
                                                                     message: `Are you sure you want to buy back "${project.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
@@ -587,6 +591,10 @@ const CatalogView: React.FC = () => {
                                                             onBuyBack={() => {
                                                                 const totalRev = song.revenue || 0;
                                                                 const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+                                                                if (activeArtistData.money < cost) {
+                                                                    alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+                                                                    return;
+                                                                }
                                                                 setConfirmAction({
                                                                     title: 'Buy Back Song',
                                                                     message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
@@ -681,6 +689,10 @@ const CatalogView: React.FC = () => {
                                                                 onClick={() => {
                                                                     const totalRev = song.revenue || 0;
                                                                     const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+                                                                    if (activeArtistData.money < cost) {
+                                                                        alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+                                                                        return;
+                                                                    }
                                                                     setConfirmAction({
                                                                         title: 'Buy Back Song',
                                                                         message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
