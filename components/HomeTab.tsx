@@ -524,38 +524,6 @@ const HomeTab: React.FC = () => {
           </p>
         </div>
       </div>
-
-      {activeArtistData.actingRoles && activeArtistData.actingRoles.filter(r => r.trailerUrl).length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <span className="text-black bg-[#f5c518] px-2 py-0.5 rounded text-sm font-black">IMDb</span> Recent Trailers
-          </h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-            {activeArtistData.actingRoles
-              .filter((r) => r.trailerUrl)
-              .sort((a, b) => b.year - a.year)
-              .slice(0, 5)
-              .map((role) => (
-                <div key={role.id} className="min-w-[280px] w-[280px] bg-zinc-800 rounded-lg overflow-hidden snap-start flex-shrink-0 border border-zinc-700 shadow-md">
-                  <div className="relative pt-[56.25%] bg-black">
-                     <img src={role.trailerUrl} alt={role.title} className="absolute top-0 left-0 w-full h-full object-cover opacity-80" />
-                     <div className="absolute inset-0 flex items-center justify-center">
-                         <div className="w-12 h-12 rounded-full border-2 border-white/70 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                             <div className="w-0 h-0 border-t-8 border-t-transparent border-l-[12px] border-l-white border-b-8 border-b-transparent ml-1"></div>
-                         </div>
-                     </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="font-bold truncate text-white">{role.title}</p>
-                    <p className="text-sm text-zinc-400 truncate">Starring as: {role.roleName}</p>
-                    <p className="text-xs text-zinc-500 mt-2 font-medium tracking-wide uppercase">{role.type} • {role.year}</p>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-
       {contract && labelSubmissions.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold">Submitted to Label</h2>

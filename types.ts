@@ -3,10 +3,13 @@ export interface ActingRole {
   title: string;
   type: 'Movie' | 'TV Show' | 'Voice Acting';
   roleName: string;
+  roleType?: 'Leading Role' | 'Supporting Role';
   year: number;
   status: 'Filming' | 'Completed' | 'Released';
   trailerUrl?: string;
+  coverUrl?: string;
   rating?: number;
+  season?: number;
 }
 
 export interface TalentAgency {
@@ -22,6 +25,7 @@ export interface ActingOffer {
   title: string;
   type: 'Movie' | 'TV Show' | 'Voice Acting';
   roleName: string;
+  roleType?: 'Leading Role' | 'Supporting Role';
   pay: number;
   durationWeeks: number;
   status: 'Pending' | 'Accepted' | 'Declined';
@@ -505,6 +509,12 @@ export interface ActingTrailerUploadOffer {
   roleTitle: string;
 }
 
+export interface ActingCoverUploadOffer {
+  type: "actingCoverUpload";
+  roleId: string;
+  roleTitle: string;
+}
+
 export interface ActingPremiereOffer {
   type: "actingPremiere";
   roleId: string;
@@ -581,6 +591,7 @@ export interface Email {
     | NpcContractRenewalOffer
     | PromoInterviewOffer
     | ActingTrailerUploadOffer
+    | ActingCoverUploadOffer
     | ActingPremiereOffer;
 }
 
@@ -1019,8 +1030,8 @@ export interface AmaAward {
 
 export interface OscarAward {
   year: number;
-  category: "Best Original Song";
-  itemId: string; // songId
+  category: "Best Original Song" | "Best Actor/Actress (Leading Role)" | "Best Supporting Actor/Actress (Supporting Role)";
+  itemId: string; // songId or roleId
   itemName: string;
   artistName: string;
   isWinner: boolean;
@@ -1075,7 +1086,7 @@ export interface AmaCategory {
 }
 
 export interface OscarCategory {
-  name: "Best Original Song";
+  name: "Best Original Song" | "Best Actor/Actress (Leading Role)" | "Best Supporting Actor/Actress (Supporting Role)";
   nominees: OscarContender[];
   winner?: OscarContender;
 }
@@ -1805,6 +1816,7 @@ export type GameAction =
   | { type: "ACCEPT_ACTING_OFFER"; payload: { offerId: string } }
   | { type: "DECLINE_ACTING_OFFER"; payload: { offerId: string } }
   | { type: "SET_ACTING_TRAILER_URL"; payload: { roleId: string; trailerUrl: string } }
+  | { type: "SET_ACTING_COVER_URL"; payload: { roleId: string; coverUrl: string } }
   | { type: "ATTEND_ACTING_PREMIERE"; payload: { roleId: string } }
   | { type: "DECLINE_ACTING_PREMIERE"; payload: { roleId: string } }
   | { type: "SIGN_TALENT_AGENCY"; payload: { agencyId: string } }

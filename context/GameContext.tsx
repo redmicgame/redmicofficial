@@ -6434,13 +6434,27 @@ const gameReducerInternal = (
             newEmails.push({
               id: crypto.randomUUID(),
               sender: "Production Team",
-              subject: `Trailer/Cover Needed: ${gig.title}`,
-              body: `We've finished post-production on "${gig.title}". We need you to select a trailer thumbnail/cover image before the premiere!`,
+              subject: `Trailer Thumbnail Needed: ${gig.title}`,
+              body: `We've finished post-production on "${gig.title}". We need you to select a trailer thumbnail image before the premiere!`,
               date: newDate,
               isRead: false,
               senderIcon: "imdb",
               offer: {
                 type: "actingTrailerUpload",
+                roleId: gig.id,
+                roleTitle: gig.title
+              }
+            });
+            newEmails.push({
+              id: crypto.randomUUID(),
+              sender: "Production Team",
+              subject: `Cover Image Needed: ${gig.title}`,
+              body: `We also need a cover image for "${gig.title}" for IMDb and promotional materials.`,
+              date: newDate,
+              isRead: false,
+              senderIcon: "imdb",
+              offer: {
+                type: "actingCoverUpload",
                 roleId: gig.id,
                 roleTitle: gig.title
               }
@@ -11068,6 +11082,33 @@ const gameReducerInternal = (
         avgQuality * 5000 * labelMultiplier * releaseTypeMultiplier,
       );
 
+      const artistProfile = [
+        state.soloArtist,
+        ...(state.group?.members || []),
+        state.group,
+        ...(state.extraPlayableArtists || []),
+      ].find((a) => a?.id === state.activeArtistId);
+
+      const isFirstRelease = !activeData.releases || activeData.releases.length === 0;
+      const isActorTransitioning = activeData.actingRoles && activeData.actingRoles.length > 0;
+      
+      const newPosts = [...(activeData.xPosts || [])];
+
+      if (isFirstRelease && isActorTransitioning && submission?.release.type === 'Single') {
+          const pronounLabel = artistProfile?.pronouns === "she/her" ? "Actress" : "Actor";
+          const popBasePost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `Famous ${pronounLabel} ${artistProfile?.name} will debut in music soon.`,
+            image: artistProfile?.image,
+            likes: Math.floor(Math.random() * 80000) + 30000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 1500000) + 500000,
+            date: state.date,
+          };
+          newPosts.unshift(popBasePost);
+      }
+
       const updatedSubmissions = activeData.labelSubmissions.map(
         (sub): LabelSubmission => {
           if (sub.id === submissionId) {
@@ -11091,6 +11132,7 @@ const gameReducerInternal = (
           [state.activeArtistId]: {
             ...activeData,
             labelSubmissions: updatedSubmissions,
+            xPosts: newPosts,
           },
         },
         activeSubmissionId: null,
@@ -16627,7 +16669,7 @@ const gameReducerInternal = (
       
       const type = action.payload.type;
       
-      if ((type === 'Movie' || type === 'TV Show') && activeData.manager?.id !== 'm3') {
+      if ((type === 'Movie' || type === 'TV Show') && activeData.manager?.id !== 'm3' && !activeData.talentAgencyId) {
           return state;
       }
 
@@ -16635,20 +16677,36 @@ const gameReducerInternal = (
       const pay = Math.floor(Math.random() * 5000000) + 1000000 * (activeData.popularity / 50);
       
       let title = '';
-      if (type === 'Movie') title = 'Blockbuster Movie ' + Math.floor(Math.random()*100);
-      else if (type === 'TV Show') title = 'Drama Series ' + Math.floor(Math.random()*100);
+      if (type === 'Movie') {
+          const movies = ['Dune: Part Three', 'Spider-Man 4', 'Knives Out 3', 'Avatar: Fire and Ash', 'Barbie 2', 'Oppenheimer: The Sequel', 'The Batman - Part II', 'Mission: Impossible 9', 'Gladiator III'];
+          title = movies[Math.floor(Math.random() * movies.length)];
+      }
+      else if (type === 'TV Show') {
+          const shows = ['The White Lotus', 'Stranger Things', 'House of the Dragon', 'Euphoria', 'The Last of Us', 'Severance', 'Succession Spin-off', 'The Bear'];
+          title = shows[Math.floor(Math.random() * shows.length)];
+      }
       else {
-         const vaTypes = ['Grand Theft Auto VI', 'Cyberpunk 2077 DLC', 'Pixar Cartoon', 'Anime Dub', 'Dreamworks Animated Feature'];
+         const vaTypes = ['Grand Theft Auto VI', 'Cyberpunk 2077 DLC', 'Inside Out 3', 'Spider-Man: Beyond the Spider-Verse', 'Shrek 5', 'Kung Fu Panda 5'];
          title = vaTypes[Math.floor(Math.random() * vaTypes.length)];
       }
 
-      const roleName = type === 'Voice Acting' ? 'Lead Voice' : 'Supporting Role';
+      const roleType = Math.random() > 0.5 ? 'Leading Role' : 'Supporting Role';
+      
+      const maleNames = ['John', 'James', 'Michael', 'David', 'William', 'Alex', 'Jack', 'Ryan', 'Liam', 'Noah'];
+      const femaleNames = ['Emma', 'Olivia', 'Ava', 'Isabella', 'Sophia', 'Mia', 'Charlotte', 'Amelia', 'Harper', 'Evelyn'];
+      const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis', 'Garcia', 'Rodriguez', 'Wilson'];
+      
+      const charFirstName = Math.random() > 0.5 ? maleNames[Math.floor(Math.random() * maleNames.length)] : femaleNames[Math.floor(Math.random() * femaleNames.length)];
+      const charLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      
+      const roleName = type === 'Voice Acting' ? `Voice of ${charFirstName}` : `${charFirstName} ${charLastName}`;
       
       offer = {
           id: crypto.randomUUID(),
           title,
           type,
           roleName,
+          roleType,
           pay,
           durationWeeks: type === 'Movie' ? 12 : type === 'TV Show' ? 8 : 4,
           status: 'Pending'
@@ -16688,6 +16746,7 @@ const gameReducerInternal = (
           title: offer.title,
           type: offer.type,
           roleName: offer.roleName,
+          roleType: offer.roleType,
           year: state.date.year,
           status: 'Filming' as const,
           remainingWeeks: offer.durationWeeks
@@ -16700,6 +16759,32 @@ const gameReducerInternal = (
               finalPay = Math.floor(offer.pay * (1 - (agency.feePercent / 100)));
           }
       }
+      
+      const artistProfile = [
+        state.soloArtist,
+        ...(state.group?.members || []),
+        state.group,
+        ...(state.extraPlayableArtists || []),
+      ].find((a) => a?.id === state.activeArtistId);
+      
+      const hasActedBefore = activeData.actingRoles && activeData.actingRoles.length > 0;
+      
+      const newPosts = [...(activeData.xPosts || [])];
+      
+      if (!hasActedBefore) {
+          const actingTypeLabel = offer.type === 'Movie' ? 'an actor/actress' : offer.type === 'TV Show' ? 'an actor/actress' : 'a voice actor';
+          const popBasePost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `Famous Artist ${artistProfile?.name} will debut in a ${offer.type} soon as ${actingTypeLabel}.`,
+            image: artistProfile?.image,
+            likes: Math.floor(Math.random() * 80000) + 30000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 1500000) + 500000,
+            date: state.date,
+          };
+          newPosts.unshift(popBasePost);
+      }
 
       return {
           ...state,
@@ -16709,7 +16794,8 @@ const gameReducerInternal = (
                   ...activeData,
                   activeActingOffer: null,
                   filmingGig,
-                  money: activeData.money + finalPay
+                  money: activeData.money + finalPay,
+                  xPosts: newPosts
               }
           }
       };
@@ -16737,20 +16823,22 @@ const gameReducerInternal = (
       if (!role) return state;
       
       const newEmails = [...activeData.inbox];
-      newEmails.push({
-          id: crypto.randomUUID(),
-          sender: "Production Team",
-          subject: `Premiere Invitation: ${role.title}`,
-          body: `The trailer is live and the movie is ready! You are cordially invited to the premiere of "${role.title}".`,
-          date: state.date,
-          isRead: false,
-          senderIcon: "imdb",
-          offer: {
-              type: "actingPremiere",
-              roleId: role.id,
-              roleTitle: role.title
-          }
-      });
+      if (role.coverUrl) { // if cover is already set, trigger premiere
+          newEmails.push({
+              id: crypto.randomUUID(),
+              sender: "Production Team",
+              subject: `Premiere Invitation: ${role.title}`,
+              body: `The trailer and cover are live and the production is ready! You are cordially invited to the premiere of "${role.title}".`,
+              date: state.date,
+              isRead: false,
+              senderIcon: "imdb",
+              offer: {
+                  type: "actingPremiere",
+                  roleId: role.id,
+                  roleTitle: role.title
+              }
+          });
+      }
       
       return {
           ...state,
@@ -16759,6 +16847,43 @@ const gameReducerInternal = (
               [state.activeArtistId]: {
                   ...activeData,
                   actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, trailerUrl: action.payload.trailerUrl } : r),
+                  inbox: newEmails
+              }
+          }
+      };
+    }
+    
+    case "SET_ACTING_COVER_URL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
+      if (!role) return state;
+      
+      const newEmails = [...activeData.inbox];
+      if (role.trailerUrl) { // if trailer is already set, trigger premiere
+          newEmails.push({
+              id: crypto.randomUUID(),
+              sender: "Production Team",
+              subject: `Premiere Invitation: ${role.title}`,
+              body: `The trailer and cover are live and the production is ready! You are cordially invited to the premiere of "${role.title}".`,
+              date: state.date,
+              isRead: false,
+              senderIcon: "imdb",
+              offer: {
+                  type: "actingPremiere",
+                  roleId: role.id,
+                  roleTitle: role.title
+              }
+          });
+      }
+      
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, coverUrl: action.payload.coverUrl } : r),
                   inbox: newEmails
               }
           }
