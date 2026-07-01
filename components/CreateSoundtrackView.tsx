@@ -108,7 +108,12 @@ const CreateSoundtrackView: React.FC = () => {
                                 <div className="flex-grow">
                                     <p className="font-semibold">{song.title}</p>
                                 </div>
-                                <QualityBadge quality={song.quality} showNumber={redMicPro.unlocked} />
+                                <div className="flex flex-col items-center">
+                                    <QualityBadge quality={song.quality} showNumber={redMicPro.unlocked} />
+                                    {redMicPro.unlocked && (song as any).trait && (
+                                        <span className="text-[9px] text-zinc-400 mt-1 uppercase font-bold text-center leading-tight max-w-[60px]">{(song as any).trait}</span>
+                                    )}
+                                </div>
                             </button>
                         ))}
                     </div>

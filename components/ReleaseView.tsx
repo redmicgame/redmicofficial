@@ -300,7 +300,12 @@ const ReleaseView: React.FC = () => {
                                             {song.isReleased && <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full font-medium">Released as Single</span>}
                                         </div>
                                     </div>
-                                    <QualityBadge quality={song.quality} showNumber={redMicPro.unlocked} />
+                                    <div className="flex flex-col items-center">
+                                        <QualityBadge quality={song.quality} showNumber={redMicPro.unlocked} />
+                                        {redMicPro.unlocked && (song as any).trait && (
+                                            <span className="text-[9px] text-zinc-400 mt-1 uppercase font-bold text-center leading-tight max-w-[60px]">{(song as any).trait}</span>
+                                        )}
+                                    </div>
                                 </button>
                             ))}
                         </div>

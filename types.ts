@@ -98,6 +98,8 @@ export interface Song {
   itunesVersions?: ITunesVersion[];
   peakWeeklyStreams?: number;
   remixOfSongId?: string;
+  trait?: "Smash Hit" | "TikTok Hit" | "Slow Burner" | "Flop" | "Radio Hit" | "Normal";
+  traitGenerated?: boolean;
   isAvailableOnStreaming?: boolean;
   sales?: number;
   leakInfo?: {

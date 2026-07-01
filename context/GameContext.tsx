@@ -3849,20 +3849,31 @@ const gameReducerInternal = (
 
             if (releaseDate) {
               let decayIntensity = 0.15;
-              if (difficulty === "easy")
-                decayIntensity = 0; // No stream decay
+              if (difficulty === "easy" || song.trait === "Smash Hit")
+                decayIntensity = 0;
               else if (difficulty === "hard") decayIntensity = 0.25;
               else if (difficulty === "extreme") decayIntensity = 0.4;
 
+              const ageInWeeks = Math.max(0, (newDate.year - (releaseDate?.year || newDate.year)) * 52 + (newDate.week - (releaseDate?.week || newDate.week)));
+
               if (decayIntensity > 0) {
-                const ageInWeeks = Math.max(
-                  0,
-                  (newDate.year - (releaseDate?.year || newDate.year)) * 52 +
-                    (newDate.week - (releaseDate?.week || newDate.week)),
-                );
-                const maxAge = Math.min(ageInWeeks, 156); // 3 years max decay
+                const maxAge = Math.min(ageInWeeks, 156);
                 const decayFactor = 1 / (1 + decayIntensity * maxAge);
                 weeklyStreams = Math.floor(weeklyStreams * decayFactor);
+              }
+
+              if (song.trait === "Slow Burner") {
+                  let traitMult = 1.0;
+                  if (ageInWeeks < 4) traitMult = 0.5;
+                  else if (ageInWeeks < 8) traitMult = 1.0;
+                  else if (ageInWeeks < 16) traitMult = 2.5;
+                  else if (ageInWeeks < 24) traitMult = 1.5;
+                  else traitMult = 0.8;
+                  weeklyStreams = Math.floor(weeklyStreams * traitMult);
+              }
+
+              if (song.trait === "Flop") {
+                  weeklyStreams = Math.floor(weeklyStreams * 0.65);
               }
             }
 
@@ -6843,12 +6854,13 @@ const gameReducerInternal = (
 
               const previousPlays = s.radioPlays || 0;
               
-              const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
+              const traitRadioBoost = s.trait === "Radio Hit" ? 3.0 : 1.0;
+              const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
               let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
               
-              targetPlays += song.weeklyStreams * 0.0005; // tiny stream impact
+              targetPlays += song.weeklyStreams * 0.0005 * traitRadioBoost; // stream impact also boosted
               
-              const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost;
+              const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost * traitRadioBoost;
               if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
 
               let dropLimit = -500;
@@ -9841,6 +9853,7 @@ const gameReducerInternal = (
 
       const newSong: Song = {
         ...action.payload.song,
+        trait: generateSongTrait(action.payload.song.quality, state.difficultyMode || "normal"), traitGenerated: true,
         dailyStreams: [],
         rightsSoldPercent:
           rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
@@ -9972,6 +9985,7 @@ const gameReducerInternal = (
       const activeData = state.artistsData[state.activeArtistId];
       const newSongs: Song[] = action.payload.songs.map((song) => ({
         ...song,
+        trait: generateSongTrait(song.quality, state.difficultyMode || "normal"), traitGenerated: true,
         dailyStreams: [],
       }));
       const updatedData = {
@@ -11329,6 +11343,13 @@ const gameReducerInternal = (
       // 5-10% chance for viral video (1M-75M views)
       if (Math.random() < 0.08) {
         views = Math.floor(Math.random() * (75000000 - 1000000)) + 1000000;
+      }
+
+      if (action.payload.songId) {
+        const song = activeData.songs.find(s => s.id === action.payload.songId);
+        if (song && song.trait === "TikTok Hit") {
+          views *= 3;
+        }
       }
 
       const likes = Math.floor(views * (0.05 + Math.random() * 0.05));
@@ -13405,6 +13426,16 @@ const gameReducerInternal = (
             ...initialArtistData,
             ...data,
           };
+          newState.artistsData[id].songs = (newState.artistsData[id].songs || []).map(song => {
+            let updatedSong = { ...song };
+            if (!updatedSong.traitGenerated) {
+                updatedSong.trait = generateSongTrait(updatedSong.quality, newState.difficultyMode || "normal");
+                updatedSong.traitGenerated = true;
+            } else if (!updatedSong.trait && newState.difficultyMode !== "easy") {
+                updatedSong.trait = "Normal";
+            }
+            return updatedSong;
+          });
           newState.artistsData[id].videos =
             newState.artistsData[id].videos || [];
           newState.artistsData[id].tiktokVideos =
@@ -15238,7 +15269,8 @@ const gameReducerInternal = (
         genre:
           NPC_ARTIST_GENRES[npcArtistName] ||
           GENRES[Math.floor(Math.random() * GENRES.length)],
-        quality: songQuality, // songQuality is up to 100
+        quality: songQuality, 
+        trait: generateSongTrait(songQuality, state.difficultyMode || "normal"), traitGenerated: true,
         coverArt: coverArt,
         isReleased: false,
         releaseDate: releaseDate,
@@ -17139,6 +17171,25 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
   }
 
   return nextState;
+};
+
+const generateSongTrait = (quality: number, difficulty: string) => { 
+  if (difficulty === "easy") return undefined; 
+  const r = Math.random(); 
+  if (quality >= 90) { 
+    if (r < 0.15) return "Smash Hit"; 
+    if (r < 0.35) return "TikTok Hit"; 
+    if (r < 0.40) return "Radio Hit"; 
+    if (r < 0.45) return "Slow Burner"; 
+    if (r < 0.50) return "Flop"; 
+  } else { 
+    if (r < 0.05) return "Smash Hit"; 
+    if (r < 0.15) return "TikTok Hit"; 
+    if (r < 0.25) return "Radio Hit"; 
+    if (r < 0.35) return "Slow Burner"; 
+    if (r < 0.45) return "Flop"; 
+  } 
+  return "Normal"; 
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({

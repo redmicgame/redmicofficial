@@ -66,7 +66,12 @@ const UnreleasedSongItem: React.FC<{
         </div>
       )}
     </div>
-    <QualityBadge quality={song.quality} showNumber={showQuality} />
+    <div className="flex flex-col items-center">
+        <QualityBadge quality={song.quality} showNumber={showQuality} />
+        {showQuality && (song as any).trait && (
+            <span className="text-[9px] text-zinc-400 mt-1 uppercase font-bold text-center leading-tight max-w-[60px]">{(song as any).trait}</span>
+        )}
+    </div>
     {onToggleVault && (
       <button
         onClick={() => onToggleVault(song.id)}

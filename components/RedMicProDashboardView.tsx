@@ -16,7 +16,10 @@ const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
 
     return (
         <div className="flex items-center gap-3">
-            <p className="flex-grow font-semibold">{song.title}</p>
+            <div className="flex-grow">
+                <p className="font-semibold">{song.title}</p>
+                {(song as any).trait && <p className="text-xs text-zinc-400 uppercase font-bold">{(song as any).trait}</p>}
+            </div>
             <input 
                 type="number" 
                 value={quality || ''} 
