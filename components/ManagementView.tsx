@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { MANAGERS } from '../constants';
+import { MANAGERS, TALENT_AGENCIES } from '../constants';
 import { Manager } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ConfirmationModal from './ConfirmationModal';
@@ -10,6 +10,8 @@ const ManagementView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
     const [confirmHire, setConfirmHire] = useState<{manager: Manager, years: number} | null>(null);
     const [confirmFire, setConfirmFire] = useState(false);
+    const [confirmAgencySign, setConfirmAgencySign] = useState<string | null>(null);
+    const [confirmAgencyLeave, setConfirmAgencyLeave] = useState(false);
     const [selectedYears, setSelectedYears] = useState<Record<string, number>>({});
     
     // Playlist Buying State
@@ -200,7 +202,45 @@ const ManagementView: React.FC = () => {
                                     <p className="text-xs text-zinc-400 mt-2 text-center mb-6">Your manager is looking for opportunities. Check your inbox next week.</p>
                                 )}
 
-                                <h3 className="font-bold mb-3">Automation Settings</h3>
+                                <h3 className="font-bold mb-3 mt-6">Acting & Hollywood</h3>
+                                <button
+                                    onClick={() => dispatch({type: 'REQUEST_ACTING_GIG', payload: { type: 'Voice Acting' }})}
+                                    disabled={!!activeArtistData.activeActingOffer || !!activeArtistData.filmingGig}
+                                    className="w-full bg-[#f5c518] text-black font-bold p-2 text-sm rounded-lg hover:bg-[#e3b516] disabled:bg-zinc-600 disabled:text-zinc-400 mb-3"
+                                >
+                                    {activeArtistData.activeActingOffer || activeArtistData.filmingGig ? 'Currently busy with a gig' : 'Request Voice Acting Gig'}
+                                </button>
+                                <button
+                                    onClick={() => dispatch({type: 'REQUEST_ACTING_GIG', payload: { type: 'Movie' }})}
+                                    disabled={currentManager.id !== 'm3' || !!activeArtistData.activeActingOffer || !!activeArtistData.filmingGig}
+                                    className="w-full bg-[#f5c518] text-black font-bold p-2 text-sm rounded-lg hover:bg-[#e3b516] disabled:bg-zinc-600 disabled:text-zinc-400 mb-6"
+                                >
+                                    {currentManager.id !== 'm3' ? 'Requires $2M/year Manager Kingston' : activeArtistData.activeActingOffer || activeArtistData.filmingGig ? 'Currently busy with a gig' : 'Request Movie/TV Gig'}
+                                </button>
+
+                                {activeArtistData.activeActingOffer && (
+                                    <div className="bg-zinc-700/50 p-4 rounded-lg border border-[#f5c518] mb-6">
+                                        <h4 className="font-bold text-[#f5c518] mb-1">Acting Offer</h4>
+                                        <p className="font-semibold text-lg">{activeArtistData.activeActingOffer.title}</p>
+                                        <p className="text-sm text-zinc-300">Role: {activeArtistData.activeActingOffer.roleName}</p>
+                                        <p className="text-sm text-zinc-300">Type: {activeArtistData.activeActingOffer.type}</p>
+                                        <p className="text-sm text-green-400 font-bold mb-3">Pay: ${formatNumber(activeArtistData.activeActingOffer.pay)} ({activeArtistData.activeActingOffer.durationWeeks} Weeks Filming)</p>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => dispatch({type: 'DECLINE_ACTING_OFFER', payload: {offerId: activeArtistData.activeActingOffer!.id}})} className="flex-1 bg-zinc-600 hover:bg-zinc-500 font-bold p-2 rounded-lg text-sm">Decline</button>
+                                            <button onClick={() => dispatch({type: 'ACCEPT_ACTING_OFFER', payload: {offerId: activeArtistData.activeActingOffer!.id}})} className="flex-1 bg-[#f5c518] text-black hover:bg-[#e3b516] font-bold p-2 rounded-lg text-sm">Accept</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeArtistData.filmingGig && (
+                                    <div className="bg-zinc-700/50 p-4 rounded-lg mb-6 border border-zinc-600">
+                                        <h4 className="font-bold text-zinc-300 mb-1">Currently Filming</h4>
+                                        <p className="font-semibold">{activeArtistData.filmingGig.title}</p>
+                                        <p className="text-sm text-zinc-400">{activeArtistData.filmingGig.remainingWeeks} weeks remaining</p>
+                                    </div>
+                                )}
+
+                                <h3 className="font-bold mb-3 mt-6">Automation Settings</h3>
                                 <div className="space-y-3">
                                     <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg cursor-pointer hover:bg-zinc-700">
                                         <span className="text-sm font-medium">Auto-distribute free songs from ASCAP</span>
@@ -262,8 +302,74 @@ const ManagementView: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    <div className="mt-8 pt-6 border-t border-zinc-800">
+                        <h2 className="text-xl font-bold mb-3">Talent Agencies</h2>
+                        {activeArtistData.talentAgencyId ? (
+                            <div className="bg-[#f5c518]/10 border border-[#f5c518]/30 p-4 rounded-lg">
+                                <h3 className="text-lg font-bold text-[#f5c518]">{TALENT_AGENCIES.find(t => t.id === activeArtistData.talentAgencyId)?.name}</h3>
+                                <p className="text-sm text-zinc-300 mb-4">You are currently signed to this agency. They take {TALENT_AGENCIES.find(t => t.id === activeArtistData.talentAgencyId)?.feePercent}% of your acting payouts.</p>
+                                <button onClick={() => {
+                                    setConfirmAgencyLeave(true);
+                                }} className="bg-red-600 hover:bg-red-500 font-bold px-4 py-2 rounded-md text-sm text-white">Leave Agency</button>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {TALENT_AGENCIES.map(agency => {
+                                    const canAfford = (activeArtistData.popularity || 0) >= agency.minPopularity;
+                                    return (
+                                        <div key={agency.id} className="bg-zinc-800 p-4 rounded-lg flex flex-col gap-3">
+                                            <div>
+                                                <h3 className="text-xl font-bold">{agency.name}</h3>
+                                                <p className="text-sm text-zinc-400">Takes {agency.feePercent}% of acting payouts</p>
+                                                <ul className="list-disc list-inside text-sm text-zinc-300 mt-2 space-y-1">
+                                                    <li>Requires {agency.minPopularity} popularity</li>
+                                                    {agency.perks.map((p, i) => <li key={i}>{p}</li>)}
+                                                </ul>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    setConfirmAgencySign(agency.id);
+                                                }} 
+                                                disabled={!canAfford} 
+                                                className="bg-[#f5c518] text-black font-bold p-2 px-6 rounded-lg disabled:bg-zinc-600 disabled:text-zinc-400"
+                                            >
+                                                {canAfford ? 'Sign Agency' : `Requires ${agency.minPopularity} Pop`}
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </main>
             </div>
+            
+            <ConfirmationModal
+                isOpen={!!confirmAgencySign}
+                title="Sign Talent Agency"
+                message={confirmAgencySign ? `Sign with ${TALENT_AGENCIES.find(t => t.id === confirmAgencySign)?.name}? They will take ${TALENT_AGENCIES.find(t => t.id === confirmAgencySign)?.feePercent}% of acting payouts.` : ''}
+                onConfirm={() => {
+                    if (confirmAgencySign) {
+                        dispatch({type: 'SIGN_TALENT_AGENCY', payload: {agencyId: confirmAgencySign}});
+                        setConfirmAgencySign(null);
+                    }
+                }}
+                onClose={() => setConfirmAgencySign(null)}
+                confirmText="Sign"
+            />
+            
+            <ConfirmationModal
+                isOpen={confirmAgencyLeave}
+                title="Leave Talent Agency"
+                message="Are you sure you want to leave your talent agency?"
+                onConfirm={() => {
+                    dispatch({type: 'LEAVE_TALENT_AGENCY'});
+                    setConfirmAgencyLeave(false);
+                }}
+                onClose={() => setConfirmAgencyLeave(false)}
+                confirmText="Leave Agency"
+            />
         </>
     );
 };

@@ -102,6 +102,7 @@ import AttendEventView from './components/AttendEventView';
 import MySpaceView from './components/MySpaceView';
 import { ChartPredictionsView } from './components/ChartPredictionsView';
 import KalshiView from './components/KalshiView';
+import ImdbView from './components/ImdbView';
 import { getEraConfiguration } from './utils/eraUtils';
 
 const AppContent: React.FC = () => {
@@ -283,6 +284,8 @@ const AppContent: React.FC = () => {
                 return <AppleMusicForArtistsView />;
             case 'appleMusic':
                 return <AppleMusicView />;
+            case 'imdb':
+                return <ImdbView />;
             case 'onlyfansSetup':
                 return <OnlyFansSetupView />;
             case 'onlyfans':

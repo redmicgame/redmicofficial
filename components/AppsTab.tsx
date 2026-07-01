@@ -53,6 +53,7 @@ const appCategories: AppCategory[] = [
         title: 'Social & Video',
         apps: [
             { name: 'MySpace', description: 'A place for friends', icon: <span className="font-bold text-xl text-[#003399]">My</span>, view: 'myspace', bgColor: '#e9e9e9' },
+            { name: 'IMDb', description: 'Movies, TV and Celebrities', icon: <span className="font-bold text-xl text-black">IMDb</span>, view: 'imdb', bgColor: '#f5c518' },
             { name: 'TikTok', description: 'Make short videos', icon: <TikTokIcon className="w-8 h-8"/>, view: 'tiktok', bgColor: '#000000', iconColor: '#25F4EE' },
             { name: 'Instagram', description: 'Share photos visually', icon: <span className="font-bold text-2xl font-serif text-white">Ig</span>, view: 'instagram', bgColor: '#E1306C' },
             { name: 'Google', description: 'Search the web', icon: <GoogleIcon className="w-8 h-8"/>, view: 'google', bgColor: '#FFFFFF', iconColor: '#000000' },

@@ -177,6 +177,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
     const handleAcceptOffer = () => {
         if (!email.offer) return;
         switch(email.offer.type) {
+            case 'actingPremiere':
+                dispatch({ type: 'ATTEND_ACTING_PREMIERE', payload: { roleId: email.offer.roleId } });
+                break;
             case 'geniusInterview':
                  dispatch({ type: 'ACCEPT_GENIUS_OFFER', payload: { songId: email.offer.songId, emailId: email.id } });
                  break;
@@ -371,6 +374,29 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             )
         }
 
+        if (email.offer.type === 'actingTrailerUpload') {
+            const offer = email.offer;
+            // Hack: we're using "isAnswered" if we add it, but it's not in the type. Let's use `email.isRead` as a proxy, or just check if trailerUrl is set? No, we don't have access to activeArtistData.actingRoles easily. We'll just dispatch SET_ACTING_TRAILER_URL and then change the text if reply length > 0... wait, `SET_ACTING_TRAILER_URL` will remove this email? No, the email is not removed, but `SET_ACTING_TRAILER_URL` creates a new email. We should mark this offer as answered. Let's assume we can add `isAnswered?: boolean` to ActingTrailerUploadOffer.
+            return (
+                <div className="mt-6 pt-4 border-t border-zinc-700">
+                    {!(offer as any).isAnswered ? (
+                        <div className="space-y-3">
+                            <p className="text-sm font-semibold text-zinc-300">Submit a thumbnail or trailer cover link for "{offer.roleTitle}":</p>
+                            <input type="text" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="https://..." className="w-full bg-zinc-700 p-3 rounded-md focus:ring-[#f5c518] focus:border-[#f5c518] text-white" />
+                            {reply && <img src={reply} alt="Trailer Preview" className="w-full h-48 object-cover rounded-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+                            <button onClick={() => {
+                                if (reply.trim()) {
+                                    dispatch({ type: 'SET_ACTING_TRAILER_URL', payload: { roleId: offer.roleId, trailerUrl: reply.trim() } });
+                                    offer.isAnswered = true; // Local optimistic update
+                                    dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                                }
+                            }} disabled={!reply.trim()} className="w-full h-12 font-bold py-2 px-4 rounded-lg transition-colors shadow-lg bg-[#f5c518] hover:bg-[#f5c518]/90 text-black disabled:bg-zinc-600 disabled:text-zinc-400">Set Thumbnail</button>
+                        </div>
+                    ) : (<div className="text-center font-semibold p-3 bg-zinc-700/50 rounded-lg">Thumbnail Submitted!</div>)}
+                </div>
+            )
+        }
+
         if (email.offer.type === 'cheatingScandal') {
             const offer = email.offer;
             return (
@@ -548,6 +574,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 buttonClass = "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20";
                 acceptedText = "Interview Scheduled";
                 isAccepted = email.offer.isAccepted;
+                break;
+            case 'actingPremiere':
+                buttonText = "Attend Premiere";
+                buttonClass = "bg-[#f5c518] hover:bg-[#f5c518]/90 text-black shadow-[#f5c518]/20";
+                acceptedText = "You attended the premiere!";
+                isAccepted = !!email.offer.isAccepted;
                 break;
             case 'coachellaOffer':
                 buttonText = "Submit for Coachella";

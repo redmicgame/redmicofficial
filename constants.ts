@@ -1,5 +1,5 @@
 
-import { Label, Manager, SecurityTeam } from './types';
+import { Label, Manager, SecurityTeam, TalentAgency } from './types';
 import { ArtistData } from './types';
 
 export const INITIAL_MONEY = 100000;
@@ -392,6 +392,12 @@ export const GIGS = [
     { name: 'College Music Festival', description: 'Headline a university music fest.', cashRange: [20000, 50000], hype: 20, isAvailable: (state: ArtistData) => state.manager && MANAGERS.find(m => m.id === state.manager!.id)!.unlocksTier >= 5, requirements: 'Requires a Tier 1 Manager' },
     { name: 'Late Night Show Performance', description: 'Perform on a major late-night TV show.', cashRange: [50000, 100000], hype: 35, isAvailable: (state: ArtistData) => state.manager && MANAGERS.find(m => m.id === state.manager!.id)!.unlocksTier >= 6, requirements: 'Requires a Tier 2 Manager' },
     { name: 'Major Festival Slot', description: 'Perform at a world-renowned festival like Coachella.', cashRange: [150000, 400000], hype: 60, isAvailable: (state: ArtistData) => state.manager && MANAGERS.find(m => m.id === state.manager!.id)!.unlocksTier >= 7, requirements: 'Requires a Tier 3 Manager' },
+];
+
+export const TALENT_AGENCIES: TalentAgency[] = [
+    { id: 'ta1', name: 'Creative Artists Agency (CAA)', feePercent: 10, minPopularity: 80, perks: ['Top tier Movie/TV roles', 'High payouts'] },
+    { id: 'ta2', name: 'William Morris Endeavor (WME)', feePercent: 15, minPopularity: 60, perks: ['Great brand deals', 'Solid TV roles'] },
+    { id: 'ta3', name: 'United Talent Agency (UTA)', feePercent: 20, minPopularity: 40, perks: ['Entry level Voice Acting', 'Indie Movies'] }
 ];
 
 export const NPC_ARTIST_IMAGES: Record<string, string> = {

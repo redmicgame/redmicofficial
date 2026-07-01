@@ -68,6 +68,7 @@ import {
   MANAGERS,
   SECURITY_TEAMS,
   GIGS,
+  TALENT_AGENCIES,
 } from "../constants";
 import { generateWeeklyXContent } from "../utils/xContentGenerator";
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
@@ -4384,18 +4385,21 @@ const gameReducerInternal = (
             // Scale demand by price (higher price = lower demand)
             const recommendedPrice =
               item.type === "Vinyl" ? 39.98 : item.type === "CD" ? 12.98 : 2.99;
-            const safePrice = Math.max(0.5, item.price);
+            const safePrice = Math.max(0.01, item.price);
             weeklySales = Math.floor(
-              weeklySales * Math.pow(recommendedPrice / safePrice, 1.5),
+              weeklySales * Math.pow(recommendedPrice / safePrice, 2.0),
             );
 
             if (item.type === "Ringtone") {
               // Ringtones demand scales massively based on hype
-              weeklySales = Math.floor(
+              let ringtoneSales = Math.floor(
                 artistData.hype *
                   2000 *
                   popularityMultiplier *
                   (Math.random() * 5 + 1),
+              );
+              weeklySales = Math.floor(
+                ringtoneSales * Math.pow(recommendedPrice / safePrice, 2.0),
               );
             }
 
@@ -6410,6 +6414,41 @@ const gameReducerInternal = (
         artistData.subsThisQuarter =
           newDate.week % 13 === 0 ? 0 : newSubsThisQuarter;
         artistData.performedGigThisWeek = false;
+
+        if (artistData.filmingGig) {
+          artistData.filmingGig.remainingWeeks -= 1;
+          if (artistData.filmingGig.remainingWeeks <= 0) {
+            const gig = artistData.filmingGig;
+            const newRole: ActingRole = {
+              id: gig.id,
+              title: gig.title,
+              type: gig.type,
+              roleName: gig.roleName,
+              year: newDate.year,
+              status: "Completed",
+              rating: Math.floor(Math.random() * 50 + 50) / 10,
+              trailerUrl: undefined,
+            };
+            artistData.actingRoles = [...(artistData.actingRoles || []), newRole];
+            artistData.filmingGig = null;
+            newEmails.push({
+              id: crypto.randomUUID(),
+              sender: "Production Team",
+              subject: `Trailer/Cover Needed: ${gig.title}`,
+              body: `We've finished post-production on "${gig.title}". We need you to select a trailer thumbnail/cover image before the premiere!`,
+              date: newDate,
+              isRead: false,
+              senderIcon: "imdb",
+              offer: {
+                type: "actingTrailerUpload",
+                roleId: gig.id,
+                roleTitle: gig.title
+              }
+            });
+            artistData.popularity = Math.min(100, artistData.popularity + (gig.type === 'Movie' ? 3 : 1));
+          }
+        }
+
         artistData.inbox.push(...newEmails);
       }
 
@@ -10425,6 +10464,9 @@ const gameReducerInternal = (
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
       if (activeData.money < action.payload.cost) return state;
+      
+      const song = activeData.songs.find(s => s.id === action.payload.songId);
+      
       return {
         ...state,
         artistsData: {
@@ -10432,6 +10474,16 @@ const gameReducerInternal = (
           [state.activeArtistId]: {
             ...activeData,
             money: activeData.money - action.payload.cost,
+            releases: activeData.releases.map((r) =>
+              r.id === song?.releaseId
+                ? {
+                    ...r,
+                    isTakenDown: false,
+                    rightsSoldPercent: 0,
+                    rightsOwnerLabelId: undefined,
+                  }
+                : r,
+            ),
             songs: activeData.songs.map((s) =>
               s.id === action.payload.songId
                 ? {
@@ -16546,6 +16598,236 @@ const gameReducerInternal = (
             tours: updatedTours,
           },
         },
+      };
+    }
+    case "UPDATE_IMDB_PROFILE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            imdbProfile: {
+              ...activeData.imdbProfile,
+              bio: action.payload.bio,
+              birthDate: action.payload.birthDate,
+            }
+          }
+        }
+      };
+    }
+    case "REQUEST_ACTING_GIG": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (activeData.activeActingOffer || activeData.filmingGig) {
+        return state;
+      }
+      
+      const type = action.payload.type;
+      
+      if ((type === 'Movie' || type === 'TV Show') && activeData.manager?.id !== 'm3') {
+          return state;
+      }
+
+      let offer: ActingOffer;
+      const pay = Math.floor(Math.random() * 5000000) + 1000000 * (activeData.popularity / 50);
+      
+      let title = '';
+      if (type === 'Movie') title = 'Blockbuster Movie ' + Math.floor(Math.random()*100);
+      else if (type === 'TV Show') title = 'Drama Series ' + Math.floor(Math.random()*100);
+      else {
+         const vaTypes = ['Grand Theft Auto VI', 'Cyberpunk 2077 DLC', 'Pixar Cartoon', 'Anime Dub', 'Dreamworks Animated Feature'];
+         title = vaTypes[Math.floor(Math.random() * vaTypes.length)];
+      }
+
+      const roleName = type === 'Voice Acting' ? 'Lead Voice' : 'Supporting Role';
+      
+      offer = {
+          id: crypto.randomUUID(),
+          title,
+          type,
+          roleName,
+          pay,
+          durationWeeks: type === 'Movie' ? 12 : type === 'TV Show' ? 8 : 4,
+          status: 'Pending'
+      };
+
+      const newEmail: Email = {
+          id: crypto.randomUUID(),
+          sender: "Management",
+          subject: `New Acting Offer: ${title}`,
+          body: `Hey, I got you an offer for a ${type} called "${title}". You will play ${roleName}. They are offering $${pay.toLocaleString()} and it will take ${offer.durationWeeks} weeks to film. What do you think?`,
+          date: state.date,
+          isRead: false,
+          senderIcon: "manager"
+      };
+
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  activeActingOffer: offer,
+                  inbox: [newEmail, ...activeData.inbox]
+              }
+          }
+      };
+    }
+    case "ACCEPT_ACTING_OFFER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.activeActingOffer || activeData.activeActingOffer.id !== action.payload.offerId) return state;
+
+      const offer = activeData.activeActingOffer;
+      
+      const filmingGig = {
+          id: offer.id,
+          title: offer.title,
+          type: offer.type,
+          roleName: offer.roleName,
+          year: state.date.year,
+          status: 'Filming' as const,
+          remainingWeeks: offer.durationWeeks
+      };
+      
+      let finalPay = offer.pay;
+      if (activeData.talentAgencyId) {
+          const agency = TALENT_AGENCIES.find(t => t.id === activeData.talentAgencyId);
+          if (agency) {
+              finalPay = Math.floor(offer.pay * (1 - (agency.feePercent / 100)));
+          }
+      }
+
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  activeActingOffer: null,
+                  filmingGig,
+                  money: activeData.money + finalPay
+              }
+          }
+      };
+    }
+    case "DECLINE_ACTING_OFFER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.activeActingOffer || activeData.activeActingOffer.id !== action.payload.offerId) return state;
+
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  activeActingOffer: null
+              }
+          }
+      };
+    }
+    case "SET_ACTING_TRAILER_URL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
+      if (!role) return state;
+      
+      const newEmails = [...activeData.inbox];
+      newEmails.push({
+          id: crypto.randomUUID(),
+          sender: "Production Team",
+          subject: `Premiere Invitation: ${role.title}`,
+          body: `The trailer is live and the movie is ready! You are cordially invited to the premiere of "${role.title}".`,
+          date: state.date,
+          isRead: false,
+          senderIcon: "imdb",
+          offer: {
+              type: "actingPremiere",
+              roleId: role.id,
+              roleTitle: role.title
+          }
+      });
+      
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, trailerUrl: action.payload.trailerUrl } : r),
+                  inbox: newEmails
+              }
+          }
+      };
+    }
+    case "ATTEND_ACTING_PREMIERE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
+      if (!role) return state;
+      
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, status: "Released" } : r),
+                  popularity: Math.min(100, activeData.popularity + 2),
+                  publicImage: Math.min(100, (activeData.publicImage || 80) + 5),
+                  hype: Math.min(100, activeData.hype + 5)
+              }
+          }
+      };
+    }
+    case "DECLINE_ACTING_PREMIERE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
+      if (!role) return state;
+      
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, status: "Released" } : r),
+                  publicImage: Math.max(0, (activeData.publicImage || 80) - 5)
+              }
+          }
+      };
+    }
+    case "SIGN_TALENT_AGENCY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  talentAgencyId: action.payload.agencyId
+              }
+          }
+      };
+    }
+    case "LEAVE_TALENT_AGENCY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  talentAgencyId: undefined
+              }
+          }
       };
     }
     default:

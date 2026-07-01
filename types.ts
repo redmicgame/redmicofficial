@@ -1,3 +1,37 @@
+export interface ActingRole {
+  id: string;
+  title: string;
+  type: 'Movie' | 'TV Show' | 'Voice Acting';
+  roleName: string;
+  year: number;
+  status: 'Filming' | 'Completed' | 'Released';
+  trailerUrl?: string;
+  rating?: number;
+}
+
+export interface TalentAgency {
+  id: string;
+  name: string;
+  feePercent: number;
+  minPopularity: number;
+  perks: string[];
+}
+
+export interface ActingOffer {
+  id: string;
+  title: string;
+  type: 'Movie' | 'TV Show' | 'Voice Acting';
+  roleName: string;
+  pay: number;
+  durationWeeks: number;
+  status: 'Pending' | 'Accepted' | 'Declined';
+}
+
+export interface ImdbProfile {
+  bio?: string;
+  birthDate?: string;
+}
+
 export interface Artist {
   id: string;
   name: string;
@@ -465,6 +499,19 @@ export type PromoInterviewSource =
   | "Therapuss"
   | "KISS FM";
 
+export interface ActingTrailerUploadOffer {
+  type: "actingTrailerUpload";
+  roleId: string;
+  roleTitle: string;
+}
+
+export interface ActingPremiereOffer {
+  type: "actingPremiere";
+  roleId: string;
+  roleTitle: string;
+  isAccepted?: boolean;
+}
+
 export interface PromoInterviewOffer {
   type: "promoInterview";
   source: PromoInterviewSource;
@@ -494,6 +541,7 @@ export interface Email {
     | "oscars"
     | "coachella"
     | "amas"
+    | "imdb"
     | "event";
   subject: string;
   body?: string;
@@ -531,7 +579,9 @@ export interface Email {
     | GiveBirthEmail
     | EventInvitationOffer
     | NpcContractRenewalOffer
-    | PromoInterviewOffer;
+    | PromoInterviewOffer
+    | ActingTrailerUploadOffer
+    | ActingPremiereOffer;
 }
 
 export interface GameDate {
@@ -1031,6 +1081,7 @@ export interface OscarCategory {
 }
 
 export type GameView =
+  | "imdb"
   | "game"
   | "myspace"
   | "spotify"
@@ -1465,6 +1516,12 @@ export interface ArtistData {
   signedVideoGames?: string[];
   kids?: Kid[];
   pregnancy?: Pregnancy | null;
+  // Acting & IMDb
+  talentAgencyId?: string;
+  imdbProfile?: ImdbProfile;
+  actingRoles?: ActingRole[];
+  activeActingOffer?: ActingOffer | null;
+  filmingGig?: (ActingRole & { remainingWeeks: number }) | null;
 }
 
 export interface RedCarpetLook {
@@ -1743,6 +1800,15 @@ export type GameAction =
   | { type: "MARK_INBOX_READ" }
   | { type: "TAKE_DOWN_SONG"; payload: { songId: string } }
   | { type: "TAKE_DOWN_RELEASE"; payload: { releaseId: string } }
+  | { type: "UPDATE_IMDB_PROFILE"; payload: { bio: string; birthDate: string } }
+  | { type: "REQUEST_ACTING_GIG"; payload: { type: "Movie" | "TV Show" | "Voice Acting" } }
+  | { type: "ACCEPT_ACTING_OFFER"; payload: { offerId: string } }
+  | { type: "DECLINE_ACTING_OFFER"; payload: { offerId: string } }
+  | { type: "SET_ACTING_TRAILER_URL"; payload: { roleId: string; trailerUrl: string } }
+  | { type: "ATTEND_ACTING_PREMIERE"; payload: { roleId: string } }
+  | { type: "DECLINE_ACTING_PREMIERE"; payload: { roleId: string } }
+  | { type: "SIGN_TALENT_AGENCY"; payload: { agencyId: string } }
+  | { type: "LEAVE_TALENT_AGENCY" }
   | {
       type: "TOGGLE_APPLE_MUSIC_EXPANDED_COVER";
       payload: { releaseId: string; enabled: boolean };
