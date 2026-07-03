@@ -1347,6 +1347,7 @@ export interface Kid {
   name: string;
   birthDate: GameDate;
   isArtist: boolean;
+  parentName?: string;
 }
 
 export interface Pregnancy {

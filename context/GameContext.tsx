@@ -16388,7 +16388,10 @@ const gameReducerInternal = (
       const activeArtist = state.soloArtist || state.group;
       if (!activeArtist || !activeData.pregnancy) return state;
 
-      const postContext = `🚨 BREAKING: ${activeArtist.name} is expecting a baby with ${activeData.pregnancy.partnerName}!`;
+      const isSingle = activeData.pregnancy.partnerName === 'Single Parent';
+      const postContext = isSingle 
+        ? `🚨 BREAKING: ${activeArtist.name} is expecting a baby!` 
+        : `🚨 BREAKING: ${activeArtist.name} is expecting a baby with ${activeData.pregnancy.partnerName}!`;
       const newPost: XPost = {
         id: crypto.randomUUID(),
         authorId: "tmz",
@@ -16424,6 +16427,7 @@ const gameReducerInternal = (
         name: action.payload.childName,
         birthDate: state.date,
         isArtist: false,
+        parentName: activeData.pregnancy?.partnerName === 'Single Parent' ? undefined : activeData.pregnancy?.partnerName,
       };
 
       let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];

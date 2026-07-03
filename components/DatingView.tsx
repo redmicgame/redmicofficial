@@ -154,7 +154,7 @@ const DatingView: React.FC = () => {
                                     </button>
                                 )}
 
-                                {activeRelationship.status === 'married' && !activeArtistData.pregnancy && (
+                                {!activeArtistData.pregnancy && (
                                     <button 
                                         onClick={() => dispatch({ type: 'START_PREGNANCY', payload: { partnerName: activeRelationship.partnerName } })}
                                         className="bg-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-pink-400"
@@ -183,12 +183,22 @@ const DatingView: React.FC = () => {
                     ) : (
                         <div className="bg-zinc-800 border border-zinc-700 border-dashed p-8 rounded-xl text-center">
                             <p className="text-zinc-400 mb-4">You are currently single.</p>
-                            <button 
-                                onClick={() => setShowNewRelationshipModal(true)}
-                                className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-full font-bold shadow-lg"
-                            >
-                                Start Dating
-                            </button>
+                            <div className="flex justify-center gap-4">
+                                <button 
+                                    onClick={() => setShowNewRelationshipModal(true)}
+                                    className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-full font-bold shadow-lg"
+                                >
+                                    Start Dating
+                                </button>
+                                {!activeArtistData.pregnancy && (
+                                    <button 
+                                        onClick={() => dispatch({ type: 'START_PREGNANCY', payload: { partnerName: 'Single Parent' } })}
+                                        className="bg-pink-500 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-pink-400"
+                                    >
+                                        Have a Baby
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </section>
@@ -257,6 +267,7 @@ const DatingView: React.FC = () => {
                                             <div>
                                                 <h3 className="text-2xl font-black text-pink-400">{kid.name}</h3>
                                                 <p className="text-zinc-400">Age: {ageInYears}</p>
+                                                {kid.parentName && <p className="text-zinc-400 text-sm">Co-parent: {kid.parentName}</p>}
                                             </div>
                                             {kid.isArtist && (
                                                 <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-xs font-semibold uppercase">
