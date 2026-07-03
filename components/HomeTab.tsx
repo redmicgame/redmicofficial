@@ -224,9 +224,11 @@ const HomeTab: React.FC = () => {
     let scoreSum = 0;
 
     for (let i = 0; i < regions.length - 1; i++) {
-      const variance = (Math.random() - 0.5) * 20; // -10 to +10 variance
+      const seed = (activeArtistId.charCodeAt(0) || 0) + i;
+      const rand = Math.abs(Math.sin(seed) * 10000) % 1;
+      const variance = (rand - 0.5) * 20; // -10 to +10 deterministic variance
       let score = base + variance;
-      if ((activeArtist as Artist).country === regions[i]) {
+      if ((activeArtistData.location || (activeArtist as Artist).country) === regions[i]) {
         score += 5; // Home country boost
       }
       score = Math.max(0, Math.min(100, score));
@@ -237,7 +239,7 @@ const HomeTab: React.FC = () => {
     // Adjust the last region to make the average roughly equal to the base popularity
     const lastRegion = regions[regions.length - 1];
     let lastScore = base * regions.length - scoreSum;
-    if ((activeArtist as Artist).country === lastRegion) {
+    if ((activeArtistData.location || (activeArtist as Artist).country) === lastRegion) {
       lastScore += 5;
     }
     lastScore = Math.max(0, Math.min(100, lastScore));

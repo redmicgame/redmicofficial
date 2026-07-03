@@ -80,6 +80,7 @@ const appCategories: AppCategory[] = [
     {
         title: 'Charts & Career',
         apps: [
+            { name: 'Spotify Charts', description: 'Top 50 Global', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954', iconColor: '#000000' },
             { name: 'Apple Music for Artists', description: 'Artist Dashboard', icon: <ITunesIcon className="w-8 h-8"/>, view: 'itunesDashboard', bgColor: '#ffffff', textColor: '#fa243c' as any },
             { name: 'Spotify for Artists', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#000000' },
             { name: 'Talk of the Charts', description: 'Early Hot 100 Predictions', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartPredictions', bgColor: '#d99aff' },
@@ -131,7 +132,7 @@ const AppsTab: React.FC = () => {
     const activeArtistData = gameState.artistsData[activeArtist?.id || ''];
 
     const isAppAvailable = (appName: string) => {
-        if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
+        if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Spotify Charts' || appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
         if (appName === 'iTunes') return eraConfig.digitalSalesActive;
         if (appName === 'X') return eraConfig.xAvailable;
         if (appName === 'Instagram') return eraConfig.instagramAvailable;
@@ -147,7 +148,7 @@ const AppsTab: React.FC = () => {
         return true;
     };
 
-    const essentialAppNames = ['Spotify', 'Spotify for Artists', 'Catalog', 'X'].filter(isAppAvailable);
+    const essentialAppNames = ['Spotify', 'Spotify for Artists', 'Spotify Charts', 'Catalog', 'X'].filter(isAppAvailable);
     const essentialApps = appCategories.flatMap(cat => cat.apps).filter(app => essentialAppNames.includes(app.name));
 
     return (

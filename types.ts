@@ -1383,6 +1383,9 @@ export interface ArtistData {
   careerStage?: 'neutral' | 'flop' | 'smash';
   flopEraLock?: boolean;
   money: number;
+  location?: "US" | "Canada" | "UK" | "Asia" | "Latin America";
+  lastMoveDate?: GameDate;
+  yearlyIncome?: number;
   hype: number;
   peakHype?: number;
   numberOneDebuts?: number;
@@ -2082,6 +2085,7 @@ export type GameAction =
       payload: { releaseId: string; summary: string };
     }
   | { type: "TOGGLE_OFFLINE_MODE" }
+  | { type: "CHANGE_LOCATION"; payload: { location: "US" | "Canada" | "UK" | "Asia" | "Latin America" } }
   | { type: "PRO_SIGN_LABEL"; payload: { labelId: Label["id"] } }
   | { type: "GO_TO_GRAMMY_SUBMISSIONS"; payload: { emailId: string } }
   | {

@@ -2456,6 +2456,7 @@ const gameReducerInternal = (
 
       for (const artistId in updatedArtistsData) {
         const artistData = updatedArtistsData[artistId];
+        const startingMoneyForWeek = artistData.money;
         let newEmails: Email[] = [];
         const artistProfileForEmail = allPlayerArtistsAndGroups.find(
           (a) => a.id === artistId,
@@ -5785,6 +5786,7 @@ const gameReducerInternal = (
         // --- CERTIFICATION POSTS ---
         if (artistProfile) {
           const newCertificationPosts: XPost[] = [];
+          const albumsWithNewCerts = new Set<string>();
 
           // Song Certifications and Billions Club
           artistData.songs = artistData.songs.map((song) => {
@@ -5797,6 +5799,7 @@ const gameReducerInternal = (
               currentCertString &&
               currentCertString !== song.lastCertification
             ) {
+              if (song.releaseId) albumsWithNewCerts.add(song.releaseId);
               const country = Math.random() > 0.5 ? "UK" : "US";
               const postContent = `${artistProfile.name}'s "${song.title}" is now certified ${currentCertString} in the ${country}.`;
 
@@ -5887,6 +5890,39 @@ const gameReducerInternal = (
 
           if (newCertificationPosts.length > 0) {
             artistData.xPosts.unshift(...newCertificationPosts);
+          }
+          
+          if (albumsWithNewCerts.size > 0) {
+              albumsWithNewCerts.forEach(releaseId => {
+                  const release = artistData.releases.find(r => r.id === releaseId);
+                  if (release) {
+                      const albumTracks = artistData.songs.filter(s => s.releaseId === releaseId).sort((a, b) => b.streams - a.streams);
+                      const albumCert = formatCertification(getAlbumCertification(albumTracks.reduce((sum, s) => sum + s.streams, 0)));
+                      
+                      let text = `${artistProfile.name}'s "${release.title}" era in the US (eligible): 🇺🇸\n\n`;
+                      if (albumCert) text += `Album — ${albumCert}\n\n`;
+                      
+                      albumTracks.forEach(t => {
+                          const cert = formatCertification(getSongCertification(t.streams));
+                          if (cert) {
+                              text += `"${t.title}" — ${cert}\n`;
+                          }
+                      });
+                      
+                      const totalStreamsMillion = Math.floor(albumTracks.reduce((sum, s) => sum + s.streams, 0) / 1000000);
+                      text += `\nTotal — ${totalStreamsMillion} Million`;
+                      
+                      artistData.xPosts.unshift({
+                          id: crypto.randomUUID(),
+                          authorId: "popbase", // Or a fan account like ririoncharts, but we don't have dynamic handles yet. Let's just use popbase or chartdata
+                          content: text,
+                          likes: Math.floor(Math.random() * 50000) + 10000,
+                          retweets: Math.floor(Math.random() * 10000) + 2000,
+                          views: Math.floor(Math.random() * 1000000) + 200000,
+                          date: newDate
+                      });
+                  }
+              });
           }
         }
 
@@ -6475,6 +6511,44 @@ const gameReducerInternal = (
         }
 
         artistData.inbox.push(...newEmails);
+
+        const netEarned = artistData.money - startingMoneyForWeek;
+        if (netEarned > 0) {
+            artistData.yearlyIncome = (artistData.yearlyIncome || 0) + netEarned;
+        }
+
+        if (newDate.week === 50) {
+            const taxRates = { Canada: 0.18, US: 0.15, UK: 0.21, Asia: 0.07, "Latin America": 0.09 };
+            const loc = artistData.location || artistProfileForEmail?.country || "US";
+            const rate = taxRates[loc as keyof typeof taxRates] || 0.15;
+            const taxable = artistData.yearlyIncome || 0;
+            const taxAmount = Math.floor(taxable * rate);
+            
+            if (taxAmount > 0) {
+               artistData.money -= taxAmount;
+               artistData.yearlyIncome = 0;
+               artistData.inbox.push({
+                   id: crypto.randomUUID(),
+                   sender: "Government",
+                   subject: "Annual Income Tax",
+                   body: `Hello ${artistProfileForEmail?.name},
+
+Based on your location in ${loc}, your annual income tax rate is ${rate * 100}%.
+
+Your total taxable income this year was $${formatNumber(taxable)}.
+
+We have deducted $${formatNumber(taxAmount)} from your account.
+
+Regards,
+The Government`,
+                   date: newDate,
+                   isRead: false,
+                   senderIcon: "default"
+               });
+            } else {
+               artistData.yearlyIncome = 0;
+            }
+        }
       }
 
       // --- ATTRIBUTE FEATURE STREAMS TO FEATURED ARTISTS ---
@@ -14307,6 +14381,21 @@ const gameReducerInternal = (
         },
         oscarSubmissions: [...state.oscarSubmissions, ...submissions],
         currentView: "game",
+      };
+    }
+    case "CHANGE_LOCATION": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            location: action.payload.location,
+            lastMoveDate: state.date,
+          },
+        },
       };
     }
     case "TOGGLE_OFFLINE_MODE": {
