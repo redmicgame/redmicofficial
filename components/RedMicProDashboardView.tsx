@@ -11,6 +11,11 @@ const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
     const [quality, setQuality] = useState(song.quality);
     const [trait, setTrait] = useState<string>(song.trait || 'Normal');
 
+    React.useEffect(() => {
+        setQuality(song.quality);
+        setTrait(song.trait || 'Normal');
+    }, [song.quality, song.trait]);
+
     const handleUpdate = () => {
         dispatch({ type: 'UPDATE_SONG_QUALITY', payload: { songId: song.id, newQuality: quality } });
         dispatch({ type: 'UPDATE_SONG_TRAIT', payload: { songId: song.id, newTrait: trait } });
@@ -25,7 +30,6 @@ const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
                 value={trait}
                 onChange={e => {
                     setTrait(e.target.value);
-                    dispatch({ type: 'UPDATE_SONG_TRAIT', payload: { songId: song.id, newTrait: e.target.value } });
                 }}
                 className="w-32 bg-zinc-700 p-1 rounded-md text-xs"
             >
@@ -40,10 +44,15 @@ const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
                 type="number" 
                 value={quality || ''} 
                 onChange={e => setQuality(parseInt(e.target.value) || 0)}
-                onBlur={handleUpdate}
                 min="0" max="100"
                 className="w-16 bg-zinc-700 p-1 rounded-md text-center"
             />
+            <button 
+                onClick={handleUpdate} 
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 px-3 rounded text-xs"
+            >
+                Confirm
+            </button>
         </div>
     );
 };
@@ -91,6 +100,72 @@ const NpcUserEditor: React.FC<{ user: XUser }> = ({ user }) => {
     );
 };
 
+
+const CustomFeatureBuilder: React.FC = () => {
+    const { gameState, dispatch } = useGame();
+    const [name, setName] = useState('');
+    const [cost, setCost] = useState('');
+
+    const handleAdd = () => {
+        if (!name.trim()) return;
+        dispatch({ type: 'ADD_CUSTOM_FEATURE', payload: { name: name.trim(), cost: parseInt(cost) || 0 } });
+        setName('');
+        setCost('');
+    };
+
+    const handleRemove = (featureName: string) => {
+        dispatch({ type: 'REMOVE_CUSTOM_FEATURE', payload: { name: featureName } });
+    };
+
+    return (
+        <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+            <h2 className="text-lg font-bold">Custom Feature Artists</h2>
+            <p className="text-sm text-zinc-400">Add custom artists to appear in your Studio collaboration list. You can set them as free ($0) or priced.</p>
+            
+            <div className="flex gap-2">
+                <input 
+                    type="text" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                    placeholder="Artist Name"
+                    className="flex-grow bg-zinc-700 p-2 rounded-md text-white"
+                />
+                <input 
+                    type="number" 
+                    value={cost} 
+                    onChange={e => setCost(e.target.value)} 
+                    placeholder="Cost ($)"
+                    className="w-24 bg-zinc-700 p-2 rounded-md text-white"
+                />
+                <button 
+                    onClick={handleAdd} 
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-md"
+                >
+                    Add
+                </button>
+            </div>
+
+            {gameState.customFeatures && gameState.customFeatures.length > 0 && (
+                <div className="mt-4 space-y-2">
+                    {gameState.customFeatures.map(f => (
+                        <div key={f.name} className="flex items-center justify-between bg-zinc-700/50 p-2 rounded-md">
+                            <div>
+                                <p className="font-bold">{f.name}</p>
+                                <p className="text-xs text-green-400">${(f.cost || 0).toLocaleString()}</p>
+                            </div>
+                            <button 
+                                onClick={() => handleRemove(f.name)}
+                                className="text-red-400 hover:text-red-300 text-sm font-bold"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const RedMicProDashboardView: React.FC = () => {
     const { dispatch, activeArtistData, gameState } = useGame();
@@ -435,6 +510,8 @@ const RedMicProDashboardView: React.FC = () => {
                         ))}
                     </div>
                 </div>
+
+                <CustomFeatureBuilder />
 
                 <CustomAwardShowBuilder />
 

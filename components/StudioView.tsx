@@ -90,8 +90,9 @@ const StudioView: React.FC = () => {
             .filter(a => a.id !== activeArtist.id)
             .map(a => a.name)
             .sort();
-        return Array.from(new Set([...otherPlayerArtists, ...npcs]));
-    }, [allPlayerArtists, activeArtist]);
+        const customCollabs = (gameState.customFeatures || []).map(f => f.name);
+        return Array.from(new Set([...customCollabs, ...otherPlayerArtists, ...npcs]));
+    }, [allPlayerArtists, activeArtist, gameState.customFeatures]);
 
     const potentialProducers = useMemo(() => {
         return ["Metro Boomin", "Mike Dean", "Rick Rubin", "Pharrell Williams", "Max Martin", "Timbaland", "Benny Blanco", "Mustard", "London on da Track", "Murda Beatz", "Jack Antonoff", "Wheezy", "Boi-1da", "Tay Keith", "Southside", "Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"].sort();
@@ -124,6 +125,11 @@ const StudioView: React.FC = () => {
     const getFeatureCost = (artistName: string) => {
         if (allPlayerArtists.some(a => a.name === artistName && a.id !== activeArtist.id)) {
             return 0; // Other playable characters (including kids) are free to feature
+        }
+        
+        const customFeature = gameState.customFeatures?.find(f => f.name === artistName);
+        if (customFeature) {
+            return customFeature.cost;
         }
         
         const genre = NPC_ARTIST_GENRES[artistName];

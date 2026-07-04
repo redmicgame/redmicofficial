@@ -13687,6 +13687,22 @@ The Government`,
         },
       };
     }
+    case "ADD_CUSTOM_FEATURE": {
+      const { name, cost } = action.payload;
+      const currentFeatures = state.customFeatures || [];
+      return {
+        ...state,
+        customFeatures: [...currentFeatures, { name, cost }],
+      };
+    }
+    case "REMOVE_CUSTOM_FEATURE": {
+      const { name } = action.payload;
+      const currentFeatures = state.customFeatures || [];
+      return {
+        ...state,
+        customFeatures: currentFeatures.filter(f => f.name !== name),
+      };
+    }
     case "CREATE_CUSTOM_AWARD_SHOW": {
       return {
         ...state,

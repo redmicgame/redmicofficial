@@ -1758,6 +1758,8 @@ export type GameAction =
   | { type: "SET_CAREER_STAGE"; payload: { stage: 'neutral' | 'flop' | 'smash' } }
   | { type: "TOGGLE_FLOP_ERA_LOCK" }
   | { type: "CREATE_CUSTOM_AWARD_SHOW"; payload: { customAwardShow: NonNullable<GameState['customAwardShow']> } }
+  | { type: "ADD_CUSTOM_FEATURE"; payload: { name: string; cost: number } }
+  | { type: "REMOVE_CUSTOM_FEATURE"; payload: { name: string } }
   | { type: "SUBMIT_CUSTOM_AWARDS"; payload: { submissions: NonNullable<GameState['customAwardSubmissions']> } }
   | { type: "JUDGE_CUSTOM_AWARDS"; payload: { nominations: NonNullable<GameState['customAwardNominations']> } }
   | { type: "SET_ACTIVE_TMZ_POST"; payload: XPost | null }
