@@ -1936,6 +1936,8 @@ const gameReducerInternal = (
 
       const songIndex = activeData.songs.findIndex((s) => s.id === songId);
       if (songIndex === -1) return state;
+      const song = activeData.songs[songIndex];
+      if (song.hasRadioPromo) return state; // Only one time
 
       let newMoney = activeData.money;
       let newContract = activeData.contract ? { ...activeData.contract } : null;
@@ -1949,18 +1951,15 @@ const gameReducerInternal = (
       }
 
       const updatedSongs = [...activeData.songs];
-      const song = updatedSongs[songIndex];
 
-      // Conversion from money to spins (payola/promotion efficiency)
-      // Every $1000 could add around 50-100 spins immediately or slowly?
-      // Since it's a one-time promo, we add an immediate boost to radioPlays,
-      // and maybe a popularity boost? Let's give them immediate radioPlays.
-      const spinsGained = Math.floor(amount / 10) * (Math.random() * 0.5 + 0.8);
-      const impressionsGained = spinsGained * 5000;
+      // Tone down radio promo significantly (divide by 10)
+      const spinsGained = Math.floor(amount / 100) * (Math.random() * 0.5 + 0.8);
+      const impressionsGained = spinsGained * 2500; // Also reduced impressions per spin
 
       updatedSongs[songIndex] = {
         ...song,
         pendingRadioPromoSpins: (song.pendingRadioPromoSpins || 0) + spinsGained,
+        hasRadioPromo: true,
       };
 
       // Add a prediction post if it's gaining radio traction
@@ -4144,7 +4143,7 @@ const gameReducerInternal = (
             const firstWeekProjectStreams = release.songIds.reduce(
               (sum, songId) => {
                 const song = updatedSongs.find((s) => s.id === songId);
-                return sum + (song?.firstWeekStreams || 0);
+                return sum + (song?.lastWeekStreams || 0);
               },
               0,
             );
@@ -5897,10 +5896,16 @@ const gameReducerInternal = (
                   const release = artistData.releases.find(r => r.id === releaseId);
                   if (release) {
                       const albumTracks = artistData.songs.filter(s => s.releaseId === releaseId).sort((a, b) => b.streams - a.streams);
-                      const albumCert = formatCertification(getAlbumCertification(albumTracks.reduce((sum, s) => sum + s.streams, 0)));
+                      const rawAlbumStreams = albumTracks.reduce((sum, s) => sum + s.streams, 0);
+                      const rawAlbumSales = albumTracks.reduce((sum, s) => sum + (s.sales || 0), 0);
+                      const albumEffectiveStreams = Math.max(0, rawAlbumStreams - (release.preReleaseStreams || 0));
+                      const albumEffectiveSales = Math.max(0, rawAlbumSales - (release.preReleaseSales || 0)) + (release.sales || 0);
+                      const albumTotalUnits = Math.floor(albumEffectiveStreams / 1500) + albumEffectiveSales;
+                      const albumCert = formatCertification(getAlbumCertification(albumTotalUnits));
+                      const albumCertFormatted = albumCert ? `${albumCert} (${(albumTotalUnits).toLocaleString()})` : '';
                       
                       let text = `${artistProfile.name}'s "${release.title}" era in the US (eligible): 🇺🇸\n\n`;
-                      if (albumCert) text += `Album — ${albumCert}\n\n`;
+                      if (albumCertFormatted) text += `Album — ${albumCertFormatted}\n\n`;
                       
                       albumTracks.forEach(t => {
                           const cert = formatCertification(getSongCertification(t.streams));
@@ -7592,8 +7597,8 @@ The Government`,
           const digitalAlbumSales = Math.floor(
             (totalWeeklyStreams / 1500) *
               eraConfigTmp2.marketShare.digital *
-              1.5,
-          ); // 1.5x boost for albums
+              1.1,
+          ); // Lowered album sales
           // Physical sales from general reach (aside from player-made merch)
           const generalPhysicalSales = Math.floor(
             (totalWeeklyStreams / 1500) * eraConfigTmp2.marketShare.physical,
@@ -7655,6 +7660,8 @@ The Government`,
           if (weeklyActivity > 4500000) {
             weeklyActivity = Math.floor(4500000 + Math.random() * 500000);
           }
+          
+          release.sales = (release.sales || 0) + totalWeeklySales;
 
           const labelName = release.releasingLabel
             ? release.releasingLabel.name
@@ -8360,7 +8367,7 @@ The Government`,
                 sender: "The Academy",
                 senderIcon: "oscars",
                 subject: `Submit for the ${newDate.year} Academy Awards`,
-                body: `Hi ${artistProfile.name},\n\nThe submission window for Best Original Song at the ${newDate.year} Academy Awards is open. Please submit your eligible soundtrack releases from last year.\n\n- The Academy of Motion Picture Arts and Sciences`,
+                body: `Hi ${artistProfile.name},\n\nThe submission window for the ${newDate.year} Academy Awards is open. Please submit your eligible soundtrack releases and acting roles from last year.\n\n- The Academy of Motion Picture Arts and Sciences`,
                 date: newDate,
                 isRead: false,
                 offer: { type: "oscarSubmission", emailId, isSubmitted: false },
@@ -10081,9 +10088,14 @@ The Government`,
 
       if (activeData.contract) return state;
 
+      const preReleaseStreams = action.payload.release.songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.streams || 0), 0);
+      const preReleaseSales = action.payload.release.songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.sales || 0), 0);
+
       const releaseWithLabel = {
         ...action.payload.release,
         releasingLabel: null,
+        preReleaseStreams,
+        preReleaseSales,
       };
 
       let hypeIncrease = 0;
@@ -15147,6 +15159,9 @@ The Government`,
         isReleased: true,
       };
 
+      const preReleaseStreams = songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.streams || 0), 0);
+      const preReleaseSales = songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.sales || 0), 0);
+
       const newRelease: Release = {
         id: crypto.randomUUID(),
         title: albumTitle,
@@ -15156,6 +15171,8 @@ The Government`,
         releaseDate: state.date,
         artistId: state.activeArtistId,
         soundtrackInfo: { albumTitle },
+        preReleaseStreams,
+        preReleaseSales,
       };
 
       const updatedSongs = activeData.songs.map((song) => {

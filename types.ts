@@ -162,6 +162,7 @@ export interface Song {
   weeksOnRadio?: number;
   radioFormat?: string;
   pendingRadioPromoSpins?: number;
+  hasRadioPromo?: boolean;
   hasTweetedBillionStreams?: boolean;
   hasBillionsClubEmail?: boolean;
   hasBillionsClubPerformance?: boolean;
@@ -193,6 +194,9 @@ export interface Release {
   tracklistImageUrl?: string;
   standardEditionId?: string;
   isAppleMusicExpandedCover?: boolean;
+  preReleaseStreams?: number;
+  preReleaseSales?: number;
+  sales?: number;
   isAppleMusicEssential?: boolean;
   appleMusicEssentialReview?: string;
   releasingLabel?: {
@@ -634,6 +638,7 @@ export interface NpcSong {
   weeksOnRadio?: number;
   radioFormat?: string;
   pendingRadioPromoSpins?: number;
+  hasRadioPromo?: boolean;
 }
 
 export interface NpcAlbum {
@@ -1088,7 +1093,7 @@ export interface AmaCategory {
 }
 
 export interface OscarCategory {
-  name: "Best Original Song" | "Best Actor/Actress (Leading Role)" | "Best Supporting Actor/Actress (Supporting Role)";
+  name: "Best Original Song" | "Best Actor/Actress" | "Best Supporting Actor/Actress" | "Best Voice Actor/Actress";
   nominees: OscarContender[];
   winner?: OscarContender;
 }
@@ -1537,6 +1542,10 @@ export interface ArtistData {
   talentAgencyId?: string;
   imdbProfile?: ImdbProfile;
   actingRoles?: ActingRole[];
+  location?: string;
+  lastMoveDate?: GameDate;
+  yearlyIncomeForTax?: number;
+  taxPaidYear?: number;
   activeActingOffer?: ActingOffer | null;
   filmingGig?: (ActingRole & { remainingWeeks: number }) | null;
 }
@@ -1715,7 +1724,7 @@ export interface GameState {
   // Oscars
   oscarSubmissions: {
     artistId: string;
-    category: "Best Original Song";
+    category: "Best Original Song" | "Best Actor/Actress" | "Best Supporting Actor/Actress" | "Best Voice Actor/Actress";
     itemId: string;
     itemName: string;
   }[];
@@ -2072,6 +2081,10 @@ export type GameAction =
   | {
       type: "UPDATE_SONG_QUALITY";
       payload: { songId: string; newQuality: number };
+    }
+  | {
+      type: "UPDATE_SONG_TRAIT";
+      payload: { songId: string; newTrait: any };
     }
   | { type: "SET_MONEY"; payload: { newAmount: number } }
   | { type: "TOGGLE_GOLD_THEME"; payload: { enabled: boolean } }

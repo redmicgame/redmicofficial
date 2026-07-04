@@ -136,6 +136,7 @@ export const ContractNegotiationModal: React.FC<Props> = ({ label, onClose, onSi
                 </div>
 
                 <div className="flex-grow overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                    <fieldset disabled={negotiationResult?.isAccepted} className="space-y-8">
                     {/* Core Terms */}
                     <section>
                         <h3 className="text-lg font-bold text-[#1ed760] mb-4 uppercase tracking-wider text-sm sticky top-0 bg-zinc-900/90 py-2">Core Terms</h3>
@@ -295,6 +296,7 @@ export const ContractNegotiationModal: React.FC<Props> = ({ label, onClose, onSi
                             </div>
                         </div>
                     </section>
+                    </fieldset>
                 </div>
 
                 <div className="p-5 border-t border-zinc-800 bg-zinc-900 sticky bottom-0 z-10 flex flex-col gap-4">

@@ -86,8 +86,11 @@ const RadioDashView: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <button onClick={() => setPromoSongId(promoSongId === song.id ? null : song.id)} className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">
-                                        {promoSongId === song.id ? 'Cancel' : 'Promote'}
+                                    <button 
+                                        onClick={() => setPromoSongId(promoSongId === song.id ? null : song.id)} 
+                                        disabled={song.hasRadioPromo}
+                                        className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded uppercase disabled:opacity-50">
+                                        {song.hasRadioPromo ? 'Promoted' : promoSongId === song.id ? 'Cancel' : 'Promote'}
                                     </button>
                                     <button onClick={() => handleWithdraw(song.id, song.radioFormat || 'pop')} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">Withdraw</button>
                                 </div>

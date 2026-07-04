@@ -9,24 +9,40 @@ import { CustomAwardShowBuilder } from './CustomAwardShowBuilder';
 const QualityEditor: React.FC<{ song: Song }> = ({ song }) => {
     const { dispatch } = useGame();
     const [quality, setQuality] = useState(song.quality);
+    const [trait, setTrait] = useState<string>(song.trait || 'Normal');
 
     const handleUpdate = () => {
         dispatch({ type: 'UPDATE_SONG_QUALITY', payload: { songId: song.id, newQuality: quality } });
+        dispatch({ type: 'UPDATE_SONG_TRAIT', payload: { songId: song.id, newTrait: trait } });
     };
 
     return (
         <div className="flex items-center gap-3">
             <div className="flex-grow">
                 <p className="font-semibold">{song.title}</p>
-                {(song as any).trait && <p className="text-xs text-zinc-400 uppercase font-bold">{(song as any).trait}</p>}
             </div>
+            <select
+                value={trait}
+                onChange={e => {
+                    setTrait(e.target.value);
+                    dispatch({ type: 'UPDATE_SONG_TRAIT', payload: { songId: song.id, newTrait: e.target.value } });
+                }}
+                className="w-32 bg-zinc-700 p-1 rounded-md text-xs"
+            >
+                <option value="Normal">Normal</option>
+                <option value="Smash Hit">Smash Hit</option>
+                <option value="TikTok Hit">TikTok Hit</option>
+                <option value="Slow Burner">Slow Burner</option>
+                <option value="Radio Hit">Radio Hit</option>
+                <option value="Flop">Flop</option>
+            </select>
             <input 
                 type="number" 
                 value={quality || ''} 
                 onChange={e => setQuality(parseInt(e.target.value) || 0)}
                 onBlur={handleUpdate}
                 min="0" max="100"
-                className="w-20 bg-zinc-700 p-1 rounded-md text-center"
+                className="w-16 bg-zinc-700 p-1 rounded-md text-center"
             />
         </div>
     );
@@ -262,9 +278,7 @@ const RedMicProDashboardView: React.FC = () => {
                     <p className="text-sm text-zinc-400">Instantly get out of your current label contract without paying breach penalties.</p>
                     <button
                         onClick={() => {
-                            if (confirm("Are you sure you want to instantly end your contract?")) {
-                                dispatch({ type: 'SHRED_CONTRACT' });
-                            }
+                            dispatch({ type: 'SHRED_CONTRACT' });
                         }}
                         disabled={!activeArtistData.contract}
                         className={`w-full py-3 font-bold rounded-md ${activeArtistData.contract ? 'bg-red-600 hover:bg-red-500' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'}`}

@@ -418,14 +418,15 @@ const CatalogView: React.FC = () => {
                 const deluxeVersion = deluxeMap.get(release.id);
                 const songsToCount = deluxeVersion ? deluxeVersion.songIds : release.songIds;
 
-                const releaseStreams = songsToCount.reduce((total, songId) => {
+                const releaseStreams = Math.max(0, songsToCount.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.streams || 0);
-                }, 0);
-                const releaseSales = songsToCount.reduce((total, songId) => {
+                }, 0) - (release.preReleaseStreams || 0));
+                
+                const releaseSales = Math.max(0, songsToCount.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.sales || 0);
-                }, 0);
+                }, 0) - (release.preReleaseSales || 0));
                 const merchUnits = activeArtistData.merch
                     .filter(m => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id))
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);

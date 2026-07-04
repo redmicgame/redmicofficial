@@ -18,7 +18,7 @@ const TmzArticleView: React.FC = () => {
     }
 
     const handleBack = () => {
-        dispatch({ type: 'CHANGE_VIEW', payload: 'x' });
+        dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
         dispatch({ type: 'SET_ACTIVE_TMZ_POST', payload: null });
     };
 
