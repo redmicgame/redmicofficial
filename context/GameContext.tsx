@@ -6360,7 +6360,7 @@ const gameReducerInternal = (
             .filter(
               (r) =>
                 (r.type === "Album" ||
-                  r.type === "Album (Deluxe)" ||
+                  
                   r.type === "EP") &&
                 r.releaseDate?.year === newDate.year,
             )
@@ -7497,7 +7497,7 @@ The Government`,
           (r) =>
             r.type === "EP" ||
             r.type === "Album" ||
-            r.type === "Album (Deluxe)" ||
+            
             r.type === "Compilation",
         )
         .forEach((release) => {
@@ -7520,8 +7520,8 @@ The Government`,
 
       const deluxeMap = new Map<string, Release>();
       allPlayerReleases.forEach((p) => {
-        if (p.type === "Album (Deluxe)" && p.originalReleaseId) {
-          deluxeMap.set(p.originalReleaseId, p);
+        if (p.standardEditionId) {
+          deluxeMap.set(p.standardEditionId, p);
         }
       });
 
@@ -7530,11 +7530,11 @@ The Government`,
           (r) =>
             (r.type === "EP" ||
               r.type === "Album" ||
-              r.type === "Album (Deluxe)" ||
+              
               r.type === "Compilation") &&
             !r.soundtrackInfo,
         )
-        .filter((r) => !(r.type === "Album (Deluxe)" && r.originalReleaseId))
+        .filter((r) => !(r.standardEditionId))
         .map((release) => {
           const artist = allPlayerArtistsAndGroups.find(
             (a) => a.id === release.artistId,
@@ -7565,7 +7565,7 @@ The Government`,
                 r.artistId === release.artistId &&
                 (r.type === "EP" ||
                   r.type === "Album" ||
-                  r.type === "Album (Deluxe)" ||
+                  
                   r.type === "Compilation") &&
                 r.songIds.includes(songId),
             );
@@ -7669,10 +7669,10 @@ The Government`,
 
           return {
             uniqueId: release.id,
-            title: release.title,
+            title: deluxeVersion ? deluxeVersion.title : release.title,
             artist: artist?.name || "Unknown",
             label: labelName,
-            coverArt: release.coverArt,
+            coverArt: deluxeVersion ? deluxeVersion.coverArt : release.coverArt,
             isPlayerAlbum: true,
             albumId: release.id,
             weeklyActivity,
@@ -8036,7 +8036,7 @@ The Government`,
             (r) =>
               r.type === "Album" ||
               r.type === "EP" ||
-              r.type === "Album (Deluxe)" ||
+              
               r.type === "Compilation",
           )
           .forEach((release) => {
@@ -15907,6 +15907,29 @@ The Government`,
         billboardTopAlbums: mapAlbumChartEntries(
           state.billboardTopAlbums || [],
         ),
+      };
+    }
+    case "EDIT_X_PROFILE": {
+      if (!state.activeArtistId) return state;
+      const { userId, name, bio, headerImage, avatar } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      
+      const updatedXUsers = activeData.xUsers.map(user => {
+          if (user.id === userId) {
+              return { ...user, name, bio, headerImage, avatar: avatar || user.avatar };
+          }
+          return user;
+      });
+
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  xUsers: updatedXUsers,
+              },
+          },
       };
     }
     case "UPDATE_NPC_AVATAR": {

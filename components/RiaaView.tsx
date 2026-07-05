@@ -218,13 +218,27 @@ const RiaaView: React.FC = () => {
             });
 
             // Player Albums
-            activeArtistData.releases.forEach(release => {
+            const deluxeMap = new Map<string, typeof activeArtistData.releases[0]>();
+            activeArtistData.releases.forEach(r => {
+                if (r.standardEditionId) deluxeMap.set(r.standardEditionId, r);
+            });
+
+            activeArtistData.releases.filter(r => !r.standardEditionId).forEach(release => {
                 let totalStreams = 0;
-                release.songIds.forEach(id => {
+                const deluxeVersion = deluxeMap.get(release.id);
+                const songsToCount = deluxeVersion ? deluxeVersion.songIds : release.songIds;
+                
+                songsToCount.forEach(id => {
                     const s = activeArtistData.songs.find(x => x.id === id);
                     if (s) totalStreams += s.streams;
                 });
-                const units = totalStreams / 1500 / 1000000; 
+                
+                // Add physical merch sales from both versions
+                const merchUnits = activeArtistData.merch
+                    .filter(m => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id))
+                    .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
+                    
+                const units = (totalStreams / 1500 + merchUnits) / 1000000; 
                 const level = getCertLevel(units);
                 if (level) {
                      const certDateStr = getLatestCertDate(units, release.releaseDate, release.id, release.certifications);
@@ -240,7 +254,7 @@ const RiaaView: React.FC = () => {
                      certs.push({
                         id: release.id,
                         artist: playerArtistName,
-                        title: release.title,
+                        title: deluxeVersion ? deluxeVersion.title : release.title,
                         format: 'ALBUM',
                         certifiedUnits: parseFloat(units.toFixed(1)),
                         certName: level.name,

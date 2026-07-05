@@ -15,6 +15,11 @@ const XProfileView: React.FC = () => {
     const [quotePostTarget, setQuotePostTarget] = React.useState<XPost | null>(null);
     const [showAbout, setShowAbout] = React.useState(false);
     const [showPremiumModal, setShowPremiumModal] = React.useState(false);
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [editName, setEditName] = React.useState('');
+    const [editBio, setEditBio] = React.useState('');
+    const [editHeader, setEditHeader] = React.useState('');
+    const [editAvatar, setEditAvatar] = React.useState('');
     const { selectedXUserId } = gameState;
     const { xUsers, xPosts, xFollowingIds, xSuspensionStatus, selectedPlayerXUserId } = activeArtistData!;
 
@@ -39,6 +44,21 @@ const XProfileView: React.FC = () => {
         }
     };
     
+    const handleEditProfile = () => {
+        if (!user) return;
+        setEditName(user.name);
+        setEditBio(user.bio || '');
+        setEditHeader(user.headerImage || '');
+        setEditAvatar(user.avatar || '');
+        setIsEditing(true);
+    };
+
+    const handleSaveProfile = () => {
+        if (!user) return;
+        dispatch({ type: 'EDIT_X_PROFILE', payload: { userId: user.id, name: editName, bio: editBio, headerImage: editHeader, avatar: editAvatar } });
+        setIsEditing(false);
+    };
+
     const handleMessage = () => {
         if (!user || !isFollowing) return;
         const chat = activeArtistData!.xChats.find(c => !c.isGroup && c.participants.includes(user.id));
@@ -73,7 +93,8 @@ const XProfileView: React.FC = () => {
                 </div>
             )}
 
-            <div className="h-32 bg-zinc-800"></div>
+            <div className="h-32 bg-zinc-800 relative bg-cover bg-center" style={{ backgroundImage: user.headerImage ? `url(${user.headerImage})` : undefined }}>
+            </div>
             <div className="p-3">
                 <div className="flex justify-between items-start -mt-14">
                     <img src={user.avatar} alt={user.name} className="w-28 h-28 rounded-full object-cover border-4 border-black" />
@@ -93,14 +114,22 @@ const XProfileView: React.FC = () => {
                                 </button>
                              </>
                         ) : (
-                            !user.isVerified && (
+                            <>
                                 <button 
-                                    onClick={() => setShowPremiumModal(true)}
-                                    className="font-bold px-4 py-1.5 rounded-full text-sm text-black bg-white"
+                                    onClick={handleEditProfile}
+                                    className="border border-zinc-600 rounded-full px-4 py-1.5 font-bold text-sm hover:bg-zinc-800"
                                 >
-                                    Get Verified
+                                    Edit Profile
                                 </button>
-                            )
+                                {!user.isVerified && (
+                                    <button 
+                                        onClick={() => setShowPremiumModal(true)}
+                                        className="font-bold px-4 py-1.5 rounded-full text-sm text-black bg-white"
+                                    >
+                                        Get Verified
+                                    </button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -249,6 +278,39 @@ const XProfileView: React.FC = () => {
                         </div>
                         
                         <button onClick={() => setShowPremiumModal(false)} className="mt-6 font-bold text-zinc-500 hover:text-white">Cancel</button>
+                    </div>
+                </div>
+            )}
+            {isEditing && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                    <div className="bg-black w-full max-w-md rounded-2xl overflow-hidden border border-zinc-800 flex flex-col max-h-[90vh]">
+                        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setIsEditing(false)} className="text-white hover:bg-zinc-800 p-2 rounded-full">
+                                    <ArrowLeftIcon className="w-5 h-5" />
+                                </button>
+                                <h2 className="text-xl font-bold">Edit profile</h2>
+                            </div>
+                            <button onClick={handleSaveProfile} className="bg-white text-black font-bold px-4 py-1.5 rounded-full text-sm">Save</button>
+                        </div>
+                        <div className="p-4 overflow-y-auto space-y-4">
+                            <div>
+                                <label className="text-xs text-zinc-500 block">Name</label>
+                                <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-black border-b border-zinc-700 text-white p-2 focus:border-blue-500 outline-none" />
+                            </div>
+                            <div>
+                                <label className="text-xs text-zinc-500 block">Bio</label>
+                                <textarea value={editBio} onChange={e => setEditBio(e.target.value)} className="w-full bg-black border-b border-zinc-700 text-white p-2 focus:border-blue-500 outline-none resize-none h-20" maxLength={160} />
+                            </div>
+                            <div>
+                                <label className="text-xs text-zinc-500 block">Header Image URL (Optional)</label>
+                                <input type="text" value={editHeader} onChange={e => setEditHeader(e.target.value)} className="w-full bg-black border-b border-zinc-700 text-white p-2 focus:border-blue-500 outline-none" />
+                            </div>
+                            <div>
+                                <label className="text-xs text-zinc-500 block">Avatar Image URL (Optional)</label>
+                                <input type="text" value={editAvatar} onChange={e => setEditAvatar(e.target.value)} className="w-full bg-black border-b border-zinc-700 text-white p-2 focus:border-blue-500 outline-none" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

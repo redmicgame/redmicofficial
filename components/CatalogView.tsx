@@ -396,24 +396,24 @@ const CatalogView: React.FC = () => {
                 const merchUnits = activeArtistData.merch
                     .filter(m => m.releaseId === s.releaseId)
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-                return { ...s, streams: s.streams + (merchUnits * 150), sales: s.sales || 0 };
+                return { ...s, streams: s.streams, sales: (s.sales || 0) + merchUnits };
             })
             .sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
     }, [songsForArtist, allReleases, activeArtistData.merch]);
     
     const releasedProjects = useMemo(() => {
         const projects = activeArtistData.releases
-            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo);
+            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.standardEditionId || r.type === 'Compilation') && !r.soundtrackInfo);
             
         const deluxeMap = new Map<string, Release>();
         projects.forEach(p => {
-            if (p.type === 'Album (Deluxe)' && p.originalReleaseId) {
-                deluxeMap.set(p.originalReleaseId, p);
+            if (p.standardEditionId && p.standardEditionId) {
+                deluxeMap.set(p.standardEditionId, p);
             }
         });
         
         return projects
-            .filter(r => !(r.type === 'Album (Deluxe)' && r.originalReleaseId))
+            .filter(r => !(r.standardEditionId && r.standardEditionId))
             .map(release => {
                 const deluxeVersion = deluxeMap.get(release.id);
                 const songsToCount = deluxeVersion ? deluxeVersion.songIds : release.songIds;
@@ -430,7 +430,7 @@ const CatalogView: React.FC = () => {
                 const merchUnits = activeArtistData.merch
                     .filter(m => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id))
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-                return { ...release, streams: releaseStreams + (merchUnits * 1500), sales: releaseSales };
+                return { ...release, streams: releaseStreams, sales: releaseSales + merchUnits, hasDeluxe: !!deluxeVersion, deluxeSongIds: deluxeVersion?.songIds };
             })
             .sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
     }, [activeArtistData.releases, activeArtistData.songs, activeArtistData.merch]);
@@ -508,7 +508,7 @@ const CatalogView: React.FC = () => {
                                             </label>
                                             <div className="flex-grow">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                    <p className="font-bold text-lg">{project.title}</p>
+                                                    <p className="font-bold text-lg">{project.title} {(project as any).hasDeluxe ? '(Deluxe)' : ''}</p>
                                                     {grammyWin && <GrammyAwardIcon className="w-5 h-5 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
                                                     <AlbumCertificationBadge streams={project.streams} sales={(project as any).sales} />
                                                 </div>
@@ -571,44 +571,97 @@ const CatalogView: React.FC = () => {
                                         {isExpanded && (
                                             <div className="mt-3 pt-3 border-t border-zinc-700 space-y-2">
                                                 {!isTakenDown && <PostAlbumSingleManager project={project} allReleases={allReleases} />}
-                                                <h4 className="font-semibold text-zinc-300">Tracklist</h4>
-                                                {project.songIds.map(songId => {
-                                                    const song = activeArtistData.songs.find(s => s.id === songId);
-                                                    if (!song) return null;
-                                                    const trackChartInfo = {
-                                                        peak: chartHistory[song.id]?.peak ?? null,
-                                                        current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null
-                                                    };
-                                                    return (
-                                                        <TrackItem
-                                                            key={song.id}
-                                                            song={song}
-                                                            chartInfo={trackChartInfo}
-                                                            isExpanded={expandedTrackId === song.id}
-                                                            onToggleExpand={() => handleToggleTrackInfo(song.id)}
-                                                            grammyWin={findGrammyWin(song.id, 'song')}
-                                                            canTakeDown={canTakeDown}
-                                                            onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
-                                                            onBuyBack={() => {
-                                                                const totalRev = song.revenue || 0;
-                                                                const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
-                                                                if (activeArtistData.money < cost) {
-                                                                    alert(`Not enough money. Costs $${formatNumber(cost)}.`);
-                                                                    return;
-                                                                }
-                                                                setConfirmAction({
-                                                                    title: 'Buy Back Song',
-                                                                    message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
-                                                                    confirmText: 'Buy Back',
-                                                                    action: () => {
-                                                                        dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
-                                                                    }
-                                                                });
-                                                            }}
-                                                            isStreamingActive={eraConfig.streamingActive}
-                                                        />
-                                                    );
-                                                })}
+                                                {(project as any).hasDeluxe ? (
+                                                    <>
+                                                        <h4 className="font-semibold text-zinc-300">Disc 1</h4>
+                                                        {project.songIds.map(songId => {
+                                                            const song = activeArtistData.songs.find(s => s.id === songId);
+                                                            if (!song) return null;
+                                                            const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
+                                                            return (
+                                                                <TrackItem
+                                                                    key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
+                                                                    grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                                    onBuyBack={() => {
+    const totalRev = song.revenue || 0;
+    const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+    if (activeArtistData.money < cost) {
+        alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+        return;
+    }
+    setConfirmAction({
+        title: 'Buy Back Song',
+        message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+        confirmText: 'Buy Back',
+        action: () => {
+            dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
+        }
+    });
+}} isStreamingActive={eraConfig.streamingActive}
+                                                                />
+                                                            );
+                                                        })}
+                                                        <h4 className="font-semibold text-zinc-300 mt-4">Disc 2</h4>
+                                                        {((project as any).deluxeSongIds || []).filter((id: string) => !project.songIds.includes(id)).map((songId: string) => {
+                                                            const song = activeArtistData.songs.find(s => s.id === songId);
+                                                            if (!song) return null;
+                                                            const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
+                                                            return (
+                                                                <TrackItem
+                                                                    key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
+                                                                    grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                                    onBuyBack={() => {
+    const totalRev = song.revenue || 0;
+    const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+    if (activeArtistData.money < cost) {
+        alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+        return;
+    }
+    setConfirmAction({
+        title: 'Buy Back Song',
+        message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+        confirmText: 'Buy Back',
+        action: () => {
+            dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
+        }
+    });
+}} isStreamingActive={eraConfig.streamingActive}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <h4 className="font-semibold text-zinc-300">Tracklist</h4>
+                                                        {project.songIds.map(songId => {
+                                                            const song = activeArtistData.songs.find(s => s.id === songId);
+                                                            if (!song) return null;
+                                                            const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
+                                                            return (
+                                                                <TrackItem
+                                                                    key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
+                                                                    grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                                    onBuyBack={() => {
+    const totalRev = song.revenue || 0;
+    const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
+    if (activeArtistData.money < cost) {
+        alert(`Not enough money. Costs $${formatNumber(cost)}.`);
+        return;
+    }
+    setConfirmAction({
+        title: 'Buy Back Song',
+        message: `Are you sure you want to buy back "${song.title}" for $${formatNumber(cost)}? It will be 100% owned by you.`,
+        confirmText: 'Buy Back',
+        action: () => {
+            dispatch({ type: 'BUY_BACK_SONG', payload: { songId: song.id, cost } });
+        }
+    });
+}} isStreamingActive={eraConfig.streamingActive}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
                                                 <button
                                                     onClick={() => {
                                                         dispatch({ type: 'SELECT_RELEASE', payload: project.id });
