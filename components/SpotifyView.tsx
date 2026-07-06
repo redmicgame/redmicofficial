@@ -79,6 +79,14 @@ const formatPlaylistsList = (playlists: string[]) => {
     return playlists.slice(0, -1).join(', ') + ', and ' + playlists[playlists.length - 1];
 };
 
+
+const getSpotifyRank = (listeners: number) => {
+    if (listeners < 30000000) return null;
+    if (listeners >= 148000000) return 1;
+    const rank = Math.round(200 - ((listeners - 30000000) / (118000000 / 199)));
+    return Math.max(1, Math.min(200, rank));
+};
+
 const VerifiedModal: React.FC<{ isOpen: boolean; onClose: () => void; sinceYear: number; releasesCount: number; playlists: string[] }> = ({ isOpen, onClose, sinceYear, releasesCount, playlists }) => {
     if (!isOpen) return null;
 
@@ -159,7 +167,13 @@ const AboutModal: React.FC<{ isOpen: boolean; onClose: () => void; artistData: A
                     <div className="p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <p className="text-3xl font-black mb-1">{listeners}</p>
+                                {getSpotifyRank(artistData.monthlyListeners) !== null && (
+                                    <div className="mb-4">
+                                        <p className="text-5xl font-black mb-1">#{getSpotifyRank(artistData.monthlyListeners)}</p>
+                                        <p className="text-sm text-zinc-300 font-medium">in the world</p>
+                                    </div>
+                                )}
+                                <p className="text-3xl font-black mb-1">{artistData.monthlyListeners.toLocaleString()}</p>
                                 <p className="text-sm text-zinc-400 font-semibold uppercase tracking-wider">Monthly Listeners</p>
                             </div>
                         </div>
@@ -610,7 +624,10 @@ const SpotifyView: React.FC = () => {
                             />
                         </div>
                         <div className="p-4" style={{ background: 'linear-gradient(to top, #282828 100%, transparent) -mt-10' }}>
-                            <div className="flex justify-between items-center mb-2">
+                            {getSpotifyRank(monthlyListeners) !== null && (
+                                <p className="text-sm font-semibold mb-1">#{getSpotifyRank(monthlyListeners)} in Top Artists</p>
+                            )}
+                            <div className="flex justify-between items-center mb-1">
                                 <div className="flex items-center gap-1">
                                     <h3 className="text-xl font-bold">{activeArtist.name}</h3>
                                     {activeArtistData.isSpotifyVerified && (
