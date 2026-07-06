@@ -2456,6 +2456,54 @@ const gameReducerInternal = (
       for (const artistId in updatedArtistsData) {
         const artistData = updatedArtistsData[artistId];
         const startingMoneyForWeek = artistData.money;
+        const currentAbsWeek = newDate.year * 52 + newDate.week;
+        
+        // Hiatus & fans asking for comeback logic
+        const releases = artistData.releases || [];
+        const recentRelease = releases.length > 0 ? releases[releases.length - 1] : null;
+        if (recentRelease) {
+            const recentReleaseAbs = recentRelease.releaseDate.year * 52 + recentRelease.releaseDate.week;
+            const weeksSinceRelease = currentAbsWeek - recentReleaseAbs;
+            
+            if (weeksSinceRelease >= 52 && (weeksSinceRelease % 4 === 0)) {
+                if (Math.random() < 0.25) {
+                    const fanAccounts = artistData.xUsers.filter(u => !u.isPlayer && u.id.startsWith("fan_"));
+                    const randomFan = fanAccounts[Math.floor(Math.random() * fanAccounts.length)];
+                    const activeArtistInfo = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+                    if (randomFan && activeArtistInfo) {
+                        const msgOptions = [
+                           `Where is ${activeArtistInfo.name}?? It's been over a year since we got a new release 😭`,
+                           `I miss ${activeArtistInfo.name} so much, we need a comeback ASAP`,
+                           `Is ${activeArtistInfo.name} officially on hiatus or did they retire? Give us something!`,
+                           `waiting for a ${activeArtistInfo.name} comeback like 💀`,
+                           `If ${activeArtistInfo.name} doesn't drop something soon I'm gonna lose it`
+                        ];
+                        const newPost = {
+                           id: crypto.randomUUID(),
+                           authorId: randomFan.id,
+                           content: msgOptions[Math.floor(Math.random() * msgOptions.length)],
+                           likes: Math.floor(Math.random() * ((artistData.popularity || 50) * 80)) + 500,
+                           retweets: Math.floor(Math.random() * ((artistData.popularity || 50) * 20)) + 100,
+                           views: Math.floor(Math.random() * ((artistData.popularity || 50) * 3000)) + 10000,
+                           date: newDate
+                        };
+                        artistData.xPosts.unshift(newPost);
+                    }
+                }
+            }
+        }
+        
+        if (artistData.isHiatus && artistData.hiatusStartYear !== undefined && artistData.hiatusStartWeek !== undefined) {
+             const hiatusStartAbs = artistData.hiatusStartYear * 52 + artistData.hiatusStartWeek;
+             const hiatusWeeks = currentAbsWeek - hiatusStartAbs;
+             if (hiatusWeeks > 104) { // More than 2 years
+                 let anticipation = 50;
+                 if (artistData.popularity > 85) anticipation = 100;
+                 else if (artistData.popularity > 50) anticipation = 80;
+                 artistData.comebackAnticipation = anticipation;
+             }
+        }
+
         let newEmails: Email[] = [];
         const artistProfileForEmail = allPlayerArtistsAndGroups.find(
           (a) => a.id === artistId,
@@ -8168,7 +8216,7 @@ The Government`,
                     post: {
                       id: crypto.randomUUID(),
                       authorId: "spotifysnapshot",
-                      content: `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(topPreRelease.lastWeekStreams)} streams on Spotify yesterday.\n\nIt was the #1 most streamed pre-release on Spotify.`,
+                      content: `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(topPreRelease.lastWeekStreams)} streams on Spotify this week.\n\nIt was the #1 most streamed pre-release on Spotify.`,
                       image: `snapshot:${jsonStr}`,
                       likes: Math.floor(Math.random() * 50000) + 10000,
                       retweets: Math.floor(Math.random() * 10000) + 2000,
@@ -8229,6 +8277,31 @@ The Government`,
               0,
             );
             if (weeklyStreams > 100000) {
+              const prevWeeklyStreams = topReleaseSongs.reduce((sum, s) => sum + (s.prevWeekStreams || 0), 0);
+              let percentChangeStr = "";
+              if (prevWeeklyStreams > 0) {
+                 const pct = ((weeklyStreams - prevWeeklyStreams) / prevWeeklyStreams) * 100;
+                 percentChangeStr = ` [${pct > 0 ? '+' : ''}${pct.toFixed(2)}%]`;
+              }
+              
+              let biggestGainerSong: Song | null = null;
+              let biggestGainerPct = -Infinity;
+              topReleaseSongs.forEach(s => {
+                 const sPrev = s.prevWeekStreams || 0;
+                 const sCurr = s.lastWeekStreams || 0;
+                 if (sPrev > 0) {
+                    const sPct = ((sCurr - sPrev) / sPrev) * 100;
+                    if (sPct > biggestGainerPct) {
+                       biggestGainerPct = sPct;
+                       biggestGainerSong = s;
+                    }
+                 }
+              });
+              let gainerText = "";
+              if (biggestGainerSong && biggestGainerPct > -Infinity) {
+                  gainerText = `\n\n—"${biggestGainerSong.title}" was the biggest gainer, ${biggestGainerPct > 0 ? 'up' : 'down'} ${Math.abs(biggestGainerPct).toFixed(2)}% with ${formatNumber(biggestGainerSong.lastWeekStreams)} streams!`;
+              }
+              
               const jsonStr = JSON.stringify({
                 type: "album_weekly",
                 albumName: topRelease.title,
@@ -8239,11 +8312,20 @@ The Government`,
                   (sum, s) => sum + s.streams,
                   0,
                 ),
-                tracks: topReleaseSongs.map((s) => ({
-                  title: s.title,
-                  streams: s.streams,
-                  weekly: s.lastWeekStreams,
-                })),
+                tracks: topReleaseSongs.map((s) => {
+                  const sPrev = s.prevWeekStreams || 0;
+                  const sCurr = s.lastWeekStreams || 0;
+                  const diff = sCurr - sPrev;
+                  let pct = 0;
+                  if (sPrev > 0) pct = (diff / sPrev) * 100;
+                  return {
+                    title: s.title,
+                    streams: s.streams,
+                    weekly: s.lastWeekStreams,
+                    changeVal: diff,
+                    changePct: pct
+                  };
+                }),
                 date: newDate,
               });
               snapshotCandidates.push({
@@ -8251,12 +8333,12 @@ The Government`,
                 streams: weeklyStreams,
                 post: {
                   id: crypto.randomUUID(),
-                  authorId: spotifyDataId,
-                  content: `'${topRelease.title}' by ${artistProfile?.name} received ${formatNumber(weeklyStreams)} streams on Spotify yesterday.`,
+                  authorId: "spotifysnapshot",
+                  content: `"${topRelease.title}" by ${artistProfile?.name} received ${formatNumber(weeklyStreams)} streams on Spotify this week${percentChangeStr}.${gainerText}`,
                   image: `snapshot:${jsonStr}`,
-                  likes: Math.floor(Math.random() * 10000) + 2000,
-                  retweets: Math.floor(Math.random() * 2000) + 500,
-                  views: Math.floor(Math.random() * 200000) + 50000,
+                  likes: Math.floor(Math.random() * 20000) + 5000,
+                  retweets: Math.floor(Math.random() * 5000) + 1000,
+                  views: Math.floor(Math.random() * 500000) + 100000,
                   date: newDate,
                 },
               });
@@ -8301,18 +8383,28 @@ The Government`,
         }
       }
 
-      // Cap Snapshot posts top 3 per week
-      snapshotCandidates.sort(
-        (a, b) =>
-          (b.streams || 0) +
-          (b.sales || 0) * 150 -
-          ((a.streams || 0) + (a.sales || 0) * 150),
-      );
-      snapshotCandidates.slice(0, 3).forEach((candidate) => {
-        if (updatedArtistsData[candidate.artistId]) {
-          updatedArtistsData[candidate.artistId].xPosts.unshift(candidate.post);
-        }
+      // Add top 2 Snapshot posts per artist
+      const artistSnapshots: Record<string, any[]> = {};
+      snapshotCandidates.forEach((candidate) => {
+         if (!artistSnapshots[candidate.artistId]) {
+            artistSnapshots[candidate.artistId] = [];
+         }
+         artistSnapshots[candidate.artistId].push(candidate);
       });
+
+      for (const artistId in artistSnapshots) {
+         artistSnapshots[artistId].sort(
+           (a, b) =>
+             (b.streams || 0) +
+             (b.sales || 0) * 150 -
+             ((a.streams || 0) + (a.sales || 0) * 150),
+         );
+         artistSnapshots[artistId].slice(0, 2).forEach((candidate) => {
+           if (updatedArtistsData[candidate.artistId]) {
+             updatedArtistsData[candidate.artistId].xPosts.unshift(candidate.post);
+           }
+         });
+      }
 
       // Week 1: Oscar Submission Email & Pop Crave Logic
       if (newDate.week === 1) {
@@ -13481,6 +13573,109 @@ The Government`,
             ],
           },
         },
+      };
+    }
+    case "START_HIATUS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            isHiatus: true,
+            hiatusStartWeek: state.date.week,
+            hiatusStartYear: state.date.year,
+            hiatusAnnounced: false
+          }
+        }
+      };
+    }
+    case "ANNOUNCE_HIATUS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      const newPosts = [...(activeData.xPosts || [])];
+      if (activeArtist) {
+        newPosts.unshift({
+           id: crypto.randomUUID(),
+           authorId: "popbase",
+           content: `${activeArtist.name} has officially announced that they are going on hiatus.`,
+           image: ('image' in activeArtist ? activeArtist.image : undefined),
+           likes: Math.floor(Math.random() * ((activeData.popularity || 50) * 800)) + 5000,
+           retweets: Math.floor(Math.random() * ((activeData.popularity || 50) * 200)) + 1000,
+           views: Math.floor(Math.random() * ((activeData.popularity || 50) * 20000)) + 100000,
+           date: state.date
+        });
+      }
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            hiatusAnnounced: true,
+            xPosts: newPosts
+          }
+        }
+      };
+    }
+    case "END_HIATUS_COMEBACK": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      const newPosts = [...(activeData.xPosts || [])];
+      
+      const { isGood } = action.payload || { isGood: true };
+      
+      let hypeChange = 0;
+      let popChange = 0;
+      
+      if (activeArtist) {
+         if (isGood) {
+            newPosts.unshift({
+               id: crypto.randomUUID(),
+               authorId: "popbase",
+               content: `${activeArtist.name} HAS RETURNED! The comeback is being universally praised by fans! 🔥🔥🔥`,
+               likes: Math.floor(Math.random() * ((activeData.popularity || 50) * 3000)) + 80000,
+               retweets: Math.floor(Math.random() * ((activeData.popularity || 50) * 800)) + 15000,
+               views: Math.floor(Math.random() * ((activeData.popularity || 50) * 80000)) + 1000000,
+               date: state.date
+            });
+            hypeChange = activeData.comebackAnticipation ? 40 : 15;
+            popChange = activeData.comebackAnticipation ? 5 : 2;
+         } else {
+            newPosts.unshift({
+               id: crypto.randomUUID(),
+               authorId: "popbase",
+               content: `${activeArtist.name}'s highly anticipated comeback has arrived, but fans are extremely disappointed in the quality... It's giving flop 😬`,
+               likes: Math.floor(Math.random() * ((activeData.popularity || 50) * 4000)) + 100000,
+               retweets: Math.floor(Math.random() * ((activeData.popularity || 50) * 1000)) + 20000,
+               views: Math.floor(Math.random() * ((activeData.popularity || 50) * 100000)) + 1200000,
+               date: state.date
+            });
+            hypeChange = activeData.comebackAnticipation ? -10 : -5;
+            popChange = activeData.comebackAnticipation ? -2 : -1;
+         }
+      }
+      
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            isHiatus: false,
+            hiatusStartWeek: undefined,
+            hiatusStartYear: undefined,
+            hiatusAnnounced: false,
+            comebackAnticipation: undefined,
+            xPosts: newPosts,
+            hype: Math.max(0, Math.min(getHypeCap(activeData), activeData.hype + hypeChange)),
+            popularity: Math.max(0, Math.min(100, activeData.popularity + popChange))
+          }
+        }
       };
     }
     case "RESET_GAME":

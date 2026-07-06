@@ -87,7 +87,14 @@ const ReleaseView: React.FC = () => {
         }
     };
 
+    const [showComebackConfirm, setShowComebackConfirm] = useState(false);
+
     const handleAction = () => {
+        if (activeArtistData.isHiatus && !showComebackConfirm) {
+             setShowComebackConfirm(true);
+             return;
+        }
+
         setError('');
         if (!title.trim()) {
             setError('Project title is required.'); return;
@@ -178,6 +185,12 @@ const ReleaseView: React.FC = () => {
             // Release Independently
             dispatch({ type: 'RELEASE_PROJECT', payload: { release: newRelease } });
         }
+        
+        if (activeArtistData.isHiatus) {
+             const avgQuality = Array.from(selectedSongIds).reduce((sum, id) => sum + (songs.find(s => s.id === id)?.quality || 0), 0) / (selectedSongIds.size || 1);
+             dispatch({ type: 'END_HIATUS_COMEBACK', payload: { isGood: avgQuality > 70 } });
+        }
+
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
 

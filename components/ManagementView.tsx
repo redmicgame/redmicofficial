@@ -16,6 +16,7 @@ const ManagementView: React.FC = () => {
     
     // Playlist Buying State
     const [isBuyingPlaylist, setIsBuyingPlaylist] = useState(false);
+    const [hiatusResponseModal, setHiatusResponseModal] = useState<{isOpen: boolean, success: boolean, message: string}>({isOpen: false, success: false, message: ''});
     const [selectedSongId, setSelectedSongId] = useState<string>('');
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('');
     const [selectedPosition, setSelectedPosition] = useState<number>(50); // 50 is bottom (entry), 1 is top
@@ -30,6 +31,34 @@ const ManagementView: React.FC = () => {
             dispatch({ type: 'HIRE_MANAGER', payload: { managerId: confirmHire.manager.id, contractYears: confirmHire.years } });
             setConfirmHire(null);
         }
+    };
+
+    const handleStartHiatus = () => {
+        if (activeArtistData.contract && !activeArtistData.contract.isCustom) {
+            // Signed to a major label. Check remaining albums.
+            const albumsTarget = activeArtistData.contract.albumsTarget || 0;
+            const albumsDelivered = activeArtistData.contract.albumsDelivered || 0;
+            const remaining = albumsTarget - albumsDelivered;
+            
+            if (remaining > 0) {
+                // Label resists
+                if (Math.random() < 0.6) {
+                    setHiatusResponseModal({
+                        isOpen: true,
+                        success: false,
+                        message: `Your label refused your hiatus request. They stated: "We need you to deliver the remaining ${remaining} album(s) on your contract first before you can take a break."`
+                    });
+                    return;
+                } else {
+                    setHiatusResponseModal({
+                        isOpen: true,
+                        success: true,
+                        message: `Your label reluctantly agreed to let you go on hiatus, even though you still owe them ${remaining} album(s).`
+                    });
+                }
+            }
+        }
+        dispatch({ type: 'START_HIATUS' });
     };
 
     const handleFire = () => {
@@ -304,6 +333,38 @@ const ManagementView: React.FC = () => {
                     )}
 
                     <div className="mt-8 pt-6 border-t border-zinc-800">
+                        <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
+                            <h2 className="text-xl font-bold mb-2">Hiatus & Comeback</h2>
+                            <p className="text-zinc-400 text-sm mb-4">
+                                {activeArtistData.isHiatus 
+                                    ? "You are currently on an official hiatus." 
+                                    : "Take a break from the industry. Fans will eventually ask for your return."}
+                            </p>
+                            
+                            {!activeArtistData.isHiatus ? (
+                                <button
+                                    onClick={handleStartHiatus}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-500 font-bold p-3 rounded-lg text-white"
+                                >
+                                    Start Hiatus
+                                </button>
+                            ) : (
+                                <div className="space-y-3">
+                                    {!activeArtistData.hiatusAnnounced && (
+                                        <button
+                                            onClick={() => dispatch({ type: 'ANNOUNCE_HIATUS' })}
+                                            className="w-full bg-blue-600 hover:bg-blue-500 font-bold p-3 rounded-lg text-white"
+                                        >
+                                            Announce Hiatus on X
+                                        </button>
+                                    )}
+                                    <p className="text-zinc-500 text-xs italic">
+                                        Note: To end your hiatus, you must release a comeback single or album.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
                         <h2 className="text-xl font-bold mb-3">Talent Agencies</h2>
                         {activeArtistData.talentAgencyId ? (
                             <div className="bg-[#f5c518]/10 border border-[#f5c518]/30 p-4 rounded-lg">
@@ -369,6 +430,19 @@ const ManagementView: React.FC = () => {
                 }}
                 onClose={() => setConfirmAgencyLeave(false)}
                 confirmText="Leave Agency"
+            />
+            <ConfirmationModal
+                isOpen={hiatusResponseModal.isOpen}
+                title={hiatusResponseModal.success ? "Hiatus Approved" : "Hiatus Denied"}
+                message={hiatusResponseModal.message}
+                onConfirm={() => {
+                    if (hiatusResponseModal.success) {
+                        dispatch({ type: 'START_HIATUS' });
+                    }
+                    setHiatusResponseModal({isOpen: false, success: false, message: ''});
+                }}
+                onClose={() => setHiatusResponseModal({isOpen: false, success: false, message: ''})}
+                confirmText={hiatusResponseModal.success ? "Start Hiatus" : "Okay"}
             />
         </>
     );

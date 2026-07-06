@@ -95,7 +95,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
             <div className="grid grid-cols-4 p-2 opacity-80 border-b border-white/20 font-semibold uppercase text-[10px] tracking-wider text-right">
               <div className="text-center">Song</div>
               <div>Total Streams</div>
-              <div>Daily Streams</div>
+              <div>Weekly Streams</div>
               <div>Change</div>
             </div>
             {data.tracks.map((t: any, i: number) => {
@@ -203,8 +203,13 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
                 <div className="bg-[#bda58d] text-white text-2xl font-sans font-black flex-1 p-2 text-center">
                   {data.streams.toLocaleString()}
                 </div>
-                <div className="bg-[#cc5555] text-white text-lg font-sans font-bold p-2 flex items-center">
-                  {(Math.random() * -5).toFixed(2)}%
+                <div className={`${(data.tracks?.reduce((acc, t) => acc + (t.changeVal || 0), 0) || 0) >= 0 ? "bg-[#55aa55]" : "bg-[#cc5555]"} text-white text-lg font-sans font-bold p-2 flex items-center`}>
+                  {(() => {
+                      const overallChangeVal = data.tracks?.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) || 0;
+                      const overallPrev = data.tracks?.reduce((acc: number, t: any) => acc + (t.weekly - (t.changeVal || 0)), 0) || 0;
+                      const overallPct = overallPrev > 0 ? (overallChangeVal / overallPrev) * 100 : 0;
+                      return (overallPct >= 0 ? "+" : "") + overallPct.toFixed(2) + "%";
+                  })()}
                 </div>
               </div>
               <div className="text-center text-zinc-400 text-xs uppercase tracking-widest mb-4 font-sans font-bold">
@@ -214,7 +219,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
                 <div className="grid grid-cols-[1rem_1fr_4rem_4rem_3rem_4.5rem] gap-2 p-2 text-[10px] font-bold text-zinc-500 border-b border-zinc-700/50">
                   <div></div>
                   <div>Track</div>
-                  <div className="text-right">Daily Streams</div>
+                  <div className="text-right">Weekly Streams</div>
                   <div className="text-right">Change</div>
                   <div className="text-right">%</div>
                   <div className="text-right">Total</div>
@@ -238,11 +243,11 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
                             ? t.dailyStreams.toLocaleString()
                             : 0}
                       </div>
-                      <div className="text-right text-red-400">
-                        -{Math.floor(Math.random() * 5000).toLocaleString()}
+                      <div className={`text-right ${t.changeVal >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {t.changeVal !== undefined ? (t.changeVal > 0 ? "+" : "") + t.changeVal.toLocaleString() : "-"}
                       </div>
-                      <div className="text-right text-red-400">
-                        {(Math.random() * -3 - 0.5).toFixed(2)}%
+                      <div className={`text-right ${t.changePct >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {t.changePct !== undefined ? (t.changePct > 0 ? "+" : "") + t.changePct.toFixed(2) + "%" : "-"}
                       </div>
                       <div className="text-right text-zinc-400">
                         {t.streams
@@ -261,9 +266,11 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
                     {data.streams.toLocaleString()}
                   </div>
                   <div className="text-right">
-                    -{Math.floor(Math.random() * 40000).toLocaleString()}
+                    {data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) > 0 ? "+" : ""}{data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0).toLocaleString()}
                   </div>
-                  <div className="text-right">-1.90%</div>
+                  <div className="text-right">
+                    {data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) > 0 ? "+" : ""}{data.tracks.reduce((acc: number, t: any) => acc + (t.weekly - (t.changeVal || 0)), 0) > 0 ? (data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) / data.tracks.reduce((acc: number, t: any) => acc + (t.weekly - (t.changeVal || 0)), 0) * 100).toFixed(2) + "%" : "0.00%"}
+                  </div>
                   <div className="text-right">
                     {data.totalStreams.toLocaleString()}
                   </div>

@@ -1415,6 +1415,11 @@ export interface ArtistData {
     lifetimeEarnings: number;
   };
   tiktokFollowers: number;
+  isHiatus?: boolean;
+  hiatusStartWeek?: number;
+  hiatusStartYear?: number;
+  hiatusAnnounced?: boolean;
+  comebackAnticipation?: number;
   tiktokVideos: TikTokVideo[];
   instagramFollowers?: number;
   instagramBio?: string;
@@ -2077,6 +2082,9 @@ export type GameAction =
       type: "REQUEST_FALLON_PROMO";
       payload: { submissionId: string; songId: string; cost: number };
     }
+  | { type: "START_HIATUS" }
+  | { type: "ANNOUNCE_HIATUS" }
+  | { type: "END_HIATUS_COMEBACK"; payload?: { isGood: boolean } }
   | { type: "RESET_GAME" }
   | { type: "LOAD_GAME"; payload: GameState }
   | {
