@@ -13641,6 +13641,22 @@ The Government`,
         },
       };
     }
+    case "UPDATE_SONG_TRAIT": {
+      if (!state.activeArtistId) return state;
+      const { songId, newTrait } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const updatedSongs = activeData.songs.map((song) =>
+        song.id === songId ? { ...song, trait: newTrait as any } : song,
+      );
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, songs: updatedSongs },
+        },
+      };
+    }
     case "UPDATE_RELEASE_REVIEW_SCORE": {
       if (!state.activeArtistId) return state;
       const { releaseId, score } = action.payload;
