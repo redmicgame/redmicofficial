@@ -1,7 +1,12 @@
+import re
+
 with open('types.ts', 'r') as f:
     content = f.read()
 
-content = content.replace('trait?: "Smash Hit" | "TikTok Hit" | "Slow Burner" | "Flop" | "Radio Hit";', 'trait?: "Smash Hit" | "TikTok Hit" | "Slow Burner" | "Flop" | "Radio Hit" | "Normal";')
+content = content.replace(
+    '  flopEraLock?: boolean;\n  money: number;',
+    '  flopEraLock?: boolean;\n  isBlacklistedByLabel?: boolean;\n  money: number;'
+)
 
 with open('types.ts', 'w') as f:
     f.write(content)

@@ -3782,7 +3782,7 @@ const gameReducerInternal = (
               (l) => l.id === artistData.contract!.labelId,
             );
             if (label) {
-              labelMultiplier = label.promotionMultiplier;
+              labelMultiplier = artistData.isBlacklistedByLabel ? 1.0 : label.promotionMultiplier;
               if (label.contractType === "petty") playerCut = 0.1;
               else if (label.id === "umg") playerCut = 0.2;
               else if (
@@ -6941,7 +6941,7 @@ The Government`,
                     (l) => l.id === contract.labelId,
                   );
                   if (majorLabel) {
-                    labelBoost = majorLabel.promotionMultiplier;
+                    labelBoost = artistData.isBlacklistedByLabel ? 1.0 : majorLabel.promotionMultiplier;
                   } else {
                     // Fallback legacy calculation
                     const labelId = contract.labelId;
@@ -6988,6 +6988,10 @@ The Government`,
               targetPlays += song.weeklyStreams * 0.0005 * traitRadioBoost; // stream impact also boosted
               
               const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost * traitRadioBoost;
+              
+              if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
+                 targetPlays = 0;
+              }
               if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
 
               let dropLimit = -500;
@@ -7029,6 +7033,10 @@ The Government`,
                 removedReason = `it was submitted to the wrong format (${rFormat.toUpperCase()}) and received very little airplay`;
               } else if (s.weeksOnRadio >= 6 && rPlays < 100) {
                 removedReason = `it failed to gain traction`;
+              }
+              
+              if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
+                 removedReason = "your label blacklisted you and pulled the song from all stations";
               }
 
               if (removedReason) {
@@ -9338,6 +9346,9 @@ The Government`,
             }
 
             if (isValid) {
+              if (artistData.isBlacklistedByLabel) {
+                 score = score * 0.1; // Extremely hard to secure nominations
+              }
               contenders.push({
                 id: sub.itemId,
                 name: sub.itemName,
@@ -11015,6 +11026,7 @@ The Government`,
             ...activeData,
             money: activeData.money + advance,
             contract: action.payload.contract,
+            isBlacklistedByLabel: false,
             xPosts: [...newPosts, ...activeData.xPosts],
           },
         },
@@ -11022,7 +11034,7 @@ The Government`,
     }
     case "END_CONTRACT": {
       if (!state.activeArtistId) return state;
-      const activeData = { ...state.artistsData[state.activeArtistId] };
+      const activeData = { ...state.artistsData[state.activeArtistId], isBlacklistedByLabel: false };
       if (!activeData.contract) {
         return state;
       }
@@ -11263,14 +11275,14 @@ The Government`,
             (l) => l.id === activeData.contract!.labelId,
           );
           if (label) {
-            labelMultiplier = label.promotionMultiplier;
+            labelMultiplier = activeData.isBlacklistedByLabel ? 1.0 : label.promotionMultiplier;
           }
         }
       }
 
       const releaseTypeMultiplier =
         submission?.release.type === "Album" ? 2 : 1.25;
-      const promoBudget = Math.floor(
+      const promoBudget = activeData.isBlacklistedByLabel ? 0 : Math.floor(
         avgQuality * 5000 * labelMultiplier * releaseTypeMultiplier,
       );
 
@@ -14923,7 +14935,7 @@ The Government`,
         albumsReleased: 0,
       });
 
-      const updatedData = { ...artistData, contract: newContract };
+      const updatedData = { ...artistData, contract: newContract, isBlacklistedByLabel: false };
 
       return {
         ...state,

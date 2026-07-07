@@ -1,3 +1,4 @@
+import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 
 
 import React from 'react';

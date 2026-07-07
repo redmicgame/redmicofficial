@@ -1389,6 +1389,7 @@ export interface ArtistData {
   aboutImages?: string[];
   careerStage?: 'neutral' | 'flop' | 'smash';
   flopEraLock?: boolean;
+  isBlacklistedByLabel?: boolean;
   money: number;
   location?: "US" | "Canada" | "UK" | "Asia" | "Latin America";
   lastMoveDate?: GameDate;
