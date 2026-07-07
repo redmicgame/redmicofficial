@@ -462,7 +462,14 @@ const CatalogView: React.FC = () => {
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
-                <h1 className="text-2xl font-bold">Your Catalog</h1>
+                <div className="flex flex-col">
+                    <h1 className="text-2xl font-bold">Your Catalog</h1>
+                    {gameState.difficultyMode && (
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">
+                            {gameState.difficultyMode} MODE
+                        </p>
+                    )}
+                </div>
             </header>
             <div className="p-4 space-y-8">
                 <div className="space-y-4">

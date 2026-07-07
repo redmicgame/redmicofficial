@@ -132,8 +132,13 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 text-center text-sm font-semibold text-gray-600 bg-white border-t border-gray-200">
-                    @Red Mic
+                <div className="p-3 flex justify-between items-center text-sm font-semibold text-gray-600 bg-white border-t border-gray-200">
+                    <span>@Red Mic</span>
+                    {gameState.difficultyMode && (
+                        <span className="text-xs uppercase opacity-50 tracking-wider">
+                            {gameState.difficultyMode} MODE
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

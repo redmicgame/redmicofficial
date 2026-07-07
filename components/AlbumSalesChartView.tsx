@@ -10,7 +10,7 @@ interface AlbumWithSales extends Release {
 }
 
 const AlbumSalesChartView: React.FC = () => {
-    const { dispatch, activeArtist, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
 
     if (!activeArtist || !activeArtistData) {
         return <p>Loading...</p>;
@@ -30,7 +30,7 @@ const AlbumSalesChartView: React.FC = () => {
             releaseRawStreams.set(release.id, rawStreams);
         });
 
-        return eligibleReleases
+        const initialList = eligibleReleases
             .map(release => {
                 const releaseStreams = release.songIds.reduce((total, songId) => {
                     const song = songs.find(s => s.id === songId);
@@ -62,8 +62,22 @@ const AlbumSalesChartView: React.FC = () => {
 
                 const units = Math.floor(releaseStreams / 1500) + releaseSales + merchUnits + (release.preorderSales || 0);
                 return { ...release, units };
-            })
-            .sort((a, b) => b.units - a.units);
+            });
+
+        const mergedMap = new Map<string, number>();
+        initialList.forEach(release => {
+            const targetId = release.originalReleaseId || release.id;
+            mergedMap.set(targetId, (mergedMap.get(targetId) || 0) + release.units);
+        });
+
+        const mergedReleases: AlbumWithSales[] = [];
+        mergedMap.forEach((units, id) => {
+             const baseRelease = releases.find(r => r.id === id);
+             if (baseRelease) {
+                 mergedReleases.push({ ...baseRelease, units });
+             }
+        });
+        return mergedReleases.sort((a, b) => b.units - a.units);
     }, [releases, songs, activeArtistData.merch]);
 
     const totalUnits = useMemo(() => {
@@ -88,7 +102,14 @@ const AlbumSalesChartView: React.FC = () => {
                      <div>
                         <h1 className="text-xl font-black tracking-tighter">{activeArtist.name.toUpperCase()}'S ALBUM SALES BAR CHART</h1>
                         <h2 className="text-lg font-bold">{formatNumber(totalUnits).toUpperCase()} UNITS SOLD</h2>
-                        <p className="text-sm text-zinc-600 font-semibold">@Red Mic</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm text-zinc-600 font-semibold">@Red Mic</p>
+                            {gameState.difficultyMode && (
+                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                                    {gameState.difficultyMode} MODE
+                                </p>
+                            )}
+                        </div>
                      </div>
                 </div>
             </div>
