@@ -1497,6 +1497,7 @@ export interface ArtistData {
   xUsers: XUser[];
   selectedPlayerXUserId?: string;
   xPosts: XPost[];
+  xUnreadMentions?: any;
   xChats: XChat[];
   xTrends: XTrend[];
   xFollowingIds: string[];
@@ -1551,8 +1552,6 @@ export interface ArtistData {
   talentAgencyId?: string;
   imdbProfile?: ImdbProfile;
   actingRoles?: ActingRole[];
-  location?: string;
-  lastMoveDate?: GameDate;
   yearlyIncomeForTax?: number;
   taxPaidYear?: number;
   activeActingOffer?: ActingOffer | null;
@@ -1569,6 +1568,7 @@ export interface RedCarpetLook {
 export interface GameState {
   timeMode?: "weekly" | "daily";
   disableEncounters?: boolean;
+  disableLoadingScreens?: boolean;
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
@@ -1778,6 +1778,7 @@ export type GameAction =
       payload: { choice: EncounterChoice; imageUrl: string };
     }
   | { type: "TOGGLE_ENCOUNTERS" }
+  | { type: "TOGGLE_LOADING_SCREENS" }
   | {
       type: "START_SOLO_GAME";
       payload: {

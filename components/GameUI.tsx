@@ -36,7 +36,7 @@ const GameUI: React.FC = () => {
         const stateStr = JSON.stringify(gameState);
         const sizeMB = stateStr.length / (1024 * 1024);
         
-        if (sizeMB > 85) {
+        if (sizeMB > 85 && !gameState.disableLoadingScreens) {
             setLoadingData({ active: true, progress: 0, text: 'Preparing to advance week...' });
             
             const extraMB = sizeMB - 85;

@@ -42,6 +42,31 @@ const MiscTab: React.FC = () => {
         }
         
         setShowExportOptions(false);
+        
+        if (gameState.disableLoadingScreens) {
+            try {
+                const artistName = activeArtist.name.replace(/\s/g, '_');
+                const dateStr = `${gameState.date.year}-W${gameState.date.week}`;
+                const fileContent = JSON.stringify(gameState, null, 2);
+                const mimeType = 'application/json';
+                const fileName = `red-mic-save_${artistName}_${dateStr}.json`;
+                
+                const blob = new Blob([fileContent], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Failed to export save data:", err);
+                alert('Error exporting data. Please check the console.');
+            }
+            return;
+        }
+
         setLoadingData({ active: true, progress: 0, text: 'Preparing save file...' });
         
         setTimeout(() => {
@@ -276,6 +301,20 @@ const MiscTab: React.FC = () => {
                         className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${!gameState.disableEncounters ? 'bg-red-500' : 'bg-zinc-600'}`}
                     >
                         <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${!gameState.disableEncounters ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                </div>
+                
+                <div className="bg-zinc-800 p-4 rounded-lg flex justify-between items-center mt-4">
+                    <div>
+                        <h3 className="font-bold text-lg">Loading Screens</h3>
+                        <p className="text-sm text-zinc-400">Show loading screens for saves and weeks.</p>
+                        <p className="text-xs text-red-400 font-bold mt-1">WARNING: Disabling only recommended for high-end devices.</p>
+                    </div>
+                    <button 
+                        onClick={() => dispatch({ type: 'TOGGLE_LOADING_SCREENS' })}
+                        className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${!gameState.disableLoadingScreens ? 'bg-red-500' : 'bg-zinc-600'}`}
+                    >
+                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${!gameState.disableLoadingScreens ? 'translate-x-6' : 'translate-x-0'}`}></div>
                     </button>
                 </div>
 

@@ -6941,7 +6941,7 @@ The Government`,
                     (l) => l.id === contract.labelId,
                   );
                   if (majorLabel) {
-                    labelBoost = artistData.isBlacklistedByLabel ? 1.0 : majorLabel.promotionMultiplier;
+                    labelBoost = updatedArtistsData[artistId].isBlacklistedByLabel ? 1.0 : majorLabel.promotionMultiplier;
                   } else {
                     // Fallback legacy calculation
                     const labelId = contract.labelId;
@@ -16998,6 +16998,11 @@ The Government`,
       return {
         ...state,
         disableEncounters: !state.disableEncounters,
+      };
+    case "TOGGLE_LOADING_SCREENS":
+      return {
+        ...state,
+        disableLoadingScreens: !state.disableLoadingScreens,
       };
     case "SET_ACTIVE_TMZ_POST":
       return {
