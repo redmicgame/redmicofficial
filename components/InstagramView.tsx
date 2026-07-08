@@ -12,20 +12,26 @@ const VerifiedBadge = () => (
     <svg aria-label="Verified" className="ml-1" fill="#0095F6" height="12" viewBox="0 0 40 40" width="12"><title>Verified</title><path d="M19.998 3.094 14.638 0l-2.972 5.15H5.432v6.354L0 14.64 3.094 20 0 25.359l5.432 3.137v5.905h5.975L14.638 40l5.36-3.094L25.358 40l3.232-5.6h6.162v-6.01L40 25.359 36.905 20 40 14.641l-5.248-3.03v-6.46h-6.419L25.358 0l-5.36 3.094Zm7.415 11.225 2.254 2.287-11.43 11.5-6.835-6.93 2.244-2.258 4.587 4.581 9.18-9.18Z" fillRule="evenodd"></path></svg>
 );
 
-const InstagramFeedPost: React.FC<{ post: InstagramPost, username: string, userAvatar: string, isVerified: boolean }> = ({ post, username, userAvatar, isVerified }) => {
+const InstagramFeedPost: React.FC<{ post: InstagramPost, username: string, userAvatar: string, isVerified: boolean, onDelete?: () => void }> = ({ post, username, userAvatar, isVerified, onDelete }) => {
+    const [showOptions, setShowOptions] = useState(false);
     return (
-        <div className="w-full bg-black text-white mb-6">
+        <div className="w-full bg-black text-white mb-6 relative">
             <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-center gap-2">
                     <img src={userAvatar} className="w-8 h-8 rounded-full object-cover border border-zinc-800" />
                     <span className="font-semibold text-[13px] flex items-center">{username} {isVerified && <VerifiedBadge />}</span>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 cursor-pointer p-2" onClick={() => setShowOptions(!showOptions)}>
                     <div className="w-1 h-1 bg-white rounded-full"></div>
                     <div className="w-1 h-1 bg-white rounded-full"></div>
                     <div className="w-1 h-1 bg-white rounded-full"></div>
                 </div>
             </div>
+            {showOptions && onDelete && (
+                <div className="absolute top-12 right-4 bg-zinc-800 rounded-lg shadow-lg overflow-hidden z-10 w-32 border border-zinc-700">
+                    <button onClick={() => { onDelete(); setShowOptions(false); }} className="w-full text-left px-4 py-3 text-red-500 font-semibold text-sm hover:bg-zinc-700">Delete Post</button>
+                </div>
+            )}
 
             <div className="w-full aspect-square bg-zinc-900 border-y border-zinc-900 overflow-x-auto snap-x snap-mandatory flex hide-scrollbar">
                 {(post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : [post.imageUrl || '']).map((url, i) => (
@@ -58,10 +64,23 @@ const InstagramFeedPost: React.FC<{ post: InstagramPost, username: string, userA
     );
 };
 
-const InstagramReelPost: React.FC<{ reel: InstagramReel, username: string, userAvatar: string, isVerified: boolean }> = ({ reel, username, userAvatar, isVerified }) => {
+const InstagramReelPost: React.FC<{ reel: InstagramReel, username: string, userAvatar: string, isVerified: boolean, onDelete?: () => void }> = ({ reel, username, userAvatar, isVerified, onDelete }) => {
+    const [showOptions, setShowOptions] = useState(false);
     return (
         <div className="w-full h-full bg-black text-white relative">
             <img src={reel.videoUrl} className="w-full h-full object-cover opacity-80" />
+            <div className="absolute top-4 right-4 z-20">
+                <div className="flex gap-1 cursor-pointer p-2 drop-shadow-md" onClick={() => setShowOptions(!showOptions)}>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                </div>
+                {showOptions && onDelete && (
+                    <div className="absolute top-8 right-0 bg-zinc-800 rounded-lg shadow-lg overflow-hidden z-30 w-32 border border-zinc-700">
+                        <button onClick={() => { onDelete(); setShowOptions(false); }} className="w-full text-left px-4 py-3 text-red-500 font-semibold text-sm hover:bg-zinc-700">Delete Reel</button>
+                    </div>
+                )}
+            </div>
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
                 <div className="flex items-center gap-2 mb-2">
                     <img src={userAvatar} className="w-8 h-8 rounded-full border border-zinc-800" />
@@ -185,7 +204,7 @@ const InstagramView: React.FC = () => {
                         )}
                         {myPosts.length > 0 ? (
                             myPosts.slice(0, 5).map(post => (
-                                <InstagramFeedPost key={post.id} post={post} username={username} userAvatar={activeArtist.image} isVerified={isVerified} />
+                                <InstagramFeedPost key={post.id} post={post} username={username} userAvatar={activeArtist.image} isVerified={isVerified} onDelete={() => dispatch({ type: 'DELETE_INSTAGRAM_POST', payload: { postId: post.id } })} />
                             ))
                         ) : (
                             <div className="flex-1 flex items-center justify-center pt-24 text-zinc-500">
@@ -351,13 +370,16 @@ const InstagramView: React.FC = () => {
                         {profileTab === 'grid' && (
                             <div className="grid grid-cols-3 gap-[1px]">
                                 {myPosts.map(post => (
-                                    <div key={post.id} className="aspect-square bg-zinc-900 relative cursor-pointer group">
+                                    <div key={post.id} className="aspect-square bg-zinc-900 relative cursor-pointer group" onClick={() => dispatch({ type: 'DELETE_INSTAGRAM_POST', payload: { postId: post.id } })}>
                                         <img src={post.imageUrls?.[0] || post.imageUrl} className="w-full h-full object-cover" />
                                         {post.imageUrls && post.imageUrls.length > 1 && (
                                             <div className="absolute top-2 right-2 text-white">
                                                 <svg aria-label="Carousel" fill="currentColor" height="22" viewBox="0 0 48 48" width="22"><path d="M34.8 29.7V11c0-2.9-2.3-5.2-5.2-5.2H11c-2.9 0-5.2 2.3-5.2 5.2v18.7c0 2.9 2.3 5.2 5.2 5.2h18.7c2.8-.1 5.1-2.4 5.1-5.2zM39.2 15v16.1c0 4.5-3.7 8.2-8.2 8.2H14.9c-.6 0-1.1.5-1.1 1.1 0 .6.5 1.1 1.1 1.1h16.1c5.8 0 10.5-4.7 10.5-10.5V15c0-.6-.5-1.1-1.1-1.1-.6 0-1.2.5-1.2 1.1z"></path></svg>
                                             </div>
                                         )}
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 font-bold transition-opacity">
+                                            DELETE
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -366,11 +388,14 @@ const InstagramView: React.FC = () => {
                         {profileTab === 'reels' && (
                             <div className="grid grid-cols-3 gap-[1px]">
                                 {myReels.map(reel => (
-                                    <div key={reel.id} className="aspect-[9/16] bg-zinc-900 relative cursor-pointer group">
+                                    <div key={reel.id} className="aspect-[9/16] bg-zinc-900 relative cursor-pointer group" onClick={() => dispatch({ type: 'DELETE_INSTAGRAM_REEL', payload: { reelId: reel.id } })}>
                                         <img src={reel.videoUrl} className="w-full h-full object-cover" />
                                         <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white font-semibold text-xs">
                                             <svg aria-label="Play" fill="currentColor" height="12" viewBox="0 0 24 24" width="12"><path d="M16.394 12.001 8.542 16.59V7.41l7.852 4.591ZM21.996 12A10.005 10.005 0 1 1 12 1.996 10.016 10.016 0 0 1 21.996 12Z"></path></svg>
                                             {formatNumber(reel.views)}
+                                        </div>
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 font-bold transition-opacity">
+                                            DELETE
                                         </div>
                                     </div>
                                 ))}

@@ -16,7 +16,8 @@ import ChevronDownIcon from './icons/ChevronDownIcon';
 import VideoIcon from './icons/VideoIcon';
 import { TikTokVideo } from '../types';
 
-const TikTokFeedVideo: React.FC<{ video: TikTokVideo & { username: string, userAvatar: string, songName?: string, isVerified?: boolean } }> = ({ video }) => {
+const TikTokFeedVideo: React.FC<{ video: TikTokVideo & { username: string, userAvatar: string, songName?: string, isVerified?: boolean }, onDelete?: () => void }> = ({ video, onDelete }) => {
+    const [showOptions, setShowOptions] = useState(false);
     return (
         <div className="relative w-full h-full min-h-full bg-black snap-start flex-shrink-0 flex flex-col justify-end text-white pb-20 px-4">
             {/* Background "video" placeholder */}
@@ -24,6 +25,21 @@ const TikTokFeedVideo: React.FC<{ video: TikTokVideo & { username: string, userA
                 <img src={video.thumbnail || video.userAvatar} className={`w-full h-full object-cover ${!video.thumbnail ? 'blur-sm opacity-30' : 'opacity-80'}`} />
             </div>
 
+            {/* Delete Menu */}
+            {onDelete && (
+                <div className="absolute top-16 right-4 z-50">
+                    <div className="flex gap-1 cursor-pointer p-2 drop-shadow-md" onClick={() => setShowOptions(!showOptions)}>
+                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                    </div>
+                    {showOptions && (
+                        <div className="absolute top-8 right-0 bg-zinc-800 rounded-lg shadow-lg overflow-hidden w-32 border border-zinc-700">
+                            <button onClick={() => { onDelete(); setShowOptions(false); }} className="w-full text-left px-4 py-3 text-red-500 font-semibold text-sm hover:bg-zinc-700">Delete Video</button>
+                        </div>
+                    )}
+                </div>
+            )}
             {/* Right side actions */}
             <div className="absolute right-4 bottom-28 z-10 flex flex-col items-center gap-6">
                 <div className="relative">
@@ -192,7 +208,7 @@ const TikTokView: React.FC = () => {
                     userAvatar: activeArtist.image,
                     isVerified: (activeArtistData.tiktokFollowers || 0) >= 100000,
                     songName: selectedVideo.songId ? activeArtistData.songs.find(s => s.id === selectedVideo.songId)?.title : undefined
-                }} />
+                }} onDelete={() => { dispatch({ type: 'DELETE_TIKTOK_VIDEO', payload: { videoId: selectedVideo.id } }); setSelectedVideo(null); }} />
             </div>
         );
     }

@@ -1,36 +1,22 @@
+import re
 
+with open('components/GameUI.tsx', 'r') as f:
+    content = f.read()
 
-import React, { useState } from 'react';
-import LoadingScreen from './LoadingScreen';
-import { useGame } from '../context/GameContext';
-import HomeTab from './HomeTab';
-import AppsTab from './AppsTab';
-import MiscTab from './MiscTab';
-import BusinessTab from './BusinessTab';
-import BottomNav from './BottomNav';
+old_import = "import React, { useEffect, useState } from 'react';"
+new_import = "import React, { useEffect, useState } from 'react';\nimport LoadingScreen from './LoadingScreen';"
+content = content.replace(old_import, new_import)
+if "import LoadingScreen" not in content:
+    content = content.replace("import React from 'react';", "import React, { useState } from 'react';\nimport LoadingScreen from './LoadingScreen';")
+    if "import LoadingScreen" not in content:
+        # Fallback
+        content = "import LoadingScreen from './LoadingScreen';\n" + content
 
-const GameUI: React.FC = () => {
-    const { gameState, dispatch } = useGame();
-    const { activeTab } = gameState;
+old_progress = """    const handleProgressWeek = () => {
+        dispatch({ type: 'PROGRESS_WEEK' });
+    };"""
 
-    const renderActiveTab = () => {
-        switch (activeTab) {
-            case 'Home':
-                return <HomeTab />;
-            case 'Apps':
-                return <AppsTab />;
-            case 'Charts':
-                return <HomeTab />;
-            case 'Business':
-                return <BusinessTab />;
-            case 'Misc':
-                return <MiscTab />;
-            default:
-                return <HomeTab />;
-        }
-    };
-
-    const [loadingData, setLoadingData] = useState<{ active: boolean, progress: number, text: string } | null>(null);
+new_progress = """    const [loadingData, setLoadingData] = useState<{ active: boolean, progress: number, text: string } | null>(null);
 
     const handleProgressWeek = () => {
         const stateStr = JSON.stringify(gameState);
@@ -65,9 +51,15 @@ const GameUI: React.FC = () => {
         } else {
             dispatch({ type: 'PROGRESS_WEEK' });
         }
-    };
+    };"""
 
-    return (
+content = content.replace(old_progress, new_progress)
+
+old_return = """    return (
+        <div className="h-full w-full flex flex-col bg-zinc-900 text-white relative">
+            <main className="flex-grow overflow-y-auto pb-24 h-full">"""
+
+new_return = """    return (
         <div className="h-full w-full flex flex-col bg-zinc-900 text-white relative">
             {loadingData && loadingData.active && (
                 <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
@@ -79,19 +71,9 @@ const GameUI: React.FC = () => {
                     </div>
                 </div>
             )}
-            <main className="flex-grow overflow-y-auto pb-24 h-full">
-                {renderActiveTab()}
-            </main>
-            <button 
-              onClick={handleProgressWeek}
-              className="absolute z-20 bottom-24 right-4 bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center hover:bg-red-700 transition-all transform hover:scale-105 shadow-red-600/30">
-              <span className="font-bold text-sm text-center leading-tight">
-                  {gameState.timeMode === 'daily' ? 'Next Day' : 'Next Week'}
-              </span>
-            </button>
-            <BottomNav />
-        </div>
-    );
-};
+            <main className="flex-grow overflow-y-auto pb-24 h-full">"""
 
-export default GameUI;
+content = content.replace(old_return, new_return)
+
+with open('components/GameUI.tsx', 'w') as f:
+    f.write(content)

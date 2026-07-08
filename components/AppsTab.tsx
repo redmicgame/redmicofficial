@@ -1,6 +1,6 @@
 
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import SpotifyIcon from './icons/SpotifyIcon';
 import YouTubeIcon from './icons/YouTubeIcon';
@@ -97,37 +97,45 @@ const appCategories: AppCategory[] = [
 // removed essentialApps
 
 
-const AppItem: React.FC<{ app: AppInfo }> = ({ app }) => {
+const AppItem: React.FC<{ app: AppInfo, onMoveUp?: () => void, onMoveDown?: () => void, isEditing?: boolean }> = ({ app, onMoveUp, onMoveDown, isEditing }) => {
     const { dispatch, activeArtistData } = useGame();
-
     const handleClick = () => {
+        if (isEditing) return;
         if (app.view === 'onlyfansSetup' && activeArtistData?.onlyfans) {
             dispatch({ type: 'CHANGE_VIEW', payload: 'onlyfans' });
         } else {
             dispatch({ type: 'CHANGE_VIEW', payload: app.view });
         }
     }
-
     return (
         <div className="flex items-center">
+            {isEditing && (
+                <div className="flex flex-col mr-2 shrink-0">
+                    <button onClick={onMoveUp} className="p-1 hover:bg-zinc-800 rounded text-zinc-400">▲</button>
+                    <button onClick={onMoveDown} className="p-1 hover:bg-zinc-800 rounded text-zinc-400">▼</button>
+                </div>
+            )}
             <div className="w-16 h-16 rounded-xl flex items-center justify-center p-2 flex-shrink-0" style={{ backgroundColor: app.bgColor || '#3f3f46' }}>
                 <div style={{ color: app.iconColor || '#ffffff' }}>
                     {app.icon}
                 </div>
             </div>
-            <div className="flex-grow ml-4">
-                <p className="font-bold text-lg">{app.name}</p>
+            <div className="ml-4 flex-grow">
+                <h3 className="font-bold text-lg">{app.name}</h3>
                 <p className="text-sm text-zinc-400">{app.description}</p>
             </div>
-            <button onClick={handleClick} className="bg-red-600 text-white font-bold text-sm px-6 py-2 rounded-full hover:bg-red-700 transition-colors flex-shrink-0">
-                OPEN
-            </button>
+            {!isEditing && (
+                <button onClick={handleClick} className="bg-red-600 text-white font-bold text-sm px-6 py-2 rounded-full hover:bg-red-700 transition-colors flex-shrink-0">
+                    OPEN
+                </button>
+            )}
         </div>
     );
 };
 
 const AppsTab: React.FC = () => {
-    const { gameState, activeArtist } = useGame();
+    const { gameState, dispatch, activeArtist } = useGame();
+    const [isEditing, setIsEditing] = useState(false);
     const eraConfig = getEraConfiguration(gameState.date.year);
     const activeArtistData = gameState.artistsData[activeArtist?.id || ''];
 
@@ -151,34 +159,92 @@ const AppsTab: React.FC = () => {
     const essentialAppNames = ['Spotify', 'Spotify for Artists', 'Spotify Charts', 'Catalog', 'X'].filter(isAppAvailable);
     const essentialApps = appCategories.flatMap(cat => cat.apps).filter(app => essentialAppNames.includes(app.name));
 
-    return (
-        <div className="bg-[#121212] min-h-full p-4 text-white">
-            <h1 className="text-4xl font-bold">Apps</h1>
-            <p className="text-zinc-400 mb-8">Discover the best apps</p>
+    const customOrder = activeArtistData?.redMicPro?.appOrder || [];
+    const hasRedMicPro = activeArtistData?.redMicPro?.unlocked;
 
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Essential Apps</h2>
+    const moveApp = (list: AppInfo[], index: number, direction: -1 | 1) => {
+        if (index + direction < 0 || index + direction >= list.length) return;
+        const appA = list[index].name;
+        const appB = list[index + direction].name;
+
+        let newOrder = [...customOrder];
+        if (newOrder.length === 0) {
+            newOrder = Array.from(new Set([
+                ...essentialApps.map(a => a.name),
+                ...appCategories.flatMap(c => c.apps.map(a => a.name))
+            ]));
+        }
+
+        const posA = newOrder.indexOf(appA);
+        const posB = newOrder.indexOf(appB);
+
+        if (posA !== -1 && posB !== -1) {
+            newOrder[posA] = appB;
+            newOrder[posB] = appA;
+        } else if (posA !== -1) {
+            newOrder.splice(posA + direction, 0, appB);
+        } else if (posB !== -1) {
+            newOrder.splice(posB - direction, 0, appA);
+        }
+
+        dispatch({ type: 'SET_APP_ORDER', payload: { appOrder: newOrder } });
+    };
+
+    const renderList = (title: string, list: AppInfo[]) => {
+        if (list.length === 0) return null;
+        let sortedList = [...list];
+        if (customOrder.length > 0) {
+            sortedList.sort((a, b) => {
+                const indexA = customOrder.indexOf(a.name);
+                const indexB = customOrder.indexOf(b.name);
+                if (indexA === -1 && indexB === -1) return 0;
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+            });
+        }
+
+        return (
+            <div className="mb-8" key={title}>
+                <h2 className="text-2xl font-bold mb-4">{title}</h2>
                 <div className="space-y-6">
-                    {essentialApps.map(app => <AppItem key={`essential-${app.name}`} app={app} />)}
+                    {sortedList.map((app, index) => (
+                        <AppItem 
+                            key={`${title}-${app.name}`} 
+                            app={app} 
+                            isEditing={isEditing} 
+                            onMoveUp={() => moveApp(sortedList, index, -1)} 
+                            onMoveDown={() => moveApp(sortedList, index, 1)} 
+                        />
+                    ))}
                 </div>
             </div>
+        );
+    };
 
+    return (
+        <div className="bg-[#121212] min-h-full p-4 text-white pb-24">
+            <div className="flex justify-between items-end mb-8">
+                <div>
+                    <h1 className="text-4xl font-bold">Apps</h1>
+                    <p className="text-zinc-400">Discover the best apps</p>
+                </div>
+                {hasRedMicPro && (
+                    <button onClick={() => setIsEditing(!isEditing)} className={`text-xs px-3 py-1.5 rounded-full font-bold ${isEditing ? 'bg-red-500 text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+                        {isEditing ? 'DONE EDITING' : 'REARRANGE APPS'}
+                    </button>
+                )}
+            </div>
+
+            {renderList('Essential Apps', essentialApps)}
+            
             <div className="space-y-8">
                 {appCategories.map(category => {
-                    const availableApps = category.apps.filter(app => isAppAvailable(app.name));
-                    if (availableApps.length === 0) return null;
-                    return (
-                        <div key={category.title}>
-                            <h2 className="text-2xl font-bold mb-4">{category.title}</h2>
-                            <div className="space-y-6">
-                                {availableApps.map(app => <AppItem key={app.name} app={app} />)}
-                            </div>
-                        </div>
-                    );
+                    const catApps = category.apps.filter(app => isAppAvailable(app.name));
+                    return renderList(category.title, catApps);
                 })}
             </div>
         </div>
     );
 };
-
 export default AppsTab;

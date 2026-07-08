@@ -1206,6 +1206,7 @@ export interface RedMicProState {
   subscriptionType: "yearly" | "lifetime" | "code" | null;
   subscriptionEndDate?: GameDate;
   hypeMode?: "locked" | "manual";
+  appOrder?: string[];
 }
 
 export interface OnlyFansPost {
@@ -1944,6 +1945,10 @@ export type GameAction =
   | { type: "CANCEL_FALLON_OFFER" }
   | { type: "ADD_ARTIST_IMAGE"; payload: string }
   | { type: "DELETE_ARTIST_IMAGE"; payload: string }
+  | { type: "DELETE_INSTAGRAM_POST"; payload: { postId: string } }
+  | { type: "DELETE_INSTAGRAM_REEL"; payload: { reelId: string } }
+  | { type: "DELETE_TIKTOK_VIDEO"; payload: { videoId: string } }
+  | { type: "SET_APP_ORDER"; payload: { appOrder: string[] } }
   | { type: "ADD_ARTIST_VIDEO"; payload: string }
   | { type: "DELETE_ARTIST_VIDEO"; payload: string }
   | { type: "ADD_PAPARAZZI_PHOTO"; payload: { photo: PaparazziPhoto } }

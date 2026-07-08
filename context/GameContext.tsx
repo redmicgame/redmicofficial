@@ -12043,6 +12043,65 @@ The Government`,
         },
       };
     }
+    case "DELETE_INSTAGRAM_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramPosts: (activeData.instagramPosts || []).filter(post => post.id !== action.payload.postId),
+          }
+        }
+      };
+    }
+    case "DELETE_INSTAGRAM_REEL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramReels: (activeData.instagramReels || []).filter(reel => reel.id !== action.payload.reelId),
+          }
+        }
+      };
+    }
+    case "DELETE_TIKTOK_VIDEO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            tiktokVideos: (activeData.tiktokVideos || []).filter(video => video.id !== action.payload.videoId),
+          }
+        }
+      };
+    }
+    case "SET_APP_ORDER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            redMicPro: {
+              ...activeData.redMicPro,
+              appOrder: action.payload.appOrder
+            }
+          }
+        }
+      };
+    }
     case "DELETE_ARTIST_IMAGE": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
