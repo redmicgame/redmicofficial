@@ -5266,7 +5266,7 @@ const gameReducerInternal = (
                   return {
                     ...s,
                     isReleased: true,
-                    releaseId: release.id,
+                    releaseId: release.type === "Compilation" ? s.releaseId : release.id,
                     coverArt:
                       release.type === "Single" ? release.coverArt : s.coverArt,
                     promoBoostWeeks:
@@ -7626,14 +7626,18 @@ The Government`,
                 r.songIds.includes(songId),
             );
             const thisRaw = releaseRawStreams.get(release.id) || 0;
+            const getTypePriority = (type: string) => type === 'Compilation' ? 2 : 1;
             const bestRelease = otherReleases.reduce(
               (best, r) => {
                 const raw = releaseRawStreams.get(r.id) || 0;
-                // If there's a tie, prioritize standard albums/EPs over compilations for fairness, or simply higher ID to be deterministic
-                if (raw > best.raw) return { id: r.id, raw };
+                const rPriority = getTypePriority(r.type);
+                const bestPriority = getTypePriority(best.type);
+                if (rPriority > bestPriority) return { id: r.id, raw, type: r.type };
+                if (rPriority < bestPriority) return best;
+                if (raw > best.raw) return { id: r.id, raw, type: r.type };
                 return best;
               },
-              { id: release.id, raw: thisRaw },
+              { id: release.id, raw: thisRaw, type: release.type },
             );
 
             if (
@@ -10430,7 +10434,7 @@ The Government`,
 
       const newSongs = activeData.songs.map((song) =>
         releaseWithLabel.songIds.includes(song.id)
-          ? { ...song, isReleased: true, releaseId: releaseWithLabel.id }
+          ? { ...song, isReleased: true, releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id }
           : song,
       );
       return {

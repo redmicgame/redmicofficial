@@ -19,7 +19,7 @@ const AlbumSalesChartView: React.FC = () => {
     const { songs, releases } = activeArtistData;
 
     const albumsWithSales = useMemo<AlbumWithSales[]>(() => {
-        const eligibleReleases = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation');
+        const eligibleReleases = releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo);
         
         const releaseRawStreams = new Map<string, number>();
         eligibleReleases.forEach(release => {
@@ -38,11 +38,18 @@ const AlbumSalesChartView: React.FC = () => {
 
                     const otherReleases = eligibleReleases.filter(r => r.songIds.includes(songId));
                     const thisRaw = releaseRawStreams.get(release.id) || 0;
+                    const getTypePriority = (type: string) => type === 'Compilation' ? 2 : 1;
                     const bestRelease = otherReleases.reduce((best, r) => {
                         const raw = releaseRawStreams.get(r.id) || 0;
-                        if (raw > best.raw) return { id: r.id, raw };
+                        const rPriority = getTypePriority(r.type);
+                        const bestPriority = getTypePriority(best.type);
+                        
+                        if (rPriority > bestPriority) return { id: r.id, raw, type: r.type };
+                        if (rPriority < bestPriority) return best;
+                        
+                        if (raw > best.raw) return { id: r.id, raw, type: r.type };
                         return best;
-                    }, { id: release.id, raw: thisRaw });
+                    }, { id: release.id, raw: thisRaw, type: release.type });
 
                     if (bestRelease.id !== release.id) {
                         return total;
@@ -57,7 +64,7 @@ const AlbumSalesChartView: React.FC = () => {
                 }, 0);
 
                 const merchUnits = activeArtistData.merch
-                    .filter(m => m.releaseId === release.id || (release.originalReleaseId && m.releaseId === release.originalReleaseId))
+                    .filter(m => m.releaseId === release.id || (release.standardEditionId && m.releaseId === release.standardEditionId))
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
 
                 const units = Math.floor(releaseStreams / 1500) + releaseSales + merchUnits + (release.preorderSales || 0);
@@ -66,7 +73,7 @@ const AlbumSalesChartView: React.FC = () => {
 
         const mergedMap = new Map<string, number>();
         initialList.forEach(release => {
-            const targetId = release.originalReleaseId || release.id;
+            const targetId = release.standardEditionId || release.id;
             mergedMap.set(targetId, (mergedMap.get(targetId) || 0) + release.units);
         });
 

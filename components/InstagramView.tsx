@@ -120,6 +120,8 @@ const InstagramView: React.FC = () => {
 
     const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
     const [communityName, setCommunityName] = useState('');
+    const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
+    const [selectedReel, setSelectedReel] = useState<InstagramReel | null>(null);
 
     const handleCreatePost = () => {
         if (createImageUrls.length === 0) return;
@@ -370,7 +372,7 @@ const InstagramView: React.FC = () => {
                         {profileTab === 'grid' && (
                             <div className="grid grid-cols-3 gap-[1px]">
                                 {myPosts.map(post => (
-                                    <div key={post.id} className="aspect-square bg-zinc-900 relative cursor-pointer group" onClick={() => dispatch({ type: 'DELETE_INSTAGRAM_POST', payload: { postId: post.id } })}>
+                                    <div key={post.id} className="aspect-square bg-zinc-900 relative cursor-pointer group" onClick={() => setSelectedPost(post)}>
                                         <img src={post.imageUrls?.[0] || post.imageUrl} className="w-full h-full object-cover" />
                                         {post.imageUrls && post.imageUrls.length > 1 && (
                                             <div className="absolute top-2 right-2 text-white">
@@ -388,7 +390,7 @@ const InstagramView: React.FC = () => {
                         {profileTab === 'reels' && (
                             <div className="grid grid-cols-3 gap-[1px]">
                                 {myReels.map(reel => (
-                                    <div key={reel.id} className="aspect-[9/16] bg-zinc-900 relative cursor-pointer group" onClick={() => dispatch({ type: 'DELETE_INSTAGRAM_REEL', payload: { reelId: reel.id } })}>
+                                    <div key={reel.id} className="aspect-[9/16] bg-zinc-900 relative cursor-pointer group" onClick={() => setSelectedReel(reel)}>
                                         <img src={reel.videoUrl} className="w-full h-full object-cover" />
                                         <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white font-semibold text-xs">
                                             <svg aria-label="Play" fill="currentColor" height="12" viewBox="0 0 24 24" width="12"><path d="M16.394 12.001 8.542 16.59V7.41l7.852 4.591ZM21.996 12A10.005 10.005 0 1 1 12 1.996 10.016 10.016 0 0 1 21.996 12Z"></path></svg>
