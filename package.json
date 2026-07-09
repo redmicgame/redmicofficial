@@ -16,6 +16,8 @@
     "dexie-react-hooks": "^1.1.7",
     "express": "^5.2.1",
     "firebase": "^12.12.1",
+    "isomorphic-unfetch": "^4.0.2",
+    "node-fetch": "^3.3.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "spotify-url-info": "^3.3.1"

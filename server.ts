@@ -2,7 +2,8 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import spotifyUrlInfo from 'spotify-url-info';
-const spotify = spotifyUrlInfo(fetch);
+import fetch from 'isomorphic-unfetch';
+const spotify = spotifyUrlInfo(fetch as any);
 
 async function startServer() {
   const app = express();
