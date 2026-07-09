@@ -1523,6 +1523,7 @@ export interface ArtistData {
   }[];
   // Red Mic Pro
   redMicPro: RedMicProState;
+  customContributorImages?: Record<string, string>;
   chartPredictionsSubscription?: boolean;
   salesBoost: number; // percentage
   isGoldTheme: boolean;
@@ -1762,6 +1763,7 @@ export interface ActiveEncounter {
 }
 
 export type GameAction =
+  | { type: "UPDATE_CUSTOM_IMAGES"; payload: Record<string, string> }
   | { type: "UPDATE_RELEASE_REVIEW_SCORE"; payload: { releaseId: string; score: number } }
   | { type: "SHRED_CONTRACT" }
   | { type: "SET_CAREER_STAGE"; payload: { stage: 'neutral' | 'flop' | 'smash' } }

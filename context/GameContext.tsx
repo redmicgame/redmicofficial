@@ -10051,6 +10051,23 @@ The Government`,
         npcAlbums: newNpcAlbums,
       };
     }
+    case "UPDATE_CUSTOM_IMAGES": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            customContributorImages: {
+              ...(activeData.customContributorImages || {}),
+              ...action.payload
+            }
+          }
+        }
+      }
+    }
     case "RECORD_SONG": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];

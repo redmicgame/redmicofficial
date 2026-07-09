@@ -29,6 +29,9 @@ const StudioView: React.FC = () => {
     const [engineers, setEngineers] = useState<string[]>([]);
     const [anr, setAnr] = useState<string[]>([]);
     const [samples, setSamples] = useState<{ songTitle: string; artistName: string; type: 'Sample' | 'Interpolation'; coverArt: string }[]>([]);
+    const [contributorPaymentMethod, setContributorPaymentMethod] = useState<'split' | 'upfront'>('split');
+    const [customImageUploads, setCustomImageUploads] = useState<Record<string, string>>({});
+    const CONTRIBUTOR_UPFRONT_COST = 25000;
 
     // Auto Remix Pack Maker state
     const [remixPackTargetId, setRemixPackTargetId] = useState<string>('');
@@ -167,6 +170,13 @@ const StudioView: React.FC = () => {
         }
     };
 
+    const getContributorCost = () => {
+        if (contributorPaymentMethod === 'upfront') {
+            return (producers.length + songwriters.length + engineers.length + anr.length) * CONTRIBUTOR_UPFRONT_COST;
+        }
+        return 0;
+    };
+
     const toggleRemixType = (type: string) => {
         const newSet = new Set(selectedRemixTypes);
         if (newSet.has(type)) {
@@ -196,7 +206,7 @@ const StudioView: React.FC = () => {
                 return;
             }
         }
-        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0);
+        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0) + getContributorCost();
         if (money < totalCost) {
             setError("You don't have enough money for this session.");
             return;
@@ -239,17 +249,24 @@ const StudioView: React.FC = () => {
         ].filter(name => CONTROVERSIAL_PRODUCERS.includes(name));
 
         const generateCut = () => Math.floor(Math.random() * 10) + 1;
-        const totalCuts = producers.reduce((sum) => sum + generateCut(), 0) +
-                          songwriters.reduce((sum) => sum + generateCut(), 0) +
-                          engineers.reduce((sum) => sum + generateCut(), 0) +
-                          anr.reduce((sum) => sum + generateCut(), 0);
+        let totalCuts = 0;
+        if (contributorPaymentMethod === 'split') {
+            totalCuts = producers.reduce((sum) => sum + generateCut(), 0) +
+                        songwriters.reduce((sum) => sum + generateCut(), 0) +
+                        engineers.reduce((sum) => sum + generateCut(), 0) +
+                        anr.reduce((sum) => sum + generateCut(), 0);
+        }
+        
+        const numContributors = producers.length + songwriters.length + engineers.length + anr.length;
+        const qualityBonus = numContributors * (Math.floor(Math.random() * 2) + 1);
+        const adjustedFinalQuality = Math.min(100, finalQuality + qualityBonus);
 
         const newSong: Song = {
             id: crypto.randomUUID(),
             title: songTitle,
             genre,
             subgenre: subgenre !== 'None' ? subgenre : undefined,
-            quality: finalQuality,
+            quality: adjustedFinalQuality,
             coverArt,
             isReleased: false,
             streams: 0,
@@ -271,6 +288,9 @@ const StudioView: React.FC = () => {
             contributorCutsTotal: totalCuts,
         };
 
+        if (Object.keys(customImageUploads).length > 0) {
+            dispatch({ type: 'UPDATE_CUSTOM_IMAGES', payload: customImageUploads });
+        }
         dispatch({ type: 'RECORD_SONG', payload: { song: newSong, cost: totalCost } });
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
@@ -286,7 +306,7 @@ const StudioView: React.FC = () => {
             return;
         }
         
-        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0);
+        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0) + getContributorCost();
         if (money < totalCost) {
             setError("You don't have enough money for this session.");
             return;
@@ -348,6 +368,9 @@ const StudioView: React.FC = () => {
             contributorCutsTotal: totalCuts,
         };
 
+        if (Object.keys(customImageUploads).length > 0) {
+            dispatch({ type: 'UPDATE_CUSTOM_IMAGES', payload: customImageUploads });
+        }
         dispatch({ type: 'RECORD_SONG', payload: { song: newSong, cost: totalCost } });
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
@@ -404,7 +427,7 @@ const StudioView: React.FC = () => {
         if (feature1) totalFeatureCost += feature1.cost;
         if (feature2) totalFeatureCost += feature2.cost;
 
-        const packTotalCost = (selectedStudio.cost * selectedRemixTypes.size) + totalFeatureCost;
+        const packTotalCost = (selectedStudio.cost * selectedRemixTypes.size) + totalFeatureCost + (getContributorCost() * selectedRemixTypes.size);
         if (money < packTotalCost) {
             setError("You don't have enough money for this remix pack.");
             return;
@@ -423,10 +446,16 @@ const StudioView: React.FC = () => {
         ].filter(name => CONTROVERSIAL_PRODUCERS.includes(name));
 
         const generateCut = () => Math.floor(Math.random() * 10) + 1;
-        const totalCuts = producers.reduce((sum) => sum + generateCut(), 0) +
-                          songwriters.reduce((sum) => sum + generateCut(), 0) +
-                          engineers.reduce((sum) => sum + generateCut(), 0) +
-                          anr.reduce((sum) => sum + generateCut(), 0);
+        let totalCuts = 0;
+        if (contributorPaymentMethod === 'split') {
+            totalCuts = producers.reduce((sum) => sum + generateCut(), 0) +
+                        songwriters.reduce((sum) => sum + generateCut(), 0) +
+                        engineers.reduce((sum) => sum + generateCut(), 0) +
+                        anr.reduce((sum) => sum + generateCut(), 0);
+        }
+
+        const numContributors = producers.length + songwriters.length + engineers.length + anr.length;
+        const qualityBonus = numContributors * (Math.floor(Math.random() * 2) + 1);
 
         Array.from(selectedRemixTypes).forEach(type => {
             let typeName = type;
@@ -442,7 +471,7 @@ const StudioView: React.FC = () => {
 
             const qualityBoost = currentFeature ? Math.floor(Math.random() * 10) + 1 : 0;
             const quality = (Math.floor(Math.random() * (max - min + 1)) + min) + qualityBoost;
-            const finalQuality = Math.min(100, quality);
+            const finalQuality = Math.min(100, quality + qualityBonus);
 
             newSongs.push({
                 ...targetSong,
@@ -468,46 +497,96 @@ const StudioView: React.FC = () => {
             });
         });
 
+        if (Object.keys(customImageUploads).length > 0) {
+            dispatch({ type: 'UPDATE_CUSTOM_IMAGES', payload: customImageUploads });
+        }
         dispatch({ type: 'CREATE_REMIX_PACK', payload: { songs: newSongs, cost: packTotalCost } });
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
 
-    const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0);
+    const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0) + getContributorCost();
     
     let packFeatureCost = 0;
     if (selectedRemixTypes.has('Feature 1') && feature1) packFeatureCost += feature1.cost;
     if (selectedRemixTypes.has('Feature 2') && feature2) packFeatureCost += feature2.cost;
     const packTotalCost = (selectedStudio.cost * selectedRemixTypes.size) + packFeatureCost;
 
-    const renderMultiSelect = (label: string, state: string[], setState: React.Dispatch<React.SetStateAction<string[]>>, options: string[]) => (
-        <div className="mt-4">
-            <label className="block text-sm font-medium text-zinc-300">{label}</label>
-            <div className="flex flex-wrap gap-2 mt-2">
-                {state.map(item => (
-                    <span key={item} className="bg-zinc-600 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
-                        {item}
-                        <button onClick={() => setState(s => s.filter(i => i !== item))} className="hover:text-red-400">×</button>
-                    </span>
-                ))}
-            </div>
-            {state.length < 20 && (
-                <select 
-                    value="" 
-                    onChange={e => {
-                        if (e.target.value && !state.includes(e.target.value)) {
-                            setState(s => [...s, e.target.value]);
-                        }
-                    }} 
-                    className="mt-2 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
-                >
-                    <option value="">Add {label}...</option>
-                    {options.filter(c => !state.includes(c)).map(name => (
-                        <option key={name} value={name}>{name}</option>
+    const renderMultiSelect = (label: string, state: string[], setState: React.Dispatch<React.SetStateAction<string[]>>, options: string[]) => {
+        return (
+            <div className="mt-4">
+                <label className="block text-sm font-medium text-zinc-300">{label}</label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {state.map(item => (
+                        <span key={item} className="bg-zinc-600 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                            {item}
+                            <button onClick={() => setState(s => s.filter(i => i !== item))} className="hover:text-red-400">×</button>
+                        </span>
                     ))}
-                </select>
-            )}
-        </div>
-    );
+                </div>
+                {state.length < 20 && (
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                        <select 
+                            value="" 
+                            onChange={e => {
+                                if (e.target.value && !state.includes(e.target.value)) {
+                                    setState(s => [...s, e.target.value]);
+                                }
+                            }} 
+                            className="flex-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                        >
+                            <option value="">Add {label}...</option>
+                            {options.filter(c => !state.includes(c)).map(name => (
+                                <option key={name} value={name}>{name}</option>
+                            ))}
+                        </select>
+                        {activeArtistData.redMicPro?.unlocked && (
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <input 
+                                    type="text" 
+                                    placeholder={`Custom ${label}...`}
+                                    className="flex-1 bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const val = e.currentTarget.value.trim();
+                                            if (val && !state.includes(val)) {
+                                                setState(s => [...s, val]);
+                                                e.currentTarget.value = '';
+                                            }
+                                        }
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+                {activeArtistData.redMicPro?.unlocked && state.length > 0 && (
+                    <div className="mt-2 text-xs text-zinc-400">
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {state.filter(item => !options.includes(item)).map(item => (
+                                <div key={item} className="flex items-center gap-2 bg-zinc-800 p-1 rounded">
+                                    <span>{item}</span>
+                                    {customImageUploads[item] ? (
+                                        <img src={customImageUploads[item]} alt={item} className="w-6 h-6 rounded-full object-cover" />
+                                    ) : (
+                                        <input type="file" accept="image/*" className="text-xs w-48 bg-zinc-700 rounded p-1" onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => {
+                                                    setCustomImageUploads(prev => ({...prev, [item]: ev.target?.result as string}));
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const handleAddSample = (artistName: string, type: 'Sample' | 'Interpolation') => {
         const dummyTitles = ["Greatest Hit", "Classic Vibe", "Love Song", "Summer Night", "The Anthem", "Heartbreak", "Memories"];
@@ -649,8 +728,26 @@ const StudioView: React.FC = () => {
                         </div>
                         
                         <div className="pt-4 border-t border-zinc-700/50 mt-4 space-y-2">
-                            <h3 className="text-lg font-bold">Contributors (SongDNA)</h3>
-                            <p className="text-xs text-zinc-400">Add up to 20 for each category.</p>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <h3 className="text-lg font-bold">Contributors (SongDNA)</h3>
+                                    <p className="text-xs text-zinc-400">Add up to 20 for each category.</p>
+                                </div>
+                                <div className="flex bg-zinc-800 rounded-lg p-1">
+                                    <button 
+                                        onClick={() => setContributorPaymentMethod('split')}
+                                        className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${contributorPaymentMethod === 'split' ? 'bg-red-500 text-white' : 'text-zinc-400 hover:text-white'}`}
+                                    >
+                                        Give % Split
+                                    </button>
+                                    <button 
+                                        onClick={() => setContributorPaymentMethod('upfront')}
+                                        className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${contributorPaymentMethod === 'upfront' ? 'bg-red-500 text-white' : 'text-zinc-400 hover:text-white'}`}
+                                    >
+                                        Pay Upfront (${(CONTRIBUTOR_UPFRONT_COST).toLocaleString()}/each)
+                                    </button>
+                                </div>
+                            </div>
                             {renderMultiSelect('Producers', producers, setProducers, potentialProducers)}
                             {renderMultiSelect('Songwriters', songwriters, setSongwriters, potentialCollaborators)}
                             {renderMultiSelect('Mix & Mastering Engineers', engineers, setEngineers, potentialEngineers)}
