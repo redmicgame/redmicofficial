@@ -1,8 +1,5 @@
 import express from 'express';
-import spotifyUrlInfo from 'spotify-url-info';
-import fetch from 'isomorphic-unfetch';
 
-const spotify = spotifyUrlInfo(fetch as any);
 const app = express();
 
 app.get('/api/health', (req, res) => {
@@ -89,14 +86,34 @@ app.get('/api/spotify/album', async (req, res) => {
         const url = req.query.url;
         if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
         
-        const data = await spotify.getData(url);
-        const preview = await spotify.getPreview(url);
+        const response = await fetch(`https://embed.spotify.com/?uri=${encodeURIComponent(url)}`);
+        const text = await response.text();
+        const match = text.match(/<script id="__NEXT_DATA__" type="application\/json"[^>]*>([\s\S]*?)<\/script>/);
+        
+        if (!match) {
+             return res.status(500).json({ error: 'Could not extract data from Spotify' });
+        }
+        
+        const json = JSON.parse(match[1]);
+        const entity = json.props?.pageProps?.state?.data?.entity;
+        
+        if (!entity) {
+             return res.status(500).json({ error: 'Data shape not recognized from Spotify' });
+        }
+        
+        const images = entity.coverArt?.sources || entity.images || entity.visualIdentity?.image;
+        let image = '';
+        if (Array.isArray(images) && images.length > 0) {
+             image = images[0]?.url || '';
+        }
+
+        const tracks = entity.trackList ? entity.trackList.map((t: any) => ({ title: t.title, duration: t.duration })) : [{ title: entity.name, duration: entity.duration }];
         
         res.json({
-            title: data.title,
-            artist: data.subtitle,
-            image: preview.image,
-            tracks: data.trackList ? data.trackList.map((t: any) => ({ title: t.title, duration: t.duration })) : [{ title: data.title, duration: data.duration }]
+            title: entity.name,
+            artist: entity.subtitle,
+            image: image,
+            tracks: tracks
         });
     } catch (e: any) {
         res.status(500).json({ error: e.message || String(e) });

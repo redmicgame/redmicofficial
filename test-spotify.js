@@ -1,6 +1,17 @@
-const spotifyUrlInfo = require('spotify-url-info');
-const spotify = spotifyUrlInfo(fetch);
-
-spotify.getData('https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy')
-  .then(data => console.log(JSON.stringify(data, null, 2)))
-  .catch(err => console.error(err));
+const fetch = require('isomorphic-unfetch');
+async function test() {
+    const res = await fetch('https://embed.spotify.com/?uri=spotify:album:4aawyAB9vmqN3uQ7FjRGTy');
+    const text = await res.text();
+    const match = text.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+    if (match) {
+        const json = JSON.parse(match[1]);
+        const entity = json.props.pageProps.state.data.entity;
+        console.log(entity.name);
+        console.log(entity.subtitle);
+        console.log(entity.coverArt.sources[0].url);
+        console.log(entity.trackList.length);
+    } else {
+        console.log("No match");
+    }
+}
+test();
