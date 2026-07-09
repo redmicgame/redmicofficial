@@ -23,8 +23,8 @@ const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boo
         <div onClick={onClick} className="flex items-center gap-4 group cursor-pointer p-2 -mx-2 rounded-md hover:bg-white/10">
             <div className="text-zinc-400 font-semibold w-5 text-right">{index + 1}</div>
             <img src={song.coverArt} alt={song.title} className="w-10 h-10 rounded-sm object-cover" />
-            <div className="flex-grow">
-                <p className="font-semibold text-white">{song.title}</p>
+            <div className="flex-grow min-w-0">
+                <p className="font-semibold text-white truncate">{song.title}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                     {song.explicit && <span className="text-[10px] w-3.5 h-3.5 bg-zinc-400 text-zinc-900 font-bold rounded-sm flex-shrink-0 flex items-center justify-center">E</span>}
                     {hasMusicVideo && (
@@ -48,8 +48,8 @@ const PopularReleaseItem: React.FC<{ release: Release; isLatest: boolean; onClic
     return (
         <button onClick={onClick} className="flex w-full text-left items-center gap-4 group cursor-pointer">
             <img src={release.coverArt} alt={release.title} className="w-16 h-16 rounded object-cover" />
-            <div className="flex-grow">
-                <p className="font-semibold text-white text-lg">{release.title}</p>
+            <div className="flex-grow min-w-0">
+                <p className="font-semibold text-white text-lg truncate">{release.title}</p>
                 <p className="text-sm text-zinc-400">
                     {isLatest ? 'Latest release' : release.releaseDate.year} • {release.type.replace(" (Deluxe)", "")}
                 </p>
@@ -62,8 +62,8 @@ const UpcomingReleaseItem: React.FC<{ release: Release; releaseDate: GameDate; o
     return (
         <button onClick={onClick} className="flex w-full text-left items-center gap-4 group cursor-pointer">
             <img src={release.coverArt} alt={release.title} className="w-16 h-16 rounded object-cover" />
-            <div className="flex-grow">
-                <p className="font-semibold text-white text-lg">{release.title}</p>
+            <div className="flex-grow min-w-0">
+                <p className="font-semibold text-white text-lg truncate">{release.title}</p>
                 <p className="text-sm text-zinc-400">
                     Coming Soon • Releasing W{releaseDate.week}, {releaseDate.year}
                 </p>

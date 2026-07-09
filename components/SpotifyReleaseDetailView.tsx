@@ -275,8 +275,8 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                                     {disc.name && <h2 className="text-lg font-bold text-white mb-2">{disc.name}</h2>}
                                     {disc.songs.map(song => (
                                         <div key={song.id} className="flex items-center">
-                                            <div className="flex-grow">
-                                                <p className="font-semibold">{song.title}</p>
+                                            <div className="flex-grow min-w-0">
+                                                <p className="font-semibold truncate">{song.title}</p>
                                                 <div className="flex items-center gap-2">
                                                     {song.explicit && <span className="text-xs w-4 h-4 bg-zinc-600/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center">E</span>}
                                                     <p className="text-sm text-zinc-400">{activeArtist.name}</p>

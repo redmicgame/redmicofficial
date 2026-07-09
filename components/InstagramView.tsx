@@ -14,69 +14,7 @@ const VerifiedBadge = () => (
 
 const InstagramFeedPost: React.FC<{ post: InstagramPost, username: string, userAvatar: string, isVerified: boolean, onDelete?: () => void }> = ({ post, username, userAvatar, isVerified, onDelete }) => {
     const [showOptions, setShowOptions] = useState(false);
-    if (selectedPost) {
-        return (
-            <div className="h-full w-full bg-black relative max-w-[400px] mx-auto overflow-y-auto overflow-x-hidden">
-                <div className="flex items-center gap-4 p-4 border-b border-zinc-800 sticky top-0 bg-black z-20">
-                    <button onClick={() => setSelectedPost(null)} className="text-white">
-                        <ArrowLeftIcon className="w-6 h-6" />
-                    </button>
-                    <span className="font-bold text-white">Post</span>
-                </div>
-                <div className="pt-4">
-                    <InstagramFeedPost 
-                        post={selectedPost} 
-                        username={username} 
-                        userAvatar={activeArtist.image} 
-                        isVerified={isVerified} 
-                        onDelete={() => { dispatch({ type: 'DELETE_INSTAGRAM_POST', payload: { postId: selectedPost.id } }); setSelectedPost(null); }} 
-                    />
-                </div>
-            </div>
-        );
-    }
-
-    if (selectedReel) {
-        return (
-            <div className="h-full w-full bg-black relative max-w-[400px] mx-auto overflow-hidden">
-                <button 
-                    onClick={() => setSelectedReel(null)} 
-                    className="absolute top-4 left-4 z-50 text-white drop-shadow-md bg-black/30 p-2 rounded-full"
-                >
-                    <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-                <div className="w-full h-full bg-zinc-900 relative">
-                    <img src={selectedReel.videoUrl} className="w-full h-full object-cover opacity-80" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
-                        <div className="flex justify-between items-end">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <img src={activeArtist.image} className="w-8 h-8 rounded-full border border-zinc-800" />
-                                    <span className="text-white font-semibold text-sm">{username}</span>
-                                </div>
-                                <p className="text-white text-sm mb-2">{selectedReel.caption}</p>
-                                {selectedReel.songId && (
-                                    <div className="flex items-center gap-2 text-white text-xs">
-                                        <svg aria-label="Audio" fill="currentColor" height="12" viewBox="0 0 24 24" width="12"><path d="M12 2v20M8 6v12M4 10v4M16 6v12M20 10v4" stroke="currentColor" strokeLinecap="round" strokeWidth="2"></path></svg>
-                                        {activeArtistData.songs.find(s => s.id === selectedReel.songId)?.title}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="flex flex-col items-center">
-                                    <HeartIcon className="w-7 h-7 text-white" />
-                                    <span className="text-white text-xs mt-1">{formatNumber(selectedReel.likes)}</span>
-                                </div>
-                                <button onClick={() => { dispatch({ type: 'DELETE_INSTAGRAM_REEL', payload: { reelId: selectedReel.id } }); setSelectedReel(null); }} className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500/40">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    
 
     return (
         <div className="w-full bg-black text-white mb-6 relative">
@@ -231,7 +169,70 @@ const InstagramView: React.FC = () => {
     const myReels = activeArtistData.instagramReels || [];
     const myStories = activeArtistData.instagramStories || [];
     const username = activeArtist.name.replace(/\s/g, '').toLowerCase();
+    if (selectedPost) {
 
+        return (
+            <div className="h-full w-full bg-black relative max-w-[400px] mx-auto overflow-y-auto overflow-x-hidden">
+                <div className="flex items-center gap-4 p-4 border-b border-zinc-800 sticky top-0 bg-black z-20">
+                    <button onClick={() => setSelectedPost(null)} className="text-white">
+                        <ArrowLeftIcon className="w-6 h-6" />
+                    </button>
+                    <span className="font-bold text-white">Post</span>
+                </div>
+                <div className="pt-4">
+                    <InstagramFeedPost 
+                        post={selectedPost} 
+                        username={username} 
+                        userAvatar={activeArtist.image} 
+                        isVerified={isVerified} 
+                        onDelete={() => { dispatch({ type: 'DELETE_INSTAGRAM_POST', payload: { postId: selectedPost.id } }); setSelectedPost(null); }} 
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (selectedReel) {
+        return (
+            <div className="h-full w-full bg-black relative max-w-[400px] mx-auto overflow-hidden">
+                <button 
+                    onClick={() => setSelectedReel(null)} 
+                    className="absolute top-4 left-4 z-50 text-white drop-shadow-md bg-black/30 p-2 rounded-full"
+                >
+                    <ArrowLeftIcon className="w-6 h-6" />
+                </button>
+                <div className="w-full h-full bg-zinc-900 relative">
+                    <img src={selectedReel.videoUrl} className="w-full h-full object-cover opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <img src={activeArtist.image} className="w-8 h-8 rounded-full border border-zinc-800" />
+                                    <span className="text-white font-semibold text-sm">{username}</span>
+                                </div>
+                                <p className="text-white text-sm mb-2">{selectedReel.caption}</p>
+                                {selectedReel.songId && (
+                                    <div className="flex items-center gap-2 text-white text-xs">
+                                        <svg aria-label="Audio" fill="currentColor" height="12" viewBox="0 0 24 24" width="12"><path d="M12 2v20M8 6v12M4 10v4M16 6v12M20 10v4" stroke="currentColor" strokeLinecap="round" strokeWidth="2"></path></svg>
+                                        {activeArtistData.songs.find(s => s.id === selectedReel.songId)?.title}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="flex flex-col items-center">
+                                    <HeartIcon className="w-7 h-7 text-white" />
+                                    <span className="text-white text-xs mt-1">{formatNumber(selectedReel.likes)}</span>
+                                </div>
+                                <button onClick={() => { dispatch({ type: 'DELETE_INSTAGRAM_REEL', payload: { reelId: selectedReel.id } }); setSelectedReel(null); }} className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500/40">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     const followers = activeArtistData.instagramFollowers || 0;
     const popularity = activeArtistData.popularity || 0;
     const isVerified = followers >= 100000 || popularity >= 50 || !!activeArtistData.instagramVerified;
@@ -443,7 +444,7 @@ const InstagramView: React.FC = () => {
                                                 <svg aria-label="Carousel" fill="currentColor" height="22" viewBox="0 0 48 48" width="22"><path d="M34.8 29.7V11c0-2.9-2.3-5.2-5.2-5.2H11c-2.9 0-5.2 2.3-5.2 5.2v18.7c0 2.9 2.3 5.2 5.2 5.2h18.7c2.8-.1 5.1-2.4 5.1-5.2zM39.2 15v16.1c0 4.5-3.7 8.2-8.2 8.2H14.9c-.6 0-1.1.5-1.1 1.1 0 .6.5 1.1 1.1 1.1h16.1c5.8 0 10.5-4.7 10.5-10.5V15c0-.6-.5-1.1-1.1-1.1-.6 0-1.2.5-1.2 1.1z"></path></svg>
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 font-bold transition-opacity">
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 font-bold transition-opacity" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DELETE_INSTAGRAM_POST', payload: { postId: post.id } }); }}>
                                             DELETE
                                         </div>
                                     </div>
@@ -460,7 +461,7 @@ const InstagramView: React.FC = () => {
                                             <svg aria-label="Play" fill="currentColor" height="12" viewBox="0 0 24 24" width="12"><path d="M16.394 12.001 8.542 16.59V7.41l7.852 4.591ZM21.996 12A10.005 10.005 0 1 1 12 1.996 10.016 10.016 0 0 1 21.996 12Z"></path></svg>
                                             {formatNumber(reel.views)}
                                         </div>
-                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 font-bold transition-opacity">
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 font-bold transition-opacity" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DELETE_INSTAGRAM_REEL', payload: { reelId: reel.id } }); }}>
                                             DELETE
                                         </div>
                                     </div>
