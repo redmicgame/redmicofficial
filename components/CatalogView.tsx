@@ -423,14 +423,13 @@ const CatalogView: React.FC = () => {
                     return total + (song?.streams || 0);
                 }, 0) - (release.preReleaseStreams || 0));
                 
-                const releaseSales = Math.max(0, songsToCount.reduce((total, songId) => {
+                const rawSingleSales = songsToCount.reduce((total, songId) => {
                     const song = activeArtistData.songs.find(s => s.id === songId);
                     return total + (song?.sales || 0);
-                }, 0) - (release.preReleaseSales || 0));
-                const merchUnits = activeArtistData.merch
-                    .filter(m => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id))
-                    .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-                return { ...release, streams: releaseStreams, sales: releaseSales + merchUnits, hasDeluxe: !!deluxeVersion, deluxeSongIds: deluxeVersion?.songIds };
+                }, 0);
+                const trackEquivalentAlbumSales = Math.floor(Math.max(0, rawSingleSales - (release.preReleaseSales || 0)) * 0.1);
+
+                return { ...release, streams: releaseStreams, sales: (release.sales || 0) + trackEquivalentAlbumSales, hasDeluxe: !!deluxeVersion, deluxeSongIds: deluxeVersion?.songIds };
             })
             .sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
     }, [activeArtistData.releases, activeArtistData.songs, activeArtistData.merch]);

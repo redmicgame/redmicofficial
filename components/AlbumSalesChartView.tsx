@@ -58,16 +58,13 @@ const AlbumSalesChartView: React.FC = () => {
                     return total + songStreams;
                 }, 0);
                 
-                const releaseSales = release.songIds.reduce((total, songId) => {
+                const rawSingleSales = release.songIds.reduce((total, songId) => {
                     const song = songs.find(s => s.id === songId);
                     return total + (song?.sales || 0);
                 }, 0);
-
-                const merchUnits = activeArtistData.merch
-                    .filter(m => m.releaseId === release.id || (release.standardEditionId && m.releaseId === release.standardEditionId))
-                    .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-
-                const units = Math.floor(releaseStreams / 1500) + releaseSales + merchUnits + (release.preorderSales || 0);
+                const trackEquivalentAlbumSales = Math.floor(Math.max(0, rawSingleSales - (release.preReleaseSales || 0)) * 0.1);
+                
+                const units = Math.floor(releaseStreams / 1500) + (release.sales || 0) + trackEquivalentAlbumSales;
                 return { ...release, units };
             });
 

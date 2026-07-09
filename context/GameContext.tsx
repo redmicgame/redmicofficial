@@ -5901,7 +5901,12 @@ const gameReducerInternal = (
               const song = artistData.songs.find((s) => s.id === songId);
               return sum + (song?.streams || 0);
             }, 0);
-            const units = Math.floor(totalStreams / 1500);
+            const rawSingleSales = release.songIds.reduce((sum, songId) => {
+              const song = artistData.songs.find((s) => s.id === songId);
+              return sum + (song?.sales || 0);
+            }, 0);
+            const trackEquivalentAlbumSales = Math.floor(Math.max(0, rawSingleSales) * 0.1);
+            const units = Math.floor(totalStreams / 1500) + trackEquivalentAlbumSales + (release.sales || 0);
 
             const currentCert = getAlbumCertification(units);
             const currentCertString = formatCertification(currentCert);
@@ -5947,7 +5952,8 @@ const gameReducerInternal = (
                       const rawAlbumStreams = albumTracks.reduce((sum, s) => sum + s.streams, 0);
                       const rawAlbumSales = albumTracks.reduce((sum, s) => sum + (s.sales || 0), 0);
                       const albumEffectiveStreams = Math.max(0, rawAlbumStreams - (release.preReleaseStreams || 0));
-                      const albumEffectiveSales = Math.max(0, rawAlbumSales - (release.preReleaseSales || 0)) + (release.sales || 0);
+                      const trackEquivalentAlbumSales = Math.floor(Math.max(0, rawAlbumSales - (release.preReleaseSales || 0)) * 0.1);
+                      const albumEffectiveSales = trackEquivalentAlbumSales + (release.sales || 0);
                       const albumTotalUnits = Math.floor(albumEffectiveStreams / 1500) + albumEffectiveSales;
                       const albumCert = formatCertification(getAlbumCertification(albumTotalUnits));
                       const albumCertFormatted = albumCert ? `${albumCert} (${(albumTotalUnits).toLocaleString()})` : '';
