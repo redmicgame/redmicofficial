@@ -1,6 +1,8 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import spotifyUrlInfo from 'spotify-url-info';
+const spotify = spotifyUrlInfo(fetch);
 
 async function startServer() {
   const app = express();
@@ -92,6 +94,25 @@ async function startServer() {
 
     } catch (e: any) {
         res.send(`Server Error: ${e.message}`);
+    }
+  });
+
+  app.get('/api/spotify/album', async (req, res) => {
+    try {
+        const url = req.query.url;
+        if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
+        
+        const data = await spotify.getData(url);
+        const preview = await spotify.getPreview(url);
+        
+        res.json({
+            title: data.title,
+            artist: data.subtitle,
+            image: preview.image,
+            tracks: data.trackList.map(t => ({ title: t.title, duration: t.duration }))
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
     }
   });
 
