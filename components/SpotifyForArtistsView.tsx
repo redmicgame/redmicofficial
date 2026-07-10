@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from "react";
 import { useGame, formatNumber } from "../context/GameContext";
 import { Release, Song, Artist, Group, GameDate } from "../types";
 import { PLAYLIST_PITCH_COST, NPC_ARTIST_IMAGES } from "../constants";
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import HomeIcon from "./icons/HomeIcon";
 import MusicNoteIcon from "./icons/MusicNoteIcon";
 import UserGroupIcon from "./icons/UserGroupIcon";
@@ -87,7 +88,7 @@ const S4AUpcomingReleaseDetailView: React.FC<{
   };
 
   return (
-    <div className="bg-gradient-to-b from-blue-800 via-stone-900 to-black text-white min-h-full p-4 flex flex-col">
+    <div className="bg-gradient-to-b from-blue-800 via-stone-900 to-black text-white h-full overflow-y-auto p-4 flex flex-col">
       <header className="flex justify-between items-center flex-shrink-0">
         <button onClick={onBack} className="p-2 -m-2">
           <ArrowLeftIcon className="w-6 h-6" />
@@ -235,6 +236,23 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
 
   if (!activeArtistData) return null;
   const { releases } = activeArtistData;
+
+  const streamSources = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < song.id.length; i++) {
+        hash = song.id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const val = Math.abs(hash) % 100;
+    const playlistingPercent = 15 + (val % 25);
+    const artificialPercent = val % 15;
+    const profilePercent = 100 - playlistingPercent - artificialPercent;
+
+    return [
+        { name: 'Profile', value: Math.floor(song.streams * (profilePercent / 100)), percent: profilePercent, color: '#1db954' },
+        { name: 'Playlisting', value: Math.floor(song.streams * (playlistingPercent / 100)), percent: playlistingPercent, color: '#404040' },
+        { name: 'Artificial (Payola)', value: Math.floor(song.streams * (artificialPercent / 100)), percent: artificialPercent, color: '#9ca3af' },
+    ];
+  }, [song.id, song.streams]);
   const release = releases.find((r) => r.id === song.releaseId);
 
   const releaseDateString = release
@@ -300,7 +318,7 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
   };
 
   return (
-    <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white min-h-full p-4 flex flex-col">
+    <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white h-full overflow-y-auto p-4 flex flex-col">
       <header className="flex justify-between items-center flex-shrink-0">
         <button onClick={onBack} className="p-2 -m-2">
           <ArrowLeftIcon className="w-6 h-6" />
@@ -375,6 +393,53 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
                     Not enough data
                 </div>
             )}
+          </div>
+          
+          <div className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-700/50 text-left space-y-3 mb-6">
+            <h3 className="font-bold text-lg border-b border-zinc-700 pb-2 mb-2">
+              Source of Streams
+            </h3>
+            <div className="h-64 w-full text-xs">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={streamSources}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {streamSources.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [formatNumber(value), name]}
+                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white' }}
+                    itemStyle={{ color: 'white' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="space-y-2 mt-4 border-t border-zinc-700/50 pt-4">
+              {streamSources.map(source => (
+                <div key={source.name} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }}></span>
+                    <span className="text-zinc-300">{source.name}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-white">{formatNumber(source.value)}</span>
+                    <span className="text-xs text-zinc-500">{source.percent}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <button
@@ -513,7 +578,7 @@ const S4AReleaseDetailView: React.FC<{ release: Release; onBack: () => void }> =
   const hasAnyCanvas = tracks.some(t => t.canvasVideo);
 
   return (
-    <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white min-h-full p-4 flex flex-col relative pb-20">
+    <div className="bg-gradient-to-b from-amber-800 via-stone-900 to-black text-white h-full overflow-y-auto p-4 flex flex-col relative pb-20">
       <header className="flex justify-between items-center flex-shrink-0">
         <button onClick={onBack} className="p-2 -m-2">
           <ArrowLeftIcon className="w-6 h-6" />
@@ -1354,7 +1419,7 @@ const S4AProfile: React.FC = () => {
   }, [songs, releases, date, pitchedSongIds]);
 
   return (
-    <div className="bg-white text-black min-h-full p-4 space-y-6">
+    <div className="bg-white text-black h-full overflow-y-auto p-4 space-y-6">
       <h1 className="text-3xl font-bold">Profile</h1>
 
       <div className="bg-zinc-100 p-4 rounded-lg space-y-3">
