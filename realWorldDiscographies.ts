@@ -1,4 +1,64 @@
 export const REAL_WORLD_DISCOGRAPHIES: Record<string, { songs: string[], albums: string[] }> = {
+    "Charlie Puth": {
+        songs: ["Attention", "We Don't Talk Anymore", "How Long", "Light Switch", "See You Again", "One Call Away", "Dangerously", "Left and Right", "Done For Me", "Marvin Gaye"],
+        albums: ["Nine Track Mind", "Voicenotes", "CHARLIE"]
+    },
+    "Katy Perry": {
+        songs: ["Dark Horse", "Roar", "Firework", "California Gurls", "Teenage Dream", "Last Friday Night (T.G.I.F.)", "I Kissed A Girl", "Hot N Cold", "Part Of Me", "Wide Awake"],
+        albums: ["One of the Boys", "Teenage Dream", "PRISM", "Witness", "Smile"]
+    },
+    "Troye Sivan": {
+        songs: ["Rush", "One of Your Girls", "My My My!", "Youth", "Fools", "WILD", "Dance To This", "Talk Me Down", "Got Me Started", "Angel Baby"],
+        albums: ["Blue Neighbourhood", "Bloom", "Something to Give Each Other"]
+    },
+    "ZAYN": {
+        songs: ["PILLOWTALK", "Dusk Till Dawn", "I Don't Wanna Live Forever", "Let Me", "Vibez", "Better", "Trampoline", "Entertainer", "Like I Would", "Sour Diesel"],
+        albums: ["Mind of Mine", "Icarus Falls", "Nobody Is Listening"]
+    },
+    "Conan Gray": {
+        songs: ["Heather", "Maniac", "Memories", "People Watching", "Telepath", "Astronomy", "Overdrive", "Never Ending Song", "Disaster", "Wish You Were Sober"],
+        albums: ["Kid Krow", "Superache"]
+    },
+    "Kesha": {
+        songs: ["TiK ToK", "Die Young", "Praying", "Your Love Is My Drug", "We R Who We R", "Take It Off", "Blow", "Cannibal", "Blah Blah Blah", "Crazy Kids"],
+        albums: ["Animal", "Warrior", "Rainbow", "High Road", "Gag Order"]
+    },
+    "Playboi Carti": {
+        songs: ["Magnolia", "Shoota", "wokeuplikethis*", "Sky", "ILoveUIHateU", "Vamp Anthem", "Location", "Fell In Luv", "Long Time - Intro", "Stop Breathing"],
+        albums: ["Playboi Carti", "Die Lit", "Whole Lotta Red"]
+    },
+    "Lil Uzi Vert": {
+        songs: ["XO Tour Llif3", "Just Wanna Rock", "20 Min", "The Way Life Goes", "Money Longer", "You Was Right", "Myron", "Sanguine Paradise", "Do What I Want", "Neon Guts"],
+        albums: ["Luv Is Rage 2", "Eternal Atake", "Pink Tape"]
+    },
+    "Young Thug": {
+        songs: ["pick up the phone", "Check", "Digits", "Best Friend", "Stoner", "Hot", "Solid", "Ski", "Bubbly", "Halftime"],
+        albums: ["Barter 6", "JEFFERY", "Beautiful Thugger Girls", "So Much Fun", "Punk"]
+    },
+    "A$AP Rocky": {
+        songs: ["Praise The Lord (Da Shine)", "F**kin' Problems", "L$D", "Sundress", "Goldie", "Everyday", "A$AP Forever", "Wild For The Night", "Fashion Killa", "1 Train"],
+        albums: ["LONG.LIVE.A$AP", "AT.LONG.LAST.A$AP", "TESTING"]
+    },
+    "Lil Yachty": {
+        songs: ["One Night", "Minnesota", "iSpy", "Broccoli", "Strike (Holster)", "Poland", "drive ME crazy!", "the BLACK seminole.", "Oprah's Bank Account", "Yacht Club"],
+        albums: ["Teenage Emotions", "Lil Boat", "Lil Boat 2", "Let's Start Here."]
+    },
+    "Pop Smoke": {
+        songs: ["Dior", "What You Know Bout Love", "For The Night", "Mood Swings", "The Woo", "Welcome To The Party", "Got It On Me", "Hello", "Get Back", "Element"],
+        albums: ["Meet The Woo", "Meet The Woo 2", "Shoot For The Stars Aim For The Moon", "Faith"]
+    },
+    "Juice WRLD": {
+        songs: ["Lucid Dreams", "All Girls Are The Same", "Robbery", "Bandit", "Righteous", "Wishing Well", "Come & Go", "Smile", "Hate The Other Side", "Empty"],
+        albums: ["Goodbye & Good Riddance", "Death Race For Love", "Legends Never Die", "Fighting Demons"]
+    },
+    "Gunna": {
+        songs: ["Drip Too Hard", "fukumean", "pushin P", "Space Cadet", "Baby Birkin", "Sold Out Dates", "Dollaz On My Head", "YOSEMITE", "Oh Okay", "Top Off"],
+        albums: ["Drip Season 3", "Drip or Drown 2", "WUNNA", "DS4EVER", "a Gift & a Curse"]
+    },
+    "Lil Baby": {
+        songs: ["Drip Too Hard", "Yes Indeed", "Freestyle", "Woah", "The Bigger Picture", "Sum 2 Prove", "Emotionally Scarred", "Close Friends", "On Me", "In A Minute"],
+        albums: ["Harder Than Ever", "My Turn", "It's Only Me"]
+    },
     "Taylor Swift": {
         songs: ["Cruel Summer", "Anti-Hero", "Blank Space", "Shake It Off", "Lover", "Cardigan", "Willow", "August", "Style", "Karma", "Lavender Haze", "Fortnight", "I Can Do It With A Broken Heart", "Is It Over Now?", "Love Story", "You Belong With Me", "All Too Well", "Look What You Made Me Do", "Delicate", "Wildest Dreams", "Enchanted"],
         albums: ["Midnights", "1989 (Taylor's Version)", "Folklore", "Evermore", "Lover", "Reputation", "Red (Taylor's Version)", "Speak Now (Taylor's Version)", "Fearless (Taylor's Version)", "The Tortured Poets Department"]

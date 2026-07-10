@@ -1634,12 +1634,6 @@ export interface GameState {
   spotifyLatin?: ChartEntry[];
   spotifyAsia?: ChartEntry[];
   spotifyAfrica?: ChartEntry[];
-  spotifyAfrica?: ChartEntry[];
-  spotifyCanada?: ChartEntry[];
-  spotifyUK?: ChartEntry[];
-  spotifyLatin?: ChartEntry[];
-  spotifyAsia?: ChartEntry[];
-  spotifyAfrica?: ChartEntry[];
   hotPopSongs: ChartEntry[];
   biggestSalesWeekByYear?: {
     [year: number]: {

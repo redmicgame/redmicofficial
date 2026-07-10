@@ -80,11 +80,11 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
     const richContributors = Array.from(richContributorsMap.values());
 
     return (
-        <div className="fixed inset-0 bg-[#121212] z-50 overflow-y-auto text-white flex flex-col pt-12 text-center pb-20 animate-[slideUp_0.3s_ease-out]" style={{ animation: 'slideUp 0.3s ease-out forwards' }}>
+        <div className="fixed inset-0 bg-[#121212] z-50 text-white flex flex-col animate-[slideUp_0.3s_ease-out]" style={{ animation: 'slideUp 0.3s ease-out forwards' }}>
             <style dangerouslySetInnerHTML={{__html: `
                 @keyframes slideUp { 0% { transform: translateY(100%); } 100% { transform: translateY(0); } }
             `}} />
-            <header className="fixed top-0 left-0 right-0 h-14 bg-[#121212] flex items-center justify-between px-4 z-10 border-b border-white/10">
+            <header className="h-14 flex-shrink-0 bg-[#121212] flex items-center justify-between px-4 z-10 border-b border-white/10">
                 <button onClick={onBack} className="p-2">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -100,7 +100,7 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
                 </div>
             </header>
 
-            <main className="text-left px-5 pt-8">
+            <main className="flex-1 overflow-y-auto text-left px-5 pt-8 pb-20">
                 <div className="flex items-center gap-4 mb-8">
                     <img src={song.coverArt} className="w-16 h-16 sm:w-20 sm:h-20 rounded shadow-lg shadow-black/50" alt="" />
                     <div className="flex-grow min-w-0 pr-2">

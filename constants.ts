@@ -137,6 +137,9 @@ export const NPC_ARTIST_NAMES = [
     // Added for more collaboration options
     // Female Rappers
     'Latto', 'GloRilla', 'Sexyy Red', 'Coi Leray', 'Flo Milli',
+    'Charlie Puth', 'Katy Perry', 'Troye Sivan', 'ZAYN', 'Conan Gray', 'Kesha',
+    'Playboi Carti', 'Lil Uzi Vert', 'Young Thug', 'A$AP Rocky', 'Lil Yachty', 
+    'Pop Smoke', 'Juice WRLD', 'Gunna', 'Lil Baby',
     // K-Pop Artists
     'BTS', 'BLACKPINK', 'NewJeans', 'Stray Kids', 'TWICE', 'SEVENTEEN', 'LE SSERAFIM', '(G)I-DLE', 'Jungkook', 'Jennie', 'Lisa', 'aespa',
     // Latin Artists
@@ -166,6 +169,9 @@ export const NPC_ARTIST_GENRES: Record<string, string> = {
     'Future': 'Hip Hop', 'Metro Boomin': 'Hip Hop', 'Morgan Wallen': 'Country', 'Luke Combs': 'Country', 'Zach Bryan': 'Country',
     'Peso Pluma': 'Latin', 'Karol G': 'Latin', 'Shakira': 'Latin', 'Rauw Alejandro': 'Latin', 'Anitta': 'Latin',
     'Latto': 'Hip Hop', 'GloRilla': 'Hip Hop', 'Sexyy Red': 'Hip Hop', 'Coi Leray': 'Hip Hop', 'Flo Milli': 'Hip Hop',
+    'Charlie Puth': 'Pop', 'Katy Perry': 'Pop', 'Troye Sivan': 'Pop', 'ZAYN': 'Pop', 'Conan Gray': 'Pop', 'Kesha': 'Pop',
+    'Playboi Carti': 'Hip Hop', 'Lil Uzi Vert': 'Hip Hop', 'Young Thug': 'Hip Hop', 'A$AP Rocky': 'Hip Hop', 'Lil Yachty': 'Hip Hop',
+    'Pop Smoke': 'Hip Hop', 'Juice WRLD': 'Hip Hop', 'Gunna': 'Hip Hop', 'Lil Baby': 'Hip Hop',
     'BTS': 'K-Pop', 'BLACKPINK': 'K-Pop', 'NewJeans': 'K-Pop', 'Stray Kids': 'K-Pop', 'TWICE': 'K-Pop', 'SEVENTEEN': 'K-Pop', 'LE SSERAFIM': 'K-Pop', '(G)I-DLE': 'K-Pop', 'Jungkook': 'K-Pop', 'Jennie': 'K-Pop', 'Lisa': 'K-Pop', 'aespa': 'K-Pop',
     'J Balvin': 'Latin', 'Maluma': 'Latin', 'Rosalía': 'Latin', 'Feid': 'Latin', 'Myke Towers': 'Latin', 'Young Miko': 'Latin', 'Ozuna': 'Latin', 'Bizarrap': 'Latin',
     'Calvin Harris': 'Electronic', 'David Guetta': 'Electronic', 'Skrillex': 'Electronic', 'Diplo': 'Electronic', 'Zedd': 'Electronic', 'Martin Garrix': 'Electronic',
@@ -401,6 +407,21 @@ export const TALENT_AGENCIES: TalentAgency[] = [
 ];
 
 export const NPC_ARTIST_IMAGES: Record<string, string> = {
+  "Charlie Puth": "https://cdn-images.dzcdn.net/images/artist/9f38f83196c81faeab5a59f518e9cff2/250x250-000000-80-0-0.jpg",
+  "Katy Perry": "https://cdn-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg",
+  "Troye Sivan": "https://cdn-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg",
+  "ZAYN": "https://cdn-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg",
+  "Conan Gray": "https://cdn-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg",
+  "Kesha": "https://cdn-images.dzcdn.net/images/artist/08ff5f3e956e12e752945a0b74da17e0/250x250-000000-80-0-0.jpg",
+  "Playboi Carti": "https://cdn-images.dzcdn.net/images/artist/fbcdfa1a7a00f2e0be5b84d436a5f782/250x250-000000-80-0-0.jpg",
+  "Lil Uzi Vert": "https://cdn-images.dzcdn.net/images/artist/738df5b3a4a75ab280ec5e4277b960b7/250x250-000000-80-0-0.jpg",
+  "Young Thug": "https://cdn-images.dzcdn.net/images/artist/ef8c5b058095da9d10eefcd6ec800201/250x250-000000-80-0-0.jpg",
+  "A$AP Rocky": "https://cdn-images.dzcdn.net/images/artist/cf109c91f1cdb6ff8d8b9dce9ba4dfb2/250x250-000000-80-0-0.jpg",
+  "Lil Yachty": "https://cdn-images.dzcdn.net/images/artist/43fc7dcdfb847e909a96e8140db79f64/250x250-000000-80-0-0.jpg",
+  "Pop Smoke": "https://cdn-images.dzcdn.net/images/artist/a2a4c148e69d76e469d4a6e344ee4dff/250x250-000000-80-0-0.jpg",
+  "Juice WRLD": "https://cdn-images.dzcdn.net/images/artist/bd126b89de9363065b21be3e4d9b6264/250x250-000000-80-0-0.jpg",
+  "Gunna": "https://cdn-images.dzcdn.net/images/artist/e1b6f6f9479b03f0b2f7902d131ec5e9/250x250-000000-80-0-0.jpg",
+  "Lil Baby": "https://cdn-images.dzcdn.net/images/artist/488d01115de62a742880099516639c00/250x250-000000-80-0-0.jpg",
   "Taylor Swift": "https://cdn-images.dzcdn.net/images/artist/e528e270424103b527f8a27ac625563b/250x250-000000-80-0-0.jpg",
   "Ariana Grande": "https://cdn-images.dzcdn.net/images/artist/3504ffe2519090026bc359b689d22e20/250x250-000000-80-0-0.jpg",
   "Billie Eilish": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/250x250-000000-80-0-0.jpg",
