@@ -238,6 +238,7 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
   const { releases } = activeArtistData;
 
   const streamSources = useMemo(() => {
+    if (!song || !song.id) return [];
     let hash = 0;
     for (let i = 0; i < song.id.length; i++) {
         hash = song.id.charCodeAt(i) + ((hash << 5) - hash);

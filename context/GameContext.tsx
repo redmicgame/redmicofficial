@@ -4212,7 +4212,7 @@ const gameReducerInternal = (
               regStreams["US"] += (weeklyStreams - currentSum);
             }
             
-            const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0, "Africa": 0 };
+            const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 };
             const newRegionalStreams = {
               "US": (currentRegStreams["US"] || 0) + regStreams["US"],
               "Canada": (currentRegStreams["Canada"] || 0) + regStreams["Canada"],
