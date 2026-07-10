@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef } from "react";
 import { useGame, formatNumber } from "../context/GameContext";
 import { Release, Song, Artist, Group, GameDate } from "../types";
 import { PLAYLIST_PITCH_COST, NPC_ARTIST_IMAGES } from "../constants";
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import HomeIcon from "./icons/HomeIcon";
 import MusicNoteIcon from "./icons/MusicNoteIcon";
 import UserGroupIcon from "./icons/UserGroupIcon";
@@ -400,31 +399,23 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
             <h3 className="font-bold text-lg border-b border-zinc-700 pb-2 mb-2">
               Source of Streams
             </h3>
-            <div className="h-64 w-full text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={streamSources}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {streamSources.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number, name: string) => [formatNumber(value), name]}
-                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white' }}
-                    itemStyle={{ color: 'white' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex justify-center items-center py-4">
+              <div 
+                className="w-32 h-32 rounded-full relative flex items-center justify-center"
+                style={{
+                  background: `conic-gradient(${
+                    streamSources.reduce((acc, source, i) => {
+                      const start = acc.angle;
+                      const end = start + (source.percent / 100) * 360;
+                      acc.gradients.push(`${source.color} ${start}deg ${end}deg`);
+                      acc.angle = end;
+                      return acc;
+                    }, { angle: 0, gradients: [] as string[] }).gradients.join(', ')
+                  })`
+                }}
+              >
+                <div className="w-24 h-24 bg-zinc-900 rounded-full absolute inset-auto"></div>
+              </div>
             </div>
             
             <div className="space-y-2 mt-4 border-t border-zinc-700/50 pt-4">

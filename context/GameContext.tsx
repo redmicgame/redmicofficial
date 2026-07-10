@@ -6865,7 +6865,7 @@ The Government`,
           (s) => s.isReleased && s.remixOfSongId === baseSong.id,
         );
         remixes.forEach((remix) => {
-          totalWeeklyStreams += remix.lastWeekStreams; const remixReg = remix.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }; totalRegStreams["US"] += remixReg["US"] || 0; totalRegStreams["Canada"] += remixReg["Canada"] || 0; totalRegStreams["UK"] += remixReg["UK"] || 0; totalRegStreams["Latin America"] += remixReg["Latin America"] || 0; totalRegStreams["Asia"] += remixReg["Asia"] || 0; totalRegStreams["Africa"] += remixReg["Africa"] || 0;
+          totalWeeklyStreams += remix.lastWeekStreams; const remixReg = remix.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }; totalRegStreams["US"] = (totalRegStreams["US"] || 0) + (remixReg["US"] || 0); totalRegStreams["Canada"] = (totalRegStreams["Canada"] || 0) + (remixReg["Canada"] || 0); totalRegStreams["UK"] = (totalRegStreams["UK"] || 0) + (remixReg["UK"] || 0); totalRegStreams["Latin America"] = (totalRegStreams["Latin America"] || 0) + (remixReg["Latin America"] || 0); totalRegStreams["Asia"] = (totalRegStreams["Asia"] || 0) + (remixReg["Asia"] || 0); totalRegStreams["Africa"] = (totalRegStreams["Africa"] || 0) + (remixReg["Africa"] || 0);
         });
 
         let displayTitle = baseSong.title;
