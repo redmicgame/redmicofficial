@@ -41,7 +41,7 @@ export interface Artist {
   id: string;
   name: string;
   age: number;
-  country: "UK" | "US";
+  country: string;
   image: string;
   pronouns: "he/him" | "she/her" | "they/them";
   fandomName: string;
@@ -167,6 +167,22 @@ export interface Song {
   hasTweetedBillionStreams?: boolean;
   hasBillionsClubEmail?: boolean;
   hasBillionsClubPerformance?: boolean;
+  regionalStreams?: {
+    "US": number;
+    "Canada": number;
+    "UK": number;
+    "Latin America": number;
+    "Asia": number;
+    "Africa": number;
+  };
+  lastWeekRegionalStreams?: {
+    "US": number;
+    "Canada": number;
+    "UK": number;
+    "Latin America": number;
+    "Asia": number;
+    "Africa": number;
+  };
 }
 
 export type ReleaseType =
@@ -673,6 +689,7 @@ export interface ChartEntry {
   itunesPriceString?: string;
   itunesDuration?: number;
   itunesExplicit?: boolean;
+  regionalStreams?: Record<string, number>;
 }
 
 export interface AlbumChartEntry {
@@ -1401,6 +1418,14 @@ export interface ArtistData {
   hasTweetedBillionTotalStreams?: boolean;
   publicImage: number;
   popularity: number;
+  regionalPopularity?: {
+    "US": number;
+    "Canada": number;
+    "UK": number;
+    "Latin America": number;
+    "Asia": number;
+    "Africa": number;
+  };
   endorsedParty?: "democrat" | "republican";
   endorsementCountThisYear?: number;
   lastEndorsementYear?: number;
@@ -1603,6 +1628,18 @@ export interface GameState {
   albumChartHistory: ChartHistory;
   chartHistory: ChartHistory;
   spotifyGlobal: ChartEntry[];
+  spotifyUS?: ChartEntry[];
+  spotifyCanada?: ChartEntry[];
+  spotifyUK?: ChartEntry[];
+  spotifyLatin?: ChartEntry[];
+  spotifyAsia?: ChartEntry[];
+  spotifyAfrica?: ChartEntry[];
+  spotifyAfrica?: ChartEntry[];
+  spotifyCanada?: ChartEntry[];
+  spotifyUK?: ChartEntry[];
+  spotifyLatin?: ChartEntry[];
+  spotifyAsia?: ChartEntry[];
+  spotifyAfrica?: ChartEntry[];
   hotPopSongs: ChartEntry[];
   biggestSalesWeekByYear?: {
     [year: number]: {
@@ -2212,6 +2249,7 @@ export type GameAction =
   | { type: "SIGN_BRAND_DEAL"; payload: { id: string; cash: number } }
   | { type: "SIGN_VIDEO_GAME_DEAL"; payload: { id: string; cash: number } }
   | { type: "SET_POPULARITY"; payload: number }
+  | { type: "SET_REGIONAL_POPULARITY"; payload: { region: string, popularity: number } }
   | {
       type: "UPDATE_RELEASE_COVER_ART";
       payload: { releaseId: string; newCoverArt: string };

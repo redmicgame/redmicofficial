@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { GIGS, MANAGERS } from '../constants';
@@ -14,17 +14,40 @@ interface Gig {
     requirements: string;
 }
 
+const REGIONS = ["US", "Canada", "UK", "Latin America", "Asia", "Africa"] as const;
+
 const GigsView: React.FC = () => {
     const { dispatch, activeArtistData } = useGame();
+    const [selectedRegion, setSelectedRegion] = useState<string>("US");
 
     if (!activeArtistData) return null;
-    const { performedGigThisWeek, manager } = activeArtistData;
+    const { performedGigThisWeek, manager, location } = activeArtistData;
+    const playerLocation = location || "US";
 
     const handlePerform = (gig: Gig) => {
         if (performedGigThisWeek || !gig.isAvailable(activeArtistData)) return;
 
-        const cashEarned = Math.floor(Math.random() * (gig.cashRange[1] - gig.cashRange[0] + 1)) + gig.cashRange[0];
-        dispatch({ type: 'PERFORM_GIG', payload: { cash: cashEarned, hype: gig.hype } });
+        let cashEarned = Math.floor(Math.random() * (gig.cashRange[1] - gig.cashRange[0] + 1)) + gig.cashRange[0];
+        const isRemoteGig = selectedRegion !== playerLocation;
+        let flightFee = 0;
+        
+        if (isRemoteGig) {
+            flightFee = Math.floor(cashEarned * 0.25);
+            cashEarned -= flightFee;
+        }
+
+        dispatch({ 
+            type: 'PERFORM_GIG', 
+            payload: { 
+                cash: cashEarned, 
+                hype: gig.hype,
+                region: selectedRegion
+            } 
+        });
+        
+        if (isRemoteGig) {
+            alert(`You performed in ${selectedRegion}! A flight fee of $${formatNumber(flightFee)} (25%) was deducted from your earnings.`);
+        }
     };
 
     const currentManager = manager ? MANAGERS.find(m => m.id === manager.id) : null;
@@ -48,6 +71,21 @@ const GigsView: React.FC = () => {
                         You've already performed your manual gig this week. Come back next week!
                     </div>
                 )}
+                
+                <div className="bg-zinc-800 p-4 rounded-lg">
+                    <h2 className="text-xl font-bold mb-2">Select Tour Region</h2>
+                    <p className="text-sm text-zinc-400 mb-3">Performing outside your home region ({playerLocation}) will incur a 25% flight fee, but builds regional popularity.</p>
+                    <select 
+                        value={selectedRegion} 
+                        onChange={(e) => setSelectedRegion(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white"
+                    >
+                        {REGIONS.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                        ))}
+                    </select>
+                </div>
+
                 {GIGS.map(gig => {
                     const available = gig.isAvailable(activeArtistData);
                     const canPerform = available && !performedGigThisWeek;
@@ -63,6 +101,9 @@ const GigsView: React.FC = () => {
                                 </div>
                                 <div className="text-right flex-shrink-0 ml-4">
                                     <p className="font-bold text-green-400">${formatNumber(gig.cashRange[0])} - ${formatNumber(gig.cashRange[1])}</p>
+                                    {selectedRegion !== playerLocation && (
+                                        <p className="text-xs text-red-400 mb-1">Flight: -25%</p>
+                                    )}
                                     <p className="text-sm text-red-400">+{gig.hype} Hype</p>
                                 </div>
                             </div>

@@ -218,8 +218,9 @@ const HomeTab: React.FC = () => {
   } = activeArtistData;
 
   const regionalScores = useMemo(() => {
+    if (activeArtistData.regionalPopularity && Object.keys(activeArtistData.regionalPopularity).length > 0) { return Object.entries(activeArtistData.regionalPopularity).map(([k, v]) => ({ region: k, score: v as number })); }
     const base = popularity;
-    const regions = ["US", "Canada", "Latin America", "Asia", "UK"];
+    const regions = ["US", "Canada", "Latin America", "Asia", "UK", "Africa"];
     const scores: { region: string; score: number }[] = [];
     let scoreSum = 0;
 

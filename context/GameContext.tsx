@@ -1158,6 +1158,12 @@ const initialState: GameState = {
   albumChartHistory: {},
   chartHistory: {},
   spotifyGlobal: [],
+  spotifyUS: [],
+  spotifyCanada: [],
+  spotifyUK: [],
+  spotifyLatin: [],
+  spotifyAsia: [],
+  spotifyAfrica: [],
   hotPopSongs: [],
   hotRapRnb: [],
   electronicChart: [],
@@ -2939,6 +2945,27 @@ const gameReducerInternal = (
               // Add income to artist
               artistData.money += revenue;
 
+              // Boost regional popularity
+              if (!artistData.regionalPopularity) {
+                  artistData.regionalPopularity = {
+                      "US": artistData.popularity || 0,
+                      "Canada": 0,
+                      "UK": 0,
+                      "Latin America": 0,
+                      "Asia": 0,
+                      "Africa": 0
+                  };
+              }
+              const vReg = venue.region || "North America";
+              let gameReg = "US";
+              if (vReg === "Europe") gameReg = "UK";
+              else if (vReg === "South America" || venue.city === "Mexico City") gameReg = "Latin America";
+              else if (vReg === "Asia" || vReg === "Middle East" || vReg === "Oceania") gameReg = "Asia";
+              else if (vReg === "Africa") gameReg = "Africa";
+              else if (venue.city === "Toronto" || venue.city === "Montreal" || venue.city === "Vancouver") gameReg = "Canada";
+              
+              artistData.regionalPopularity[gameReg] = Math.min(100, (artistData.regionalPopularity[gameReg] || 0) + 1);
+
               // Add hype for successful shows
               if (updatedVenue.soldOut) {
                 artistData.hype = Math.min(
@@ -4144,6 +4171,57 @@ const gameReducerInternal = (
               (weeklyStreams * (1 - effectiveStreamingShare)) / 150,
             );
 
+            const regPop = artistData.regionalPopularity || {
+              "US": artistData.popularity || 0,
+              "Canada": 0,
+              "UK": 0,
+              "Latin America": 0,
+              "Asia": 0,
+              "Africa": 0
+            };
+            
+            let wUS = (regPop["US"] || 0);
+            let wCanada = (regPop["Canada"] || 0);
+            let wUK = (regPop["UK"] || 0);
+            let wLatin = (regPop["Latin America"] || 0);
+            let wAsia = (regPop["Asia"] || 0);
+            let wAfrica = (regPop["Africa"] || 0);
+            
+            const gLower = (song.genre || "").toLowerCase();
+            if (gLower.includes("country")) wUS *= 2.5;
+            if (gLower.includes("k-pop") || gLower.includes("kpop") || gLower.includes("j-pop")) wAsia *= 2.5;
+            if (gLower.includes("reggae") || gLower.includes("afrobeat")) wAfrica *= 2.5;
+            if (gLower.includes("latin") || gLower.includes("reggaeton")) wLatin *= 2.5;
+            if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) wUK *= 2.0;
+            
+            let totalPop = wUS + wCanada + wUK + wLatin + wAsia + wAfrica;
+            if (totalPop === 0) {
+              totalPop = 1;
+              wUS = 1;
+            }
+            const regStreams = {
+              "US": Math.floor(weeklyStreams * (wUS / totalPop)),
+              "Canada": Math.floor(weeklyStreams * (wCanada / totalPop)),
+              "UK": Math.floor(weeklyStreams * (wUK / totalPop)),
+              "Latin America": Math.floor(weeklyStreams * (wLatin / totalPop)),
+              "Asia": Math.floor(weeklyStreams * (wAsia / totalPop)),
+              "Africa": Math.floor(weeklyStreams * (wAfrica / totalPop)),
+            };
+            const currentSum = regStreams["US"] + regStreams["Canada"] + regStreams["UK"] + regStreams["Latin America"] + regStreams["Asia"] + regStreams["Africa"];
+            if (currentSum < weeklyStreams) {
+              regStreams["US"] += (weeklyStreams - currentSum);
+            }
+            
+            const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0, "Africa": 0 };
+            const newRegionalStreams = {
+              "US": (currentRegStreams["US"] || 0) + regStreams["US"],
+              "Canada": (currentRegStreams["Canada"] || 0) + regStreams["Canada"],
+              "UK": (currentRegStreams["UK"] || 0) + regStreams["UK"],
+              "Latin America": (currentRegStreams["Latin America"] || 0) + regStreams["Latin America"],
+              "Asia": (currentRegStreams["Asia"] || 0) + regStreams["Asia"],
+              "Africa": (currentRegStreams["Africa"] || 0) + regStreams["Africa"],
+            };
+
             return {
               ...song,
               streams: (song.streams || 0) + actualStreamsThisWeek,
@@ -4152,6 +4230,8 @@ const gameReducerInternal = (
               lastWeekStreams: weeklyStreams,
               actualPrevWeekStreams: song.actualLastWeekStreams || 0,
               actualLastWeekStreams: actualStreamsThisWeek,
+              regionalStreams: newRegionalStreams,
+              lastWeekRegionalStreams: regStreams,
               ...firstWeekStreamsData,
               playlistBoostWeeks: newPlaylistBoostWeeks,
               purchasedPlaylists: newPurchasedPlaylists,
@@ -4168,12 +4248,12 @@ const gameReducerInternal = (
                     playerCut) + generatedNet,
             };
           }
-
           if (song.isTakenDown) {
             return {
               ...song,
               prevWeekStreams: song.lastWeekStreams || 0,
               lastWeekStreams: 0,
+              lastWeekRegionalStreams: { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 },
             };
           }
           return song;
@@ -6780,12 +6860,12 @@ The Government`,
           (a) => a.id === baseSong.artistId,
         );
 
-        let totalWeeklyStreams = baseSong.lastWeekStreams;
+        let totalWeeklyStreams = baseSong.lastWeekStreams; let totalRegStreams = { ...(baseSong.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }) };
         const remixes = allPlayerSongsFlat.filter(
           (s) => s.isReleased && s.remixOfSongId === baseSong.id,
         );
         remixes.forEach((remix) => {
-          totalWeeklyStreams += remix.lastWeekStreams;
+          totalWeeklyStreams += remix.lastWeekStreams; const remixReg = remix.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }; totalRegStreams["US"] += remixReg["US"] || 0; totalRegStreams["Canada"] += remixReg["Canada"] || 0; totalRegStreams["UK"] += remixReg["UK"] || 0; totalRegStreams["Latin America"] += remixReg["Latin America"] || 0; totalRegStreams["Asia"] += remixReg["Asia"] || 0; totalRegStreams["Africa"] += remixReg["Africa"] || 0;
         });
 
         let displayTitle = baseSong.title;
@@ -6816,7 +6896,7 @@ The Government`,
         }
 
         return {
-          uniqueId: baseSong.id,
+          uniqueId: baseSong.id, regionalStreams: totalRegStreams,
           title: displayTitle,
           artist: displayArtist,
           weeklyStreams: totalWeeklyStreams,
@@ -6859,11 +6939,43 @@ The Government`,
 
       const npcChartContenders = newNpcsWithReleases.map((npc) => {
         const weeklyStreams = npcSongStreamMap.get(npc.uniqueId) || 500000;
+        let wUS = 40;
+        let wCanada = 10;
+        let wUK = 15;
+        let wLatin = 15;
+        let wAsia = 15;
+        let wAfrica = 5;
+
+        const gLower = (npc.genre || "").toLowerCase();
+        if (gLower.includes("country")) wUS *= 2.5;
+        if (gLower.includes("k-pop") || gLower.includes("kpop") || gLower.includes("j-pop")) wAsia *= 2.5;
+        if (gLower.includes("reggae") || gLower.includes("afrobeat")) wAfrica *= 2.5;
+        if (gLower.includes("latin") || gLower.includes("reggaeton")) wLatin *= 2.5;
+        if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) wUK *= 2.0;
+
+        let totalWeight = wUS + wCanada + wUK + wLatin + wAsia + wAfrica;
+        if (totalWeight === 0) totalWeight = 1;
+
+        const regStreams = {
+            "US": Math.floor(weeklyStreams * (wUS / totalWeight)),
+            "Canada": Math.floor(weeklyStreams * (wCanada / totalWeight)),
+            "UK": Math.floor(weeklyStreams * (wUK / totalWeight)),
+            "Latin America": Math.floor(weeklyStreams * (wLatin / totalWeight)),
+            "Asia": Math.floor(weeklyStreams * (wAsia / totalWeight)),
+            "Africa": Math.floor(weeklyStreams * (wAfrica / totalWeight)),
+        };
+
+        const currentSum = regStreams["US"] + regStreams["Canada"] + regStreams["UK"] + regStreams["Latin America"] + regStreams["Asia"] + regStreams["Africa"];
+        if (currentSum < weeklyStreams) {
+            regStreams["US"] += (weeklyStreams - currentSum);
+        }
+
         return {
           uniqueId: npc.uniqueId,
           title: npc.title,
           artist: npc.artist,
           weeklyStreams,
+          regionalStreams: regStreams,
           isPlayerSong: false,
           coverArt:
             npc.coverArt ||
@@ -7393,10 +7505,6 @@ The Government`,
       }
 
       const spotifyLocalTop = allContenders.slice(0, 100);
-      const newSpotifyGlobal: ChartEntry[] = [];
-      const prevSpotifyMap = new Map(
-        state.spotifyGlobal.map((entry) => [entry.uniqueId, entry.rank]),
-      );
       let newEntriesCount = 0;
       const eraConfigTmpSp = getEraConfiguration(state.date.year);
       const streamMultiplier = Math.max(
@@ -7404,26 +7512,49 @@ The Government`,
         eraConfigTmpSp.marketShare.streaming,
       );
 
-      spotifyLocalTop.forEach((song, index) => {
-        const rank = index + 1;
-        const lastWeekRank = prevSpotifyMap.get(song.uniqueId) ?? null;
-        if (lastWeekRank === null) newEntriesCount++;
-        const actualStreams = Math.floor(song.weeklyStreams * streamMultiplier);
+      const generateSpotifyChart = (region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa", prevChart: ChartEntry[]) => {
+          const sorted = [...allContenders].sort((a, b) => {
+              const aStreams = region === "Global" ? a.weeklyStreams : (a.regionalStreams?.[region] || 0);
+              const bStreams = region === "Global" ? b.weeklyStreams : (b.regionalStreams?.[region] || 0);
+              return bStreams - aStreams;
+          }).slice(0, 100);
 
-        newSpotifyGlobal.push({
-          rank: rank,
-          lastWeek: lastWeekRank,
-          peak: newChartHistory[song.uniqueId]?.peak ?? rank,
-          weeksOnChart: newChartHistory[song.uniqueId]?.weeksOnChart ?? 1,
-          title: song.title,
-          artist: song.artist,
-          coverArt: song.coverArt,
-          isPlayerSong: song.isPlayerSong,
-          songId: song.songId,
-          uniqueId: song.uniqueId,
-          weeklyStreams: actualStreams,
-        });
-      });
+          const pMap = new Map((prevChart || []).map((entry) => [entry.uniqueId, entry.rank]));
+          const chart: ChartEntry[] = [];
+          
+          sorted.forEach((song, index) => {
+            const rank = index + 1;
+            const lastWeekRank = pMap.get(song.uniqueId) ?? null;
+            if (region === "Global" && lastWeekRank === null) newEntriesCount++;
+            
+            const rawStreams = region === "Global" ? song.weeklyStreams : (song.regionalStreams?.[region] || 0);
+            const actualStreams = Math.floor(rawStreams * streamMultiplier);
+            
+            chart.push({
+              rank: rank,
+              lastWeek: lastWeekRank,
+              peak: newChartHistory[song.uniqueId]?.peak ?? rank,
+              weeksOnChart: newChartHistory[song.uniqueId]?.weeksOnChart ?? 1,
+              title: song.title,
+              artist: song.artist,
+              coverArt: song.coverArt,
+              isPlayerSong: song.isPlayerSong,
+              songId: song.songId,
+              uniqueId: song.uniqueId,
+              weeklyStreams: actualStreams,
+              regionalStreams: song.regionalStreams,
+            });
+          });
+          return chart;
+      };
+
+      const newSpotifyGlobal = generateSpotifyChart("Global", state.spotifyGlobal);
+      const newSpotifyUS = generateSpotifyChart("US", (state as any).spotifyUS || []);
+      const newSpotifyCanada = generateSpotifyChart("Canada", (state as any).spotifyCanada || []);
+      const newSpotifyUK = generateSpotifyChart("UK", (state as any).spotifyUK || []);
+      const newSpotifyLatin = generateSpotifyChart("Latin America", (state as any).spotifyLatin || []);
+      const newSpotifyAsia = generateSpotifyChart("Asia", (state as any).spotifyAsia || []);
+      const newSpotifyAfrica = generateSpotifyChart("Africa", (state as any).spotifyAfrica || []);
 
       // --- GENRE CHART CALCULATION ---
       const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } =
@@ -9953,6 +10084,12 @@ The Government`,
           chartHistory: newChartHistory,
           albumChartHistory: newAlbumChartHistory,
           spotifyGlobal: newSpotifyGlobal,
+          spotifyUS: newSpotifyUS,
+          spotifyCanada: newSpotifyCanada,
+          spotifyUK: newSpotifyUK,
+          spotifyLatin: newSpotifyLatin,
+          spotifyAsia: newSpotifyAsia,
+          spotifyAfrica: newSpotifyAfrica,
           radioOverallChart,
           radioUrbanChart,
           radioPopChart,
@@ -10038,6 +10175,12 @@ The Government`,
         chartHistory: newChartHistory,
         albumChartHistory: newAlbumChartHistory,
         spotifyGlobal: newSpotifyGlobal,
+        spotifyUS: newSpotifyUS,
+        spotifyCanada: newSpotifyCanada,
+        spotifyUK: newSpotifyUK,
+        spotifyLatin: newSpotifyLatin,
+        spotifyAsia: newSpotifyAsia,
+        spotifyAfrica: newSpotifyAfrica,
         radioOverallChart,
         radioUrbanChart,
         radioPopChart,
@@ -11018,6 +11161,24 @@ The Government`,
               getHypeCap(activeData),
               activeData.hype + action.payload.hype,
             ),
+            regionalPopularity: {
+              ...(activeData.regionalPopularity || {
+                "US": activeData.popularity || 0,
+                "Canada": 0,
+                "UK": 0,
+                "Latin America": 0,
+                "Asia": 0,
+                "Africa": 0
+              }),
+              [action.payload.region || "US"]: Math.min(100, ((activeData.regionalPopularity || {
+                "US": activeData.popularity || 0,
+                "Canada": 0,
+                "UK": 0,
+                "Latin America": 0,
+                "Asia": 0,
+                "Africa": 0
+              })[action.payload.region || "US"] || 0) + 1)
+            },
             performedGigThisWeek: true,
           },
         },
@@ -15418,6 +15579,33 @@ The Government`,
         },
       };
     }
+    case "SET_REGIONAL_POPULARITY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.redMicPro.unlocked) return state;
+
+      const updatedData: ArtistData = {
+        ...activeData,
+        regionalPopularity: {
+          ...(activeData.regionalPopularity || {
+            "US": activeData.popularity || 0,
+            "Canada": 0,
+            "UK": 0,
+            "Latin America": 0,
+            "Asia": 0,
+            "Africa": 0
+          }),
+          [action.payload.region]: Math.max(0, Math.min(100, action.payload.popularity))
+        }
+      };
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: updatedData,
+        },
+      };
+    }
     case "SET_POPULARITY": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -16263,6 +16451,12 @@ The Government`,
         ),
         billboardHot100: mapChartEntries(state.billboardHot100),
         spotifyGlobal: mapChartEntries(state.spotifyGlobal),
+        spotifyUS: mapChartEntries(state.spotifyUS || []), 
+        spotifyCanada: mapChartEntries(state.spotifyCanada || []),
+        spotifyUK: mapChartEntries(state.spotifyUK || []),
+        spotifyLatin: mapChartEntries(state.spotifyLatin || []),
+        spotifyAsia: mapChartEntries(state.spotifyAsia || []),
+        spotifyAfrica: mapChartEntries(state.spotifyAfrica || []),
         hotPopSongs: mapChartEntries(state.hotPopSongs || []),
         hotRapRnb: mapChartEntries(state.hotRapRnb || []),
         electronicChart: mapChartEntries(state.electronicChart || []),

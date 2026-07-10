@@ -302,6 +302,23 @@ const RedMicProDashboardView: React.FC = () => {
                         />
                         <button onClick={() => dispatch({ type: 'SET_POPULARITY', payload: newPopularity })} className="bg-zinc-600 font-bold px-4 rounded-md">Set</button>
                     </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-zinc-700 space-y-3">
+                        <h3 className="text-md font-bold text-zinc-300">Edit Regional Popularity</h3>
+                        {(['US', 'Canada', 'UK', 'Latin America', 'Asia', 'Africa'] as const).map(region => (
+                            <div key={region} className="flex justify-between items-center gap-2">
+                                <span className="w-24 text-sm text-zinc-400">{region}</span>
+                                <input 
+                                    type="number" 
+                                    value={activeArtistData?.regionalPopularity?.[region] ?? newPopularity ?? 0}
+                                    onChange={(e) => dispatch({ type: 'SET_REGIONAL_POPULARITY', payload: { region, popularity: parseInt(e.target.value) || 0 }})}
+                                    min="1" 
+                                    max="100" 
+                                    className="w-20 bg-zinc-700 p-1 text-sm rounded-md text-center" 
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
                 
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">

@@ -19,7 +19,7 @@ const StartScreen: React.FC = () => {
     // Solo state
     const [soloName, setSoloName] = useState('');
     const [soloAge, setSoloAge] = useState(18);
-    const [soloCountry, setSoloCountry] = useState<'UK' | 'US'>('US');
+    const [soloCountry, setSoloCountry] = useState<string>('US');
     const [soloImage, setSoloImage] = useState<string | null>(null);
     const [soloFandomName, setSoloFandomName] = useState('');
     const [soloPronouns, setSoloPronouns] = useState<'he/him' | 'she/her' | 'they/them'>('they/them');
@@ -325,9 +325,13 @@ const StartScreen: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label htmlFor="country" className="block text-sm font-medium text-zinc-300">Country</label>
-                                        <select id="country" value={soloCountry} onChange={e => setSoloCountry(e.target.value as 'UK' | 'US')} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                            <option>US</option>
-                                            <option>UK</option>
+                                        <select id="country" value={soloCountry} onChange={e => setSoloCountry(e.target.value as any)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                            <option value="US">US</option>
+                                            <option value="UK">UK</option>
+                                            <option value="Canada">Canada</option>
+                                            <option value="Latin America">Latin America</option>
+                                            <option value="Asia">Asia</option>
+                                            <option value="Africa">Africa</option>
                                         </select>
                                     </div>
                                 </div>

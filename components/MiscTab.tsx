@@ -522,6 +522,7 @@ const MiscTab: React.FC = () => {
                             <option value="UK">UK</option>
                             <option value="Asia">Asia</option>
                             <option value="Latin America">Latin America</option>
+                            <option value="Africa">Africa</option>
                         </select>
                     </div>
                     <div className="flex items-center justify-between mb-4">

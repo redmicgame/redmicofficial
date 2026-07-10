@@ -54,26 +54,27 @@ const ChartRow: React.FC<{ entry: ChartEntry }> = ({ entry }) => {
 
 const SpotifyTopSongsView: React.FC = () => {
     const { gameState, dispatch } = useGame();
-    const { spotifyGlobal = [], date } = gameState;
-    const [region, setRegion] = React.useState<'Global' | 'USA'>('Global');
+    const { spotifyGlobal = [], spotifyUS = [], spotifyCanada = [], spotifyUK = [], spotifyLatin = [], spotifyAsia = [], spotifyAfrica = [], date } = gameState as any;
+    const [region, setRegion] = React.useState<'Global' | 'US' | 'Canada' | 'UK' | 'Latin America' | 'Asia' | 'Africa'>('Global');
 
     const getWeekDate = (d: { week: number; year: number; }) => {
         const dateObj = new Date(d.year, 0, (d.week - 1) * 7 + 1);
         return `Week of ${dateObj.toLocaleString('en-US', { month: 'short' })} ${dateObj.getDate()}`;
     };
 
-    const highestNewEntry = spotifyGlobal.find(s => s.lastWeek === null && s.weeksOnChart === 1);
-
-    const usaMultiplier = 0.62; // roughly 38% less than global
-    
-    // Derived USA chart
     const currentChart = React.useMemo(() => {
-        if (region === 'Global') return spotifyGlobal;
-        return spotifyGlobal.map(entry => ({
-            ...entry,
-            weeklyStreams: Math.floor(entry.weeklyStreams * usaMultiplier)
-        }));
-    }, [spotifyGlobal, region]);
+        switch(region) {
+            case 'US': return spotifyUS;
+            case 'Canada': return spotifyCanada;
+            case 'UK': return spotifyUK;
+            case 'Latin America': return spotifyLatin;
+            case 'Asia': return spotifyAsia;
+            case 'Africa': return spotifyAfrica;
+            default: return spotifyGlobal;
+        }
+    }, [spotifyGlobal, spotifyUS, spotifyCanada, spotifyUK, spotifyLatin, spotifyAsia, spotifyAfrica, region]);
+    
+    const highestNewEntry = currentChart.find((s: ChartEntry) => s.lastWeek === null && s.weeksOnChart === 1);
 
     return (
         <div className="bg-[#121212] h-full overflow-y-auto text-white pb-24">
@@ -84,11 +85,16 @@ const SpotifyTopSongsView: React.FC = () => {
                 </div>
                 <select 
                     value={region}
-                    onChange={(e) => setRegion(e.target.value as 'Global' | 'USA')}
-                    className="bg-transparent border border-zinc-600 rounded-full px-3 py-1 text-sm font-semibold appearance-none outline-none cursor-pointer"
+                    onChange={(e) => setRegion(e.target.value as any)}
+                    className="bg-zinc-800 text-white border border-zinc-600 rounded-full px-3 py-1 text-sm font-semibold outline-none cursor-pointer"
                 >
                     <option value="Global">Global</option>
-                    <option value="USA">USA</option>
+                    <option value="US">US</option>
+                    <option value="Canada">Canada</option>
+                    <option value="UK">UK</option>
+                    <option value="Latin America">Latin America</option>
+                    <option value="Asia">Asia</option>
+                    <option value="Africa">Africa</option>
                 </select>
             </header>
 

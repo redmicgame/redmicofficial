@@ -353,6 +353,30 @@ const S4ASongDetailView: React.FC<{ song: Song; onBack: () => void }> = ({
             </div>
           </div>
 
+          <div className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-700/50 text-left space-y-3 mb-6">
+            <h3 className="font-bold text-lg border-b border-zinc-700 pb-2 mb-2 flex justify-between items-center">
+              <span>Regional Streams</span>
+              <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full">All-Time</span>
+            </h3>
+            
+            {(song.regionalStreams && Object.keys(song.regionalStreams).length > 0) ? (
+                <>
+                {Object.entries(song.regionalStreams).map(([region, regionStreams]) => (
+                    <div key={region} className="flex justify-between items-center">
+                      <span className="text-zinc-300 font-medium">{region}</span>
+                      <span className="font-bold text-white">
+                        {formatNumber(regionStreams as number)}
+                      </span>
+                    </div>
+                ))}
+                </>
+            ) : (
+                <div className="text-zinc-500 text-sm italic text-center py-2">
+                    Not enough data
+                </div>
+            )}
+          </div>
+
           <button
             onClick={() => setIsCanvasModalOpen(true)}
             className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 px-4 rounded-full flex items-center justify-center gap-2 transition-colors mb-4 border border-zinc-700"

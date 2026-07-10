@@ -238,7 +238,7 @@ const SpotifyChartView: React.FC = () => {
                 {topSong && (
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'spotifyTopSongs'})} className="w-full bg-[#a03fec] p-4 rounded-lg text-left">
                         <p className="font-bold text-lg">Weekly Top Songs</p>
-                        <p>Global</p>
+                        <p>Global & Regional</p>
                         <div className="mt-4 flex items-center gap-3">
                             <img src={topSong.coverArt} className="w-16 h-16 rounded-md" />
                             <div>
