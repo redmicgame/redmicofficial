@@ -360,7 +360,7 @@ const PromoteView: React.FC = () => {
                 message="Are you sure you want to cancel this campaign? It will stop at the end of the week."
                 confirmText="Cancel Campaign"
             />
-            <div className="h-screen w-full bg-zinc-900 flex flex-col">
+            <div className="h-full w-full bg-zinc-900 flex flex-col">
                 <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
                         <ArrowLeftIcon className="w-6 h-6" />

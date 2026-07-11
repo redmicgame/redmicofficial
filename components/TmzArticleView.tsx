@@ -23,7 +23,7 @@ const TmzArticleView: React.FC = () => {
     };
 
     return (
-        <div className="bg-white text-black min-h-screen">
+        <div className="bg-white text-black min-h-full">
             <header className="flex items-center justify-between p-4 border-b border-gray-200">
                 <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <ArrowLeftIcon className="w-6 h-6 " />

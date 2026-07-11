@@ -62,7 +62,7 @@ const GrammysView: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-[#121212] text-white flex flex-col overflow-hidden">
+        <div className="h-full w-full bg-[#121212] text-white flex flex-col overflow-hidden">
             <div className="relative h-64 flex-shrink-0 cursor-pointer group" onClick={handleBannerClick}>
                 <img src={grammyBanner || "https://i.imgur.com/uM0fGPh.jpg"} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" alt="Grammy background"/>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />

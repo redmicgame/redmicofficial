@@ -11,6 +11,9 @@ import StudioView from './components/StudioView';
 import ReleaseView from './components/ReleaseView';
 import PitchforkView from './components/PitchforkView';
 import YouTubeView from './components/YouTubeView';
+import MTVView from './components/MTVView';
+import CreateMagazineInterviewView from './components/CreateMagazineInterviewView';
+import CreateTvInterviewView from './components/CreateTvInterviewView';
 import CreateVideoView from './components/CreateVideoView';
 import YouTubeStoreView from './components/YouTubeStoreView';
 import InboxView from './components/InboxView';
@@ -147,6 +150,8 @@ const AppContent: React.FC = () => {
                 return <PitchforkView />;
             case 'youtube':
                 return <YouTubeView />;
+            case 'mtv':
+                return <MTVView />;
             case 'youtubeVideoDetail':
                 return <YouTubeVideoDetailView />;
             case 'createVideo':

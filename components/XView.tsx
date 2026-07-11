@@ -1973,7 +1973,7 @@ const XView: React.FC = () => {
   };
 
   return (
-    <div className="bg-black text-white h-screen flex flex-col pb-14">
+    <div className="bg-black text-white h-full flex flex-col pb-14">
       {showPremiumModal && (
         <XPremiumModal onClose={() => setShowPremiumModal(false)} />
       )}

@@ -53,7 +53,7 @@ const YouTubeStudioView: React.FC = () => {
     }
 
     return (
-        <div className="bg-[#0f0f0f] text-white min-h-screen pb-16">
+        <div className="bg-[#0f0f0f] text-white min-h-full pb-16">
              <header className="p-4 flex flex-col gap-2 sticky top-0 bg-[#0f0f0f]/95 backdrop-blur-sm z-10 border-b border-white/10">
                 <div className="flex items-center gap-4">
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'youtube'})} className="p-2 rounded-full hover:bg-white/10">

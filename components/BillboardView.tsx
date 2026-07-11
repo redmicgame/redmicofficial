@@ -108,11 +108,15 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">PURE SALES</p>
                             <p className="text-lg font-black text-black">{entry.weeklyPureSales || entry.weeklySales > 0 ? formatNumber(Math.floor(entry.weeklyPureSales || entry.weeklySales)) : '0'}</p>
                         </div>
-                        <div className="w-px h-8 bg-zinc-300"></div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMING EQUIVALENT (SES)</p>
-                            <p className="text-lg font-black text-black">{formatNumber(entry.weeklySES || 0)}</p>
-                        </div>
+                        {gameState.date.year >= 2008 && (
+                            <>
+                                <div className="w-px h-8 bg-zinc-300"></div>
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMING EQUIVALENT (SES)</p>
+                                    <p className="text-lg font-black text-black">{formatNumber(entry.weeklySES || 0)}</p>
+                                </div>
+                            </>
+                        )}
                         <div className="w-px h-8 bg-zinc-300"></div>
                         <div className="text-center">
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">TOTAL SPS</p>
@@ -130,11 +134,15 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
                             <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
                         </div>
-                        <div className="w-px h-8 bg-zinc-300"></div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMS</p>
-                            <p className="text-lg font-black text-black">{formatNumber(weeklyStreams || 0)}</p>
-                        </div>
+                        {gameState.date.year >= 2008 && (
+                            <>
+                                <div className="w-px h-8 bg-zinc-300"></div>
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMS</p>
+                                    <p className="text-lg font-black text-black">{formatNumber(weeklyStreams || 0)}</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
@@ -171,7 +179,7 @@ const BillboardView: React.FC = () => {
     const currentChart = chartsData[selectedChart];
 
     return (
-        <div className="bg-[#e4e4e4] h-screen font-sans relative pb-24 text-black overflow-y-auto">
+        <div className="bg-[#e4e4e4] h-full font-sans relative pb-24 text-black overflow-y-auto">
             <header className="bg-white">
                 <div className="flex items-center justify-between p-4 border-b-4 border-black relative">
                     <button 

@@ -122,7 +122,7 @@ const SpotifyAlbumCountdownView: React.FC = () => {
   }
 
   return (
-    <div className="h-screen w-full bg-black text-white overflow-y-auto pb-20">
+    <div className="h-full w-full bg-black text-white overflow-y-auto pb-20">
       <header className="px-4 py-3 sticky top-0 bg-black/80 backdrop-blur-md z-10 flex items-center gap-4 border-b border-zinc-900 shadow-xl">
         <button
           onClick={() => dispatch({ type: "CHANGE_VIEW", payload: "spotify" })}

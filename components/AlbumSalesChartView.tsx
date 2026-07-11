@@ -95,7 +95,7 @@ const AlbumSalesChartView: React.FC = () => {
 
 
     return (
-        <div className="min-h-screen w-full bg-white text-black font-sans relative overflow-x-auto">
+        <div className="min-h-full w-full bg-white text-black font-sans relative overflow-x-auto">
             <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'catalog' })} className="absolute top-4 left-4 z-20 p-2 bg-black/10 rounded-full hover:bg-black/20">
                 <ArrowLeftIcon className="w-6 h-6 text-black" />
             </button>

@@ -27,7 +27,7 @@ const AmaRedCarpetView: React.FC = () => {
     };
     
     return (
-        <div className="h-screen w-full bg-zinc-900 flex flex-col">
+        <div className="h-full w-full bg-zinc-900 flex flex-col">
              <header className="p-4 flex items-center gap-4 sticky top-0 bg-red-900/80 backdrop-blur-sm z-10 border-b border-red-700/50">
                 <button onClick={() => dispatch({type: 'DECLINE_AMA_RED_CARPET', payload: {emailId: activeAmaRedCarpetOffer.emailId}})} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />

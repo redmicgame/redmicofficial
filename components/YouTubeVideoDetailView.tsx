@@ -356,7 +356,7 @@ const YouTubeVideoDetailView: React.FC = () => {
 
     if (!video) {
         return (
-            <div className="bg-[#0f0f0f] text-white min-h-screen p-4">
+            <div className="bg-[#0f0f0f] text-white min-h-full p-4">
                 <p>Video not found.</p>
                 <button onClick={handleBack} className="mt-4 text-red-500">Back to YouTube</button>
             </div>
@@ -382,7 +382,7 @@ const YouTubeVideoDetailView: React.FC = () => {
     };
 
     return (
-        <div className="bg-[#0f0f0f] text-white min-h-screen">
+        <div className="bg-[#0f0f0f] text-white min-h-full">
             <div className="w-full aspect-video bg-black flex items-center justify-center relative">
                 <img src={video.thumbnail} alt={video.title} className="w-full h-full object-contain"/>
                  <button onClick={handleBack} className="absolute top-4 left-4 z-20 p-2 bg-black/50 rounded-full">

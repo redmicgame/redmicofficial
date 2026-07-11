@@ -83,7 +83,7 @@ const DatingView: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-zinc-900 flex flex-col text-white">
+        <div className="h-full w-full bg-zinc-900 flex flex-col text-white">
             <header className="p-4 flex items-center gap-4 flex-shrink-0 border-b border-zinc-800">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'misc' })} className="p-2 rounded-full hover:bg-zinc-800">
                     <ArrowLeftIcon className="w-6 h-6" />

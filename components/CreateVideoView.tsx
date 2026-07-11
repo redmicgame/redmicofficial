@@ -140,13 +140,13 @@ const CreateVideoView: React.FC = () => {
         };
 
         dispatch({ type: 'CREATE_VIDEO', payload: { video: newVideo, cost } });
-        dispatch({ type: 'CHANGE_VIEW', payload: 'youtube' });
+        dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
     
     return (
-        <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
+        <div className="h-full w-full bg-zinc-900 overflow-y-auto">
             <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
-                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'youtube'})} className="p-2 rounded-full hover:bg-white/10">
+                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
                 <h1 className="text-2xl font-bold">Create Video</h1>

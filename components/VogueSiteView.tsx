@@ -42,7 +42,7 @@ export const VogueSiteView: React.FC<{ initialArticle?: any, onClose: () => void
     }, [initialArticle]);
 
     return (
-        <div className="bg-[#faf9f6] text-zinc-900 min-h-screen font-serif relative pb-16">
+        <div className="bg-[#faf9f6] text-zinc-900 min-h-full font-serif relative pb-16">
             {/* Nav */}
             <header className="px-4 py-6 border-b border-zinc-200 sticky top-0 bg-[#faf9f6]/95 backdrop-blur z-20 w-full flex items-center justify-between">
                 <button onClick={onClose} className="p-2 text-zinc-600 hover:text-black transition-colors rounded-full hover:bg-zinc-200">

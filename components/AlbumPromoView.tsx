@@ -25,7 +25,7 @@ const AlbumPromoView: React.FC = () => {
         return submission.release.songIds.map(id => songs.find(s => s.id === id)).filter((s): s is Song => !!s);
     }, [submission, songs]);
 
-    const handleAction = (actionType: 'countdown' | 'genius' | 'fallon') => {
+    const handleAction = (actionType: 'countdown' | 'genius' | 'fallon' | 'magazine' | 'tv_interview') => {
         if (!submission) return;
 
         switch (actionType) {
@@ -58,7 +58,7 @@ const AlbumPromoView: React.FC = () => {
     const budgetPercentage = (spent / budget) * 100;
 
     return (
-        <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
+        <div className="h-full w-full bg-zinc-900 overflow-y-auto">
             <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
@@ -101,23 +101,65 @@ const AlbumPromoView: React.FC = () => {
                         </button>
                     </div>
 
-                     {/* Genius & Fallon Promos */}
-                    {['genius', 'fallon'].map(type => {
+
+                    {/* Dynamic Promos */}
+                    {[
+                        ...(date.year >= 2009 ? ['genius'] : []),
+                        ...(date.year >= 2014 ? ['fallon'] : (date.year >= 1968 ? ['tv_interview'] : [])),
+                        'magazine'
+                    ].map(type => {
                         const isGenius = type === 'genius';
-                        const cost = isGenius ? 150000 : 500000;
-                        const requestedSongId = isGenius ? submission.geniusInterviewRequestedForSongId : submission.fallonPerformanceRequestedForSongId;
+                        const isMagazine = type === 'magazine';
+                        const isFallon = type === 'fallon';
+                        const isTv = type === 'tv_interview';
+                        
+                        let cost = 50000;
+                        let title = "Magazine Interview";
+                        let desc = "An in-depth feature discussing your new music.";
+                        let requestedSongId = submission.magazineInterviewRequestedForSongId;
+                        let icon = <span className="font-serif font-black text-2xl px-2 italic">M</span>;
+                        let actionType = 'magazine';
+                        let colorClass = 'bg-amber-100 text-amber-900 border-amber-500';
+                        
+                        if (isGenius) {
+                            cost = 150000;
+                            title = "Genius 'Verified'";
+                            desc = "An official lyric breakdown video.";
+                            requestedSongId = submission.geniusInterviewRequestedForSongId;
+                            icon = <GeniusIcon className="w-10 h-10 text-yellow-300 flex-shrink-0" />;
+                            actionType = 'genius';
+                            colorClass = 'bg-yellow-300 text-black border-yellow-500';
+                        } else if (isFallon) {
+                            cost = 500000;
+                            title = "Fallon Performance";
+                            desc = "A high-profile live TV performance.";
+                            requestedSongId = submission.fallonPerformanceRequestedForSongId;
+                            icon = <TonightShowIcon className="w-10 h-10 flex-shrink-0" />;
+                            actionType = 'fallon';
+                            colorClass = 'bg-blue-500 text-white border-blue-500';
+                        } else if (isTv) {
+                            cost = 300000;
+                            title = "60 Minutes Interview";
+                            desc = "A prime-time investigative journalism interview.";
+                            requestedSongId = submission.tvInterviewRequestedForSongId;
+                            icon = <span className="font-sans font-black text-xl px-1">60</span>;
+                            actionType = 'tv_interview';
+                            colorClass = 'bg-red-600 text-white border-red-600';
+                        }
 
                         return (
                             <div key={type} className={`p-4 rounded-lg border-2 ${requestedSongId ? 'border-green-500 bg-green-900/30' : 'border-zinc-700 bg-zinc-800'}`}>
-                                <div className="flex items-center gap-3">
-                                    {isGenius ? <GeniusIcon className="w-10 h-10 text-yellow-300 flex-shrink-0" /> : <TonightShowIcon className="w-10 h-10 flex-shrink-0" />}
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-12 h-12 flex items-center justify-center bg-zinc-900 rounded-lg">
+                                        {icon}
+                                    </div>
                                     <div>
-                                        <h3 className="font-bold text-lg">Request {isGenius ? "Genius 'Verified'" : "Fallon Performance"}</h3>
-                                        <p className="text-sm text-zinc-400">{isGenius ? "An official lyric breakdown video." : "A high-profile live TV performance."}</p>
+                                        <h3 className="font-bold text-lg">{title}</h3>
+                                        <p className="text-sm text-zinc-400">{desc}</p>
                                     </div>
                                 </div>
                                 {!requestedSongId ? (
-                                    <div className="mt-3 space-y-2">
+                                    <div className="space-y-2">
                                         <select
                                             onChange={(e) => setSelectedSongId(e.target.value)}
                                             defaultValue=""
@@ -127,21 +169,22 @@ const AlbumPromoView: React.FC = () => {
                                             {projectSongs.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                                         </select>
                                         <button
-                                            onClick={() => handleAction(isGenius ? 'genius' : 'fallon')}
+                                            onClick={() => handleAction(actionType as any)}
                                             disabled={!selectedSongId || budget - spent < cost}
-                                            className={`w-full h-10 font-bold rounded-lg text-sm ${isGenius ? 'bg-yellow-300 text-black' : 'bg-blue-500 text-white'} disabled:bg-zinc-600 disabled:text-zinc-400`}
+                                            className={`w-full h-10 font-bold rounded-lg text-sm ${colorClass} disabled:bg-zinc-600 disabled:text-zinc-400 disabled:border-transparent`}
                                         >
                                             Request (-${formatNumber(cost)})
                                         </button>
                                     </div>
                                 ) : (
-                                    <p className="mt-3 text-center text-green-300 font-semibold p-2 bg-green-900/50 rounded-md">
-                                        {isGenius ? 'Genius Interview' : 'Fallon Performance'} for "{songs.find(s => s.id === requestedSongId)?.title}" requested.
+                                    <p className="text-center text-green-300 font-semibold p-2 bg-green-900/50 rounded-md">
+                                        {title} for "{songs.find(s => s.id === requestedSongId)?.title}" requested.
                                     </p>
                                 )}
                             </div>
                         )
                     })}
+
                 </div>
             </main>
         </div>

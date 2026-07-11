@@ -79,6 +79,7 @@ const YouTubeHome: React.FC = () => {
                 map.set(label.id, { name: label.youtubeChannel.name, avatar: label.logo });
             }
         });
+        map.set('mtv', { name: 'MTV', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/MTV_Logo.svg/1200px-MTV_Logo.svg.png' });
         return map;
     }, [allPlayerArtists]);
 
@@ -92,7 +93,8 @@ const YouTubeHome: React.FC = () => {
     }, [careerMode, group]);
     
     const filteredVideos = useMemo(() => {
-        const allVideos = Object.values(artistsData).flatMap(data => data.videos);
+        let allVideos = Object.values(artistsData).flatMap(data => data.videos);
+        allVideos = allVideos.filter(v => !(v.channelId === 'mtv' && date.year < 2010));
         const sortedByDate = [...allVideos].sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
 
         if (activeFilter === 'All') {

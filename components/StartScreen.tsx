@@ -197,7 +197,7 @@ const StartScreen: React.FC = () => {
 
     if (showSavesList) {
         return (
-            <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+            <div className="min-h-full bg-zinc-900 flex items-center justify-center p-4">
                 <ConfirmationModal 
                     isOpen={saveToDelete !== null} 
                     onClose={() => setSaveToDelete(null)}
@@ -259,7 +259,7 @@ const StartScreen: React.FC = () => {
 
     return (
         <>
-            <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+            <div className="min-h-full bg-zinc-900 flex items-center justify-center p-4">
                 <div className="w-full max-w-md bg-zinc-800 rounded-2xl shadow-lg p-8 border border-red-500/30">
                     <h1 className="text-4xl font-black text-center text-red-500 mb-2">RED MIC</h1>
                     <h2 className="text-xl font-bold text-center text-white mb-6">ARTIST SIMULATOR</h2>

@@ -1912,7 +1912,7 @@ const SpotifyForArtistsView: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col">
+    <div className="h-full w-full flex flex-col">
       <header className="p-2 flex justify-between items-center bg-black text-white sticky top-0 z-20">
         <button
           onClick={() => dispatch({ type: "CHANGE_VIEW", payload: "game" })}

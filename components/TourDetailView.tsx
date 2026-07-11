@@ -55,7 +55,7 @@ const TourDetailView: React.FC = () => {
         };
 
         return (
-            <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
+            <div className="h-full w-full bg-zinc-900 overflow-y-auto">
                 <header className="relative h-48">
                     <img src={tour.bannerImage} className="w-full h-full object-cover"/>
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent"/>

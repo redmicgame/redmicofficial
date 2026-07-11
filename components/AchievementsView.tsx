@@ -113,7 +113,7 @@ const AchievementsView: React.FC = () => {
         .sort((a, b) => b.totalStreams - a.totalStreams), [releases, songs]);
 
     return (
-        <div className="h-screen w-full bg-zinc-900 overflow-y-auto">
+        <div className="h-full w-full bg-zinc-900 overflow-y-auto">
             <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
@@ -131,7 +131,7 @@ const AchievementsView: React.FC = () => {
                             <p className="text-sm font-bold text-red-400 uppercase tracking-widest">Your Biggest Hit</p>
                             <h2 className="text-3xl md:text-4xl font-bold">{mostStreamedSong.title}</h2>
                             <p className="text-5xl md:text-6xl font-black text-white/80 mt-2">{formatNumber(mostStreamedSong.streams)}</p>
-                            <p className="font-semibold text-zinc-400">Total Streams</p>
+                            <p className="font-semibold text-zinc-400">{gameState.date.year >= 2008 ? "Total Streams" : "Total Sales"}</p>
                         </div>
                     </div>
                 )}
@@ -176,18 +176,18 @@ const AchievementsView: React.FC = () => {
                     </div>
                 )}
 
-                <AchievementCard title="Top First Week Streams" accentColorClass="text-green-400">
+                <AchievementCard title={gameState.date.year >= 2008 ? "Top First Week Streams" : "Top First Week Sales"} accentColorClass="text-green-400">
                     <ExpandableList 
                         items={topSongsFirstWeek} 
-                        getValue={(item) => item.firstWeekStreams ?? 0} 
+                        getValue={(item) => gameState.date.year >= 2008 ? (item.firstWeekStreams ?? 0) : Math.floor((item.firstWeekStreams ?? 0) / 150)} 
                         emptyMessage="No songs with first week data yet." 
                     />
                 </AchievementCard>
 
-                <AchievementCard title="Top First Week Album/EP Streams" accentColorClass="text-green-400">
+                <AchievementCard title={gameState.date.year >= 2008 ? "Top First Week Album/EP Streams" : "Top First Week Album/EP Sales"} accentColorClass="text-green-400">
                     <ExpandableList 
                         items={topAlbumsFirstWeek} 
-                        getValue={(item) => item.firstWeekStreams ?? 0} 
+                        getValue={(item) => gameState.date.year >= 2008 ? (item.firstWeekStreams ?? 0) : Math.floor((item.firstWeekStreams ?? 0) / 1500)} 
                         emptyMessage="No projects with first week data yet." 
                     />
                 </AchievementCard>
@@ -200,7 +200,7 @@ const AchievementsView: React.FC = () => {
                     />
                 </AchievementCard>
                 
-                <AchievementCard title="Top First Week Video Views" accentColorClass="text-red-400">
+                <AchievementCard title={gameState.date.year >= 2008 ? "Top First Week Video Views" : "Top First Week Video Requests"} accentColorClass="text-red-400">
                     <ExpandableList 
                         items={topVideosFirstWeek} 
                         getValue={(item) => item.firstWeekViews ?? 0} 
@@ -212,7 +212,7 @@ const AchievementsView: React.FC = () => {
                     <ExpandableList 
                         items={topFraudulentSongs} 
                         getValue={(item) => item.removedStreams ?? 0} 
-                        emptyMessage="No songs have had artificial streams removed yet." 
+                        emptyMessage={gameState.date.year >= 2008 ? "No songs have had artificial streams removed yet." : "No songs have had artificial sales removed yet."} 
                     />
                 </AchievementCard>
                 
@@ -224,11 +224,11 @@ const AchievementsView: React.FC = () => {
                     />
                 </AchievementCard>
                 
-                <AchievementCard title="Most Streamed Projects" accentColorClass="text-green-500">
+                <AchievementCard title={gameState.date.year >= 2008 ? "Most Streamed Projects" : "Highest Selling Projects"} accentColorClass="text-green-500">
                     <ExpandableList 
                         items={topStreamedProjects as any} 
-                        getValue={(item) => item.totalStreams ?? 0} 
-                        emptyMessage="No streamed projects yet." 
+                        getValue={(item) => gameState.date.year >= 2008 ? (item.totalStreams ?? 0) : Math.floor((item.totalStreams ?? 0) / 1500)} 
+                        emptyMessage={gameState.date.year >= 2008 ? "No streamed projects yet." : "No selling projects yet."} 
                     />
                 </AchievementCard>
             </main>

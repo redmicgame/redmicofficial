@@ -359,7 +359,7 @@ const RiaaView: React.FC = () => {
     }, [allCerts, searchTerm, formatFilter]);
 
     return (
-        <div className="h-screen w-full bg-white text-black overflow-y-auto">
+        <div className="h-full w-full bg-white text-black overflow-y-auto">
             {/* RIAA Header Bar */}
             <div className="bg-black text-white p-4 flex items-center justify-between shadow-md">
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'apps'})} className="p-2 mr-2 hover:bg-white/20 rounded-full">

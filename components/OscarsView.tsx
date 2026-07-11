@@ -62,7 +62,7 @@ const OscarsView: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-[#121212] text-white flex flex-col overflow-hidden">
+        <div className="h-full w-full bg-[#121212] text-white flex flex-col overflow-hidden">
             <div className="relative h-64 flex-shrink-0 cursor-pointer group" onClick={handleBannerClick}>
                 <img src={oscarBanner || "https://i.imgur.com/8N45gY1.jpg"} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" alt="Oscars background"/>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />

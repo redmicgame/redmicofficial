@@ -44,7 +44,7 @@ const VMAsView: React.FC = () => {
     }
 
     return (
-        <div className="h-screen w-full bg-[#121212] text-white flex flex-col overflow-hidden">
+        <div className="h-full w-full bg-[#121212] text-white flex flex-col overflow-hidden">
             <div className="relative h-64 flex-shrink-0">
                 <img src="https://i.imgur.com/Ypvy2Lh.jpg" className="w-full h-full object-cover" alt="VMA background"/>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-black/50" />

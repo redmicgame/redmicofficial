@@ -52,7 +52,7 @@ const AmasView: React.FC = () => {
     }
 
     return (
-        <div className="h-screen w-full bg-[#121212] text-white flex flex-col overflow-hidden">
+        <div className="h-full w-full bg-[#121212] text-white flex flex-col overflow-hidden">
             <div className="relative h-64 flex-shrink-0 cursor-pointer group">
                 <div className="w-full h-full bg-red-900 absolute inset-0"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-black/50" />

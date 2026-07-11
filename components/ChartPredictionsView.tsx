@@ -269,7 +269,7 @@ export const ChartPredictionsView: React.FC = () => {
 
     if (!activeArtistData.chartPredictionsSubscription) {
         return (
-            <div className="h-screen w-full bg-zinc-900 text-white flex flex-col items-center justify-center p-8">
+            <div className="h-full w-full bg-zinc-900 text-white flex flex-col items-center justify-center p-8">
                 <header className="absolute top-0 left-0 w-full p-4 flex items-center gap-4">
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'catalog'})} className="p-2 rounded-full hover:bg-white/10">
                         <ArrowLeftIcon className="w-6 h-6" />
@@ -292,7 +292,7 @@ export const ChartPredictionsView: React.FC = () => {
     }
 
     return (
-        <div className="h-screen w-full bg-gradient-to-b from-[#d99aff] via-fuchsia-200 to-indigo-600 overflow-y-auto text-black">
+        <div className="h-full w-full bg-gradient-to-b from-[#d99aff] via-fuchsia-200 to-indigo-600 overflow-y-auto text-black">
             <header className="p-4 flex items-center gap-4 sticky top-0 bg-white/20 backdrop-blur-md z-10 border-b border-white/20">
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'catalog'})} className="p-2 rounded-full hover:bg-black/10">
                     <ArrowLeftIcon className="w-6 h-6" />

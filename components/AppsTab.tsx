@@ -58,6 +58,7 @@ const appCategories: AppCategory[] = [
             { name: 'Instagram', description: 'Share photos visually', icon: <span className="font-bold text-2xl font-serif text-white">Ig</span>, view: 'instagram', bgColor: '#E1306C' },
             { name: 'Google', description: 'Search the web', icon: <GoogleIcon className="w-8 h-8"/>, view: 'google', bgColor: '#FFFFFF', iconColor: '#000000' },
             { name: 'X', description: 'Connect with fans worldwide', icon: <XIcon className="w-7 h-7"/>, view: 'x', bgColor: '#000000' },
+            { name: 'MTV', description: 'Music Television', icon: <span className="font-black text-2xl italic">MTV</span>, view: 'mtv', bgColor: '#000000' },
             { name: 'YouTube', description: 'Watch and share videos', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtube', bgColor: '#FF0000' },
             { name: 'YT Studio', description: 'Analyze your channel performance', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtubeStudio', bgColor: '#282828'},
             { name: 'OnlyFans', description: 'Monetize exclusive content', icon: <span className="font-bold text-2xl">OF</span>, view: 'onlyfansSetup', bgColor: '#00AFF0' },
@@ -149,6 +150,7 @@ const AppsTab: React.FC = () => {
         if (appName === 'TikTok') return eraConfig.tiktokAvailable;
         if (appName === 'MySpace') return eraConfig.myspaceAvailable;
         if (appName === 'YouTube' || appName === 'YT Studio') return eraConfig.youtubeAvailable;
+        if (appName === 'MTV') return gameState.date.year >= 1975 && gameState.date.year <= 2007;
         if (appName === 'OnlyFans') return eraConfig.onlyfansAvailable;
         if (appName === 'Piracy') return gameState.date.year >= 1999 && gameState.date.year <= 2008;
         if (appName === 'ASCAP') return gameState.date.year >= 2008;

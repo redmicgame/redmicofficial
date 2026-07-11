@@ -53,7 +53,7 @@ const BillboardAlbumsView: React.FC = () => {
     const { billboardTopAlbums } = gameState;
 
     return (
-        <div className="bg-white text-black min-h-screen">
+        <div className="bg-white text-black min-h-full">
             <header className="p-4 text-center sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-zinc-200">
                  <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="absolute top-1/2 left-4 -translate-y-1/2 p-2 rounded-full hover:bg-zinc-100">
                     <ArrowLeftIcon className="w-6 h-6" />

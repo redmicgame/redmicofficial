@@ -58,7 +58,7 @@ const SpotifyWrappedView: React.FC = () => {
     }, [activeArtistData, activeArtist, gameState.date.year]);
 
     if (!wrappedData) {
-        return <div className="bg-[#F3F0EC] text-black h-screen flex items-center justify-center">Loading your Wrapped...</div>;
+        return <div className="bg-[#F3F0EC] text-black h-full flex items-center justify-center">Loading your Wrapped...</div>;
     }
 
     const { year, artistName, latestAlbumCover, totalStreams, totalListeners, topSong, topSongs, topAlbums, personaSongs } = wrappedData;

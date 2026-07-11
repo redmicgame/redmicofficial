@@ -53,7 +53,7 @@ const PromoInterviewView: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-zinc-900 overflow-y-auto text-white">
+        <div className="h-full w-full bg-zinc-900 overflow-y-auto text-white">
             <header className="p-4 flex flex-col gap-2 sticky top-0 bg-zinc-900 z-10 border-b border-zinc-700">
                 <div className="flex justify-between items-center">
                     <h1 className="text-xl font-bold flex items-center gap-2">

@@ -155,7 +155,7 @@ const SpotifyChartView: React.FC = () => {
     const topAlbum: AlbumChartEntry | undefined = billboardTopAlbums[0];
 
     return (
-        <div className="bg-[#121212] h-screen text-white overflow-y-auto pb-24 relative">
+        <div className="bg-[#121212] h-full text-white overflow-y-auto pb-24 relative">
             <header className="p-4 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="p-1 -ml-1 rounded-full hover:bg-white/10" aria-label="Go back">

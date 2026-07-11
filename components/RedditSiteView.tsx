@@ -77,7 +77,7 @@ export const RedditSiteView: React.FC<{ initialPost?: any, onClose: () => void }
     ];
 
     return (
-        <div className="bg-[#DAE0E6] text-[#1c1c1c] min-h-screen font-sans relative">
+        <div className="bg-[#DAE0E6] text-[#1c1c1c] min-h-full font-sans relative">
             {/* Header */}
             <header className="bg-white border-b border-gray-300 sticky top-0 z-20 w-full flex items-center px-4 py-2 shadow-sm h-12">
                 <button onClick={onClose} className="p-1.5 mr-2 text-gray-500 hover:text-black rounded-full hover:bg-gray-100 transition-colors">

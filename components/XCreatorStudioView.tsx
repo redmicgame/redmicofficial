@@ -273,7 +273,7 @@ const XCreatorStudioView: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-black text-white flex flex-col overflow-y-auto">
+        <div className="h-full w-full bg-black text-white flex flex-col overflow-y-auto">
             <header className="sticky top-0 bg-black/80 backdrop-blur-sm z-20 p-4 flex items-center border-b border-zinc-800">
                 <button onClick={() => {
                     if (view === 'main') {

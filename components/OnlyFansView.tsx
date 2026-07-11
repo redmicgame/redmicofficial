@@ -52,7 +52,7 @@ const OnlyFansView: React.FC = () => {
 
     if (view === 'stats') {
         return (
-            <div className="bg-white text-black min-h-screen">
+            <div className="bg-white text-black min-h-full">
                  <header className="p-4 border-b border-zinc-200">
                     <button onClick={() => setView('profile')} className="flex items-center gap-2 text-zinc-600">
                         <ArrowLeftIcon className="w-5 h-5" />
@@ -86,7 +86,7 @@ const OnlyFansView: React.FC = () => {
 
 
     return (
-        <div className="bg-white text-black min-h-screen">
+        <div className="bg-white text-black min-h-full">
             <header className="p-3 flex justify-between items-center">
                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})}><ArrowLeftIcon className="w-6 h-6"/></button>
                 <p className="font-bold">{displayName}</p>

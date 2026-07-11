@@ -12,7 +12,7 @@ const UKChartView: React.FC = () => {
     const [selectedSong, setSelectedSong] = useState<any>(null);
 
     return (
-        <div className="bg-[#fdf9f3] h-screen text-black overflow-y-auto pb-24 relative">
+        <div className="bg-[#fdf9f3] h-full text-black overflow-y-auto pb-24 relative">
             <header className="p-4 flex items-center bg-[#0024f0] text-white sticky top-0 z-10 shadow-md">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'apps' })} className="p-1 -ml-1 rounded-full hover:bg-black/10" aria-label="Go back">
                     <ChevronLeftIcon className="w-6 h-6" />

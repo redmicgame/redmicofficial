@@ -114,7 +114,7 @@ const SpotifyTopSongsView: React.FC = () => {
                 </div>
             )}
             
-            <main className="p-4 bg-white text-black mt-2 rounded-t-3xl min-h-screen">
+            <main className="p-4 bg-white text-black mt-2 rounded-t-3xl min-h-full">
                 <div className="flex justify-between items-center">
                     <h2 className="text-3xl font-bold tracking-tight">Weekly Top Songs {region}</h2>
                     <button className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center">

@@ -266,6 +266,7 @@ export interface Video {
   description?: string;
   mentionedNpcs?: string[];
   isFeatureVideo?: boolean;
+  isMtv?: boolean;
 }
 
 export interface MerchProduct {
@@ -564,6 +565,7 @@ export interface Email {
   senderIcon?:
     | "spotify"
     | "youtube"
+  | "mtv"
     | "default"
     | "label"
     | "genius"
@@ -865,6 +867,9 @@ export interface LabelSubmission {
   hasCountdownPage?: boolean;
   geniusInterviewRequestedForSongId?: string;
   fallonPerformanceRequestedForSongId?: string;
+  magazineInterviewRequestedForSongId?: string;
+  newspaperInterviewRequestedForSongId?: string;
+  tvInterviewRequestedForSongId?: string;
   recommendedSingles?: { songId: string; reason: string }[];
   preorderSales?: number;
 }
@@ -1165,6 +1170,8 @@ export type GameView =
   | "spotifyForArtists"
   | "createFallonPerformance"
   | "createFallonInterview"
+  | "createMagazineInterview"
+  | "createTvInterview"
   | "spotifyAlbumCountdown"
   | "createLabel"
   | "manageLabel"
@@ -1176,6 +1183,7 @@ export type GameView =
   | "wikipedia"
   | "grammys"
   | "submitForGrammys"
+  | "mtv"
   | "createGrammyPerformance"
   | "grammyRedCarpet"
   | "contractRenewal"
@@ -1696,6 +1704,12 @@ export interface GameState {
     eventType: string;
     hostName?: string;
     associatedSoundtrack?: string;
+  } | null;
+  activeInterviewOffer?: {
+    releaseId: string;
+    interviewType: "magazine" | "newspaper" | "tv";
+    outletName: string;
+    emailId: string;
   } | null;
   activeFallonOffer: {
     releaseId: string;

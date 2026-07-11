@@ -254,7 +254,7 @@ const MerchStoreView: React.FC = () => {
     
     if (gameState.date.year >= 2005 && (activeArtistData.youtubeSubscribers || 0) < 100) {
         return (
-            <div className="h-screen w-full bg-zinc-900 flex flex-col items-center justify-center text-center p-4">
+            <div className="h-full w-full bg-zinc-900 flex flex-col items-center justify-center text-center p-4">
                  <ShoppingBagIcon className="w-16 h-16 text-zinc-500 mb-4" />
                 <h1 className="text-2xl font-bold text-white">Merch Store Locked</h1>
                 <p className="text-zinc-400 mt-2">

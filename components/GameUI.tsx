@@ -79,7 +79,7 @@ const GameUI: React.FC = () => {
                     </div>
                 </div>
             )}
-            <main className="flex-grow overflow-y-auto pb-24 h-full">
+            <main className="flex-1 overflow-y-auto pb-24 -webkit-overflow-scrolling-touch">
                 {renderActiveTab()}
             </main>
             <button 

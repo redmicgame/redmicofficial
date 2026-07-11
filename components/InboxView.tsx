@@ -642,7 +642,7 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
     }
 
     return (
-        <div className="h-screen w-full bg-[#1c1c1e] text-white flex flex-col">
+        <div className="h-full w-full bg-[#1c1c1e] text-white flex flex-col">
             {email.offer?.type === 'soundtrackOffer' && (
                 <ConfirmationModal
                     isOpen={showSoundtrackConfirm}
@@ -722,7 +722,7 @@ const InboxView: React.FC = () => {
     }
 
     return (
-        <div className="h-screen w-full bg-[#1c1c1e] text-white flex flex-col">
+        <div className="h-full w-full bg-[#1c1c1e] text-white flex flex-col">
             <header className="p-4 sticky top-0 bg-[#1c1c1e]/80 backdrop-blur-sm z-10 space-y-4">
                 <div className="flex items-center gap-4">
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
