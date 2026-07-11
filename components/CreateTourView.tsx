@@ -97,12 +97,12 @@ const CreateTourView: React.FC = () => {
     const venueBookingCost = chosenVenuesList.reduce((sum, v) => sum + (v.capacity * 4), 0); // $4 per capacity
     
     const opener = gameState.npcs?.find(n => n.uniqueId === openerId);
-    const openerCost = opener ? opener.basePopularity * 2000 * chosenVenuesList.length : 0;
+    const openerCost = opener ? Math.floor(opener.basePopularity / 50) * chosenVenuesList.length : 0;
     
     let guestsCost = 0;
     guestIds.forEach(gid => {
         const guest = gameState.npcs?.find(n => n.uniqueId === gid);
-        if (guest) guestsCost += guest.basePopularity * 1000 * chosenVenuesList.length;
+        if (guest) guestsCost += Math.floor(guest.basePopularity / 100) * chosenVenuesList.length;
     });
 
     const totalUpfrontCost = venueBookingCost + openerCost + guestsCost;
@@ -267,7 +267,7 @@ const CreateTourView: React.FC = () => {
                                 <option value="">No Opener</option>
                                 {npcList.map(npc => (
                                     <option key={npc.uniqueId} value={npc.uniqueId}>
-                                        {npc.artist} (${formatNumber(npc.basePopularity * 2000 * chosenVenuesList.length)} total cost)
+                                        {npc.artist} (${formatNumber(Math.floor(npc.basePopularity / 50) * chosenVenuesList.length)} total cost)
                                     </option>
                                 ))}
                             </select>
@@ -283,7 +283,7 @@ const CreateTourView: React.FC = () => {
                                             <input type="checkbox" checked={guestIds.has(npc.uniqueId)} onChange={() => handleToggleGuest(npc.uniqueId)} className="form-checkbox h-4 w-4 rounded bg-zinc-700 border-zinc-600 text-red-600 focus:ring-red-500"/>
                                             <div className="flex-1 flex justify-between items-center text-sm">
                                                 <span>{npc.artist}</span>
-                                                <span className="text-xs text-zinc-400">Cost: ${formatNumber(npc.basePopularity * 1000 * chosenVenuesList.length)}</span>
+                                                <span className="text-xs text-zinc-400">Cost: ${formatNumber(Math.floor(npc.basePopularity / 100) * chosenVenuesList.length)}</span>
                                             </div>
                                         </label>
                                     );

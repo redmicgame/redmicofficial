@@ -166,7 +166,7 @@ const ToursView: React.FC = () => {
                         
                         <div className="space-y-4 pt-4">
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Upcoming & Active</h3>
-                            {plannedTours.map(tour => (
+                            {[...plannedTours, ...activeTours].map(tour => (
                                 <div key={tour.id} onClick={() => handleSelectTour(tour.id)} className="border border-gray-200 p-4 rounded-xl cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all flex items-center justify-between">
                                     <div>
                                         <p className="font-bold text-lg">{tour.name}</p>
@@ -175,7 +175,7 @@ const ToursView: React.FC = () => {
                                     <ChevronRightIcon className="w-5 h-5 text-gray-400"/>
                                 </div>
                             ))}
-                            {plannedTours.length === 0 && <p className="text-gray-400 text-sm">No active tours.</p>}
+                            {(plannedTours.length + activeTours.length) === 0 && <p className="text-gray-400 text-sm">No active tours.</p>}
 
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mt-8">Past Tours</h3>
                             {pastTours.map(tour => (
