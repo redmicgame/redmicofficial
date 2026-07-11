@@ -84,6 +84,7 @@ const appCategories: AppCategory[] = [
             { name: 'Spotify Charts', description: 'Top 50 Global', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954', iconColor: '#000000' },
             { name: 'Apple Music for Artists', description: 'Artist Dashboard', icon: <ITunesIcon className="w-8 h-8"/>, view: 'itunesDashboard', bgColor: '#ffffff', textColor: '#fa243c' as any },
             { name: 'Spotify for Artists', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#000000' },
+            { name: 'HITS Daily Double', description: 'Album Sales Predictions', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'albumPredictions', bgColor: '#DC2626', textColor: '#ffffff' as any },
             { name: 'Talk of the Charts', description: 'Early Hot 100 Predictions', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartPredictions', bgColor: '#d99aff' },
             { name: 'Kalshi', description: 'Prediction Markets', icon: <span className="font-bold text-xl text-white">Kalshi</span>, view: 'kalshi', bgColor: '#00D182' },
             { name: 'GRAMMYs', description: 'Your awards history', icon: <TrophyIcon className="w-8 h-8"/>, view: 'grammys', bgColor: '#f59e0b' },

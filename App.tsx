@@ -104,6 +104,7 @@ import MySpaceView from './components/MySpaceView';
 import { ChartPredictionsView } from './components/ChartPredictionsView';
 import KalshiView from './components/KalshiView';
 import ImdbView from './components/ImdbView';
+import AlbumPredictionsView from './components/AlbumPredictionsView';
 import { getEraConfiguration } from './utils/eraUtils';
 import UKChartView from './components/UKChartView';
 
@@ -156,6 +157,8 @@ const AppContent: React.FC = () => {
                 return <YouTubeStudioView />;
             case 'inbox':
                 return <InboxView />;
+            case 'albumPredictions':
+                return <AlbumPredictionsView />;
             case 'chartPredictions':
                 return <ChartPredictionsView />;
             case 'catalog':

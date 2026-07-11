@@ -2098,6 +2098,22 @@ const gameReducerInternal = (
         },
       };
     }
+    case "UNLOCK_ALBUM_PREDICTIONS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (activeData.money < action.payload.cost) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - action.payload.cost,
+            albumPredictionsUnlocked: true,
+          },
+        },
+      };
+    }
     case "RELEASE_ITUNES_VERSION": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -11352,6 +11368,7 @@ The Government`,
               getHypeCap(activeData),
               activeData.hype + action.payload.hype,
             ),
+            popularity: Math.min(100, (activeData.popularity || 0) + 1),
             regionalPopularity: {
               ...(activeData.regionalPopularity || {
                 "US": activeData.popularity || 0,

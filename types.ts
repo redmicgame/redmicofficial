@@ -1229,6 +1229,7 @@ export type GameView =
   | "radioCharts"
   | "promoInterview"
   | "chartPredictions"
+  | "albumPredictions"
   | "limewire"
   | "ascap"
   | "kalshi"
@@ -1570,6 +1571,7 @@ export interface ArtistData {
   redMicPro: RedMicProState;
   customContributorImages?: Record<string, string>;
   chartPredictionsSubscription?: boolean;
+  albumPredictionsUnlocked?: boolean;
   salesBoost: number; // percentage
   isGoldTheme: boolean;
   // AMAs
@@ -1853,6 +1855,7 @@ export type GameAction =
       };
     }
   | { type: "SUBSCRIBE_CHART_PREDICTIONS"; payload: { cost: number } }
+  | { type: "UNLOCK_ALBUM_PREDICTIONS"; payload: { cost: number } }
   | {
       type: "RELEASE_ITUNES_VERSION";
       payload: { songId: string; title: string; coverArt: string };
