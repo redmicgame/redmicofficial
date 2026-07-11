@@ -105,6 +105,7 @@ import { ChartPredictionsView } from './components/ChartPredictionsView';
 import KalshiView from './components/KalshiView';
 import ImdbView from './components/ImdbView';
 import { getEraConfiguration } from './utils/eraUtils';
+import UKChartView from './components/UKChartView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData } = useGame();
@@ -167,6 +168,8 @@ const AppContent: React.FC = () => {
                 return <BillboardAlbumsView />;
             case 'spotifyChart':
                 return <SpotifyChartView />;
+            case 'ukChart':
+                return <UKChartView />;
             case 'hotPopSongs':
                 return <HotPopSongsView />;
             case 'hotRapRnb':

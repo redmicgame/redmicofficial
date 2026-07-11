@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { Song, Release, ChartHistory } from '../types';
 
-type ChartType = 'billboardHot100' | 'billboardTopAlbums' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart';
+type ChartType = 'billboardHot100' | 'billboardTopAlbums' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'ukSinglesChart';
 
 const ChartHistoryView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
@@ -24,29 +24,34 @@ const ChartHistoryView: React.FC = () => {
 
         switch (selectedChart) {
             case 'billboardTopAlbums':
-                history = gameState.albumChartHistory;
+                history = gameState.albumChartHistory || {};
                 items = releases.filter(r => r.type !== 'Single');
                 title = 'Billboard 200';
                 break;
             case 'hotPopSongs':
-                history = gameState.hotPopSongsHistory;
+                history = gameState.hotPopSongsHistory || {};
                 items = [...songs];
                 break;
             case 'hotRapRnb':
-                history = gameState.hotRapRnbHistory;
+                history = gameState.hotRapRnbHistory || {};
                 items = [...songs];
                 break;
             case 'electronicChart':
-                history = gameState.electronicChartHistory;
+                history = gameState.electronicChartHistory || {};
                 items = [...songs];
                 break;
             case 'countryChart':
-                history = gameState.countryChartHistory;
+                history = gameState.countryChartHistory || {};
                 items = [...songs];
+                break;
+            case 'ukSinglesChart':
+                history = gameState.ukSinglesChartHistory || {};
+                items = [...songs];
+                title = 'UK Official Singles Chart';
                 break;
             case 'billboardHot100':
             default:
-                history = gameState.chartHistory;
+                history = gameState.chartHistory || {};
                 items = [...songs];
                 title = 'Billboard Hot 100';
                 break;
@@ -67,6 +72,7 @@ const ChartHistoryView: React.FC = () => {
                 case 'hotRapRnb': title = 'Hot Rap/R&B Songs'; break;
                 case 'electronicChart': title = 'Electronic Chart'; break;
                 case 'countryChart': title = 'Country Chart'; break;
+                case 'ukSinglesChart': title = 'UK Official Singles Chart'; break;
                 case 'billboardHot100':
                 default: title = 'Billboard Hot 100'; break;
             }
@@ -126,6 +132,7 @@ const ChartHistoryView: React.FC = () => {
                     <option value="hotRapRnb">Hot Rap/R&B Songs</option>
                     <option value="electronicChart">Electronic Chart</option>
                     <option value="countryChart">Country Chart</option>
+                    {gameState.date.year >= 2016 && <option value="ukSinglesChart">UK Official Singles Chart</option>}
                 </select>
             </div>
 

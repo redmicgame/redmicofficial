@@ -21,7 +21,7 @@ const ChartItemPreview: React.FC<{
 
 const ChartsTab: React.FC = () => {
     const { gameState, dispatch } = useGame();
-    const { billboardHot100, spotifyGlobal = [], billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart } = gameState;
+    const { billboardHot100, spotifyGlobal = [], billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart, ukSinglesChart = [] } = gameState;
 
     const billboardTop3 = billboardHot100.slice(0, 3);
     const spotifyTop3 = spotifyGlobal.slice(0, 3);
@@ -30,6 +30,7 @@ const ChartsTab: React.FC = () => {
     const hotRapRnbTop3 = hotRapRnb.slice(0, 3);
     const electronicTop3 = electronicChart.slice(0, 3);
     const countryTop3 = countryChart.slice(0, 3);
+    const ukTop3 = ukSinglesChart.slice(0, 3);
 
     return (
         <div className="p-4 space-y-6">

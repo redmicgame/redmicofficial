@@ -80,6 +80,7 @@ const appCategories: AppCategory[] = [
     {
         title: 'Charts & Career',
         apps: [
+            { name: 'Official UK Charts', description: 'Official Singles Chart', icon: <span className="font-bold text-xl text-white">UK</span>, view: 'ukChart', bgColor: '#0024f0' },
             { name: 'Spotify Charts', description: 'Top 50 Global', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954', iconColor: '#000000' },
             { name: 'Apple Music for Artists', description: 'Artist Dashboard', icon: <ITunesIcon className="w-8 h-8"/>, view: 'itunesDashboard', bgColor: '#ffffff', textColor: '#fa243c' as any },
             { name: 'Spotify for Artists', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#000000' },

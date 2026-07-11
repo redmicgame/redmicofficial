@@ -164,6 +164,14 @@ export interface Song {
   radioFormat?: string;
   pendingRadioPromoSpins?: number;
   hasRadioPromo?: boolean;
+  
+  isOnUkRadio?: boolean;
+  ukRadioPlays?: number;
+  lastWeekUkRadioPlays?: number;
+  ukWeeksOnRadio?: number;
+  ukRadioFormat?: string;
+  pendingUkRadioPromoSpins?: number;
+  hasUkRadioPromo?: boolean;
   hasTweetedBillionStreams?: boolean;
   hasBillionsClubEmail?: boolean;
   hasBillionsClubPerformance?: boolean;
@@ -630,6 +638,7 @@ export interface Promotion {
   itemType: "song" | "release" | "video";
   promoType: string; // e.g., 'Playlist Push', 'Nostalgia Campaign'
   promoQuality: "high" | "medium" | "low";
+  region?: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa";
   weeklyCost: number;
   boostMultiplier: number;
   artistId: string;
@@ -656,6 +665,14 @@ export interface NpcSong {
   radioFormat?: string;
   pendingRadioPromoSpins?: number;
   hasRadioPromo?: boolean;
+  
+  isOnUkRadio?: boolean;
+  ukRadioPlays?: number;
+  lastWeekUkRadioPlays?: number;
+  ukWeeksOnRadio?: number;
+  ukRadioFormat?: string;
+  pendingUkRadioPromoSpins?: number;
+  hasUkRadioPromo?: boolean;
 }
 
 export interface NpcAlbum {
@@ -1214,7 +1231,8 @@ export type GameView =
   | "chartPredictions"
   | "limewire"
   | "ascap"
-  | "kalshi";
+  | "kalshi"
+  | "ukChart";
 
 export type Tab = "Home" | "Apps" | "Charts" | "Misc" | "Business";
 
@@ -1658,6 +1676,8 @@ export interface GameState {
   radioRhythmicChart?: ChartEntry[];
   radioCountryChart?: ChartEntry[];
   radioChristmasChart?: ChartEntry[];
+  ukSinglesChart?: ChartEntry[];
+  ukSinglesChartHistory?: ChartHistory;
   spotifyNewEntries: number;
   selectedVideoId: string | null;
   selectedReleaseId: string | null;
@@ -2388,10 +2408,10 @@ export type GameAction =
       type: "UPLOAD_ALBUM_CANVAS";
       payload: { releaseId: string; videoUrl: string; hashtags: string[] };
     }
-  | { type: "SUBMIT_TO_RADIO"; payload: { songId: string; format: string } }
+  | { type: "SUBMIT_TO_RADIO"; payload: { songId: string; format: string; region?: "US" | "UK" } }
   | {
       type: "WITHDRAW_FROM_RADIO";
-      payload: { songId: string; format: string };
+      payload: { songId: string; format: string; region?: "US" | "UK" };
     }
   | {
       type: "PROMOTE_RADIO";

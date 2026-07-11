@@ -1158,6 +1158,8 @@ const initialState: GameState = {
   albumChartHistory: {},
   chartHistory: {},
   spotifyGlobal: [],
+  ukSinglesChart: [],
+  ukSinglesChartHistory: {},
   spotifyUS: [],
   spotifyCanada: [],
   spotifyUK: [],
@@ -1893,14 +1895,26 @@ const gameReducerInternal = (
       );
       if (songIndex === -1) return state;
       const updatedSongs = [...activeData.songs];
-      updatedSongs[songIndex] = {
-        ...updatedSongs[songIndex],
-        isOnRadio: true,
-        radioFormat: action.payload.format,
-        weeksOnRadio: 0,
-        radioPlays: 0,
-        radioImpressions: 0,
-      };
+      
+      const region = (action.payload as any).region || 'US';
+      if (region === 'US') {
+          updatedSongs[songIndex] = {
+            ...updatedSongs[songIndex],
+            isOnRadio: true,
+            radioFormat: action.payload.format,
+            weeksOnRadio: 0,
+            radioPlays: 0,
+            radioImpressions: 0,
+          };
+      } else if (region === 'UK') {
+          updatedSongs[songIndex] = {
+            ...updatedSongs[songIndex],
+            isOnUkRadio: true,
+            ukRadioFormat: action.payload.format,
+            ukWeeksOnRadio: 0,
+            ukRadioPlays: 0,
+          };
+      }
       return {
         ...state,
         artistsData: {
@@ -1920,10 +1934,19 @@ const gameReducerInternal = (
       );
       if (songIndex === -1) return state;
       const updatedSongs = [...activeData.songs];
-      updatedSongs[songIndex] = {
-        ...updatedSongs[songIndex],
-        isOnRadio: false,
-      };
+      
+      const region = (action.payload as any).region || 'US';
+      if (region === 'UK') {
+          updatedSongs[songIndex] = {
+            ...updatedSongs[songIndex],
+            isOnUkRadio: false,
+          };
+      } else {
+          updatedSongs[songIndex] = {
+            ...updatedSongs[songIndex],
+            isOnRadio: false,
+          };
+      }
       return {
         ...state,
         artistsData: {
@@ -1938,12 +1961,14 @@ const gameReducerInternal = (
     case "PROMOTE_RADIO": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const { songId, format, amount, source } = action.payload;
+      const { songId, format, amount, source, region = 'US' } = action.payload as any;
 
       const songIndex = activeData.songs.findIndex((s) => s.id === songId);
       if (songIndex === -1) return state;
       const song = activeData.songs[songIndex];
-      if (song.hasRadioPromo) return state; // Only one time
+      
+      if (region === 'US' && song.hasRadioPromo) return state;
+      if (region === 'UK' && song.hasUkRadioPromo) return state;
 
       let newMoney = activeData.money;
       let newContract = activeData.contract ? { ...activeData.contract } : null;
@@ -1962,11 +1987,19 @@ const gameReducerInternal = (
       const spinsGained = Math.floor(amount / 100) * (Math.random() * 0.5 + 0.8);
       const impressionsGained = spinsGained * 2500; // Also reduced impressions per spin
 
-      updatedSongs[songIndex] = {
-        ...song,
-        pendingRadioPromoSpins: (song.pendingRadioPromoSpins || 0) + spinsGained,
-        hasRadioPromo: true,
-      };
+      if (region === 'UK') {
+          updatedSongs[songIndex] = {
+            ...song,
+            pendingUkRadioPromoSpins: (song.pendingUkRadioPromoSpins || 0) + spinsGained,
+            hasUkRadioPromo: true,
+          };
+      } else {
+          updatedSongs[songIndex] = {
+            ...song,
+            pendingRadioPromoSpins: (song.pendingRadioPromoSpins || 0) + spinsGained,
+            hasRadioPromo: true,
+          };
+      }
 
       // Add a prediction post if it's gaining radio traction
       const newXPosts = [...(activeData.xPosts || [])];
@@ -4070,9 +4103,13 @@ const gameReducerInternal = (
               (p) => p.itemId === song.id && p.itemType === "song",
             );
             if (songPromo) {
-              weeklyStreams = Math.floor(
-                weeklyStreams * songPromo.boostMultiplier,
-              );
+              if (songPromo.region && songPromo.region !== "Global") {
+                  // Handled later when splitting regional streams
+              } else {
+                  weeklyStreams = Math.floor(
+                    weeklyStreams * songPromo.boostMultiplier,
+                  );
+              }
             }
 
             let newPromoBoostWeeks = song.promoBoostWeeks;
@@ -4193,6 +4230,17 @@ const gameReducerInternal = (
             if (gLower.includes("reggae") || gLower.includes("afrobeat")) wAfrica *= 2.5;
             if (gLower.includes("latin") || gLower.includes("reggaeton")) wLatin *= 2.5;
             if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) wUK *= 2.0;
+            
+            if (songPromo && songPromo.region && songPromo.region !== "Global") {
+                if (songPromo.region === "US") wUS *= songPromo.boostMultiplier;
+                if (songPromo.region === "Canada") wCanada *= songPromo.boostMultiplier;
+                if (songPromo.region === "UK") wUK *= songPromo.boostMultiplier;
+                if (songPromo.region === "Latin America") wLatin *= songPromo.boostMultiplier;
+                if (songPromo.region === "Asia") wAsia *= songPromo.boostMultiplier;
+                if (songPromo.region === "Africa") wAfrica *= songPromo.boostMultiplier;
+                
+                weeklyStreams = Math.floor(weeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.3)); // Overall weekly streams gets a slight boost since it's regional
+            }
             
             let totalPop = wUS + wCanada + wUK + wLatin + wAsia + wAfrica;
             if (totalPop === 0) {
@@ -7042,6 +7090,9 @@ The Government`,
         let rImpressions = 0;
         let isOnRadio = false;
         let rFormat = "pop";
+        let pIsOnUkRadio = false;
+        let pUkRadioPlays = 0;
+        let pUkRadioFormat = "pop";
 
         const maxPlaysForRank = Math.max(
           0,
@@ -7056,9 +7107,7 @@ The Government`,
             const s = updatedArtistsData[artistId].songs.find(
               (x) => x.id === song.songId,
             );
-            if (s && s.isOnRadio) {
-              isOnRadio = true;
-              rFormat = s.radioFormat || "pop";
+            if (s && (s.isOnRadio || s.isOnUkRadio)) {
               const qualityBoost =
                 (s.quality || 50) +
                 (updatedArtistsData[artistId].popularity || 0);
@@ -7116,8 +7165,11 @@ The Government`,
                 }
               }
 
-              const weeksOn = s.weeksOnRadio || 0;
-              s.weeksOnRadio = weeksOn + 1;
+              if (s.isOnRadio) {
+                  isOnRadio = true;
+                  rFormat = s.radioFormat || "pop";
+                  const weeksOn = s.weeksOnRadio || 0;
+                  s.weeksOnRadio = weeksOn + 1;
 
               const formatMultiplier = isFormatCompatible(song.genre, rFormat);
               const radioEraBoost =
@@ -7205,6 +7257,42 @@ The Government`,
               rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
               s.radioImpressions = rImpressions;
             }
+            
+            if (s.isOnUkRadio) {
+              const rFormat = s.ukRadioFormat || "pop";
+              const weeksOn = s.ukWeeksOnRadio || 0;
+              s.ukWeeksOnRadio = weeksOn + 1;
+              const formatMultiplier = isFormatCompatible(song.genre, rFormat);
+              const radioEraBoost = state.date.year < 2010 ? (state.date.year < 2000 ? 5.0 : 3.0) : 1.0;
+              const previousPlays = s.ukRadioPlays || 0;
+              const traitRadioBoost = s.trait === "Radio Hit" ? 3.0 : 1.0;
+              const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
+              let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
+              targetPlays += (song.regionalStreams?.["UK"] || 0) * 0.001 * traitRadioBoost; 
+              const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost * traitRadioBoost;
+              if (updatedArtistsData[artistId]?.isBlacklistedByLabel) targetPlays = 0;
+              if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
+              const pendingSpins = s.pendingUkRadioPromoSpins || 0;
+              const spinIncrease = Math.min(pendingSpins, Math.floor(Math.random() * 1500) + 500);
+              s.pendingUkRadioPromoSpins = pendingSpins - spinIncrease;
+              let rPlays = Math.floor(targetPlays) + spinIncrease;
+              if (weeksOn > 15 + Math.floor(qualityBoost / 2)) {
+                  rPlays = Math.floor(rPlays * 0.85); 
+              }
+              if (rPlays < 0) rPlays = 0;
+              if (rPlays < 50 && weeksOn > 4 && pendingSpins === 0) {
+                  s.isOnUkRadio = false;
+                  rPlays = 0;
+              }
+              s.ukRadioPlays = rPlays;
+            }
+              
+              if (s.isOnUkRadio) {
+                  pIsOnUkRadio = s.isOnUkRadio;
+                  pUkRadioPlays = s.ukRadioPlays || 0;
+                  pUkRadioFormat = s.ukRadioFormat || "pop";
+              }
+            } // Close if (s && (s.isOnRadio || s.isOnUkRadio))
           }
         } else {
           if (song.weeklyStreams > 1000000) {
@@ -7253,12 +7341,27 @@ The Government`,
           }
         }
 
+        let isOnUkRadio = false;
+        let ukRadioPlays = 0;
+        let ukRadioFormat = undefined;
+
+        if (song.isPlayerSong) {
+            // Already handled internally
+        } else {
+            if (isOnRadio) {
+                isOnUkRadio = true;
+                ukRadioPlays = Math.floor(rPlays * 0.15);
+                ukRadioFormat = rFormat;
+            }
+        }
+
         return {
           ...song,
           isOnRadio,
           radioPlays: rPlays,
           radioImpressions: rImpressions,
           radioFormat: rFormat,
+          ...( !song.isPlayerSong ? { isOnUkRadio, ukRadioPlays, ukRadioFormat } : { isOnUkRadio: pIsOnUkRadio, ukRadioPlays: pUkRadioPlays, ukRadioFormat: pUkRadioFormat } ),
         };
       });
 
@@ -7555,6 +7658,69 @@ The Government`,
       const newSpotifyLatin = generateSpotifyChart("Latin America", (state as any).spotifyLatin || []);
       const newSpotifyAsia = generateSpotifyChart("Asia", (state as any).spotifyAsia || []);
       const newSpotifyAfrica = generateSpotifyChart("Africa", (state as any).spotifyAfrica || []);
+
+      // --- UK OFFICIAL SINGLES CHART ---
+      let newUkSinglesChart: ChartEntry[] = state.ukSinglesChart || [];
+      let newUkSinglesChartHistory: ChartHistory = state.ukSinglesChartHistory || {};
+      
+        const sortedUkContenders = [...allContenders].map(song => {
+            const aUkStreams = song.regionalStreams?.["UK"] || 0;
+            const aUkRadio = song.ukRadioPlays || 0;
+            const points = (aUkStreams * 0.5) + (aUkRadio * 2000 * 0.5);
+            return { ...song, _ukPoints: points };
+        }).sort((a, b) => b._ukPoints - a._ukPoints);
+        
+        const eligibleUkContenders = sortedUkContenders.filter((song, index) => {
+            const potentialRank = index + 1;
+            const history = newUkSinglesChartHistory[song.uniqueId];
+            if (history && history.weeksOnChart >= 52 && potentialRank > 25) return false;
+            if (history && history.weeksOnChart >= 20 && potentialRank > 50) return false;
+            return true;
+        });
+
+        const top50 = eligibleUkContenders.slice(0, 50);
+        newUkSinglesChart = [];
+        const prevUkMap = new Map((state.ukSinglesChart || []).map(entry => [entry.uniqueId, entry]));
+        newUkSinglesChartHistory = { ...state.ukSinglesChartHistory };
+
+        top50.forEach((song, index) => {
+            const rank = index + 1;
+            const history = newUkSinglesChartHistory[song.uniqueId];
+            const prevChartEntry = prevUkMap.get(song.uniqueId);
+
+            if (history) {
+              history.weeksOnChart += 1;
+              history.lastRank = rank;
+              if (rank < history.peak) history.peak = rank;
+              if (rank === 1) history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
+              if (history.chartRun) history.chartRun.push(rank);
+              else history.chartRun = [rank];
+            } else {
+              newUkSinglesChartHistory[song.uniqueId] = {
+                weeksOnChart: 1,
+                peak: rank,
+                lastRank: rank,
+                weeksAtNo1: rank === 1 ? 1 : 0,
+                chartRun: [rank],
+                firstEntered: { year: newDate.year, week: newDate.week },
+              };
+            }
+
+            newUkSinglesChart.push({
+              rank: rank,
+              lastWeek: prevChartEntry?.rank ?? null,
+              peak: newUkSinglesChartHistory[song.uniqueId].peak,
+              weeksOnChart: newUkSinglesChartHistory[song.uniqueId].weeksOnChart,
+              title: song.title,
+              artist: song.artist,
+              coverArt: song.coverArt,
+              isPlayerSong: song.isPlayerSong,
+              songId: song.songId,
+              uniqueId: song.uniqueId,
+              weeklyStreams: song.regionalStreams?.["UK"] || 0,
+              radioPlays: song.ukRadioPlays || 0,
+            });
+        });
 
       // --- GENRE CHART CALCULATION ---
       const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } =
@@ -10090,6 +10256,8 @@ The Government`,
           spotifyLatin: newSpotifyLatin,
           spotifyAsia: newSpotifyAsia,
           spotifyAfrica: newSpotifyAfrica,
+          ukSinglesChart: newUkSinglesChart,
+          ukSinglesChartHistory: newUkSinglesChartHistory,
           radioOverallChart,
           radioUrbanChart,
           radioPopChart,
@@ -10181,6 +10349,8 @@ The Government`,
         spotifyLatin: newSpotifyLatin,
         spotifyAsia: newSpotifyAsia,
         spotifyAfrica: newSpotifyAfrica,
+        ukSinglesChart: newUkSinglesChart,
+        ukSinglesChartHistory: newUkSinglesChartHistory,
         radioOverallChart,
         radioUrbanChart,
         radioPopChart,
@@ -10951,7 +11121,7 @@ The Government`,
               s.id === action.payload.songId
                 ? {
                     ...s,
-                    quality: Math.min(100, s.quality + action.payload.qualityBoost),
+                    quality: Math.min(100, (s.quality || 50) + action.payload.qualityBoost),
                     isReleased: false,
                     releaseDate: undefined,
                     releaseId: undefined,

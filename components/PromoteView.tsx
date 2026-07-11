@@ -15,12 +15,13 @@ const PromotionModal: React.FC<{
     title: string;
     packages: Array<PromotionPackage>;
     onClose: () => void;
-    onSelectPackage: (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => void;
+    onSelectPackage: (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa") => void;
     money: number;
     marketingBudget?: number;
     selectedCount?: number;
 }> = ({ title, packages, onClose, onSelectPackage, money, marketingBudget = 0, selectedCount = 1 }) => {
     const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('low');
+    const [region, setRegion] = useState<"Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa">('Global');
 
     const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
     const totalFunds = money + marketingBudget;
@@ -62,16 +63,34 @@ const PromotionModal: React.FC<{
                         High Quality
                     </button>
                 </div>
+                
+                <div className="mb-4">
+                    <label className="block text-sm font-bold text-zinc-400 mb-2">Target Region (Global costs more)</label>
+                    <select 
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value as any)}
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500"
+                    >
+                        <option value="Global">Global</option>
+                        <option value="US">United States</option>
+                        <option value="Canada">Canada</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="Latin America">Latin America</option>
+                        <option value="Asia">Asia</option>
+                        <option value="Africa">Africa</option>
+                    </select>
+                </div>
 
                 <div className="overflow-y-auto space-y-4 pr-2">
                     {packages.map(pkg => {
-                        const totalCost = pkg.weeklyCost * selectedCount * qualityMultiplier;
+                        const regionMultiplier = region === 'Global' ? 1 : 0.35; // cheaper for specific regions
+                        const totalCost = Math.floor(pkg.weeklyCost * selectedCount * qualityMultiplier * regionMultiplier);
                         const canAfford = totalFunds >= totalCost;
                         const usedBudget = Math.min(marketingBudget, totalCost);
                         return (
                             <button
                                 key={pkg.name}
-                                onClick={() => onSelectPackage(pkg, quality)}
+                                onClick={() => onSelectPackage(pkg, quality, region)}
                                 disabled={!canAfford}
                                 className="w-full p-4 rounded-lg text-left transition-colors border-2 border-zinc-700 bg-zinc-800 hover:border-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-700"
                             >
@@ -188,9 +207,10 @@ const PromoteView: React.FC = () => {
         setSelectedSongIds(new Set());
     };
 
-    const handleSelectPackageForSongs = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
+    const handleSelectPackageForSongs = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa") => {
         const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
-        const totalCost = pkg.weeklyCost * selectedSongIds.size * qualityMultiplier;
+        const regionMultiplier = region === 'Global' ? 1 : 0.35;
+        const totalCost = Math.floor(pkg.weeklyCost * selectedSongIds.size * qualityMultiplier * regionMultiplier);
         const totalFunds = money + (contract?.marketingBudget || 0);
         if (totalFunds < totalCost) return;
 

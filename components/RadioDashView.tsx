@@ -45,21 +45,24 @@ const RadioDashView: React.FC = () => {
         );
     }
     
-    const songsOnRadioCount = activeArtistData?.songs.filter(s => s.isOnRadio).length || 0;
+    const songsOnRadioCount = activeArtistData?.songs.filter(s => s.isOnRadio || s.isOnUkRadio).length || 0;
 
-    const handleWithdraw = (songId: string, format: string) => {
-        dispatch({ type: 'WITHDRAW_FROM_RADIO', payload: { songId, format } });
+    const handleWithdraw = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
+        dispatch({ type: 'WITHDRAW_FROM_RADIO', payload: { songId, format, region } });
     };
 
-    const handleSubmit = (songId: string, format: string) => {
-        if (songsOnRadioCount >= maxSongs) {
-            alert(`Your label restricts you to ${maxSongs} concurrent song(s) on radio.`);
+    const [selectedRegion, setSelectedRegion] = useState<'US'|'UK'>('US');
+
+    const handleSubmit = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
+        const onRadioCount = activeArtistData?.songs.filter(s => region === 'US' ? s.isOnRadio : s.isOnUkRadio).length || 0;
+        if (onRadioCount >= maxSongs) {
+            alert(`Your label restricts you to ${maxSongs} concurrent song(s) on ${region} radio.`);
             return;
         }
-        dispatch({ type: 'SUBMIT_TO_RADIO', payload: { songId, format } });
+        dispatch({ type: 'SUBMIT_TO_RADIO', payload: { songId, format, region } });
     };
 
-    const handlePromote = (songId: string, format: string) => {
+    const handlePromote = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
         if (promoSource === 'personal' && (activeArtistData?.money || 0) < promoAmount) {
             alert("Not enough personal funds.");
             return;
@@ -68,13 +71,17 @@ const RadioDashView: React.FC = () => {
             alert("Not enough label marketing budget.");
             return;
         }
-        dispatch({ type: 'PROMOTE_RADIO', payload: { songId, format, amount: promoAmount, source: promoSource } });
+        dispatch({ type: 'PROMOTE_RADIO', payload: { songId, format, amount: promoAmount, source: promoSource, region } });
         setPromoSongId(null);
         alert(`Successfully invested $${formatNumber(promoAmount)} in radio promotion!`);
     };
 
     const renderManage = () => {
         if (!activeArtistData) return null;
+
+        const usRadioSongs = activeArtistData.songs.filter(s => s.isOnRadio).map(s => ({...s, _region: 'US' as 'US'|'UK', _key: s.id + '_us'}));
+        const ukRadioSongs = activeArtistData.songs.filter(s => s.isOnUkRadio).map(s => ({...s, _region: 'UK' as 'US'|'UK', _key: s.id + '_uk'}));
+        const activeRadioSongs = [...usRadioSongs, ...ukRadioSongs];
 
         if (maxSongs === 0) {
             return (
@@ -90,26 +97,26 @@ const RadioDashView: React.FC = () => {
                 <div>
                     <h2 className="text-xl font-bold mb-2">My Airplay</h2>
                     <p className="text-sm text-zinc-500 mb-4">Capacity: {songsOnRadioCount} / {maxSongs} active campaigns</p>
-                    {activeArtistData.songs.filter(s => s.isOnRadio).map(song => (
-                        <div key={song.id} className="bg-white p-3 rounded-lg border border-black shadow mb-3 flex flex-col">
+                    {activeRadioSongs.map(song => (
+                        <div key={song._key} className="bg-white p-3 rounded-lg border border-black shadow mb-3 flex flex-col">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <img src={song.coverArt} className="w-12 h-12 object-cover border border-black" />
                                     <div>
                                         <p className="font-bold text-sm truncate w-40">{song.title}</p>
                                         <p className="text-xs text-zinc-500 pt-1">
-                                            Plays: {formatNumber(song.radioPlays || 0)} TW • Format: {song.radioFormat?.toUpperCase()}
+                                            Plays: {formatNumber(song._region === 'US' ? (song.radioPlays || 0) : (song.ukRadioPlays || 0))} TW • Format: {(song._region === 'US' ? song.radioFormat : song.ukRadioFormat)?.toUpperCase()} • Region: {song._region}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <button 
                                         onClick={() => setPromoSongId(promoSongId === song.id ? null : song.id)} 
-                                        disabled={song.hasRadioPromo}
+                                        disabled={song._region === 'US' ? song.hasRadioPromo : song.hasUkRadioPromo}
                                         className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded uppercase disabled:opacity-50">
-                                        {song.hasRadioPromo ? 'Promoted' : promoSongId === song.id ? 'Cancel' : 'Promote'}
+                                        {(song._region === 'US' ? song.hasRadioPromo : song.hasUkRadioPromo) ? 'Promoted' : promoSongId === song.id ? 'Cancel' : 'Promote'}
                                     </button>
-                                    <button onClick={() => handleWithdraw(song.id, song.radioFormat || 'pop')} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">Withdraw</button>
+                                    <button onClick={() => handleWithdraw(song.id, song._region === 'US' ? (song.radioFormat || 'pop') : (song.ukRadioFormat || 'pop'), song._region)} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">Withdraw</button>
                                 </div>
                             </div>
                             {promoSongId === song.id && (
@@ -146,7 +153,7 @@ const RadioDashView: React.FC = () => {
                                         </button>
                                     </div>
                                     <button 
-                                        onClick={() => handlePromote(song.id, song.radioFormat || 'pop')} 
+                                        onClick={() => handlePromote(song.id, song._region === 'US' ? (song.radioFormat || 'pop') : (song.ukRadioFormat || 'pop'), song._region)} 
                                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded shadow text-sm uppercase tracking-wide transition-colors"
                                     >
                                         Confirm Campaign
@@ -159,20 +166,30 @@ const RadioDashView: React.FC = () => {
                 </div>
 
                 <div>
-                    <h2 className="text-xl font-bold mb-4 pt-4 border-t border-zinc-200">Submit New Track</h2>
-                    {activeArtistData.songs.filter(s => !s.isOnRadio && s.isReleased && !s.remixOfSongId).map(song => (
+                    <div className="flex justify-between items-center mb-4 pt-4 border-t border-zinc-200">
+                        <h2 className="text-xl font-bold">Submit New Track</h2>
+                        <select 
+                            value={selectedRegion}
+                            onChange={(e) => setSelectedRegion(e.target.value as 'US'|'UK')}
+                            className="bg-zinc-800 text-white px-3 py-1 rounded border border-zinc-700"
+                        >
+                            <option value="US">US Radio</option>
+                            <option value="UK">UK Radio</option>
+                        </select>
+                    </div>
+                    {activeArtistData.songs.filter(s => !(selectedRegion === 'US' ? s.isOnRadio : s.isOnUkRadio) && s.isReleased && !s.remixOfSongId).map(song => (
                         <div key={song.id} className="bg-white p-3 rounded border border-zinc-300 mb-3 flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div className="flex items-center w-full gap-3">
                                 <img src={song.coverArt} className="w-10 h-10 object-cover border border-zinc-200" />
                                 <p className="font-bold text-sm truncate flex-1">{song.title}</p>
                             </div>
                             <div className="flex gap-2 w-full sm:w-auto">
-                                <button onClick={() => handleSubmit(song.id, 'pop')} className="bg-blue-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Pop</button>
-                                <button onClick={() => handleSubmit(song.id, 'urban')} className="bg-orange-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Urban</button>
-                                <button onClick={() => handleSubmit(song.id, 'rhythmic')} className="bg-purple-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Rhythm</button>
-                                <button onClick={() => handleSubmit(song.id, 'country')} className="bg-green-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Country</button>
+                                <button onClick={() => handleSubmit(song.id, 'pop', selectedRegion)} className="bg-blue-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Pop</button>
+                                <button onClick={() => handleSubmit(song.id, 'urban', selectedRegion)} className="bg-orange-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Urban</button>
+                                <button onClick={() => handleSubmit(song.id, 'rhythmic', selectedRegion)} className="bg-purple-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Rhythm</button>
+                                <button onClick={() => handleSubmit(song.id, 'country', selectedRegion)} className="bg-green-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Country</button>
                                 {(gameState.date.week > 40 || gameState.date.week < 2) && (
-                                    <button onClick={() => handleSubmit(song.id, 'christmas')} className="bg-red-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Holiday</button>
+                                    <button onClick={() => handleSubmit(song.id, 'christmas', selectedRegion)} className="bg-red-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Holiday</button>
                                 )}
                             </div>
                         </div>
