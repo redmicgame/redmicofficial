@@ -11043,6 +11043,20 @@ The Government`,
         },
       };
     }
+    case "UPDATE_SNAPSHOT_BANNER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            releases: activeData.releases.map(r => r.id === action.payload.releaseId ? { ...r, snapshotBanner: action.payload.bannerUrl } : r)
+          }
+        }
+      };
+    }
     case "UPDATE_MERCH_BANNER": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];

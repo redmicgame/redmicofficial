@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import fs from 'fs';
+
+const code = `import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import ChevronLeftIcon from './icons/ChevronLeftIcon';
+import ChevronRightIcon from './icons/ChevronRightIcon';
 import { Release, Song } from '../types';
 import { FastAverageColor } from 'fast-average-color';
 
@@ -49,17 +53,17 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         const weekStreams = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
         const prevStreams = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
         
-        let changePercentDisplay = '-';
         let changeDisplay = '-';
+        let changePercentDisplay = '-';
         
         if (prevStreams > 0) {
             const change = ((weekStreams - prevStreams) / prevStreams) * 100;
-            changePercentDisplay = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+            changePercentDisplay = \`\${change >= 0 ? '+' : ''}\${change.toFixed(2)}%\`;
             const rawChange = weekStreams - prevStreams;
-            changeDisplay = `${rawChange >= 0 ? '+' : ''}${rawChange.toLocaleString()}`;
+            changeDisplay = \`\${rawChange >= 0 ? '+' : ''}\${rawChange.toLocaleString()}\`;
         } else if (weekStreams > 0) {
             changePercentDisplay = '+NEW';
-            changeDisplay = `+${weekStreams.toLocaleString()}`;
+            changeDisplay = \`+\${weekStreams.toLocaleString()}\`;
         }
 
         return { weekStreams, prevStreams, changePercentDisplay, changeDisplay, netWeekly: weekStreams };
@@ -74,13 +78,13 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                 <tr key={song.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-100/50'}>
                     <td className="p-2 font-bold text-black border border-gray-300 text-center">{song.title}</td>
                     <td className="text-center p-2 text-gray-700 border border-gray-300">{(song.streams || 0).toLocaleString()}</td>
-                    <td className={`text-center p-2 font-bold border border-gray-300 ${isNegative ? 'text-red-600' : 'text-gray-800'}`}>
+                    <td className={\`text-center p-2 font-bold border border-gray-300 \${isNegative ? 'text-red-600' : 'text-gray-800'}\`}>
                         {isNegative ? '' : '+'}{data.netWeekly.toLocaleString()}
                     </td>
-                    <td className={`text-center p-2 font-semibold border border-gray-300 ${isChangeNegative ? 'text-red-600' : 'text-green-600'}`}>
+                    <td className={\`text-center p-2 font-semibold border border-gray-300 border-r-0 \${isChangeNegative ? 'text-red-600' : 'text-green-600'}\`}>
                         {data.changePercentDisplay}
                     </td>
-                    <td className={`text-center p-2 font-semibold border border-gray-300 ${isChangeNegative ? 'text-red-600' : 'text-green-600'}`}>
+                    <td className={\`text-center p-2 font-semibold border border-gray-300 border-l-0 \${isChangeNegative ? 'text-red-600' : 'text-green-600'}\`}>
                         {data.changeDisplay}
                     </td>
                 </tr>
@@ -103,25 +107,25 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         let changeDisplay = '-';
         if (totalPrevWeeklyStreams > 0) {
             const change = ((totalWeeklyStreams - totalPrevWeeklyStreams) / totalPrevWeeklyStreams) * 100;
-            changePercentDisplay = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+            changePercentDisplay = \`\${change >= 0 ? '+' : ''}\${change.toFixed(2)}%\`;
             const rawChange = totalWeeklyStreams - totalPrevWeeklyStreams;
-            changeDisplay = `${rawChange >= 0 ? '+' : ''}${rawChange.toLocaleString()}`;
+            changeDisplay = \`\${rawChange >= 0 ? '+' : ''}\${rawChange.toLocaleString()}\`;
         } else if (totalWeeklyStreams > 0) {
             changePercentDisplay = '+NEW';
-            changeDisplay = `+${totalWeeklyStreams.toLocaleString()}`;
+            changeDisplay = \`+\${totalWeeklyStreams.toLocaleString()}\`;
         }
 
         return (
             <tr className="font-bold text-white border-y border-gray-300" style={{ backgroundColor: bgColor }}>
                 <td className="p-2 text-center border-r border-gray-300/30">{label}</td>
                 <td className="text-center p-2 border-r border-gray-300/30">{totalStreams.toLocaleString()}</td>
-                <td className={`text-center p-2 border-r border-gray-300/30`}>
+                <td className={\`text-center p-2 border-r border-gray-300/30\`}>
                     {totalWeeklyStreams >= 0 ? '+' : ''}{totalWeeklyStreams.toLocaleString()}
                 </td>
-                <td className={`text-center p-2 border-r border-gray-300/30`}>
+                <td className={\`text-center p-2 border-r-0\`}>
                     {changePercentDisplay}
                 </td>
-                <td className={`text-center p-2`}>
+                <td className={\`text-center p-2 border-l-0\`}>
                     {changeDisplay}
                 </td>
             </tr>
@@ -141,72 +145,25 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         }
     };
 
-    // Responsive scaling
-    const [scale, setScale] = useState(1);
-    
-    useEffect(() => {
-        const updateScale = () => {
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            
-            // Base width of the snapshot
-            const targetWidth = 800;
-            
-            // Estimate height (banner 192px + date 40px + header 48px + footer 44px + rows ~37px each)
-            const rowCount = standardSongs.length + deluxeSongs.length + (hasDeluxe ? 2 : 0) + 1;
-            const estimatedHeight = 192 + 40 + 60 + 60 + (rowCount * 45) + 64; // +64 for extra safe margin // 32px for padding
-            
-            const widthScale = (viewportWidth - 32) / targetWidth; // 32px padding
-            const heightScale = (viewportHeight - 32) / estimatedHeight;
-            
-            // Use the smaller scale so it fits entirely, cap at 1
-            setScale(Math.min(1, widthScale, heightScale));
-        };
-        
-        updateScale();
-        window.addEventListener('resize', updateScale);
-        return () => window.removeEventListener('resize', updateScale);
-    }, [standardSongs.length, deluxeSongs.length, hasDeluxe]);
+    // Calculate lighter color for Deluxe subtotal (basic approach: just use opacity or a fixed variant, let's use opacity via rgba or simply the same color slightly faded. Actually, we can just use a slightly lower opacity).
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center overflow-hidden" onClick={onBack}>
-            <div 
-                className="w-[800px] shadow-2xl rounded-lg overflow-hidden relative font-sans shrink-0" 
-                onClick={e => e.stopPropagation()} 
-                style={{ 
-                    transform: `scale(${scale})`, 
-                    transformOrigin: 'center center'
-                }}
-            >
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 p-4 flex items-center justify-center overflow-y-auto" onClick={onBack}>
+            <div className="w-full max-w-4xl shadow-2xl rounded-lg overflow-hidden relative font-sans" onClick={e => e.stopPropagation()} style={{ transform: \`scale(\${releaseSongs.length > 15 ? 0.8 : 1})\`, transformOrigin: 'top center' }}>
                 
                 {/* Banner Area */}
                 <div 
-                    className="w-full h-48 bg-zinc-800 relative cursor-pointer group flex items-center justify-between px-8 border-b-4 border-black overflow-hidden"
+                    className="w-full h-48 bg-zinc-800 relative cursor-pointer group flex items-center justify-center border-b-4 border-black"
                     onClick={() => fileInputRef.current?.click()}
                     style={{ 
-                        backgroundImage: release.snapshotBanner ? `url(${release.snapshotBanner})` : 'none',
+                        backgroundImage: release.snapshotBanner ? \`url(\${release.snapshotBanner})\` : 'none',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center'
                     }}
                 >
-                    <div className="absolute inset-0 bg-black/40 z-0 group-hover:bg-black/50 transition-colors" />
-                    
-                    <div className="relative z-10 flex items-center gap-6">
-                        <img src={release.coverArt} className="w-32 h-32 rounded-sm shadow-xl" alt="Cover" />
-                    </div>
-                    
-                    <div className="relative z-10 flex-grow text-center pointer-events-none">
-                         {!release.snapshotBanner ? (
-                            <div className="flex flex-col items-center">
-                                <h1 className="text-5xl font-black text-white uppercase tracking-tighter drop-shadow-lg">{release.title}</h1>
-                                <span className="text-white/80 font-bold mt-2">Tap to upload custom banner</span>
-                            </div>
-                         ) : null}
-                    </div>
-
-                    <div className="relative z-10 font-bold text-white/50 italic pointer-events-none">
-                         Charts by Red Mic
-                    </div>
+                    {!release.snapshotBanner && (
+                        <span className="text-white/50 font-bold group-hover:text-white/80 transition-colors">Tap to upload banner image</span>
+                    )}
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleBannerUpload} className="hidden" />
                 </div>
 
@@ -222,9 +179,8 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                             <tr>
                                 <th className="text-center p-3 font-bold border border-gray-600">Song</th>
                                 <th className="text-center p-3 font-bold border border-gray-600">Total Streams</th>
-                                <th className="text-center p-3 font-bold border border-gray-600">Weekly Streams</th>
-                                <th className="text-center p-3 font-bold border border-gray-600">% Change</th>
-                                <th className="text-center p-3 font-bold border border-gray-600">Net Change</th>
+                                <th className="text-center p-3 font-bold border border-gray-600">Daily Streams</th>
+                                <th className="text-center p-3 font-bold border border-gray-600" colSpan={2}>Change</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -257,3 +213,6 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
 };
 
 export default SpotifySnapshotView;
+`;
+
+fs.writeFileSync('components/SpotifySnapshotView.tsx', code);

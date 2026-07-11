@@ -214,6 +214,7 @@ export interface Release {
   artistId: string;
   countdownVideoUrl?: string; // For upcoming albums
   countdownImageUrl?: string;
+  snapshotBanner?: string;
   isTracklistRevealed?: boolean;
   revealedTrackIds?: string[];
   tracklistImageUrl?: string;
@@ -1910,6 +1911,7 @@ export type GameAction =
   | { type: "UPDATE_MERCH_PRICE"; payload: { id: string; price: number } }
   | { type: "REMOVE_MERCH"; payload: { id: string } }
   | { type: "UPDATE_MERCH_BANNER"; payload: string }
+  | { type: "UPDATE_SNAPSHOT_BANNER"; payload: { releaseId: string; bannerUrl: string } }
   | { type: "UPDATE_GRAMMY_BANNER"; payload: string }
   | { type: "UPDATE_OSCAR_BANNER"; payload: string }
   | { type: "MARK_INBOX_READ" }
