@@ -2558,18 +2558,20 @@ const gameReducerInternal = (
         });
 
         // --- MANAGER AUTOMATIONS ---
-        if (
-          (artistData.manager?.autoDistributeAscap || artistData.manager?.autoDistributeFreeSongsToAscap) &&
-          artistData.contract !== null
-        ) {
-          artistData.songs.forEach((song) => {
+        if (artistData.manager?.autoDistributeAscap || artistData.manager?.autoDistributeFreeSongsToAscap) {
+          artistData.songs = artistData.songs.map((song) => {
             if (
               song.isReleased &&
               !song.isAvailableOnStreaming &&
               !song.isTakenDown
             ) {
-              song.isAvailableOnStreaming = true;
+              const cost = artistData.contract !== null ? 0 : 1500;
+              if (artistData.money >= cost) {
+                 artistData.money -= cost;
+                 return { ...song, isAvailableOnStreaming: true };
+              }
             }
+            return song;
           });
         }
 
@@ -2690,10 +2692,11 @@ const gameReducerInternal = (
                   targetRegion = regions[Math.floor(Math.random() * regions.length)] as any;
                 }
                 if (targetRegion && targetRegion !== "Random") {
-                    artistData.regionalPopularity[targetRegion] = Math.min(100, (artistData.regionalPopularity[targetRegion] || 0) + 1);
-                    regionBoostText = `\nWe focused bookings in ${targetRegion}, giving you a +1 popularity boost there!`;
+                    artistData.regionalPopularity[targetRegion] = Math.min(100, (artistData.regionalPopularity[targetRegion] || 0) + gigsBookedThisWeek);
+                    regionBoostText = `\nWe focused bookings in ${targetRegion}, giving you a +${gigsBookedThisWeek} popularity boost there!`;
                 }
               }
+              artistData.popularity = Math.min(100, (artistData.popularity || 0) + gigsBookedThisWeek);
 
               if (artistProfileForEmail) {
                 newEmails.push({
