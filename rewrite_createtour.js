@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import fs from 'fs';
+
+const code = `import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { VENUES, TOUR_TIER_REQUIREMENTS, TOUR_TICKET_PRICE_SUGGESTIONS } from '../constants';
-import { Tour, Venue, Song, MerchProduct } from '../types';
+import { Tour, Venue, Song, MerchItem } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 type TourTier = 'Small Halls' | 'Large Halls' | 'Arenas' | 'Stadiums';
@@ -122,7 +124,7 @@ const CreateTourView: React.FC = () => {
         }
         
         if (money < totalUpfrontCost) {
-            setError(`You do not have enough money to book this tour. (Costs: $${formatNumber(totalUpfrontCost)})`);
+            setError(\`You do not have enough money to book this tour. (Costs: \$\${formatNumber(totalUpfrontCost)})\`);
             return;
         }
 
@@ -159,7 +161,7 @@ const CreateTourView: React.FC = () => {
             bookingCostsPaid: totalUpfrontCost
         };
 
-        
+        dispatch({ type: 'DEDUCT_MONEY', payload: totalUpfrontCost });
         dispatch({ type: 'CREATE_TOUR', payload: newTour });
         dispatch({ type: 'CHANGE_VIEW', payload: 'tours' });
     };
@@ -193,7 +195,7 @@ const CreateTourView: React.FC = () => {
                         <h2 className="text-xl font-bold">{tier} Tour ({chosenVenueIds.size} shows)</h2>
                         <div className="bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg">
                             <p className="text-sm font-bold text-blue-200">Venue Booking Costs</p>
-                            <p className="text-xs text-blue-300">You must pay upfront to secure venues. Currently: ${formatNumber(venueBookingCost)}</p>
+                            <p className="text-xs text-blue-300">You must pay upfront to secure venues. Currently: \${formatNumber(venueBookingCost)}</p>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-zinc-300">Ticket Price</label>
@@ -247,7 +249,7 @@ const CreateTourView: React.FC = () => {
                                             <input type="checkbox" checked={chosenMerchIds.has(m.id)} onChange={() => handleToggleMerch(m.id)} className="form-checkbox h-4 w-4 rounded bg-zinc-700 border-zinc-600 text-red-600 focus:ring-red-500"/>
                                             <div className="flex-1 flex justify-between items-center">
                                                 <span className="font-bold text-sm">{m.name}</span>
-                                                <span className="text-xs bg-zinc-700 px-2 py-0.5 rounded">${m.price.toFixed(2)}</span>
+                                                <span className="text-xs bg-zinc-700 px-2 py-0.5 rounded">\${m.price.toFixed(2)}</span>
                                             </div>
                                         </label>
                                     ))}
@@ -267,7 +269,7 @@ const CreateTourView: React.FC = () => {
                                 <option value="">No Opener</option>
                                 {npcList.map(npc => (
                                     <option key={npc.uniqueId} value={npc.uniqueId}>
-                                        {npc.artist} (${formatNumber(npc.basePopularity * 2000 * chosenVenuesList.length)} total cost)
+                                        {npc.artist} (\${formatNumber(npc.basePopularity * 2000 * chosenVenuesList.length)} total cost)
                                     </option>
                                 ))}
                             </select>
@@ -283,7 +285,7 @@ const CreateTourView: React.FC = () => {
                                             <input type="checkbox" checked={guestIds.has(npc.uniqueId)} onChange={() => handleToggleGuest(npc.uniqueId)} className="form-checkbox h-4 w-4 rounded bg-zinc-700 border-zinc-600 text-red-600 focus:ring-red-500"/>
                                             <div className="flex-1 flex justify-between items-center text-sm">
                                                 <span>{npc.artist}</span>
-                                                <span className="text-xs text-zinc-400">Cost: ${formatNumber(npc.basePopularity * 1000 * chosenVenuesList.length)}</span>
+                                                <span className="text-xs text-zinc-400">Cost: \${formatNumber(npc.basePopularity * 1000 * chosenVenuesList.length)}</span>
                                             </div>
                                         </label>
                                     );
@@ -294,7 +296,7 @@ const CreateTourView: React.FC = () => {
                         <div className="bg-zinc-800 p-3 rounded-lg flex justify-between items-center font-bold border border-zinc-700">
                             <span>Total Upfront Cost:</span>
                             <span className={money >= totalUpfrontCost ? 'text-green-400' : 'text-red-400'}>
-                                ${formatNumber(totalUpfrontCost)}
+                                \${formatNumber(totalUpfrontCost)}
                             </span>
                         </div>
 
@@ -318,7 +320,7 @@ const CreateTourView: React.FC = () => {
                             {allSongs.map(song => {
                                 const isHit = top3Hits.some(h => h.id === song.id);
                                 return (
-                                <button key={song.id} onClick={() => handleToggleSetlist(song.id)} className={`w-full flex items-center gap-3 p-2 rounded-lg ${setlist.has(song.id) ? 'bg-red-500/20' : 'bg-zinc-800'}`}>
+                                <button key={song.id} onClick={() => handleToggleSetlist(song.id)} className={\`w-full flex items-center gap-3 p-2 rounded-lg \${setlist.has(song.id) ? 'bg-red-500/20' : 'bg-zinc-800'}\`}>
                                     <input type="checkbox" readOnly checked={setlist.has(song.id)} className="form-checkbox h-5 w-5 rounded bg-zinc-700 border-zinc-600 text-red-600 focus:ring-red-500" />
                                     <img src={song.coverArt} className="w-12 h-12 rounded-md object-cover"/>
                                     <div className="text-left flex-grow">
@@ -359,7 +361,7 @@ const CreateTourView: React.FC = () => {
                             disabled={chosenVenueIds.size === 0 || !tourName || setlist.size < 10} 
                             className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors p-4 rounded-lg font-bold text-lg"
                         >
-                            Finalize Tour & Pay Booking (${formatNumber(totalUpfrontCost)})
+                            Finalize Tour & Pay Booking (\${formatNumber(totalUpfrontCost)})
                         </button>
                     </div>
                 );
@@ -374,14 +376,14 @@ const CreateTourView: React.FC = () => {
                 </button>
                 <h1 className="text-2xl font-bold">Plan Tour</h1>
                 <div className="ml-auto text-green-400 font-bold text-sm">
-                    Bank: ${formatNumber(money)}
+                    Bank: \${formatNumber(money)}
                 </div>
             </header>
 
             <main className="p-4 max-w-2xl mx-auto pb-24">
                 <div className="flex items-center gap-2 mb-6">
                     {[1,2,3,4,5].map(s => (
-                        <div key={s} className={`h-2 flex-1 rounded-full ${s <= step ? 'bg-red-600' : 'bg-zinc-800'}`}></div>
+                        <div key={s} className={\`h-2 flex-1 rounded-full \${s <= step ? 'bg-red-600' : 'bg-zinc-800'}\`}></div>
                     ))}
                 </div>
                 {renderStep()}
@@ -391,3 +393,6 @@ const CreateTourView: React.FC = () => {
 };
 
 export default CreateTourView;
+`;
+
+fs.writeFileSync('components/CreateTourView.tsx', code);

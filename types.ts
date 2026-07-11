@@ -1353,6 +1353,10 @@ export interface Tour {
   presaleCollectionQueue?: { weeksRemaining: number; amount: number }[];
   presaleDemand?: number; // Estimated demand
   isSetlistMissingHits?: boolean; // Flag to apply -50% penalty
+  merchItems?: MerchProduct[];
+  openerId?: string;
+  guestIds?: string[];
+  bookingCostsPaid?: number;
 }
 
 export interface Manager {

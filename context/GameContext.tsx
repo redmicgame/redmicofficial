@@ -2997,6 +2997,27 @@ const gameReducerInternal = (
                 const vipTickets = Math.floor(newTicketsSold * 0.05); // 5% buy VIP
                 revenue += vipTickets * (actualTicketPrice * 4); // VIP is an extra 4x
               }
+              
+              let merchRevenue = 0;
+              if (tour.merchItems && tour.merchItems.length > 0) {
+                 artistData.merch = artistData.merch.map(item => {
+                    const isTourMerch = tour.merchItems?.find(m => m.id === item.id);
+                    if (isTourMerch && item.stock > 0) {
+                       const price = item.price;
+                       const safePrice = Math.max(0.01, price);
+                       // Tour attendees are very likely to buy merch (10-30% base, scaled by price)
+                       let buyerRate = (0.1 + Math.random() * 0.2) * Math.min(1, 20 / safePrice);
+                       buyerRate = Math.min(buyerRate, 0.4); // max 40%
+                       let buyers = Math.floor(newTicketsSold * buyerRate);
+                       buyers = Math.min(buyers, item.stock);
+                       const itemRev = buyers * price;
+                       merchRevenue += itemRev;
+                       return { ...item, stock: item.stock - buyers, unitsSold: (item.unitsSold || 0) + buyers, _actualWeeklySales: (item._actualWeeklySales || 0) + buyers };
+                    }
+                    return item;
+                 });
+                 revenue += merchRevenue;
+              }
 
               const updatedVenue = {
                 ...venue,
@@ -4588,8 +4609,8 @@ const gameReducerInternal = (
         ].slice(0, 4);
 
         const newSubscribersGained = Math.floor(
-          totalWeeklyViews /
-            (450 - Math.min(350, artistData.youtubeSubscribers / 4000)),
+          (totalWeeklyViews /
+            (450 - Math.min(350, artistData.youtubeSubscribers / 4000))) * 0.85,
         );
         const newYoutubeSubscribers =
           artistData.youtubeSubscribers + newSubscribersGained;
@@ -6242,8 +6263,8 @@ const gameReducerInternal = (
 
           // Grow Instagram followers passively
           const instagramPassiveGain =
-            Math.floor((totalWeeklyStreams / 12000) * tikTokPopMult) +
-            Math.floor(Math.random() * 60);
+            Math.floor((totalWeeklyStreams / 8000) * tikTokPopMult) +
+            Math.floor(Math.random() * 90);
           artistData.instagramFollowers =
             (artistData.instagramFollowers || 0) + instagramPassiveGain;
 
@@ -11980,6 +12001,9 @@ The Government`,
       const viewVariance = baseViews * 0.5 * (Math.random() - 0.5);
       let views = Math.floor(Math.max(10, baseViews + viewVariance));
 
+      // Ensure tiktok video views are always more than followers
+      views = Math.max(views, followers + Math.floor(followers * (Math.random() * 0.5 + 0.1)));
+
       // 5-10% chance for viral video (1M-75M views)
       if (Math.random() < 0.08) {
         views = Math.floor(Math.random() * (75000000 - 1000000)) + 1000000;
@@ -16362,12 +16386,14 @@ Let us know if you accept.`,
     case "CREATE_TOUR": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      const cost = action.payload.bookingCostsPaid || 0;
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
+            money: activeData.money - cost,
             tours: [...activeData.tours, action.payload],
           },
         },

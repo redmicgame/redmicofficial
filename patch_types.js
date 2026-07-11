@@ -1,15 +1,19 @@
 import fs from 'fs';
 let code = fs.readFileSync('types.ts', 'utf8');
-code = code.replace(
-  'fallonPerformanceRequestedForSongId?: string;',
-  'fallonPerformanceRequestedForSongId?: string;\n  magazineInterviewRequestedForSongId?: string;\n  newspaperInterviewRequestedForSongId?: string;\n  tvInterviewRequestedForSongId?: string;'
-);
-code = code.replace(
-  'activeFallonOffer: {',
-  'activeInterviewOffer?: {\n    releaseId: string;\n    interviewType: "magazine" | "newspaper" | "tv";\n    outletName: string;\n    emailId: string;\n  } | null;\n  activeFallonOffer: {'
-);
-code = code.replace(
-  '"createFallonInterview"',
-  '"createFallonInterview"\n  | "createMagazineInterview"\n  | "createTvInterview"'
-);
+
+const target = `  presaleCollectionQueue?: { weeksRemaining: number; amount: number }[];
+  presaleDemand?: number; // Estimated demand
+  isSetlistMissingHits?: boolean; // Flag to apply -50% penalty
+}`;
+
+const repl = `  presaleCollectionQueue?: { weeksRemaining: number; amount: number }[];
+  presaleDemand?: number; // Estimated demand
+  isSetlistMissingHits?: boolean; // Flag to apply -50% penalty
+  merchItems?: MerchItem[];
+  openerId?: string;
+  guestIds?: string[];
+  bookingCostsPaid?: number;
+}`;
+
+code = code.replace(target, repl);
 fs.writeFileSync('types.ts', code);
