@@ -2559,8 +2559,8 @@ const gameReducerInternal = (
 
         // --- MANAGER AUTOMATIONS ---
         if (
-          artistData.manager?.autoDistributeAscap &&
-          artistData.currentLabel !== "Independent"
+          (artistData.manager?.autoDistributeAscap || artistData.manager?.autoDistributeFreeSongsToAscap) &&
+          artistData.contract !== null
         ) {
           artistData.songs.forEach((song) => {
             if (
@@ -2677,13 +2677,31 @@ const gameReducerInternal = (
                 getHypeCap(artistData),
                 artistData.hype + weeklyGigHype,
               );
+              let regionBoostText = "";
+              if (artistData.manager?.autoGigRegion) {
+                if (!artistData.regionalPopularity) {
+                  artistData.regionalPopularity = {
+                    "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0
+                  };
+                }
+                let targetRegion = artistData.manager.autoGigRegion;
+                if (targetRegion === "Random") {
+                  const regions = ["US", "Canada", "UK", "Latin America", "Asia", "Africa"];
+                  targetRegion = regions[Math.floor(Math.random() * regions.length)] as any;
+                }
+                if (targetRegion && targetRegion !== "Random") {
+                    artistData.regionalPopularity[targetRegion] = Math.min(100, (artistData.regionalPopularity[targetRegion] || 0) + 1);
+                    regionBoostText = `\nWe focused bookings in ${targetRegion}, giving you a +1 popularity boost there!`;
+                }
+              }
+
               if (artistProfileForEmail) {
                 newEmails.push({
                   id: crypto.randomUUID(),
                   sender: manager?.name || "Your Manager",
                   senderIcon: "business",
                   subject: `Weekly Gig Report`,
-                  body: `Hi ${artistProfileForEmail.name},\n\nI've booked ${gigsBookedThisWeek} gig(s) for you this week, earning a total of $${formatNumber(weeklyGigIncome)} and +${weeklyGigHype} hype.\n\nDetails:\n${bookedGigNames.join("\n")}\n\nKeep up the great work!\n\nBest,\n${manager?.name}`,
+                  body: `Hi ${artistProfileForEmail.name},\n\nI've booked ${gigsBookedThisWeek} gig(s) for you this week, earning a total of $${formatNumber(weeklyGigIncome)} and +${weeklyGigHype} hype.${regionBoostText}\n\nDetails:\n${bookedGigNames.join("\n")}\n\nKeep up the great work!\n\nBest,\n${manager?.name}`,
                   date: newDate,
                   isRead: false,
                 });
@@ -16412,6 +16430,25 @@ The Government`,
               ...activeData.manager,
               [action.payload.setting]:
                 !activeData.manager[action.payload.setting],
+            },
+          },
+        },
+      };
+    }
+    case "SET_MANAGER_GIG_REGION": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.manager) return state;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            manager: {
+              ...activeData.manager,
+              autoGigRegion: action.payload,
             },
           },
         },

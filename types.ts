@@ -1522,6 +1522,8 @@ export interface ArtistData {
     autoSubmitAwards?: boolean;
     autoSubmitCoachella?: boolean;
     autoMakeOfficialAudio?: boolean;
+    autoDistributeFreeSongsToAscap?: boolean;
+    autoGigRegion?: "Random" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa";
   } | null;
   requestedPromoInterview?: boolean;
   lastPushToItunesWeek?: number;
@@ -2306,8 +2308,13 @@ export type GameAction =
           | "autoDistributeAscap"
           | "autoSubmitAwards"
           | "autoSubmitCoachella"
-          | "autoMakeOfficialAudio";
+          | "autoMakeOfficialAudio"
+          | "autoDistributeFreeSongsToAscap";
       };
+    }
+  | {
+      type: "SET_MANAGER_GIG_REGION";
+      payload: "Random" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa";
     }
   | {
       type: "BUY_PLAYLIST_ENTRY";

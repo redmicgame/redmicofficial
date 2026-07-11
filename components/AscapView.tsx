@@ -27,7 +27,7 @@ const AscapView: React.FC = () => {
 
     const getDistributeCost = () => {
         if (!activeArtistData) return 1500;
-        return activeArtistData.currentLabel !== 'Independent' ? 0 : 1500;
+        return activeArtistData.contract !== null ? 0 : 1500;
     };
 
     const handleUpload = (songId: string) => {

@@ -287,6 +287,22 @@ const ManagementView: React.FC = () => {
                                         <span className="text-sm font-medium">Auto-make official audio (Custom video)</span>
                                         <input type="checkbox" checked={!!manager!.autoMakeOfficialAudio} onChange={() => dispatch({ type: 'TOGGLE_MANAGER_SETTING', payload: { setting: 'autoMakeOfficialAudio' }})} className="w-5 h-5 accent-red-600" />
                                     </label>
+                                    <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg">
+                                        <span className="text-sm font-medium">Auto-book Gigs Region (+1 Pop)</span>
+                                        <select
+                                            value={manager!.autoGigRegion || "Random"}
+                                            onChange={(e) => dispatch({ type: 'SET_MANAGER_GIG_REGION', payload: e.target.value as any })}
+                                            className="bg-zinc-800 border border-zinc-600 text-white p-1 rounded"
+                                        >
+                                            <option value="Random">Random</option>
+                                            <option value="US">US</option>
+                                            <option value="Canada">Canada</option>
+                                            <option value="UK">UK</option>
+                                            <option value="Latin America">Latin America</option>
+                                            <option value="Asia">Asia</option>
+                                            <option value="Africa">Africa</option>
+                                        </select>
+                                    </label>
                                 </div>
                             </div>
                         </div>
