@@ -4396,6 +4396,10 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               }
             }
             baseStreams *= careerStageMultiplier;
+            const songRelease = artistData.releases.find((r) => r.id === song.releaseId);
+            if (songRelease && songRelease.type === 'Live Album') {
+                baseStreams *= 0.05; // -95% streams permanently
+            }
 
             // ---- Sound Trends & Era Multipliers ----
             let trendMultiplier = 1.0;
@@ -19799,8 +19803,7 @@ Let us know if you accept.`,
             const artistName = state.soloArtist?.name || state.group?.name;
             const title = state.activeMoviePremiereOffer.roleTitle;
             
-            const locations = ["New York City", "Los Angeles", "Paris", "Dubai", "London", "Tokyo"];
-            const loc = locations[Math.floor(Math.random() * locations.length)];
+            const loc = action.payload.location || "Los Angeles";
             
             const popBasePost = {
               id: crypto.randomUUID(),

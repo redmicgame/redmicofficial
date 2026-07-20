@@ -2053,6 +2053,7 @@ export type GameAction =
   | { type: "SET_ACTING_COVER_URL"; payload: { roleId: string; coverUrl: string } }
   | { type: "ATTEND_ACTING_PREMIERE"; payload: { roleId: string } }
   | { type: "DECLINE_ACTING_PREMIERE"; payload: { roleId: string } }
+  | { type: "ACCEPT_MOVIE_PREMIERE_RED_CARPET"; payload: { emailId: string, lookUrl: string, location?: string } }
   | { type: "SIGN_TALENT_AGENCY"; payload: { agencyId: string } }
   | { type: "LEAVE_TALENT_AGENCY" }
   | {

@@ -1,23 +1,9 @@
+const fs = require('fs');
+let file = '/app/applet/components/GameGuideView.tsx';
+let content = fs.readFileSync(file, 'utf8');
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useGame } from '../context/GameContext';
-import ArrowLeftIcon from './icons/ArrowLeftIcon';
-import BookOpenIcon from './icons/BookOpenIcon';
-import MusicNoteIcon from './icons/MusicNoteIcon';
-import BriefcaseIcon from './icons/BriefcaseIcon';
-import FireIcon from './icons/FireIcon';
-import ChartBarIcon from './icons/ChartBarIcon';
-import StarIcon from './icons/StarIcon';
-import AmaAwardIcon from './icons/AmaAwardIcon';
-
-interface GuideSection {
-    id: string;
-    title: string;
-    icon: React.ReactNode;
-    content: React.ReactNode;
-}
-
-const guideSections: GuideSection[] = [
+const regex = /const guideSections: GuideSection\[\] = \[([\s\S]*?)\];\n\nconst GameGuideView/m;
+const expandedGuide = `const guideSections: GuideSection[] = [
     {
         id: 'getting-started',
         title: 'Getting Started',
@@ -71,8 +57,6 @@ const guideSections: GuideSection[] = [
         content: (
             <>
                 <p>Go to the 'Release Hub' to package unreleased songs. You can release a <strong>Single</strong> (1 song), an <strong>EP</strong> (3-7 songs), or an <strong>Album</strong> (8+ songs). Releasing independently gives you full control, but signing to a label offers promotional power.</p>
-                <h3 className="font-bold text-red-400 mt-4">Features & Collaborations</h3>
-                <p>Sometimes you will get an email asking you to feature on another artist's track. Accepting these can give you a boost in popularity and passive streams. Similarly, you can ask NPCs to feature on your songs during recording, which combines your star power to boost the song's potential streams.</p>
                 <h3 className="font-bold text-red-400 mt-4">Live Albums</h3>
                 <p>You can package live performances into a <strong>Live Album</strong>. However, be aware that live album tracks receive a massive <strong>-95% stream penalty permanently</strong> compared to studio recordings. They are mostly for fan service and modest revenue bumps, not for topping charts.</p>
                 <h3 className="font-bold text-red-400 mt-4">Compilations & Deluxe</h3>
@@ -239,90 +223,8 @@ const guideSections: GuideSection[] = [
     },
 ];
 
-const GameGuideView: React.FC = () => {
-    const { dispatch } = useGame();
-    const [activeSection, setActiveSection] = useState(guideSections[0].id);
-    const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
-    const contentRef = useRef<HTMLDivElement | null>(null);
+const GameGuideView`;
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        setActiveSection(entry.target.id);
-                    }
-                });
-            },
-            { root: contentRef.current, threshold: 0.3, rootMargin: '-40% 0px -60% 0px' }
-        );
-
-        Object.values(sectionRefs.current).forEach(ref => {
-            if (ref) observer.observe(ref);
-        });
-
-        return () => {
-            Object.values(sectionRefs.current).forEach(ref => {
-                if (ref) observer.unobserve(ref);
-            });
-        };
-    }, []);
-
-    const scrollToSection = (id: string) => {
-        sectionRefs.current[id]?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-        });
-    };
-
-    return (
-        <div className="h-full w-full bg-zinc-900 flex flex-col text-white">
-            <header className="p-4 flex items-center gap-4 flex-shrink-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
-                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="p-2 rounded-full hover:bg-white/10">
-                    <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-                <h1 className="text-2xl font-bold">Game Guide</h1>
-            </header>
-            <div className="flex flex-grow overflow-hidden">
-                <aside className="w-1/3 md:w-1/4 h-full overflow-y-auto border-r border-zinc-700/50 p-4">
-                    <nav className="space-y-1">
-                        {guideSections.map(section => (
-                            <button
-                                key={section.id}
-                                onClick={() => scrollToSection(section.id)}
-                                className={`w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors text-sm font-semibold ${
-                                    activeSection === section.id
-                                        ? 'bg-red-500/20 text-red-400'
-                                        : 'text-zinc-300 hover:bg-zinc-800'
-                                }`}
-                            >
-                                <span className="flex-shrink-0">{section.icon}</span>
-                                <span className="truncate">{section.title}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </aside>
-                <main ref={contentRef} className="w-2/3 md:w-3/4 h-full overflow-y-auto p-4 md:p-6">
-                    <div className="space-y-8 max-w-2xl mx-auto">
-                        {guideSections.map(section => (
-                            <div
-                                key={section.id}
-                                id={section.id}
-                                ref={el => sectionRefs.current[section.id] = el}
-                                className="bg-zinc-800 p-4 rounded-lg scroll-mt-4"
-                            >
-                                <h2 className="text-2xl font-bold text-red-400 mb-4">{section.title}</h2>
-                                <div className="space-y-3 text-zinc-300 leading-relaxed">
-                                    {section.content}
-                                </div>
-                            </div>
-                        ))}
-                         <div className="h-32"></div>
-                    </div>
-                </main>
-            </div>
-        </div>
-    );
-};
-
-export default GameGuideView;
+content = content.replace(regex, expandedGuide);
+fs.writeFileSync(file, content);
+console.log('Game guide expanded successfully');

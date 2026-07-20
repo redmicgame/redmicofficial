@@ -99,6 +99,7 @@ import OscarsView from './components/OscarsView';
 import SubmitForOscarsView from './components/SubmitForOscarsView';
 import CreateOscarPerformanceView from './components/CreateOscarPerformanceView';
 import OscarRedCarpetView from './components/OscarRedCarpetView';
+import MoviePremiereRedCarpetView from './components/MoviePremiereRedCarpetView';
 import SwitchSaveView from './components/SwitchSaveView';
 import RedCarpetHistoryView from './components/RedCarpetHistoryView';
 import DatingView from './components/DatingView';
@@ -297,6 +298,8 @@ const AppContent: React.FC = () => {
                 return <CreateOscarPerformanceView />;
             case 'oscarRedCarpet':
                 return <OscarRedCarpetView />;
+            case 'moviePremiereRedCarpet':
+                return <MoviePremiereRedCarpetView />;
             case 'switchSave':
                 return <SwitchSaveView />;
             case 'redCarpetHistory':
