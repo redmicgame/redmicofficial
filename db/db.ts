@@ -35,16 +35,17 @@ export const setActiveSaveId = (id: number): void => {
     localStorage.setItem('redmic_active_save_id', id.toString());
 };
 
-// Traverse and separate base64 data URIs into the media table
-export const separateMediaFromState = async (state: GameState): Promise<any> => {
+export const separateMediaFromState = async (state: GameState, onProgress?: (progress: number, msg?: string) => void): Promise<any> => {
   const mediaToSave: MediaSave[] = [];
-
+  
+  if (onProgress) onProgress(0, "Analyzing state structure...");
+  
+  // Synchronous traversal to avoid Promise memory overhead
   const traverseAndReplace = (obj: any): any => {
     if (obj === null || typeof obj !== 'object') {
       if (typeof obj === 'string' && obj.startsWith('data:')) {
-        // Hash it or just random UUID. A simple hash prevents duplicates.
         let hash = 0;
-        for (let i = 0; i < obj.length; i++) {
+        for (let i = 0; i < obj.length && i < 1000; i++) {
           hash = (Math.imul(31, hash) + obj.charCodeAt(i)) | 0;
         }
         const id = `__media_${hash}_${obj.length}`;
@@ -53,11 +54,14 @@ export const separateMediaFromState = async (state: GameState): Promise<any> => 
       }
       return obj;
     }
-
+    
     if (Array.isArray(obj)) {
-      return obj.map(traverseAndReplace);
+      const arr = new Array(obj.length);
+      for (let i = 0; i < obj.length; i++) {
+          arr[i] = traverseAndReplace(obj[i]);
+      }
+      return arr;
     }
-
     const newObj: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -66,24 +70,32 @@ export const separateMediaFromState = async (state: GameState): Promise<any> => 
     }
     return newObj;
   };
-
+  
   const newState = traverseAndReplace(state);
 
-  // Bulk put all discovered media
   if (mediaToSave.length > 0) {
-    // deduplicate media to save
+    if (onProgress) onProgress(50, "Saving unique media assets...");
     const uniqueMedia = Array.from(new Map(mediaToSave.map(item => [item.id, item])).values());
-    await db.media.bulkPut(uniqueMedia);
+    
+    const chunkSize = 100;
+    for (let i = 0; i < uniqueMedia.length; i += chunkSize) {
+        const chunk = uniqueMedia.slice(i, i + chunkSize);
+        await db.media.bulkPut(chunk);
+        if (onProgress) onProgress(50 + Math.floor((i / uniqueMedia.length) * 50), `Saving media chunk ${i} / ${uniqueMedia.length}...`);
+        await new Promise(r => setTimeout(r, 2));
+    }
   }
-
+  
+  if (onProgress) onProgress(100, "Done separating media!");
   return newState;
 };
 
-// Re-inject media from the media table into the state
-export const injectMediaIntoState = async (state: any): Promise<GameState> => {
-  // Collect all media IDs needed
+export const injectMediaIntoState = async (state: any, onProgress?: (progress: number, msg?: string) => void): Promise<GameState> => {
   const mediaIds = new Set<string>();
   
+  if (onProgress) onProgress(0, "Analyzing save file structure...");
+  
+  // Synchronous collection
   const collectMediaIds = (obj: any) => {
     if (obj === null || typeof obj !== 'object') {
       if (typeof obj === 'string' && obj.startsWith('__media_')) {
@@ -91,8 +103,11 @@ export const injectMediaIntoState = async (state: any): Promise<GameState> => {
       }
       return;
     }
+    
     if (Array.isArray(obj)) {
-      obj.forEach(collectMediaIds);
+      for (let i = 0; i < obj.length; i++) {
+          collectMediaIds(obj[i]);
+      }
       return;
     }
     for (const key in obj) {
@@ -101,28 +116,46 @@ export const injectMediaIntoState = async (state: any): Promise<GameState> => {
       }
     }
   };
-
+  
   collectMediaIds(state);
 
-  // Fetch all needed media
-  const mediaRecords = await db.media.bulkGet(Array.from(mediaIds));
+  if (onProgress) onProgress(15, "Retrieving assets from local database...");
+  const mediaIdArray = Array.from(mediaIds);
   const mediaMap = new Map<string, string>();
-  Array.from(mediaIds).forEach((id, index) => {
-    if (mediaRecords[index]) {
-      mediaMap.set(id, mediaRecords[index]!.data);
-    }
-  });
+  
+  const chunkSize = 100;
+  for (let i = 0; i < mediaIdArray.length; i += chunkSize) {
+      const chunk = mediaIdArray.slice(i, i + chunkSize);
+      const records = await db.media.bulkGet(chunk);
+      chunk.forEach((id, index) => {
+          if (records[index]) {
+              mediaMap.set(id, records[index]!.data);
+          }
+      });
+      if (onProgress) {
+          const pct = Math.floor(15 + ((i / mediaIdArray.length) * 35));
+          onProgress(pct, `Loading assets (${i} / ${mediaIdArray.length})...`);
+      }
+      await new Promise(r => setTimeout(r, 2)); 
+  }
 
-  // Replace IDs with actual base64
+  if (onProgress) onProgress(50, "Constructing game state...");
+  
+  // Synchronous injection
   const traverseAndInject = (obj: any): any => {
     if (obj === null || typeof obj !== 'object') {
       if (typeof obj === 'string' && obj.startsWith('__media_')) {
-        return mediaMap.get(obj) || obj; // Fallback to ID if not found
+        return mediaMap.get(obj) || obj; 
       }
       return obj;
     }
+    
     if (Array.isArray(obj)) {
-      return obj.map(traverseAndInject);
+      const newArr = new Array(obj.length);
+      for (let i = 0; i < obj.length; i++) {
+          newArr[i] = traverseAndInject(obj[i]);
+      }
+      return newArr;
     }
     const newObj: any = {};
     for (const key in obj) {
@@ -132,6 +165,12 @@ export const injectMediaIntoState = async (state: any): Promise<GameState> => {
     }
     return newObj;
   };
-
-  return traverseAndInject(state) as GameState;
+  
+  const finalState = traverseAndInject(state);
+  if (onProgress) onProgress(100, "Ready!");
+  
+  // A tiny extra delay to make sure UI can render 100%
+  await new Promise(r => setTimeout(r, 100));
+  
+  return finalState as GameState;
 };

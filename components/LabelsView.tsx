@@ -10,11 +10,17 @@ import { getEraConfiguration } from '../utils/eraUtils';
 
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 
-const getLabelAdvance = (label: Label) => {
-    if (label.contractType === 'petty') return 1000000;
-    if (label.id === 'umg') return 2500000;
-    if (label.tier === 'Mid-high' || label.tier === 'Mid-Low' || label.tier === 'Top') return 750000;
-    return 300000;
+const getLabelAdvanceRange = (label: Label) => {
+    if (label.isDistributionOnly) return '$0 - $100k';
+    
+    let base = 300000;
+    if (label.contractType === 'petty') base = 1000000;
+    else if (label.id === 'umg' || label.id === 'sony') base = 2500000;
+    else if (label.tier === 'Mid-high' || label.tier === 'Mid-Low' || label.tier === 'Top') base = 750000;
+    
+    const low = Math.floor(base * 0.5);
+    const high = Math.floor(base * 1.5);
+    return `$${formatNumber(low)} - $${formatNumber(high)}`;
 };
 
 const getLabelSplit = (label: Label) => {
@@ -31,7 +37,7 @@ const LabelCard: React.FC<{ label: Label, onSign: (label: Label) => void, canSig
         <p className="text-sm font-semibold" style={{ color: label.tier === 'Top' ? '#f59e0b' : '#a1a1aa' }}>{label.tier} Tier</p>
         <div className="mt-3 text-xs text-zinc-400 space-y-1">
             <p>Promotion: <span className="font-bold text-white">{label.promotionMultiplier}x</span></p>
-            <p>Adv: <span className="font-bold text-green-400 font-mono">${formatNumber(getLabelAdvance(label))}</span></p>
+            <p>Est. Adv: <span className="font-bold text-green-400 font-mono">{getLabelAdvanceRange(label)}</span></p>
             <p>Cut (You/Label): <span className="font-bold text-yellow-400">{getLabelSplit(label)}</span></p>
             <p>Requires: <span className="font-bold text-white">{label.streamRequirement > 0 ? (isStreamingActive ? formatNumber(label.streamRequirement) + ' streams' : formatNumber(Math.floor(label.streamRequirement / 500)) + ' sales') : 'None'}</span></p>
         </div>
@@ -289,8 +295,19 @@ const UnsignedView: React.FC = () => {
     const eraConfig = getEraConfiguration(gameState.date.year);
     const careerStreams = activeArtistData.songs.reduce((sum, song) => sum + song.streams, 0);
 
-    const standardLabels = LABELS.filter(l => l.contractType !== 'petty');
-    const pettyLabels = LABELS.filter(l => l.contractType === 'petty');
+    const currentYear = gameState.date.year;
+    const standardLabels = LABELS.filter(l => 
+        l.contractType !== 'petty' && 
+        !l.isDistributionOnly &&
+        (!l.activeFromYear || currentYear >= l.activeFromYear) &&
+        (!l.activeUntilYear || currentYear <= l.activeUntilYear)
+    );
+    const pettyLabels = LABELS.filter(l => 
+        l.contractType === 'petty' && 
+        !l.isDistributionOnly &&
+        (!l.activeFromYear || currentYear >= l.activeFromYear) &&
+        (!l.activeUntilYear || currentYear <= l.activeUntilYear)
+    );
 
     const handleSignWithCheck = (label: Label, isPetty: boolean = false) => {
         // 50% chance for small/petty labels to require a name change
@@ -329,7 +346,9 @@ const UnsignedView: React.FC = () => {
             labelId: label.id,
             artistId: activeArtist!.id,
             startDate: gameState.date,
-            albumsReleased: 0
+            albumsReleased: 0,
+            advance: 1000000,
+            royaltyPercent: 10
         });
         dispatch({ type: 'SIGN_CONTRACT', payload: { contract: newContract } });
         setConfirmPettyJoin(null);

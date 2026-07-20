@@ -1,3 +1,4 @@
+import { NPC_ARTIST_IMAGES } from "../constants";
 import React from 'react';
 import { useGame } from '../context/GameContext';
 import ChevronRightIcon from './icons/ChevronRightIcon';
@@ -45,7 +46,7 @@ const ChartsTab: React.FC = () => {
                 {billboardTop3.length > 0 ? (
                     <div className="space-y-4">
                         {billboardTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt} title={song.title} artist={song.artist} />
+                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={NPC_ARTIST_IMAGES[song.artist.split(",")[0].trim()] || song.coverArt} title={song.title} artist={song.artist} />
                         ))}
                     </div>
                 ) : (
@@ -66,7 +67,7 @@ const ChartsTab: React.FC = () => {
                 {billboardAlbumsTop3.length > 0 ? (
                     <div className="space-y-4">
                         {billboardAlbumsTop3.map(album => (
-                            <ChartItemPreview key={album.uniqueId} rank={album.rank} coverArt={album.coverArt} title={album.title} artist={album.artist} />
+                            <ChartItemPreview key={album.uniqueId} rank={album.rank} coverArt={NPC_ARTIST_IMAGES[(album.artistName || album.artist).split(",")[0].trim()] || album.coverArt} title={album.title} artist={album.artist} />
                         ))}
                     </div>
                 ) : (
@@ -90,7 +91,7 @@ const ChartsTab: React.FC = () => {
                 {spotifyTop3.length > 0 ? (
                     <div className="space-y-4">
                         {spotifyTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt} title={song.title} artist={song.artist} />
+                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={NPC_ARTIST_IMAGES[song.artist.split(",")[0].trim()] || song.coverArt} title={song.title} artist={song.artist} />
                         ))}
                     </div>
                 ) : (
@@ -111,7 +112,7 @@ const ChartsTab: React.FC = () => {
                 {hotPopTop3.length > 0 ? (
                     <div className="space-y-4">
                         {hotPopTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt} title={song.title} artist={song.artist} />
+                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={NPC_ARTIST_IMAGES[song.artist.split(",")[0].trim()] || song.coverArt} title={song.title} artist={song.artist} />
                         ))}
                     </div>
                 ) : ( <div className="text-center py-6 text-zinc-400">Chart is empty.</div> )}
@@ -127,7 +128,7 @@ const ChartsTab: React.FC = () => {
                 {hotRapRnbTop3.length > 0 ? (
                     <div className="space-y-4">
                         {hotRapRnbTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt} title={song.title} artist={song.artist} />
+                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={NPC_ARTIST_IMAGES[song.artist.split(",")[0].trim()] || song.coverArt} title={song.title} artist={song.artist} />
                         ))}
                     </div>
                 ) : ( <div className="text-center py-6 text-zinc-400">Chart is empty.</div> )}
@@ -143,7 +144,7 @@ const ChartsTab: React.FC = () => {
                 {electronicTop3.length > 0 ? (
                     <div className="space-y-4">
                         {electronicTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt} title={song.title} artist={song.artist} />
+                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={NPC_ARTIST_IMAGES[song.artist.split(",")[0].trim()] || song.coverArt} title={song.title} artist={song.artist} />
                         ))}
                     </div>
                 ) : ( <div className="text-center py-6 text-zinc-400">Chart is empty.</div> )}
@@ -159,7 +160,7 @@ const ChartsTab: React.FC = () => {
                 {countryTop3.length > 0 ? (
                     <div className="space-y-4">
                         {countryTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt} title={song.title} artist={song.artist} />
+                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={NPC_ARTIST_IMAGES[song.artist.split(",")[0].trim()] || song.coverArt} title={song.title} artist={song.artist} />
                         ))}
                     </div>
                 ) : ( <div className="text-center py-6 text-zinc-400">Chart is empty.</div> )}

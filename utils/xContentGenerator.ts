@@ -10,7 +10,7 @@ import {
   XMessage,
 } from "../types";
 import { formatNumber } from "../context/GameContext";
-import { LABELS } from "../constants";
+import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES } from "../constants";
 import { ARTIST_GIFS } from "../data/artistGifs";
 
 type PlayerSongWithChart = Song & { chartRank?: number };
@@ -511,17 +511,39 @@ export const generateWeeklyXContent = (
 
   // PopBase Post for stream removal
   if (streamsRemovedThisWeek && streamsRemovedThisWeek > 0) {
-    newPosts.push({
-      id: crypto.randomUUID(),
-      authorId: "popbase",
-      content: `Spotify has reportedly removed approximately ${formatNumber(streamsRemovedThisWeek)} artificial streams from ${artistName}'s catalog following a routine review.`,
-      image: undefined,
-      likes: Math.floor(Math.random() * 8000) + 3000,
-      retweets: Math.floor(Math.random() * 2000) + 500,
-      views: Math.floor(Math.random() * 150000) + 40000,
-      date,
-    });
+    const totalRemoved = songs.reduce((sum, song) => sum + (song.removedStreams || 0), 0);
+    
+    if (totalRemoved > 10000000) {
+      newPosts.push({
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `${artistName} is now the most fraudulent artist in history with over 10 MILLION streams removed from their discography`,
+        image: artistImages.length > 0 ? pickRandom(artistImages) : undefined,
+        likes: Math.floor(Math.random() * 50000) + 20000,
+        retweets: Math.floor(Math.random() * 10000) + 5000,
+        views: Math.floor(Math.random() * 500000) + 100000,
+        date,
+      });
+    } else {
+      newPosts.push({
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `Spotify has reportedly removed approximately ${formatNumber(streamsRemovedThisWeek)} artificial streams from ${artistName}'s catalog following a routine review.`,
+        image: undefined,
+        likes: Math.floor(Math.random() * 8000) + 3000,
+        retweets: Math.floor(Math.random() * 2000) + 500,
+        views: Math.floor(Math.random() * 150000) + 40000,
+        date,
+      });
+    }
     delete artistData.streamsRemovedThisWeek;
+  }
+
+  // PopBase Brand Ambassador Deal Post
+  if (artistData.activeBrandDeals && artistData.activeBrandDeals.length > 0) {
+      // Find a deal that hasn't been announced yet? Or just announce randomly? Let's assume we announce deals signed this week.
+      // A simple way is to check if we haven't posted about this deal. We can use a property or just random chance if a deal exists.
+      // But we probably want to trigger this when SIGN_BRAND_DEAL happens. It's better to add the post directly in the SIGN_BRAND_DEAL reducer.
   }
 
   // (artist name) Stats post
@@ -900,8 +922,7 @@ export const generateWeeklyXContent = (
           id: npcUserId,
           name: randomArtist,
           username: npcUsername,
-          avatar:
-            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzMzMyIvPjwvc3ZnPg==",
+          avatar: NPC_ARTIST_IMAGES[randomArtist] || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzMzMyIvPjwvc3ZnPg==",
           isVerified: true,
           bio: `Official X account for ${randomArtist}`,
           followersCount: Math.floor(Math.random() * 5000000) + 1000000,
@@ -2279,7 +2300,7 @@ export const generateWeeklyXContent = (
     }
 
     if (Math.random() < 0.1) {
-      const npcNames = npcArtists.filter((name) => name !== artistName);
+      const npcNames = NPC_ARTIST_NAMES.filter((name) => name !== artistName);
       if (npcNames.length > 0) {
         const callingOutArtist = pickRandom(npcNames);
         const npcUser = artistData.xUsers.find(

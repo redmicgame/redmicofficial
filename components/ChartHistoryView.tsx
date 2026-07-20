@@ -1,3 +1,4 @@
+import { NPC_ARTIST_IMAGES } from "../constants";
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -62,6 +63,8 @@ const ChartHistoryView: React.FC = () => {
                 data.songs.forEach(song => {
                     if (song.collaboration?.artistName === activeArtist.name) {
                         items.push({ ...song, title: `${song.title} (with ${song.collaboration.artistName})` });
+                    } else if (song.features && song.features.includes(activeArtist.name)) {
+                        items.push({ ...song, title: `${song.title} (with ${activeArtist.name})` });
                     }
                 });
             });

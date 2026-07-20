@@ -120,6 +120,15 @@ const YearEndChart: React.FC<{ dataString: string }> = ({ dataString }) => {
   }
 };
 
+const renderContentWithHighlights = (text: string) => {
+    return text.split(/(\$[a-zA-Z0-9]+)/g).map((part, i) => {
+        if (part.startsWith('$')) {
+            return <span key={i} className="text-purple-500 font-semibold">{part}</span>;
+        }
+        return part;
+    });
+};
+
 export const Post: React.FC<{
   post: XPost;
   author: XUser | undefined;
@@ -147,7 +156,7 @@ export const Post: React.FC<{
     if (
       author.isPlayer ||
       (!author.id.startsWith("hater_") &&
-        !["popbase", "chartdata", "spotifysnapshot"].includes(author.id))
+        !["popbase", "chartdata", "spotifysnapshot", "golden_globes"].includes(author.id))
     ) {
       dispatch({ type: "VIEW_X_PROFILE", payload: author.id });
     }
@@ -346,7 +355,7 @@ export const Post: React.FC<{
           </span>
         </div>
         <p className="text-white whitespace-pre-wrap break-words">
-          {post.content}
+          {renderContentWithHighlights(post.content)}
         </p>
         {post.isSpace && (
           <div
@@ -454,11 +463,28 @@ export const Post: React.FC<{
             />
           </div>
         ) : post.image ? (
-          <img
-            src={post.image}
-            alt="Post image"
-            className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto"
-          />
+          post.image.includes('||') ? (
+            <div className="mt-2 rounded-xl border border-zinc-700 overflow-hidden flex divide-x divide-zinc-700 h-64 bg-white/5">
+              <img
+                src={post.image.split('||')[0]}
+                alt="Post image 1"
+                className="w-1/2 h-full object-cover"
+              />
+              <div className="w-1/2 h-full flex items-center justify-center p-8 bg-zinc-900">
+                <img
+                  src={post.image.split('||')[1]}
+                  alt="Post image 2"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            </div>
+          ) : (
+            <img
+              src={post.image}
+              alt="Post image"
+              className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto"
+            />
+          )
         ) : null}
         {post.poll && (
           <div className="mt-3 border border-zinc-800 rounded-xl overflow-hidden">
@@ -764,6 +790,17 @@ const FeedView: React.FC<{
   const [displayCount, setDisplayCount] = useState(20);
 
   const SYSTEM_USERS_FALLBACK: Record<string, XUser> = {
+    
+    golden_globes: {
+      id: "golden_globes",
+      name: "Golden Globes",
+      username: "goldenglobes",
+      avatar: "https://upload.wikimedia.org/wikipedia/en/thumb/e/ef/Golden_Globe_Awards_logo.svg/1200px-Golden_Globe_Awards_logo.svg.png",
+      isVerified: true,
+      bio: "#GoldenGlobes — LIVE Sunday, January 10, 2027 on @CBS and @paramountplus hosted by @NikkiGlaser! 📍 Hollywood, California 🔗 goldenglobes.com",
+      followersCount: 1900000,
+      followingCount: 822,
+    },
     spotifysnapshot: {
       id: "spotifysnapshot",
       name: "Spotify Snapshot",
@@ -931,7 +968,7 @@ const ExploreView: React.FC<{
   // Find latest posts from PopBase/TMZ for news
   const newsPosts = [...xPosts]
     .filter((p) =>
-      ["popbase", "tmz", "chartdata", "spotifysnapshot", "talkofthecharts"].includes(p.authorId),
+      ["popbase", "tmz", "chartdata", "spotifysnapshot", "talkofthecharts", "golden_globes"].includes(p.authorId),
     )
     .slice(0, 3);
 
@@ -1434,7 +1471,7 @@ export const ComposeXPostModal: React.FC<{
   onPost: (payload: {
     content: string;
     image?: string;
-    postType: "normal" | "fanWar" | "push" | "announce" | "endorse";
+    postType: "normal" | "fanWar" | "push" | "announce" | "endorse" | "market_crypto";
     targetId?: string;
     songId?: string;
     quoteOf?: XPost;
@@ -1452,7 +1489,7 @@ export const ComposeXPostModal: React.FC<{
   const [isPollVisible, setIsPollVisible] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [postType, setPostType] = useState<
-    "normal" | "fanWar" | "push" | "announce" | "endorse"
+    "normal" | "fanWar" | "push" | "announce" | "endorse" | "market_crypto"
   >("normal");
   const [targetId, setTargetId] = useState<string>("");
   const [songId, setSongId] = useState<string>("");
@@ -1550,6 +1587,7 @@ export const ComposeXPostModal: React.FC<{
       postType === "push" ||
       postType === "announce" ||
       postType === "endorse" ||
+      postType === "market_crypto" ||
       quotePost ||
       hasValidPoll
     ) {
@@ -1756,6 +1794,13 @@ export const ComposeXPostModal: React.FC<{
                   Endorse
                 </button>
               )}
+              <button
+                onClick={() => setPostType("market_crypto")}
+                disabled={!activeArtistData.cryptoCoin}
+                className={`py-2 px-1 text-xs font-semibold rounded-md ${postType === "market_crypto" ? "bg-amber-500 text-white" : "bg-zinc-800"} disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Market Coin
+              </button>
             </div>
             {isPushDisabled && postType === "push" && (
               <p className="text-xs text-zinc-500 text-center">
@@ -1862,7 +1907,7 @@ export const ComposeXPostModal: React.FC<{
             </span>
             <button
               onClick={handlePost}
-              disabled={!content.trim() && !image}
+              disabled={!content.trim() && !image && postType === "normal"}
               className="bg-blue-500 text-white font-bold px-5 py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Post

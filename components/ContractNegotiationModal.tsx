@@ -100,7 +100,7 @@ export const ContractNegotiationModal: React.FC<Props> = ({ label, onClose, onSi
         labelId: label.id,
         artistId: activeArtist!.id,
         startDate: gameState.date,
-        advance: label.tier === 'Top' ? 2000000 : (label.tier === 'Low' ? 300000 : 750000),
+        advance: label.isDistributionOnly ? 0 : (label.tier === 'Top' ? 2000000 : (label.tier === 'Low' ? 300000 : 750000)),
         merchPercent: 50,
         marketingBudget: 100000,
         royaltyPercent: 15,

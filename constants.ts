@@ -151,7 +151,7 @@ export const NPC_ARTIST_NAMES = [
     // Afrobeats Artists
     'Burna Boy', 'Wizkid', 'Davido', 'Rema', 'Tems', 'Asake', 'Omah Lay',
     // Indie Artists
-    'Huda Mustafa', 'TRIM', 'Sunshine Benzi', 'Stunna Sandy'
+    
 ];
 
 export const NPC_ARTIST_GENRES: Record<string, string> = {
@@ -177,7 +177,7 @@ export const NPC_ARTIST_GENRES: Record<string, string> = {
     'Calvin Harris': 'Electronic', 'David Guetta': 'Electronic', 'Skrillex': 'Electronic', 'Diplo': 'Electronic', 'Zedd': 'Electronic', 'Martin Garrix': 'Electronic',
     'Bob Marley': 'Reggae', 'Sean Paul': 'Reggae', 'Koffee': 'Reggae', 'Shaggy': 'Reggae', 'Popcaan': 'Reggae',
     'Burna Boy': 'Afrobeats', 'Wizkid': 'Afrobeats', 'Davido': 'Afrobeats', 'Rema': 'Afrobeats', 'Tems': 'Afrobeats', 'Asake': 'Afrobeats', 'Omah Lay': 'Afrobeats',
-    'Huda Mustafa': 'Indie', 'TRIM': 'Indie', 'Sunshine Benzi': 'Indie', 'Stunna Sandy': 'Indie'
+    
 };
 export const NPC_SONG_ADJECTIVES = ['Golden', 'Ordinary', 'What I', 'Your', 'Midnight', 'Electric', 'Fading', 'Broken', 'Summer', 'Winter', 'Lost', 'Found', 'Starlight', 'City', 'Velvet', 'Crystal', 'Silent', 'Cosmic', 'Wild', 'Sweet', 'Bitter'];
 export const NPC_SONG_NOUNS = ['Idol', 'Want', 'Dreams', 'Rain', 'Lights', 'Hearts', 'Echoes', 'Sky', 'Moon', 'Sun', 'Stars', 'Ocean', 'River', 'Memories', 'Secrets', 'Lies', 'Truth', 'Flames', 'Sparks', 'Ghosts'];
@@ -322,7 +322,113 @@ export const LABELS: Label[] = [
         minQuality: 70,
         streamRequirement: 0,
         contractType: 'petty'
-    }
+    },
+{
+    "id": "def_jam",
+    "name": "Def Jam Recordings",
+    "tier": "Mid-high",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMxMTEiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5ERUYgSkFNPC90ZXh0Pjwvc3ZnPg==",
+    "promotionMultiplier": 1.6,
+    "creativeControl": 65,
+    "minQuality": 50,
+    "streamRequirement": 350000000
+},
+{
+    "id": "bad_boy",
+    "name": "Bad Boy Records",
+    "tier": "Mid-Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMwMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5CQUQgQk9ZPC90ZXh0Pjwvc3ZnPg==",
+    "promotionMultiplier": 1.3,
+    "creativeControl": 60,
+    "minQuality": 40,
+    "streamRequirement": 10000,
+    "activeFromYear": 1998,
+    "activeUntilYear": 2013
+},
+{
+    "id": "polydor",
+    "name": "Polydor Records",
+    "tier": "Mid-Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNEMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5QT0xZRE9SPC90ZXh0Pjwvc3ZnPg==",
+    "promotionMultiplier": 1.2,
+    "creativeControl": 50,
+    "minQuality": 40,
+    "streamRequirement": 0,
+    "activeFromYear": 2013
+},
+{
+    "id": "nice_life",
+    "name": "Nice Life",
+    "tier": "Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNGOTAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5OSUNFIExJRkU8L3RleHQ+PC9zdmc+",
+    "promotionMultiplier": 1.1,
+    "creativeControl": 80,
+    "minQuality": 30,
+    "streamRequirement": 0,
+    "activeFromYear": 2018,
+    "isDistributionOnly": true
+},
+{
+    "id": "sony",
+    "name": "Sony Music",
+    "tier": "Top",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNEMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5TT05ZPC90ZXh0Pjwvc3ZnPg==",
+    "promotionMultiplier": 2,
+    "creativeControl": 75,
+    "minQuality": 65,
+    "streamRequirement": 5000000000
+},
+{
+    "id": "capitol",
+    "name": "Capitol Records",
+    "tier": "Mid-Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMwMDkiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5DQVBJVE9MPC90ZXh0Pjwvc3ZnPg==",
+    "promotionMultiplier": 1.3,
+    "creativeControl": 55,
+    "minQuality": 45,
+    "streamRequirement": 1000000
+},
+{
+    "id": "motown",
+    "name": "Motown Records",
+    "tier": "Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMwMDUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5NT1RPV048L3RleHQ+PC9zdmc+",
+    "promotionMultiplier": 1.1,
+    "creativeControl": 40,
+    "minQuality": 30,
+    "streamRequirement": 0
+},
+{
+    "id": "geffen",
+    "name": "Geffen Records",
+    "tier": "Mid-Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMyMjIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5HRUZGRU48L3RleHQ+PC9zdmc+",
+    "promotionMultiplier": 1.4,
+    "creativeControl": 60,
+    "minQuality": 40,
+    "streamRequirement": 3000000
+},
+{
+    "id": "empire",
+    "name": "EMPIRE",
+    "tier": "Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNGRkYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDAwIj5FTVBJUkU8L3RleHQ+PC9zdmc+",
+    "promotionMultiplier": 1.15,
+    "creativeControl": 90,
+    "minQuality": 25,
+    "streamRequirement": 0,
+    "isDistributionOnly": true
+},
+{
+    "id": "virgin",
+    "name": "Virgin Music Group",
+    "tier": "Low",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNFMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5WSVJHSU48L3RleHQ+PC9zdmc+",
+    "promotionMultiplier": 1.2,
+    "creativeControl": 50,
+    "minQuality": 30,
+    "streamRequirement": 0
+},
 ];
 
 export const CUSTOM_LABEL_TIERS = {
@@ -362,6 +468,38 @@ export const VENUES = {
         { name: 'Dubai Opera', city: 'Dubai', capacity: 2000, region: 'Middle East' }, { name: 'Zepp DiverCity', city: 'Tokyo', capacity: 2500, region: 'Asia' }, { name: 'Grand Arena', city: 'Cape Town', capacity: 5000, region: 'Africa' }
     ],
     'Arenas': [
+
+{ name: "Madison Square Garden", city: "New York", capacity: 19500, region: "North America" },
+{ name: "Staples Center", city: "Los Angeles", capacity: 20000, region: "North America" },
+{ name: "United Center", city: "Chicago", capacity: 23500, region: "North America" },
+{ name: "Wells Fargo Center", city: "Philadelphia", capacity: 21000, region: "North America" },
+{ name: "TD Garden", city: "Boston", capacity: 19580, region: "North America" },
+{ name: "State Farm Arena", city: "Atlanta", capacity: 21000, region: "North America" },
+{ name: "American Airlines Center", city: "Dallas", capacity: 20000, region: "North America" },
+{ name: "Chase Center", city: "San Francisco", capacity: 18064, region: "North America" },
+{ name: "O2 Arena", city: "London", capacity: 20000, region: "Europe" },
+{ name: "Accor Arena", city: "Paris", capacity: 20300, region: "Europe" },
+{ name: "Lanxess Arena", city: "Cologne", capacity: 20000, region: "Europe" },
+{ name: "Mercedes-Benz Arena", city: "Berlin", capacity: 17000, region: "Europe" },
+{ name: "Ziggo Dome", city: "Amsterdam", capacity: 17000, region: "Europe" },
+{ name: "O2 Arena Prague", city: "Prague", capacity: 18000, region: "Europe" },
+{ name: "Wiener Stadthalle", city: "Vienna", capacity: 16152, region: "Europe" },
+{ name: "Palau Sant Jordi", city: "Barcelona", capacity: 17000, region: "Europe" },
+{ name: "Wizink Center", city: "Madrid", capacity: 17453, region: "Europe" },
+{ name: "Jeunesse Arena", city: "Rio de Janeiro", capacity: 18000, region: "South America" },
+{ name: "Allianz Parque", city: "Sao Paulo", capacity: 43713, region: "South America" }, // Wait, this is a stadium, but maybe arena size configuration
+{ name: "Movistar Arena", city: "Santiago", capacity: 15000, region: "South America" },
+{ name: "Movistar Arena", city: "Buenos Aires", capacity: 15000, region: "South America" },
+{ name: "Movistar Arena", city: "Bogota", capacity: 14000, region: "South America" },
+{ name: "Saitama Super Arena", city: "Saitama", capacity: 36500, region: "Asia" },
+{ name: "Yokohama Arena", city: "Yokohama", capacity: 17000, region: "Asia" },
+{ name: "KSPO Dome", city: "Seoul", capacity: 15000, region: "Asia" },
+{ name: "Impact Arena", city: "Bangkok", capacity: 11000, region: "Asia" },
+{ name: "Philippine Arena", city: "Bulacan", capacity: 51898, region: "Asia" }, // Huge arena
+{ name: "Mall of Asia Arena", city: "Manila", capacity: 15000, region: "Asia" },
+{ name: "Singapore Indoor Stadium", city: "Singapore", capacity: 12000, region: "Asia" },
+{ name: "Coca-Cola Arena", city: "Dubai", capacity: 17000, region: "Middle East" },
+,
         { name: 'Madison Square Garden', city: 'New York', capacity: 20000, region: 'North America' }, { name: 'The Forum', city: 'Los Angeles', capacity: 17500, region: 'North America' }, { name: 'United Center', city: 'Chicago', capacity: 23500, region: 'North America' }, { name: 'American Airlines Arena', city: 'Miami', capacity: 21000, region: 'North America' }, { name: 'The O2', city: 'London', capacity: 20000, region: 'Europe' },
         { name: 'Crypto.com Arena', city: 'Los Angeles', capacity: 19067, region: 'North America' }, { name: 'Barclays Center', city: 'Brooklyn', capacity: 17732, region: 'North America' }, { name: 'Scotiabank Arena', city: 'Toronto', capacity: 19800, region: 'North America' }, { name: 'Lanxess Arena', city: 'Cologne', capacity: 20000, region: 'Europe' }, { name: 'Accor Arena', city: 'Paris', capacity: 20300, region: 'Europe' },
         { name: '3Arena', city: 'Dublin', capacity: 13000, region: 'Europe' }, { name: 'Rod Laver Arena', city: 'Melbourne', capacity: 14820, region: 'Oceania' }, { name: 'Qudos Bank Arena', city: 'Sydney', capacity: 21032, region: 'Oceania' }, { name: 'TD Garden', city: 'Boston', capacity: 19580, region: 'North America' }, { name: 'Capital One Arena', city: 'Washington D.C.', capacity: 20356, region: 'North America' },
@@ -369,6 +507,115 @@ export const VENUES = {
         { name: 'Coca-Cola Arena', city: 'Dubai', capacity: 17000, region: 'Middle East' }, { name: 'Gocheok Sky Dome', city: 'Seoul', capacity: 16744, region: 'Asia' }, { name: 'Ticketpro Dome', city: 'Johannesburg', capacity: 20000, region: 'Africa' }
     ],
     'Stadiums': [
+
+{ name: "Estadio Nacional", city: "Lima", capacity: 50000, region: "South America" },
+{ name: "Estadio Monumental U", city: "Lima", capacity: 80000, region: "South America" },
+{ name: "Estadio Monumental", city: "Buenos Aires", capacity: 84567, region: "South America" },
+{ name: "Estadio Unico de La Plata", city: "La Plata", capacity: 53000, region: "South America" },
+{ name: "Estadio Nacional", city: "Santiago", capacity: 48665, region: "South America" },
+{ name: "Estadio El Campin", city: "Bogota", capacity: 39000, region: "South America" },
+{ name: "Estadio Atanasio Girardot", city: "Medellin", capacity: 40043, region: "South America" },
+{ name: "Estadio Azteca", city: "Mexico City", capacity: 87523, region: "North America" },
+{ name: "Foro Sol", city: "Mexico City", capacity: 65000, region: "North America" },
+{ name: "Estadio BBVA", city: "Monterrey", capacity: 51000, region: "North America" },
+{ name: "Estadio Akron", city: "Guadalajara", capacity: 49850, region: "North America" },
+{ name: "Rogers Centre", city: "Toronto", capacity: 49282, region: "North America" },
+{ name: "BC Place", city: "Vancouver", capacity: 54500, region: "North America" },
+{ name: "Commonwealth Stadium", city: "Edmonton", capacity: 56302, region: "North America" },
+{ name: "Olympic Stadium", city: "Montreal", capacity: 56040, region: "North America" },
+{ name: "Lumen Field", city: "Seattle", capacity: 68740, region: "North America" },
+{ name: "Levi's Stadium", city: "Santa Clara", capacity: 68500, region: "North America" },
+{ name: "Rose Bowl", city: "Pasadena", capacity: 92542, region: "North America" },
+{ name: "SoFi Stadium", city: "Inglewood", capacity: 70240, region: "North America" },
+{ name: "Allegiant Stadium", city: "Las Vegas", capacity: 65000, region: "North America" },
+{ name: "State Farm Stadium", city: "Glendale", capacity: 63400, region: "North America" },
+{ name: "AT&T Stadium", city: "Arlington", capacity: 80000, region: "North America" },
+{ name: "NRG Stadium", city: "Houston", capacity: 72220, region: "North America" },
+{ name: "Caesars Superdome", city: "New Orleans", capacity: 73208, region: "North America" },
+{ name: "Mercedes-Benz Stadium", city: "Atlanta", capacity: 71000, region: "North America" },
+{ name: "Hard Rock Stadium", city: "Miami Gardens", capacity: 64767, region: "North America" },
+{ name: "Raymond James Stadium", city: "Tampa", capacity: 65890, region: "North America" },
+{ name: "Bank of America Stadium", city: "Charlotte", capacity: 74867, region: "North America" },
+{ name: "Nissan Stadium", city: "Nashville", capacity: 69143, region: "North America" },
+{ name: "Soldier Field", city: "Chicago", capacity: 61500, region: "North America" },
+{ name: "Ford Field", city: "Detroit", capacity: 65000, region: "North America" },
+{ name: "Lucas Oil Stadium", city: "Indianapolis", capacity: 67000, region: "North America" },
+{ name: "Paycor Stadium", city: "Cincinnati", capacity: 65515, region: "North America" },
+{ name: "Cleveland Browns Stadium", city: "Cleveland", capacity: 67431, region: "North America" },
+{ name: "Acrisure Stadium", city: "Pittsburgh", capacity: 68400, region: "North America" },
+{ name: "Lincoln Financial Field", city: "Philadelphia", capacity: 69796, region: "North America" },
+{ name: "MetLife Stadium", city: "East Rutherford", capacity: 82500, region: "North America" },
+{ name: "Gillette Stadium", city: "Foxborough", capacity: 65878, region: "North America" },
+{ name: "Wembley Stadium", city: "London", capacity: 90000, region: "Europe" },
+{ name: "Tottenham Hotspur Stadium", city: "London", capacity: 62850, region: "Europe" },
+{ name: "London Stadium", city: "London", capacity: 60000, region: "Europe" },
+{ name: "Principality Stadium", city: "Cardiff", capacity: 74500, region: "Europe" },
+{ name: "Murrayfield Stadium", city: "Edinburgh", capacity: 67144, region: "Europe" },
+{ name: "Aviva Stadium", city: "Dublin", capacity: 51700, region: "Europe" },
+{ name: "Croke Park", city: "Dublin", capacity: 82300, region: "Europe" },
+{ name: "Stade de France", city: "Paris", capacity: 80698, region: "Europe" },
+{ name: "Groupama Stadium", city: "Lyon", capacity: 59186, region: "Europe" },
+{ name: "Orange Vélodrome", city: "Marseille", capacity: 67394, region: "Europe" },
+{ name: "Olympiastadion", city: "Berlin", capacity: 74475, region: "Europe" },
+{ name: "Olympiastadion", city: "Munich", capacity: 69250, region: "Europe" },
+{ name: "Allianz Arena", city: "Munich", capacity: 75024, region: "Europe" },
+{ name: "Deutsche Bank Park", city: "Frankfurt", capacity: 51500, region: "Europe" },
+{ name: "Merkur Spiel-Arena", city: "Dusseldorf", capacity: 54600, region: "Europe" },
+{ name: "RheinEnergieStadion", city: "Cologne", capacity: 50000, region: "Europe" },
+{ name: "Volksparkstadion", city: "Hamburg", capacity: 57000, region: "Europe" },
+{ name: "Johan Cruyff Arena", city: "Amsterdam", capacity: 55500, region: "Europe" },
+{ name: "Koning Boudewijnstadion", city: "Brussels", capacity: 50093, region: "Europe" },
+{ name: "San Siro", city: "Milan", capacity: 75923, region: "Europe" },
+{ name: "Stadio Olimpico", city: "Rome", capacity: 70634, region: "Europe" },
+{ name: "Santiago Bernabéu", city: "Madrid", capacity: 81044, region: "Europe" },
+{ name: "Estadio Metropolitano", city: "Madrid", capacity: 70460, region: "Europe" },
+{ name: "Camp Nou", city: "Barcelona", capacity: 99354, region: "Europe" },
+{ name: "Estadi Olímpic Lluís Companys", city: "Barcelona", capacity: 55926, region: "Europe" },
+{ name: "PGE Narodowy", city: "Warsaw", capacity: 58145, region: "Europe" },
+{ name: "Friends Arena", city: "Stockholm", capacity: 50622, region: "Europe" },
+{ name: "Ullevi", city: "Gothenburg", capacity: 43000, region: "Europe" },
+{ name: "Telenor Arena", city: "Oslo", capacity: 25000, region: "Europe" }, // technically an arena but acts as stadium
+{ name: "Parken", city: "Copenhagen", capacity: 38065, region: "Europe" },
+{ name: "Luzhniki Stadium", city: "Moscow", capacity: 81000, region: "Europe" },
+{ name: "Tokyo Dome", city: "Tokyo", capacity: 55000, region: "Asia" },
+{ name: "Ajinomoto Stadium", city: "Tokyo", capacity: 49970, region: "Asia" },
+{ name: "Nissan Stadium", city: "Yokohama", capacity: 72327, region: "Asia" },
+{ name: "Yanai Stadium", city: "Osaka", capacity: 47000, region: "Asia" },
+{ name: "Kyocera Dome", city: "Osaka", capacity: 36477, region: "Asia" },
+{ name: "Mizuho Stadium", city: "Nagoya", capacity: 27000, region: "Asia" },
+{ name: "Fukuoka PayPay Dome", city: "Fukuoka", capacity: 38561, region: "Asia" },
+{ name: "Sapporo Dome", city: "Sapporo", capacity: 41484, region: "Asia" },
+{ name: "Seoul Olympic Stadium", city: "Seoul", capacity: 69950, region: "Asia" },
+{ name: "Seoul World Cup Stadium", city: "Seoul", capacity: 66704, region: "Asia" },
+{ name: "Gocheok Sky Dome", city: "Seoul", capacity: 16744, region: "Asia" }, // smaller but often stadium acts play here
+{ name: "National Stadium", city: "Beijing", capacity: 80000, region: "Asia" },
+{ name: "Shanghai Stadium", city: "Shanghai", capacity: 56842, region: "Asia" },
+{ name: "Hong Kong Stadium", city: "Hong Kong", capacity: 40000, region: "Asia" },
+{ name: "Taipei Dome", city: "Taipei", capacity: 40000, region: "Asia" },
+{ name: "National Stadium", city: "Kaohsiung", capacity: 55000, region: "Asia" },
+{ name: "Rajamangala Stadium", city: "Bangkok", capacity: 51552, region: "Asia" },
+{ name: "National Stadium", city: "Bukit Jalil", capacity: 87411, region: "Asia" },
+{ name: "Gelora Bung Karno Stadium", city: "Jakarta", capacity: 77193, region: "Asia" },
+{ name: "Philippine Sports Stadium", city: "Bocaue", capacity: 25000, region: "Asia" },
+{ name: "Singapore National Stadium", city: "Singapore", capacity: 55000, region: "Asia" },
+{ name: "DY Patil Stadium", city: "Mumbai", capacity: 55000, region: "Asia" },
+{ name: "Jawaharlal Nehru Stadium", city: "Delhi", capacity: 60000, region: "Asia" },
+{ name: "King Fahd International Stadium", city: "Riyadh", capacity: 68000, region: "Middle East" },
+{ name: "Lusail Stadium", city: "Lusail", capacity: 88966, region: "Middle East" },
+{ name: "Zayed Sports City Stadium", city: "Abu Dhabi", capacity: 45000, region: "Middle East" },
+{ name: "FNB Stadium", city: "Johannesburg", capacity: 94736, region: "Africa" },
+{ name: "Cape Town Stadium", city: "Cape Town", capacity: 55000, region: "Africa" },
+{ name: "Moses Mabhida Stadium", city: "Durban", capacity: 54000, region: "Africa" },
+{ name: "Cairo International Stadium", city: "Cairo", capacity: 75000, region: "Africa" },
+{ name: "MCG", city: "Melbourne", capacity: 100024, region: "Oceania" },
+{ name: "Marvel Stadium", city: "Melbourne", capacity: 53359, region: "Oceania" },
+{ name: "Accor Stadium", city: "Sydney", capacity: 83500, region: "Oceania" },
+{ name: "Allianz Stadium", city: "Sydney", capacity: 42500, region: "Oceania" },
+{ name: "Suncorp Stadium", city: "Brisbane", capacity: 52500, region: "Oceania" },
+{ name: "Optus Stadium", city: "Perth", capacity: 60000, region: "Oceania" },
+{ name: "Adelaide Oval", city: "Adelaide", capacity: 53583, region: "Oceania" },
+{ name: "Eden Park", city: "Auckland", capacity: 50000, region: "Oceania" }
+,
         { name: 'SoFi Stadium', city: 'Los Angeles', capacity: 70000, region: 'North America' }, { name: 'MetLife Stadium', city: 'New York', capacity: 82500, region: 'North America' }, { name: 'Wembley Stadium', city: 'London', capacity: 90000, region: 'Europe' }, { name: 'AT&T Stadium', city: 'Dallas', capacity: 80000, region: 'North America' }, { name: 'Mercedes-Benz Stadium', city: 'Atlanta', capacity: 71000, region: 'North America' },
         { name: 'Rose Bowl', city: 'Pasadena', capacity: 92542, region: 'North America' }, { name: 'Soldier Field', city: 'Chicago', capacity: 61500, region: 'North America' }, { name: 'Gillette Stadium', city: 'Foxborough', capacity: 65878, region: 'North America' }, { name: 'Lincoln Financial Field', city: 'Philadelphia', capacity: 69796, region: 'North America' }, { name: "Levi's Stadium", city: 'Santa Clara', capacity: 68500, region: 'North America' },
         { name: 'NRG Stadium', city: 'Houston', capacity: 72220, region: 'North America' }, { name: 'Hard Rock Stadium', city: 'Miami', capacity: 64767, region: 'North America' }, { name: 'Estadio Azteca', city: 'Mexico City', capacity: 87523, region: 'North America' }, { name: 'Maracanã Stadium', city: 'Rio de Janeiro', capacity: 78838, region: 'South America' }, { name: 'Stade de France', city: 'Paris', capacity: 80698, region: 'Europe' },
@@ -535,3 +782,1436 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Asake": "https://cdn-images.dzcdn.net/images/artist/29baf235626c8cd1cdc782c6d467aca8/250x250-000000-80-0-0.jpg",
   "Omah Lay": "https://cdn-images.dzcdn.net/images/artist/e8ce64479eb3d7fc2853f7fd694cc999/250x250-000000-80-0-0.jpg"
 };
+export const NPC_ERAS: Record<string, { start: number, end: number, genre: string, image: string }> = {
+  "Michael Jackson": {
+    "start": 1964,
+    "end": 2009,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/f1fb89eb8e390c5003c20c0dcfe63f45/250x250-000000-80-0-0.jpg"
+  },
+  "Prince": {
+    "start": 1978,
+    "end": 2016,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e51d953930b8d52367b140f0c05dd7de/250x250-000000-80-0-0.jpg"
+  },
+  "Madonna": {
+    "start": 1982,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/5e5486cbab3a2283bf366c88f1766de3/250x250-000000-80-0-0.jpg"
+  },
+  "Whitney Houston": {
+    "start": 1985,
+    "end": 2012,
+    "genre": "R&B",
+    "image": "https://cdn-images.dzcdn.net/images/artist/dfd0d6118d09559ff10f92a1cfce28d6/250x250-000000-80-0-0.jpg"
+  },
+  "Nirvana": {
+    "start": 1987,
+    "end": 1994,
+    "genre": "Rock",
+    "image": "https://cdn-images.dzcdn.net/images/artist/bd1fc51c2069edcc63329cf8cd0fb69e/250x250-000000-80-0-0.jpg"
+  },
+  "Tupac": {
+    "start": 1991,
+    "end": 1996,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/dbb2a59f518e9d5ab4cc8dbad3a9dae8/250x250-000000-80-0-0.jpg"
+  },
+  "The Notorious B.I.G.": {
+    "start": 1993,
+    "end": 1997,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/1c9de578a8bc894563a620023a1eb1d7/250x250-000000-80-0-0.jpg"
+  },
+  "Britney Spears": {
+    "start": 1998,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/3ff402daee9c78d5ce8084a77b75ecb0/250x250-000000-80-0-0.jpg"
+  },
+  "Eminem": {
+    "start": 1999,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg"
+  },
+  "Kanye West": {
+    "start": 2004,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/733182eebe9455331e7cc4d8123df16d/250x250-000000-80-0-0.jpg"
+  },
+  "Drake": {
+    "start": 2009,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/14299499876356c9a96e95c4794b1ef4/250x250-000000-80-0-0.jpg"
+  },
+  "Taylor Swift": {
+    "start": 2006,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/77332219463b7194f454a856a2bbca25/250x250-000000-80-0-0.jpg"
+  },
+  "Ariana Grande": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/c1a6f8742cc65a8df241dcd79fcbd9fa/250x250-000000-80-0-0.jpg"
+  },
+  "Billie Eilish": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/a22bfb8d5a7dffbfaad1cb93d7c2a728/250x250-000000-80-0-0.jpg"
+  },
+  "The Weeknd": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/624b5d63428987ecfa4dcc6599b441da/250x250-000000-80-0-0.jpg"
+  },
+  "Justin Bieber": {
+    "start": 2009,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg"
+  },
+  "Ed Sheeran": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/b068e42ff3ffbc12aa44ec5f4eeaf38e/250x250-000000-80-0-0.jpg"
+  },
+  "Beyoncé": {
+    "start": 1997,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/33e6604cb745ce3438a927a7c7847ee0/250x250-000000-80-0-0.jpg"
+  },
+  "Rihanna": {
+    "start": 2005,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/19446d33dc3d001099684126ea14b30e/250x250-000000-80-0-0.jpg"
+  },
+  "Adele": {
+    "start": 2008,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/64e83fdf089e5fc24c2d3a39e701968d/250x250-000000-80-0-0.jpg"
+  },
+  "Post Malone": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/b8110b1a0f8bfd9472e35a9fcc96328a/250x250-000000-80-0-0.jpg"
+  },
+  "Dua Lipa": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e9d4df8e27c0c92f97fc18ab72df6c23/250x250-000000-80-0-0.jpg"
+  },
+  "Olivia Rodrigo": {
+    "start": 2021,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/2cc14cc45b0a373ff26fcd92c7333a46/250x250-000000-80-0-0.jpg"
+  },
+  "Harry Styles": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/95a5fbc4ce12a45d064ff3156cfd8f5c/250x250-000000-80-0-0.jpg"
+  },
+  "Bad Bunny": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/3ba7493b822295cfcc7484df7148a07f/250x250-000000-80-0-0.jpg"
+  },
+  "Kendrick Lamar": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e71fba2ff4be2c488730999052b610c1/250x250-000000-80-0-0.jpg"
+  },
+  "J. Cole": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/36bebb5d3763f03b86026a267f8b9ecf/250x250-000000-80-0-0.jpg"
+  },
+  "Travis Scott": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/7db8087be82498db2da36ff69ff15dae/250x250-000000-80-0-0.jpg"
+  },
+  "Doja Cat": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/d12b0bb3198de7eeb88c1c01e66c9dbd/250x250-000000-80-0-0.jpg"
+  },
+  "SZA": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://cdn-images.dzcdn.net/images/artist/37e3d1ceee42fb2f6ef531fc801ed8fb/250x250-000000-80-0-0.jpg"
+  },
+  "Lana Del Rey": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Indie",
+    "image": "https://cdn-images.dzcdn.net/images/artist/57f1ca5ce892eb527d730aef245e3966/250x250-000000-80-0-0.jpg"
+  },
+  "Frank Ocean": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://cdn-images.dzcdn.net/images/artist/3c14c53ef8ddc5f6e3cceb6a67dae4ff/250x250-000000-80-0-0.jpg"
+  },
+  "Tyler, the Creator": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/11cbe28cb52c4ca7d5c907a4b0058b4b/250x250-000000-80-0-0.jpg"
+  },
+  "Lil Nas X": {
+    "start": 2019,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/d0959f2c3eb2aab64a1387d853b0dfb9/250x250-000000-80-0-0.jpg"
+  },
+  "Cardi B": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/af776cd99efbc010c3782030df0e7e1e/250x250-000000-80-0-0.jpg"
+  },
+  "Nicki Minaj": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/53d53bdc676d1e4eb1bc10d8a57df38c/250x250-000000-80-0-0.jpg"
+  },
+  "Megan Thee Stallion": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/56c702a0a2df31c713b63200ff7343b2/250x250-000000-80-0-0.jpg"
+  },
+  "Jay-Z": {
+    "start": 1996,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/ff684990c749aebeddb6e3c0b05b637f/250x250-000000-80-0-0.jpg"
+  },
+  "Lady Gaga": {
+    "start": 2008,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/c1ecfcd5b81bf66b3f20d82998ad5c4a/250x250-000000-80-0-0.jpg"
+  },
+  "Bruno Mars": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/a05d8bc1955fbcd7428574102dc45495/250x250-000000-80-0-0.jpg"
+  },
+  "Miley Cyrus": {
+    "start": 2007,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/f104de0f4f9104085c88c7414df872eb/250x250-000000-80-0-0.jpg"
+  },
+  "Selena Gomez": {
+    "start": 2009,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/0ec3d2746c4f34657dcbb2e39b9bf8e0/250x250-000000-80-0-0.jpg"
+  },
+  "Demi Lovato": {
+    "start": 2008,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/06db3a30eb08331ffad09ed88f343868/250x250-000000-80-0-0.jpg"
+  },
+  "Shawn Mendes": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/ce2fa255017df8edbe00f2e3be75a004/250x250-000000-80-0-0.jpg"
+  },
+  "Camila Cabello": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/5e3b508f7ce19df1f7292215c2ec0fde/250x250-000000-80-0-0.jpg"
+  },
+  "Halsey": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/81816f1c4e72be61f715dd7cbf0d769d/250x250-000000-80-0-0.jpg"
+  },
+  "Lorde": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e781eb894871e469deeddf1525f09ad9/250x250-000000-80-0-0.jpg"
+  },
+  "Charli XCX": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/abf21eb757f59d240dce5a8508eb82f1/250x250-000000-80-0-0.jpg"
+  },
+  "Coldplay": {
+    "start": 2000,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://cdn-images.dzcdn.net/images/artist/845115c5bd4a22c5e53be126742512f4/250x250-000000-80-0-0.jpg"
+  },
+  "Imagine Dragons": {
+    "start": 2012,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://cdn-images.dzcdn.net/images/artist/683fb08d01d166ec7cda3a81763138b7/250x250-000000-80-0-0.jpg"
+  },
+  "Maroon 5": {
+    "start": 2002,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/230cc9eebfc8fc72e4ebef9eb98b4b74/250x250-000000-80-0-0.jpg"
+  },
+  "OneRepublic": {
+    "start": 2007,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/36556d769dc4052d915eb78c8daf98fb/250x250-000000-80-0-0.jpg"
+  },
+  "Arctic Monkeys": {
+    "start": 2006,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://cdn-images.dzcdn.net/images/artist/6c03e4c7c36800897fd468633286db24/250x250-000000-80-0-0.jpg"
+  },
+  "The 1975": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://cdn-images.dzcdn.net/images/artist/3408c43ed74f73c88281b37a62a51638/250x250-000000-80-0-0.jpg"
+  },
+  "Tame Impala": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/250x250-000000-80-0-0.jpg"
+  },
+  "Glass Animals": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "Indie",
+    "image": "https://cdn-images.dzcdn.net/images/artist/b2e9164dfa2a293330ce341905710034/250x250-000000-80-0-0.jpg"
+  },
+  "FINNEAS": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/d4cf2dedbdf65c8b42050fe987358d0c/250x250-000000-80-0-0.jpg"
+  },
+  "Jack Harlow": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/acf97ceb30d48a97e47afd1c3f9b68ce/250x250-000000-80-0-0.jpg"
+  },
+  "Sabrina Carpenter": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/4a9cdc7737e2a0e59b4917b47884b859/250x250-000000-80-0-0.jpg"
+  },
+  "Tate McRae": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/b3578bcbd54124c8125c9a9d52f38716/250x250-000000-80-0-0.jpg"
+  },
+  "Chappell Roan": {
+    "start": 2022,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/14ca3aea25950189f30efe0fa79ac4f9/250x250-000000-80-0-0.jpg"
+  },
+  "Ice Spice": {
+    "start": 2022,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/175bb716a4289c50e39c048ad35b491e/250x250-000000-80-0-0.jpg"
+  },
+  "21 Savage": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/76b4cd56c7e94e8d2bdc3e2157e1080f/250x250-000000-80-0-0.jpg"
+  },
+  "Future": {
+    "start": 2012,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/c8c8fea7e2b8613b3ba7328d22d3016c/250x250-000000-80-0-0.jpg"
+  },
+  "Metro Boomin": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/bc031b73f958987fa103031070be5c16/250x250-000000-80-0-0.jpg"
+  },
+  "Morgan Wallen": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Country",
+    "image": "https://cdn-images.dzcdn.net/images/artist/75488d12757f5809b9e6c7f53e5bb455/250x250-000000-80-0-0.jpg"
+  },
+  "Luke Combs": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Country",
+    "image": "https://cdn-images.dzcdn.net/images/artist/c2a8e5d0d293a06bf887bb2724a780bc/250x250-000000-80-0-0.jpg"
+  },
+  "Zach Bryan": {
+    "start": 2021,
+    "end": 2050,
+    "genre": "Country",
+    "image": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/250x250-000000-80-0-0.jpg"
+  },
+  "Peso Pluma": {
+    "start": 2023,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/dde2bf89c1e8da0aeb94436681bc3aac/250x250-000000-80-0-0.jpg"
+  },
+  "Karol G": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/dd8c6b3068d2761955eb6e432046ed91/250x250-000000-80-0-0.jpg"
+  },
+  "Shakira": {
+    "start": 1995,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/69c569506a8ff6ab0edfecbd1adf94b0/250x250-000000-80-0-0.jpg"
+  },
+  "Rauw Alejandro": {
+    "start": 2019,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/0e7b2b93b91789a054bc3f08bb3df3a8/250x250-000000-80-0-0.jpg"
+  },
+  "Anitta": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/bab6017df606c55ba0b5418fc345c3ca/250x250-000000-80-0-0.jpg"
+  },
+  "Latto": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/01a5b9598e1de78a0cfad893c0e4e161/250x250-000000-80-0-0.jpg"
+  },
+  "GloRilla": {
+    "start": 2022,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/6bccd80c250c642b7d5262480e8af617/250x250-000000-80-0-0.jpg"
+  },
+  "Sexyy Red": {
+    "start": 2023,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/5b4a7d84536a2f0edde7eca15469057d/250x250-000000-80-0-0.jpg"
+  },
+  "Coi Leray": {
+    "start": 2021,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/8aebf8da8832f87d840330bf994cfb59/250x250-000000-80-0-0.jpg"
+  },
+  "Flo Milli": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/db4c9e92ebbb65eaca8d4f8ef5bf82d3/250x250-000000-80-0-0.jpg"
+  },
+  "Charlie Puth": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Pop",
+    "image": ""
+  },
+  "Katy Perry": {
+    "start": 2008,
+    "end": 2050,
+    "genre": "Pop",
+    "image": ""
+  },
+  "Troye Sivan": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "Pop",
+    "image": ""
+  },
+  "ZAYN": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Pop",
+    "image": ""
+  },
+  "Conan Gray": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Pop",
+    "image": ""
+  },
+  "Kesha": {
+    "start": 2009,
+    "end": 2050,
+    "genre": "Pop",
+    "image": ""
+  },
+  "Playboi Carti": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Lil Uzi Vert": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Young Thug": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "A$AP Rocky": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Lil Yachty": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Pop Smoke": {
+    "start": 2019,
+    "end": 2020,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Juice WRLD": {
+    "start": 2018,
+    "end": 2019,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Gunna": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "Lil Baby": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": ""
+  },
+  "BTS": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/b5c64fa8216ca158e52b4d88bd9388ff/250x250-000000-80-0-0.jpg"
+  },
+  "BLACKPINK": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/89675729453893a91be35bde691050ff/250x250-000000-80-0-0.jpg"
+  },
+  "NewJeans": {
+    "start": 2022,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/0866c2c1d7d00879f5db46ddc1250db8/250x250-000000-80-0-0.jpg"
+  },
+  "Stray Kids": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/004d3950684af2157081072af2df192b/250x250-000000-80-0-0.jpg"
+  },
+  "TWICE": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/1f4acadade675899b7f775ae4ac67faa/250x250-000000-80-0-0.jpg"
+  },
+  "SEVENTEEN": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/f24702900c1454ea23c573a3eed5b149/250x250-000000-80-0-0.jpg"
+  },
+  "LE SSERAFIM": {
+    "start": 2022,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e789ab2d16cad9a738cd83722940512b/250x250-000000-80-0-0.jpg"
+  },
+  "(G)I-DLE": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/0b381aacaf9b4c4c1b60664431c815bf/250x250-000000-80-0-0.jpg"
+  },
+  "Jungkook": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/7e8a65d06b7c0293ff33f44e34a8b7e6/250x250-000000-80-0-0.jpg"
+  },
+  "Jennie": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/56c65ac9ea451119ddc8c0b02915d103/250x250-000000-80-0-0.jpg"
+  },
+  "Lisa": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/040c7161f753b46331aad225cb8bac38/250x250-000000-80-0-0.jpg"
+  },
+  "aespa": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "K-Pop",
+    "image": "https://cdn-images.dzcdn.net/images/artist/0031639b755895dc9d638628587c5459/250x250-000000-80-0-0.jpg"
+  },
+  "J Balvin": {
+    "start": 2009,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/325eaa46bc25052d0e3d549d60cc8225/250x250-000000-80-0-0.jpg"
+  },
+  "Maluma": {
+    "start": 2012,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/a1627f420e880b7229e52890b99626c9/250x250-000000-80-0-0.jpg"
+  },
+  "Rosalía": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/96636156440182f1e7db3f77d39e6545/250x250-000000-80-0-0.jpg"
+  },
+  "Feid": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/a37d75aa98b04da700412398a988c31a/250x250-000000-80-0-0.jpg"
+  },
+  "Myke Towers": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/d3a7418b4e44bf8ee3ae268067a86f09/250x250-000000-80-0-0.jpg"
+  },
+  "Young Miko": {
+    "start": 2021,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/5912325ca89e72e925de22d05001ed4a/250x250-000000-80-0-0.jpg"
+  },
+  "Ozuna": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/df2030b9e796f55f58d2c4b68aecb18f/250x250-000000-80-0-0.jpg"
+  },
+  "Bizarrap": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Latin",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e121c1ef9b1135e6a5b71c1e65ab10b4/250x250-000000-80-0-0.jpg"
+  },
+  "Calvin Harris": {
+    "start": 2007,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://cdn-images.dzcdn.net/images/artist/a53031d02dc2f8a8eb15d117c015d5eb/250x250-000000-80-0-0.jpg"
+  },
+  "David Guetta": {
+    "start": 2002,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://cdn-images.dzcdn.net/images/artist/2d527fa03e106ed82a28f161694278d3/250x250-000000-80-0-0.jpg"
+  },
+  "Skrillex": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://cdn-images.dzcdn.net/images/artist/0075f053766d7d0e12e4a7be22b85e6a/250x250-000000-80-0-0.jpg"
+  },
+  "Diplo": {
+    "start": 2004,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e26fa83b67df45f262ce0181c3b86463/250x250-000000-80-0-0.jpg"
+  },
+  "Zedd": {
+    "start": 2012,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://cdn-images.dzcdn.net/images/artist/6013ec7ad0b823306c3582e2792dd145/250x250-000000-80-0-0.jpg"
+  },
+  "Martin Garrix": {
+    "start": 2013,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://cdn-images.dzcdn.net/images/artist/4cab1c0cbe0edc1b3d2234873abc485e/250x250-000000-80-0-0.jpg"
+  },
+  "Bob Marley": {
+    "start": 1962,
+    "end": 1981,
+    "genre": "Reggae",
+    "image": "https://cdn-images.dzcdn.net/images/artist/c8241e15efdefa9465c7b470643efb3b/250x250-000000-80-0-0.jpg"
+  },
+  "Sean Paul": {
+    "start": 1996,
+    "end": 2050,
+    "genre": "Reggae",
+    "image": "https://cdn-images.dzcdn.net/images/artist/043332be51a1a67cb0a363ea88475a41/250x250-000000-80-0-0.jpg"
+  },
+  "Koffee": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Reggae",
+    "image": "https://cdn-images.dzcdn.net/images/artist/fa724e6edaae0359a9e8d63815ecc29d/250x250-000000-80-0-0.jpg"
+  },
+  "Shaggy": {
+    "start": 1993,
+    "end": 2050,
+    "genre": "Reggae",
+    "image": "https://cdn-images.dzcdn.net/images/artist/2e74048a1d7271efc79b0d3a91fdf085/250x250-000000-80-0-0.jpg"
+  },
+  "Popcaan": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Reggae",
+    "image": "https://cdn-images.dzcdn.net/images/artist/17a66041a82cd6ead846178a104ecdf4/250x250-000000-80-0-0.jpg"
+  },
+  "Burna Boy": {
+    "start": 2012,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/ad15b7f03325752d60db9e4d39c079ae/250x250-000000-80-0-0.jpg"
+  },
+  "Wizkid": {
+    "start": 2010,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/171332ffcaa66c2b5583d7630297be88/250x250-000000-80-0-0.jpg"
+  },
+  "Davido": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/bb20fa59263d537ce7a27160b8471aed/250x250-000000-80-0-0.jpg"
+  },
+  "Rema": {
+    "start": 2019,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/45262002b65a0bb0157aff134106c72b/250x250-000000-80-0-0.jpg"
+  },
+  "Tems": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/6afe2edff567600abf781c3d8a29344b/250x250-000000-80-0-0.jpg"
+  },
+  "Asake": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/29baf235626c8cd1cdc782c6d467aca8/250x250-000000-80-0-0.jpg"
+  },
+  "Omah Lay": {
+    "start": 2020,
+    "end": 2050,
+    "genre": "Afrobeats",
+    "image": "https://cdn-images.dzcdn.net/images/artist/e8ce64479eb3d7fc2853f7fd694cc999/250x250-000000-80-0-0.jpg"
+  }
+};
+
+
+
+
+// moreImages patch
+
+Object.entries({"Charlie Puth":"https://cdn-images.dzcdn.net/images/artist/9f38f83196c81faeab5a59f518e9cff2/250x250-000000-80-0-0.jpg","Katy Perry":"https://cdn-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg","Troye Sivan":"https://cdn-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg","ZAYN":"https://cdn-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg","Conan Gray":"https://cdn-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg","Kesha":"https://cdn-images.dzcdn.net/images/artist/11cc7c5a08bd2f7fa7fb2930eb5a6e25/250x250-000000-80-0-0.jpg","Playboi Carti":"https://cdn-images.dzcdn.net/images/artist/c17b8f0417934c9f131a4fa62baac816/250x250-000000-80-0-0.jpg","Lil Uzi Vert":"https://cdn-images.dzcdn.net/images/artist/c60010cc39f3ebc6731932ea48cf9f0e/250x250-000000-80-0-0.jpg","Young Thug":"https://cdn-images.dzcdn.net/images/artist/19eb2e0cfcd08534125b29b63486b72d/250x250-000000-80-0-0.jpg","A$AP Rocky":"https://cdn-images.dzcdn.net/images/artist/733979fdb23145d2e0523ed60912fbbd/250x250-000000-80-0-0.jpg","Lil Yachty":"https://cdn-images.dzcdn.net/images/artist/4ab0eb922c2a2dcff6d8cfd3d3a033ec/250x250-000000-80-0-0.jpg","Pop Smoke":"https://cdn-images.dzcdn.net/images/artist/230cc9eebfc8fc72e4ebef9eb98b4b74/250x250-000000-80-0-0.jpg","Juice WRLD":"https://cdn-images.dzcdn.net/images/artist/683fb08d01d166ec7cda3a81763138b7/250x250-000000-80-0-0.jpg","Gunna":"https://cdn-images.dzcdn.net/images/artist/6c03e4c7c36800897fd468633286db24/250x250-000000-80-0-0.jpg","Lil Baby":"https://cdn-images.dzcdn.net/images/artist/845115c5bd4a22c5e53be126742512f4/250x250-000000-80-0-0.jpg"}).forEach(([name, image]) => {
+  if (image) {
+    NPC_ARTIST_IMAGES[name] = image;
+  }
+});
+
+// Eras new additions
+Object.assign(NPC_ERAS, {"Aretha Franklin":{"start":1961,"end":2018,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg"},"Diana Ross":{"start":1970,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"},"Bee Gees":{"start":1965,"end":2003,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/4ebef891bc86ff542b6f5cf1de36f875/250x250-000000-80-0-0.jpg"},"The Rolling Stones":{"start":1962,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/1e74880c54bb9b5f818fdfcb796b4121/250x250-000000-80-0-0.jpg"},"Eagles":{"start":1971,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/c1a6f8742cc65a8df241dcd79fcbd9fa/250x250-000000-80-0-0.jpg"},"Donna Summer":{"start":1974,"end":2012,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"},"Tina Turner":{"start":1984,"end":2023,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/f1fb89eb8e390c5003c20c0dcfe63f45/250x250-000000-80-0-0.jpg"},"Cyndi Lauper":{"start":1983,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"},"Cher":{"start":1965,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg"},"Def Leppard":{"start":1980,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg"},"AC/DC":{"start":1973,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/b2fa8bc635583b27b3e839e9fc1f912a/250x250-000000-80-0-0.jpg"},"Shania Twain":{"start":1993,"end":2050,"genre":"Country","image":"https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"},"No Doubt":{"start":1992,"end":2012,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"},"Aaliyah":{"start":1994,"end":2001,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/81005a39626c8cd1cf9c9f28ecb3a2a6/250x250-000000-80-0-0.jpg"},"Lauryn Hill":{"start":1998,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"},"Pearl Jam":{"start":1991,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/43e74ff1f3bf78b4d08e56314ff9478e/250x250-000000-80-0-0.jpg"},"Red Hot Chili Peppers":{"start":1984,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg"},"Eminem":{"start":1999,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg"},"Christina Aguilera":{"start":1999,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/3ff402daee9c78d5ce8084a77b75ecb0/250x250-000000-80-0-0.jpg"},"Kelly Clarkson":{"start":2002,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg"},"Avril Lavigne":{"start":2002,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/a1be2e68449c25f4ab36181b5fbce306/250x250-000000-80-0-0.jpg"},"P!nk":{"start":2000,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg"},"Justin Timberlake":{"start":2002,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg"},"Missy Elliott":{"start":1997,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/bdab4cc8dbad3a9dae88ff39ccb36ce9/250x250-000000-80-0-0.jpg"}}, {
+  "David Bowie": {
+    "start": 1969,
+    "end": 2016,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f1d7e2f5b4ed697ccabcf9163e8a4a58/250x250-000000-80-0-0.jpg"
+  },
+  "Elton John": {
+    "start": 1969,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/a824706db6ed2a4176461b2fc8ad0dfc/250x250-000000-80-0-0.jpg"
+  },
+  "Stevie Wonder": {
+    "start": 1962,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg"
+  },
+  "Fleetwood Mac": {
+    "start": 1968,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg"
+  },
+  "Queen": {
+    "start": 1973,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"
+  },
+  "ABBA": {
+    "start": 1972,
+    "end": 1982,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/d5ebf9fc325143a1a9e33d262df5846c/250x250-000000-80-0-0.jpg"
+  },
+  "Pink Floyd": {
+    "start": 1967,
+    "end": 2014,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"
+  },
+  "Led Zeppelin": {
+    "start": 1969,
+    "end": 1980,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/43e74ff1f3bf78b4d08e56314ff9478e/250x250-000000-80-0-0.jpg"
+  },
+  "Bruce Springsteen": {
+    "start": 1973,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/335805560940dcf16d470d04c4f9eb66/250x250-000000-80-0-0.jpg"
+  },
+  "U2": {
+    "start": 1980,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg"
+  },
+  "George Michael": {
+    "start": 1982,
+    "end": 2016,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/a1be2e68449c25f4ab36181b5fbce306/250x250-000000-80-0-0.jpg"
+  },
+  "Phil Collins": {
+    "start": 1981,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b06385d5ad198308cf2b170e7e1694c9/250x250-000000-80-0-0.jpg"
+  },
+  "Bon Jovi": {
+    "start": 1984,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b2fa8bc635583b27b3e839e9fc1f912a/250x250-000000-80-0-0.jpg"
+  },
+  "Guns N' Roses": {
+    "start": 1987,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg"
+  },
+  "Janet Jackson": {
+    "start": 1982,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f1cc5bcba18a10b42f6c8d4512c1404c/250x250-000000-80-0-0.jpg"
+  },
+  "Mariah Carey": {
+    "start": 1990,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f56641e7d23d8c1995a329d675bb2f69/250x250-000000-80-0-0.jpg"
+  },
+  "Celine Dion": {
+    "start": 1990,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"
+  },
+  "Spice Girls": {
+    "start": 1996,
+    "end": 2000,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg"
+  },
+  "TLC": {
+    "start": 1992,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/81005a39626c8cd1cf9c9f28ecb3a2a6/250x250-000000-80-0-0.jpg"
+  },
+  "Oasis": {
+    "start": 1994,
+    "end": 2009,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/735dbd26a2675713dfce0cfcd31a7836/250x250-000000-80-0-0.jpg"
+  },
+  "Radiohead": {
+    "start": 1992,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7c7a522dd4bb134958ce74e6f49dd9e8/250x250-000000-80-0-0.jpg"
+  },
+  "Snoop Dogg": {
+    "start": 1992,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/bdab4cc8dbad3a9dae88ff39ccb36ce9/250x250-000000-80-0-0.jpg"
+  },
+  "Jay-Z": {
+    "start": 1996,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/ecb18f081c7f9df8813a7c64a39b3cc1/250x250-000000-80-0-0.jpg"
+  },
+  "Destiny's Child": {
+    "start": 1997,
+    "end": 2006,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/88b5668eeb1161d2d3e4e7303e3a479d/250x250-000000-80-0-0.jpg"
+  },
+  "Beyoncé": {
+    "start": 2003,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b6f5cf1de36f875323a7891bc86ff542/250x250-000000-80-0-0.jpg"
+  },
+  "Rihanna": {
+    "start": 2005,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/33e382b68378619bcbb8f9ce136d8be6/250x250-000000-80-0-0.jpg"
+  },
+  "Coldplay": {
+    "start": 2000,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/8d7fc4917462762a74c4dbb242e881dc/250x250-000000-80-0-0.jpg"
+  },
+  "Linkin Park": {
+    "start": 2000,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/3cc3f8da08e9d8f3ea7f9e8557997672/250x250-000000-80-0-0.jpg"
+  },
+  "Alicia Keys": {
+    "start": 2001,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/a232f01fbd8f168fbcfffc07153a5518/250x250-000000-80-0-0.jpg"
+  },
+  "Usher": {
+    "start": 1994,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/1e7cc4d8123df16d5570bbcc671755fb/250x250-000000-80-0-0.jpg"
+  },
+  "OutKast": {
+    "start": 1994,
+    "end": 2014,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b7ee0420b72a6b2259eb5607dbfa33f9/250x250-000000-80-0-0.jpg"
+  },
+  "50 Cent": {
+    "start": 2003,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/e7a22f9c3230a1334c9c7fecfa1cded3/250x250-000000-80-0-0.jpg"
+  },
+  "Green Day": {
+    "start": 1994,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/bd3bba65b6f00dbba3b1d167ef088fa6/250x250-000000-80-0-0.jpg"
+  },
+  "Lady Gaga": {
+    "start": 2008,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/d1ff8217bbba9c6f272a843916960cc2/250x250-000000-80-0-0.jpg"
+  },
+  "Katy Perry": {
+    "start": 2008,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg"
+  },
+  "Huda Mustafa": {
+    "start": 2025,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60"
+  },
+  "TRIM": {
+    "start": 2025,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60"
+  },
+  "Sunshine Benzi": {
+    "start": 2025,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60"
+  },
+  "Stunna Sandy": {
+    "start": 2025,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60"
+  },
+  "Charlie Puth": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/9f38f83196c81faeab5a59f518e9cff2/250x250-000000-80-0-0.jpg"
+  },
+  "Troye Sivan": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg"
+  },
+  "ZAYN": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg"
+  },
+  "Conan Gray": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg"
+  },
+  "Kesha": {
+    "start": 2009,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/11cc7c5a08bd2f7fa7fb2930eb5a6e25/250x250-000000-80-0-0.jpg"
+  },
+  "Playboi Carti": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/c17b8f0417934c9f131a4fa62baac816/250x250-000000-80-0-0.jpg"
+  },
+  "Lil Uzi Vert": {
+    "start": 2015,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/c60010cc39f3ebc6731932ea48cf9f0e/250x250-000000-80-0-0.jpg"
+  },
+  "Young Thug": {
+    "start": 2014,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/19eb2e0cfcd08534125b29b63486b72d/250x250-000000-80-0-0.jpg"
+  },
+  "A$AP Rocky": {
+    "start": 2011,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/733979fdb23145d2e0523ed60912fbbd/250x250-000000-80-0-0.jpg"
+  },
+  "Lil Yachty": {
+    "start": 2016,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/4ab0eb922c2a2dcff6d8cfd3d3a033ec/250x250-000000-80-0-0.jpg"
+  },
+  "Pop Smoke": {
+    "start": 2019,
+    "end": 2020,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/230cc9eebfc8fc72e4ebef9eb98b4b74/250x250-000000-80-0-0.jpg"
+  },
+  "Juice WRLD": {
+    "start": 2018,
+    "end": 2019,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/683fb08d01d166ec7cda3a81763138b7/250x250-000000-80-0-0.jpg"
+  },
+  "Gunna": {
+    "start": 2018,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/6c03e4c7c36800897fd468633286db24/250x250-000000-80-0-0.jpg"
+  },
+  "Lil Baby": {
+    "start": 2017,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/845115c5bd4a22c5e53be126742512f4/250x250-000000-80-0-0.jpg"
+  }
+});
+
+
+
+// Eras extra additions
+Object.assign(NPC_ERAS, {
+  "Aretha Franklin": {
+    "start": 1961,
+    "end": 2018,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg"
+  },
+  "Diana Ross": {
+    "start": 1970,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"
+  },
+  "Bee Gees": {
+    "start": 1965,
+    "end": 2003,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/4ebef891bc86ff542b6f5cf1de36f875/250x250-000000-80-0-0.jpg"
+  },
+  "The Rolling Stones": {
+    "start": 1962,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/1e74880c54bb9b5f818fdfcb796b4121/250x250-000000-80-0-0.jpg"
+  },
+  "Eagles": {
+    "start": 1971,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/c1a6f8742cc65a8df241dcd79fcbd9fa/250x250-000000-80-0-0.jpg"
+  },
+  "Donna Summer": {
+    "start": 1974,
+    "end": 2012,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"
+  },
+  "Tina Turner": {
+    "start": 1984,
+    "end": 2023,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f1fb89eb8e390c5003c20c0dcfe63f45/250x250-000000-80-0-0.jpg"
+  },
+  "Cyndi Lauper": {
+    "start": 1983,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"
+  },
+  "Cher": {
+    "start": 1965,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg"
+  },
+  "Def Leppard": {
+    "start": 1980,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg"
+  },
+  "AC/DC": {
+    "start": 1973,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b2fa8bc635583b27b3e839e9fc1f912a/250x250-000000-80-0-0.jpg"
+  },
+  "Shania Twain": {
+    "start": 1993,
+    "end": 2050,
+    "genre": "Country",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"
+  },
+  "No Doubt": {
+    "start": 1992,
+    "end": 2012,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"
+  },
+  "Aaliyah": {
+    "start": 1994,
+    "end": 2001,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/81005a39626c8cd1cf9c9f28ecb3a2a6/250x250-000000-80-0-0.jpg"
+  },
+  "Lauryn Hill": {
+    "start": 1998,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"
+  },
+  "Pearl Jam": {
+    "start": 1991,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/43e74ff1f3bf78b4d08e56314ff9478e/250x250-000000-80-0-0.jpg"
+  },
+  "Red Hot Chili Peppers": {
+    "start": 1984,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg"
+  },
+  "Eminem": {
+    "start": 1999,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg"
+  },
+  "Christina Aguilera": {
+    "start": 1999,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/3ff402daee9c78d5ce8084a77b75ecb0/250x250-000000-80-0-0.jpg"
+  },
+  "Kelly Clarkson": {
+    "start": 2002,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg"
+  },
+  "Avril Lavigne": {
+    "start": 2002,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/a1be2e68449c25f4ab36181b5fbce306/250x250-000000-80-0-0.jpg"
+  },
+  "P!nk": {
+    "start": 2000,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg"
+  },
+  "Justin Timberlake": {
+    "start": 2002,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg"
+  },
+  "Missy Elliott": {
+    "start": 1997,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/bdab4cc8dbad3a9dae88ff39ccb36ce9/250x250-000000-80-0-0.jpg"
+  }
+});
+
+
+
+// Patching 2025 artists
+
+Object.assign(NPC_ERAS, {
+  "Huda Mustafa": { ...NPC_ERAS["Huda Mustafa"], start: 2025 },
+  "Stunna Sandy": { ...NPC_ERAS["Stunna Sandy"], start: 2025 },
+  "Sunshine Benzi": { ...NPC_ERAS["Sunshine Benzi"], start: 2025 },
+  "TRIM": { ...NPC_ERAS["TRIM"], start: 2025 },
+});
+
+
+
+// More era additions
+Object.assign(NPC_ERAS, {
+  "The Beatles": {
+    "start": 1962,
+    "end": 1970,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/9c45c3ec047eb3ba7ad43dbbbf1025a7/250x250-000000-80-0-0.jpg"
+  },
+  "The Beach Boys": {
+    "start": 1961,
+    "end": 2012,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/dfa473f6ed9100742f534fa889241b12/250x250-000000-80-0-0.jpg"
+  },
+  "The Supremes": {
+    "start": 1959,
+    "end": 1977,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"
+  },
+  "Jimi Hendrix": {
+    "start": 1963,
+    "end": 1970,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/5cb1b702ec4cb03e4823db9dfd048d08/250x250-000000-80-0-0.jpg"
+  },
+  "Bob Dylan": {
+    "start": 1961,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"
+  },
+  "The Jackson 5": {
+    "start": 1969,
+    "end": 1989,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/c1a6f8742cc65a8df241dcd79fcbd9fa/250x250-000000-80-0-0.jpg"
+  },
+  "Aerosmith": {
+    "start": 1970,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/1e74880c54bb9b5f818fdfcb796b4121/250x250-000000-80-0-0.jpg"
+  },
+  "The Clash": {
+    "start": 1976,
+    "end": 1986,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg"
+  },
+  "Ramones": {
+    "start": 1974,
+    "end": 1996,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg"
+  },
+  "Blondie": {
+    "start": 1974,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"
+  },
+  "Duran Duran": {
+    "start": 1978,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"
+  },
+  "The Cure": {
+    "start": 1978,
+    "end": 2050,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/43e74ff1f3bf78b4d08e56314ff9478e/250x250-000000-80-0-0.jpg"
+  },
+  "Depeche Mode": {
+    "start": 1980,
+    "end": 2050,
+    "genre": "Electronic",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg"
+  },
+  "The Smiths": {
+    "start": 1982,
+    "end": 1987,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/f1fb89eb8e390c5003c20c0dcfe63f45/250x250-000000-80-0-0.jpg"
+  },
+  "INXS": {
+    "start": 1977,
+    "end": 2012,
+    "genre": "Rock",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"
+  },
+  "TLC": {
+    "start": 1991,
+    "end": 2050,
+    "genre": "R&B",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg"
+  },
+  "Spice Girls": {
+    "start": 1994,
+    "end": 2000,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/3ff402daee9c78d5ce8084a77b75ecb0/250x250-000000-80-0-0.jpg"
+  },
+  "Backstreet Boys": {
+    "start": 1993,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg"
+  },
+  "NSYNC": {
+    "start": 1995,
+    "end": 2002,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/81005a39626c8cd1cf9c9f28ecb3a2a6/250x250-000000-80-0-0.jpg"
+  },
+  "The Notorious B.I.G.": {
+    "start": 1992,
+    "end": 1997,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"
+  },
+  "Black Eyed Peas": {
+    "start": 1995,
+    "end": 2050,
+    "genre": "Pop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg"
+  },
+  "Nelly": {
+    "start": 1993,
+    "end": 2050,
+    "genre": "Hip Hop",
+    "image": "https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg"
+  }
+});
+
+// Merging Eras data into standard lists
+Object.entries(NPC_ERAS).forEach(([name, data]) => {
+  if (!NPC_ARTIST_NAMES.includes(name)) {
+    NPC_ARTIST_NAMES.push(name);
+  }
+  if (!NPC_ARTIST_GENRES[name]) {
+    NPC_ARTIST_GENRES[name] = data.genre;
+  }
+  if (!NPC_ARTIST_IMAGES[name] && data.image) {
+    NPC_ARTIST_IMAGES[name] = data.image;
+  }
+});

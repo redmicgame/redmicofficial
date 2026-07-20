@@ -54,7 +54,7 @@ import {
   STREAM_INCOME_MULTIPLIER,
   SUBSCRIBER_THRESHOLD_STORE,
   VIEW_INCOME_MULTIPLIER,
-  NPC_ARTIST_NAMES,
+  NPC_ARTIST_NAMES, NPC_ERAS,
   NPC_ARTIST_GENRES,
   NPC_SONG_ADJECTIVES,
   NPC_SONG_NOUNS,
@@ -86,6 +86,59 @@ export const getPossibleEncounters = (
   );
 
   const encounters: ActiveEncounter[] = [
+
+    {
+      id: "lawsuit_copyright",
+      text: "You are being sued by an underground artist who claims you stole their melody for your latest hit. They are demanding a massive payout.",
+      requiresImage: false,
+      choices: [
+        {
+          label: "Settle out of court ($2M)",
+          tweetTemplate: "{artist} settles copyright lawsuit out of court for $2M. GUILTY much? ☕",
+          authorName: "Pop Crave",
+          isTMZ: false,
+          publicImageEffect: -2,
+          hypeEffect: 1,
+          moneyEffect: -2000000
+        },
+        {
+          label: "Fight in court (50% chance to lose $5M)",
+          tweetTemplate: "{artist} refuses to settle and goes to trial over copyright claim!",
+          authorName: "TMZ",
+          isTMZ: true,
+          publicImageEffect: 3,
+          hypeEffect: 5,
+          // We will handle the money effect in the component or just make a safe assumption
+          moneyEffect: Math.random() > 0.5 ? -5000000 : -100000
+        }
+      ]
+    },
+    {
+      id: "lawsuit_fan_war",
+      text: "A rival artist's fan is suing you because your fan base relentlessly bullied and doxxed them after a subtle shade tweet you made.",
+      requiresImage: false,
+      choices: [
+        {
+          label: "Pay their legal fees & apologize ($500k)",
+          tweetTemplate: "{artist} apologizes for toxic fans and pays victim's legal fees. Respect.",
+          authorName: "Pop Base",
+          isTMZ: false,
+          publicImageEffect: 5,
+          hypeEffect: -2,
+          moneyEffect: -500000
+        },
+        {
+          label: "Countersue for defamation ($1M)",
+          tweetTemplate: "{artist} is COUNTERSUING the fan who sued them! This is getting messy 😭",
+          authorName: "TMZ",
+          isTMZ: true,
+          publicImageEffect: -8,
+          hypeEffect: 10,
+          moneyEffect: -1000000
+        }
+      ]
+    },
+
     {
       id: "music_release",
       text: "A fan approaches you while you are out getting coffee and asks when you are releasing new music.",
@@ -205,6 +258,94 @@ export const getPossibleEncounters = (
       ],
     },
   ];
+
+
+  if (isMarried) {
+    encounters.push(
+      {
+        id: "lawsuit_divorce",
+        text: "Your spouse has filed for DIVORCE! They are demanding a massive settlement and it's all over the tabloids.",
+        requiresImage: false,
+        choices: [
+          {
+            label: "Sign the papers ($5M)",
+            tweetTemplate: "{artist} officially divorces! The settlement was MASSIVE 💔",
+            authorName: "TMZ",
+            isTMZ: true,
+            publicImageEffect: -5,
+            hypeEffect: 15,
+            moneyEffect: -5000000
+          },
+
+          {
+            label: "Fight for assets ($2M legal fees)",
+            tweetTemplate: "{artist} is fighting their ex in court! The divorce is getting UGLY.",
+            authorName: "TMZ",
+            isTMZ: true,
+            publicImageEffect: -10,
+            hypeEffect: 20,
+            moneyEffect: -2000000
+          }
+        ]
+      },
+      {
+        id: "lawsuit_annulment",
+        text: "Your spouse is filing for an ANNULMENT! They claim the marriage was a sham and want monthly compensation.",
+        requiresImage: false,
+        choices: [
+          {
+            label: "Grant annulment ($50k/month)",
+            tweetTemplate: "{artist}'s marriage annulled! Rumor has it they are paying a monthly fee...",
+            authorName: "Pop Crave",
+            isTMZ: false,
+            publicImageEffect: -2,
+            hypeEffect: 5,
+            moneyEffect: 0
+          },
+          {
+            label: "Deny and drag it out ($1M)",
+            tweetTemplate: "{artist} denies annulment request, forcing a messy public trial!",
+            authorName: "TMZ",
+            isTMZ: true,
+            publicImageEffect: -8,
+            hypeEffect: 12,
+            moneyEffect: -1000000
+          }
+        ]
+      }
+    );
+  }
+
+  const hasExes = artistData.relationships?.some(r => r.status === "ex");
+  if (hasExes) {
+    encounters.push(
+      {
+        id: "lawsuit_child_support",
+        text: "Your ex is suing you for CHILD SUPPORT! They are demanding a hefty monthly payment.",
+        requiresImage: false,
+        choices: [
+          {
+            label: "Agree to pay ($25k/month)",
+            tweetTemplate: "{artist} agrees to pay child support. A responsible parent! 🍼",
+            authorName: "Pop Base",
+            isTMZ: false,
+            publicImageEffect: 5,
+            hypeEffect: 0,
+            moneyEffect: 0
+          },
+          {
+            label: "Fight the claim ($500k)",
+            tweetTemplate: "{artist} is fighting their ex over child support... not a good look 😬",
+            authorName: "TMZ",
+            isTMZ: true,
+            publicImageEffect: -15,
+            hypeEffect: 5,
+            moneyEffect: -500000
+          }
+        ]
+      }
+    );
+  }
 
   if (isGroup) {
     encounters.push({
@@ -363,13 +504,27 @@ const formatCertification = (
   return cert.level;
 };
 
-const getRandomNpcName = (excludedNames: string[] = []): string => {
+const getRandomNpcName = (excludedNames: string[] = [], currentYear?: number): string => {
   let name = "";
   let attempts = 0;
   const lowerExcluded = excludedNames.map((n) => n.toLowerCase());
+  
+  // Filter available artists by era if currentYear is provided
+  let availableArtists = NPC_ARTIST_NAMES;
+  if (currentYear) {
+    // We can also use NPC_ERAS if available, or just fallback to some default mapping
+    const eraArtists = Object.keys(NPC_ERAS).filter(artist => {
+      const era = NPC_ERAS[artist];
+      return currentYear >= era.start && currentYear <= era.end;
+    });
+    
+    // Add existing ones from NPC_ARTIST_NAMES that might not be in NPC_ERAS
+    const legacyArtists = NPC_ARTIST_NAMES.filter(a => !NPC_ERAS[a]);
+    availableArtists = [...eraArtists, ...legacyArtists];
+  }
+
   do {
-    name =
-      NPC_ARTIST_NAMES[Math.floor(Math.random() * NPC_ARTIST_NAMES.length)];
+    name = availableArtists[Math.floor(Math.random() * availableArtists.length)] || NPC_ARTIST_NAMES[0];
     attempts++;
   } while (lowerExcluded.includes(name.toLowerCase()) && attempts < 50);
   return name;
@@ -380,6 +535,7 @@ const generateNpcs = (
   existingNpcs: NpcSong[] = [],
   npcImages?: Record<string, string>,
   excludedNames: string[] = [],
+  currentYear?: number
 ): NpcSong[] => {
   const npcs: NpcSong[] = [];
   const usedNames = new Set<string>(
@@ -394,14 +550,14 @@ const generateNpcs = (
 
     let baseArtist = "";
     do {
-      baseArtist = getRandomNpcName(excludedNames);
+      baseArtist = getRandomNpcName(excludedNames, currentYear);
       let displayArtist = baseArtist;
 
       if (Math.random() < 0.05) {
         // 5% chance
         let collabArtist = baseArtist;
         while (collabArtist === baseArtist) {
-          collabArtist = getRandomNpcName(excludedNames);
+          collabArtist = getRandomNpcName(excludedNames, currentYear);
         }
         displayArtist = `${baseArtist}, ${collabArtist}`;
       }
@@ -471,6 +627,7 @@ const generateNewHits = (
   existingNpcs: NpcSong[],
   npcImages?: Record<string, string>,
   excludedNames: string[] = [],
+  currentYear?: number
 ): NpcSong[] => {
   const hits: NpcSong[] = [];
   const usedNames = new Set<string>(
@@ -485,14 +642,14 @@ const generateNewHits = (
 
     let baseArtist = "";
     do {
-      baseArtist = getRandomNpcName(excludedNames);
+      baseArtist = getRandomNpcName(excludedNames, currentYear);
       let displayArtist = baseArtist;
 
       if (Math.random() < 0.05) {
         // 5% chance
         let collabArtist = baseArtist;
         while (collabArtist === baseArtist) {
-          collabArtist = getRandomNpcName(excludedNames);
+          collabArtist = getRandomNpcName(excludedNames, currentYear);
         }
         displayArtist = `${baseArtist}, ${collabArtist}`;
       }
@@ -626,7 +783,7 @@ const generateNpcAlbums = (
     // Ensure top tier sales potential
     // Higher index (later generated) means slightly less potential, but we want chart ready albums.
     // Generate potential between 14,000 and 150,000
-    const salesPotential = Math.floor(Math.random() * 136000) + 14000;
+    const salesPotential = Math.floor(Math.pow(Math.random(), 2.5) * 160000) + 3000;
 
     albums.push({
       uniqueId,
@@ -702,6 +859,8 @@ const initialArtistData: ArtistData = {
   grammyHistory: [],
   hasSubmittedForBestNewArtist: false,
   oscarHistory: [],
+  goldenGlobeHistory: [],
+  actingRoles: [],
   onlyfans: null,
   fanWarStatus: null,
   // Soundtracks
@@ -1137,6 +1296,51 @@ const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
   },
 ];
 
+export const DEFAULT_PODCASTS: Podcast[] = [
+  {
+    id: "pod_joe_rogan",
+    name: "The Joe Rogan Experience",
+    host: "Joe Rogan",
+    description: "The official podcast of comedian Joe Rogan.",
+    topics: ["Comedy", "Society & Culture"],
+    coverArt: "https://i.scdn.co/image/9af79fd06e34dea3cd27c4e1cd6ec7343ce20af4",
+    followers: 950600,
+    episodes: [],
+    totalPlays: 5000000,
+    imdbRating: 8.5,
+    isNpc: true,
+    requiredPopularity: 80
+  },
+  {
+    id: "pod_shawn_ryan",
+    name: "The Shawn Ryan Show",
+    host: "Shawn Ryan Show",
+    description: "Shawn Ryan Show",
+    topics: ["Society & Culture", "True Crime"],
+    coverArt: "https://i.scdn.co/image/ab6765630000ba8aa32a0d922de12470e9b986b2",
+    followers: 400000,
+    episodes: [],
+    totalPlays: 2000000,
+    imdbRating: 8.8,
+    isNpc: true,
+    requiredPopularity: 60
+  },
+  {
+    id: "pod_call_her_daddy",
+    name: "Call Her Daddy",
+    host: "Alex Cooper",
+    description: "Alex Cooper's Call Her Daddy.",
+    topics: ["Comedy"],
+    coverArt: "https://i.scdn.co/image/ab6765630000ba8aa23e3ecb90ba6e709e37fc53",
+    followers: 125000,
+    episodes: [],
+    totalPlays: 1000000,
+    imdbRating: 4.0,
+    isNpc: true,
+    requiredPopularity: 70
+  }
+];
+
 const initialState: GameState = {
   offlineMode: true,
   difficultyMode: "normal",
@@ -1146,6 +1350,8 @@ const initialState: GameState = {
   activeArtistId: null,
   artistsData: {},
   spotifyPlaylists: DEFAULT_SPOTIFY_PLAYLISTS,
+  podcasts: DEFAULT_PODCASTS,
+  podcastCharts: DEFAULT_PODCASTS,
   date: { week: 1, year: 2024 },
   currentView: "game",
   activeTab: "Home",
@@ -1202,6 +1408,8 @@ const initialState: GameState = {
   grammyCurrentYearNominations: null,
   activeGrammyPerformanceOffer: null,
   activeGrammyRedCarpetOffer: null,
+  goldenGlobeSubmissions: [],
+  goldenGlobeCurrentYearNominations: null,
   oscarSubmissions: [],
   oscarCurrentYearNominations: null,
   activeOscarPerformanceOffer: null,
@@ -1344,7 +1552,11 @@ const gameReducerInternal = (
         id: crypto.randomUUID(),
         sender: "Red Mic",
         subject: `Welcome to the Music Industry, ${artist.name}!`,
-        body: `Hey ${artist.name},\n\nThis is it, your first step into the world of music. We've given you $100,000 to start. Your fandom, The ${artist.fandomName}, are waiting. Spend your money wisely. Record hits, build your fanbase, and take over the charts. Good luck.\n\nThe Red Mic Team`,
+        body: `Hey ${artist.name},
+
+This is it, your first step into the world of music. We've given you $100,000 to start. Your fandom, The ${artist.fandomName}, are waiting. Spend your money wisely. Record hits, build your fanbase, and take over the charts. Good luck.
+
+The Red Mic Team`,
         date: startDate,
         isRead: false,
         senderIcon: "default",
@@ -1396,6 +1608,18 @@ const gameReducerInternal = (
         followersCount: 2300000,
         followingCount: 1,
       };
+      
+      const goldenGlobesUser: XUser = {
+        id: "golden_globes",
+        name: "Golden Globes",
+        username: "goldenglobes",
+        avatar: "https://upload.wikimedia.org/wikipedia/en/thumb/e/ef/Golden_Globe_Awards_logo.svg/1200px-Golden_Globe_Awards_logo.svg.png",
+        isVerified: true,
+        bio: "#GoldenGlobes — LIVE Sunday, January 10, 2027 on @CBS and @paramountplus hosted by @NikkiGlaser! 📍 Hollywood, California 🔗 goldenglobes.com",
+        followersCount: 1900000,
+        followingCount: 822,
+      };
+
       const spotifySnapshotUser: XUser = {
         id: "spotifysnapshot",
         name: "Spotify Snapshot",
@@ -1580,9 +1804,7 @@ const gameReducerInternal = (
         followers: Math.floor(initialSubs / 5),
       };
       // Increase songs and albums for more realistic charts
-      const npcs = generateNpcs(600, [], undefined, [
-        action.payload.artist.name,
-      ]);
+      const npcs = generateNpcs(600, [], undefined, [action.payload.artist.name], action.payload.startYear);
       const npcAlbums = generateNpcAlbums(60, npcs);
 
       return {
@@ -1609,7 +1831,11 @@ const gameReducerInternal = (
         id: crypto.randomUUID(),
         sender: "Red Mic",
         subject: `Welcome to the Music Industry, ${name}!`,
-        body: `Hey ${name},\n\nThis is it, your first step into the world of music. Your fandom, The ${group.fandomName}, is waiting. We've given you $100,000 to start. Spend it wisely. Record hits, build your fanbase, and take over the charts. Good luck.\n\nThe Red Mic Team`,
+        body: `Hey ${name},
+
+This is it, your first step into the world of music. Your fandom, The ${group.fandomName}, is waiting. We've given you $100,000 to start. Spend it wisely. Record hits, build your fanbase, and take over the charts. Good luck.
+
+The Red Mic Team`,
         date: startDate,
         isRead: false,
         senderIcon: "default",
@@ -1660,6 +1886,18 @@ const gameReducerInternal = (
         followersCount: 2300000,
         followingCount: 1,
       };
+      
+      const goldenGlobesUser: XUser = {
+        id: "golden_globes",
+        name: "Golden Globes",
+        username: "goldenglobes",
+        avatar: "https://upload.wikimedia.org/wikipedia/en/thumb/e/ef/Golden_Globe_Awards_logo.svg/1200px-Golden_Globe_Awards_logo.svg.png",
+        isVerified: true,
+        bio: "#GoldenGlobes — LIVE Sunday, January 10, 2027 on @CBS and @paramountplus hosted by @NikkiGlaser! 📍 Hollywood, California 🔗 goldenglobes.com",
+        followersCount: 1900000,
+        followingCount: 822,
+      };
+
       const spotifySnapshotUser: XUser = {
         id: "spotifysnapshot",
         name: "Spotify Snapshot",
@@ -1860,9 +2098,7 @@ const gameReducerInternal = (
       });
 
       // Increase songs and albums for more realistic charts
-      const npcs = generateNpcs(600, [], undefined, [
-        action.payload.group.name,
-      ]);
+      const npcs = generateNpcs(600, [], undefined, [action.payload.group.name], action.payload.startYear);
       const npcAlbums = generateNpcAlbums(60, npcs);
 
       return {
@@ -2315,10 +2551,16 @@ const gameReducerInternal = (
 
       // NPC Churn Logic: Simulate new songs releasing
       let newNpcsList = [...state.npcs];
+      
+      // Remove dead/inactive artists
+      newNpcsList = newNpcsList.filter(npc => {
+          if (!NPC_ERAS[npc.artist]) return true;
+          return newYear <= NPC_ERAS[npc.artist].end;
+      });
       const CHURN_COUNT = 600;
       // Remove NPCs from the bottom of the list.
-      if (newNpcsList.length >= CHURN_COUNT) {
-        newNpcsList.splice(newNpcsList.length - CHURN_COUNT, CHURN_COUNT);
+      if (newNpcsList.length > 2500) {
+        newNpcsList.splice(2500, newNpcsList.length - 2500);
       }
 
       // Generate new NPCs, avoiding name collisions
@@ -2327,18 +2569,22 @@ const gameReducerInternal = (
         state.soloArtist?.name,
         state.group?.name,
       ].filter((n): n is string => !!n);
-      const newlyGeneratedNpcs = generateNewHits(
-        CHURN_COUNT,
-        newNpcsList,
-        state.npcImages,
-        allPlayerNamesForNpcs,
-      );
+      const newlyGeneratedNpcs = generateNewHits(CHURN_COUNT, newNpcsList, state.npcImages, allPlayerNamesForNpcs, state.date.year);
 
       // Add them back to the list
-      newNpcsList.push(...newlyGeneratedNpcs);
+      newNpcsList.unshift(...newlyGeneratedNpcs);
+      // Optional: simulate decay so old hits drop
+      newNpcsList = newNpcsList.map(npc => ({...npc, basePopularity: Math.floor(npc.basePopularity * (0.97 + Math.random() * 0.02))}));
+      newNpcsList.sort((a, b) => b.basePopularity - a.basePopularity);
 
       // NPC Album Churn Logic
       let newNpcAlbums = [...state.npcAlbums];
+      
+      // Remove dead/inactive artists' albums
+      newNpcAlbums = newNpcAlbums.filter(album => {
+          if (!NPC_ERAS[album.artist]) return true;
+          return newYear <= NPC_ERAS[album.artist].end;
+      });
       const ALBUM_CHURN_COUNT = 50;
       const MAX_ALBUMS = 500;
       if (newNpcAlbums.length > MAX_ALBUMS) {
@@ -2347,6 +2593,9 @@ const gameReducerInternal = (
           ALBUM_CHURN_COUNT,
         );
       }
+      newNpcAlbums = newNpcAlbums.map(album => ({...album, salesPotential: Math.floor((album.salesPotential || 3000) * (0.94 + Math.random() * 0.04))}));
+      newNpcAlbums.sort((a, b) => (b.salesPotential || 0) - (a.salesPotential || 0));
+      
       // Generate new albums using the newest songs
       const newestSongsForAlbums = newlyGeneratedNpcs.slice(
         0,
@@ -2510,7 +2759,21 @@ const gameReducerInternal = (
 
       for (const artistId in updatedArtistsData) {
         const artistData = updatedArtistsData[artistId];
-        const startingMoneyForWeek = artistData.money;
+        let startingMoneyForWeek = artistData.money;
+        
+        // Deduct recurring expenses
+        if (artistData.recurringExpenses) {
+            let totalDeducted = 0;
+            artistData.recurringExpenses.forEach(exp => {
+                if (exp.type === 'weekly') {
+                    totalDeducted += exp.cost;
+                } else if (exp.type === 'monthly' && newDate.week % 4 === 0) {
+                    totalDeducted += exp.cost;
+                }
+            });
+            artistData.money -= totalDeducted;
+            startingMoneyForWeek = artistData.money;
+        }
         const currentAbsWeek = newDate.year * 52 + newDate.week;
         
         // Hiatus & fans asking for comeback logic
@@ -2659,7 +2922,11 @@ const gameReducerInternal = (
                 sender: "Business Alert",
                 senderIcon: "business",
                 subject: "Manager Contract Expired",
-                body: `Hi ${artistProfileForEmail.name},\n\nYour yearly contract with ${manager?.name || "your manager"} has expired. You will need to hire a new one if you wish to continue using management services.\n\n- Red Mic Business Team`,
+                body: `Hi ${artistProfileForEmail.name},
+
+Your yearly contract with ${manager?.name || "your manager"} has expired. You will need to hire a new one if you wish to continue using management services.
+
+- Red Mic Business Team`,
                 date: newDate,
                 isRead: false,
               });
@@ -2709,7 +2976,8 @@ const gameReducerInternal = (
                 }
                 if (targetRegion && targetRegion !== "Random") {
                     artistData.regionalPopularity[targetRegion] = Math.min(100, (artistData.regionalPopularity[targetRegion] || 0) + gigsBookedThisWeek);
-                    regionBoostText = `\nWe focused bookings in ${targetRegion}, giving you a +${gigsBookedThisWeek} popularity boost there!`;
+                    regionBoostText = `
+We focused bookings in ${targetRegion}, giving you a +${gigsBookedThisWeek} popularity boost there!`;
                 }
               }
               artistData.popularity = Math.min(100, (artistData.popularity || 0) + gigsBookedThisWeek);
@@ -2720,7 +2988,17 @@ const gameReducerInternal = (
                   sender: manager?.name || "Your Manager",
                   senderIcon: "business",
                   subject: `Weekly Gig Report`,
-                  body: `Hi ${artistProfileForEmail.name},\n\nI've booked ${gigsBookedThisWeek} gig(s) for you this week, earning a total of $${formatNumber(weeklyGigIncome)} and +${weeklyGigHype} hype.${regionBoostText}\n\nDetails:\n${bookedGigNames.join("\n")}\n\nKeep up the great work!\n\nBest,\n${manager?.name}`,
+                  body: `Hi ${artistProfileForEmail.name},
+
+I've booked ${gigsBookedThisWeek} gig(s) for you this week, earning a total of $${formatNumber(weeklyGigIncome)} and +${weeklyGigHype} hype.${regionBoostText}
+
+Details:
+${bookedGigNames.join("\n")}
+
+Keep up the great work!
+
+Best,
+${manager?.name}`,
                   date: newDate,
                   isRead: false,
                 });
@@ -2743,7 +3021,11 @@ const gameReducerInternal = (
                   sender: "Business Alert",
                   senderIcon: "business",
                   subject: "Security Payment Failed",
-                  body: `Hi ${artistProfileForEmail.name},\n\nYour weekly payment of $${formatNumber(team.weeklyCost)} for ${team.name} failed due to insufficient funds. Your security contract has been terminated.\n\n- Red Mic Business Team`,
+                  body: `Hi ${artistProfileForEmail.name},
+
+Your weekly payment of $${formatNumber(team.weeklyCost)} for ${team.name} failed due to insufficient funds. Your security contract has been terminated.
+
+- Red Mic Business Team`,
                   date: newDate,
                   isRead: false,
                 });
@@ -2786,7 +3068,13 @@ const gameReducerInternal = (
                 id: crypto.randomUUID(),
                 sender: "Red Mic Promotions",
                 subject: "Promotion Payment Failed",
-                body: `Hi ${artistProfileForEmail.name},\n\nYour weekly payment of $${formatNumber(totalWeeklyPromoCost)} for active promotions could not be processed due to insufficient funds.\n\nAll your active promotions have been cancelled.\n\n- The Red Mic Team`,
+                body: `Hi ${artistProfileForEmail.name},
+
+Your weekly payment of $${formatNumber(totalWeeklyPromoCost)} for active promotions could not be processed due to insufficient funds.
+
+All your active promotions have been cancelled.
+
+- The Red Mic Team`,
                 date: newDate,
                 isRead: false,
                 senderIcon: "default",
@@ -2799,16 +3087,28 @@ const gameReducerInternal = (
             }
 
             if (artistProfileForEmail) {
-              let invoiceBody = `Hi ${artistProfileForEmail.name},\n\nThis is your invoice for this week's promotions.`;
+              let invoiceBody = `Hi ${artistProfileForEmail.name},
+
+This is your invoice for this week's promotions.`;
 
               if (coveredByBudget > 0) {
-                invoiceBody += `\nYour label's marketing budget covered $${formatNumber(coveredByBudget)}.\n`;
+                invoiceBody += `
+Your label's marketing budget covered $${formatNumber(coveredByBudget)}.
+`;
               }
 
               if (costToArtist > 0) {
-                invoiceBody += `\nA total of $${formatNumber(costToArtist)} has been deducted from your personal account.\n\nBreakdown:\n`;
+                invoiceBody += `
+A total of $${formatNumber(costToArtist)} has been deducted from your personal account.
+
+Breakdown:
+`;
               } else {
-                invoiceBody += `\nThe entire cost was covered by your marketing budget.\n\nBreakdown:\n`;
+                invoiceBody += `
+The entire cost was covered by your marketing budget.
+
+Breakdown:
+`;
               }
 
               artistData.promotions.forEach((p) => {
@@ -2816,10 +3116,14 @@ const gameReducerInternal = (
                   p.itemType === "video"
                     ? artistData.videos.find((v) => v.id === p.itemId)
                     : artistData.songs.find((s) => s.id === p.itemId);
-                invoiceBody += `• ${p.promoType} for "${item?.title || "Item"}": $${formatNumber(p.weeklyCost)}\n`;
+                invoiceBody += `• ${p.promoType} for "${item?.title || "Item"}": $${formatNumber(p.weeklyCost)}
+`;
               });
 
-              invoiceBody += `\nPromotions will automatically renew next week. You can cancel them at any time in the 'Promote' menu.\n\n- The Red Mic Team`;
+              invoiceBody += `
+Promotions will automatically renew next week. You can cancel them at any time in the 'Promote' menu.
+
+- The Red Mic Team`;
 
               newEmails.push({
                 id: crypto.randomUUID(),
@@ -2862,7 +3166,12 @@ const gameReducerInternal = (
                   id: crypto.randomUUID(),
                   sender: "Ticketmaster/Live Nation",
                   subject: `Presale Funds Disbursed ($${formatNumber(newlyCollected)})`,
-                  body: `Hi ${artistProfileForEmail.name},\n\nYour presale funds for ${tour.name} of $${formatNumber(newlyCollected)} have finished processing and were deposited into your account.\n\nThanks,\nLive Nation`,
+                  body: `Hi ${artistProfileForEmail.name},
+
+Your presale funds for ${tour.name} of $${formatNumber(newlyCollected)} have finished processing and were deposited into your account.
+
+Thanks,
+Live Nation`,
                   date: newDate,
                   isRead: false,
                   senderIcon: "default",
@@ -3169,7 +3478,14 @@ const gameReducerInternal = (
                 sender: "Major Film Studio",
                 senderIcon: "soundtrack",
                 subject: `Opportunity: Contribute to "${chosenSoundtrack}" Soundtrack`,
-                body: `Hi ${artistProfileForEmail.name},\n\nWe are currently curating the official soundtrack for the upcoming blockbuster "${chosenSoundtrack}" and would be honored to feature your music.\n\nThis is a major opportunity to reach a global audience. If you are interested in contributing 1-3 unreleased songs, please accept this offer.\n\nBest regards,\nMusic Supervisor`,
+                body: `Hi ${artistProfileForEmail.name},
+
+We are currently curating the official soundtrack for the upcoming blockbuster "${chosenSoundtrack}" and would be honored to feature your music.
+
+This is a major opportunity to reach a global audience. If you are interested in contributing 1-3 unreleased songs, please accept this offer.
+
+Best regards,
+Music Supervisor`,
                 date: newDate,
                 isRead: false,
                 offer: {
@@ -3184,6 +3500,37 @@ const gameReducerInternal = (
               artistData.offeredSoundtracks.push(chosenSoundtrack);
             }
           }
+        }
+
+        
+        // --- FIFA WORLD CUP LOGIC ---
+        if (newDate.year % 4 === 2 && newDate.week === 20 && artistProfileForEmail) {
+          const emailId = crypto.randomUUID();
+          
+          // Select 1 or 2 random npcs
+          const allNpcs = state.npcs || [];
+          const numCollabs = Math.random() > 0.5 ? 2 : 1;
+          const collabs = [];
+          for (let i = 0; i < numCollabs; i++) {
+              const randomNpc = allNpcs[Math.floor(Math.random() * allNpcs.length)];
+              if (randomNpc) collabs.push(randomNpc.artist);
+          }
+          
+          newEmails.push({
+            id: emailId,
+            sender: "FIFA Sound",
+            senderIcon: "soundtrack",
+            subject: `Invitation: Official FIFA World Cup ${newDate.year} Soundtrack`,
+            body: `Hello ${artistProfileForEmail.name},\n\nWe are thrilled to invite you to be a lead artist on a featured track for the upcoming Official FIFA World Cup ${newDate.year} Soundtrack!\n\nWe envision this as a powerful collaboration and would like to pair you with ${collabs.join(" and ")}.\n\nIf you accept, you will need to provide the song title and cover art, and the single will drop on week 23, building hype before the full soundtrack release on week 25.\n\nPlease let us know if you accept.\n\nBest,\nFIFA Sound`,
+            date: newDate,
+            isRead: false,
+            offer: {
+              type: "fifaWorldCupOffer",
+              emailId: emailId,
+              isAccepted: false,
+              collabs
+            },
+          });
         }
 
         // --- VOGUE OFFER LOGIC ---
@@ -3209,7 +3556,14 @@ const gameReducerInternal = (
             sender: chosenMagazine,
             senderIcon: "vogue",
             subject: `Invitation: Grace the Cover of ${chosenMagazine}`,
-            body: `Dear ${artistProfileForEmail.name},\n\nYour recent impact on the music and fashion worlds has not gone unnoticed. We at ${chosenMagazine} would be honored to feature you on our upcoming cover.\n\nThis opportunity includes a full photoshoot and an in-depth interview. Please let us know if you're interested in this prestigious feature.\n\nSincerely,\nThe Editors`,
+            body: `Dear ${artistProfileForEmail.name},
+
+Your recent impact on the music and fashion worlds has not gone unnoticed. We at ${chosenMagazine} would be honored to feature you on our upcoming cover.
+
+This opportunity includes a full photoshoot and an in-depth interview. Please let us know if you're interested in this prestigious feature.
+
+Sincerely,
+The Editors`,
             date: newDate,
             isRead: false,
             offer: {
@@ -3231,7 +3585,14 @@ const gameReducerInternal = (
               sender: "Anna Wintour",
               senderIcon: "event",
               subject: `Invitation: The Met Gala ${newDate.year}`,
-              body: `Dear ${artistProfileForEmail.name},\n\nWe cordially invite you to attend The ${newDate.year} Met Gala.\n\nPlease RSVP by responding to this invitation.\n\nYours sincerely,\nAnna Wintour`,
+              body: `Dear ${artistProfileForEmail.name},
+
+We cordially invite you to attend The ${newDate.year} Met Gala.
+
+Please RSVP by responding to this invitation.
+
+Yours sincerely,
+Anna Wintour`,
               date: newDate,
               isRead: false,
               offer: {
@@ -3251,7 +3612,11 @@ const gameReducerInternal = (
               sender: "NYFW Council",
               senderIcon: "event",
               subject: `Invitation: New York Fashion Week`,
-              body: `Hi ${artistProfileForEmail.name},\n\nYou're invited to sit front row at New York Fashion Week.\n\nPlease let us know if you can attend.`,
+              body: `Hi ${artistProfileForEmail.name},
+
+You're invited to sit front row at New York Fashion Week.
+
+Please let us know if you can attend.`,
               date: newDate,
               isRead: false,
               offer: {
@@ -3274,7 +3639,11 @@ const gameReducerInternal = (
               sender: npcArtistName,
               senderIcon: "event",
               subject: `Invitation: Grammy After Party`,
-              body: `Hey ${artistProfileForEmail.name},\n\nI'm throwing a huge Grammy after party tonight. You should come thru.\n\n- ${npcArtistName}`,
+              body: `Hey ${artistProfileForEmail.name},
+
+I'm throwing a huge Grammy after party tonight. You should come thru.
+
+- ${npcArtistName}`,
               date: newDate,
               isRead: false,
               offer: {
@@ -3298,7 +3667,11 @@ const gameReducerInternal = (
               sender: npcArtistName,
               senderIcon: "event",
               subject: `Invitation: Oscar After Party`,
-              body: `Hey ${artistProfileForEmail.name},\n\nI'm throwing an Oscars after party this weekend. Grab a drink with us.\n\n- ${npcArtistName}`,
+              body: `Hey ${artistProfileForEmail.name},
+
+I'm throwing an Oscars after party this weekend. Grab a drink with us.
+
+- ${npcArtistName}`,
               date: newDate,
               isRead: false,
               offer: {
@@ -3322,7 +3695,11 @@ const gameReducerInternal = (
               sender: npcArtistName,
               senderIcon: "event",
               subject: `Invitation: AMA After Party`,
-              body: `Hey ${artistProfileForEmail.name},\n\nHosting a post-AMA bash. Would love to see you there.\n\n- ${npcArtistName}`,
+              body: `Hey ${artistProfileForEmail.name},
+
+Hosting a post-AMA bash. Would love to see you there.
+
+- ${npcArtistName}`,
               date: newDate,
               isRead: false,
               offer: {
@@ -3352,7 +3729,11 @@ const gameReducerInternal = (
                 sender: "Studio Exec",
                 senderIcon: "event",
                 subject: `Invitation: ${st.title} Red Carpet Premiere`,
-                body: `Hi ${artistProfileForEmail?.name},\n\nThe red carpet premiere for ${st.title} is happening this week. Since you are on the soundtrack, we'd love for you to walk the red carpet.\n\nStudio Exec`,
+                body: `Hi ${artistProfileForEmail?.name},
+
+The red carpet premiere for ${st.title} is happening this week. Since you are on the soundtrack, we'd love for you to walk the red carpet.
+
+Studio Exec`,
                 date: newDate,
                 isRead: false,
                 offer: {
@@ -3439,7 +3820,16 @@ const gameReducerInternal = (
               sender: npcArtistName,
               senderIcon: "feature",
               subject: "Feature Request",
-              body: `Hey ${artistProfileForEmail.name},\n\nBig fan of your work. I have a track that I think you'd sound perfect on.\n\nI can offer a payout of $${formatNumber(payout)} for your verse. The song quality is looking to be around ${Math.min(100, songQuality)}${promotion ? `, and we'll be running a ${promotion.name} for ${promotion.durationWeeks} weeks` : ""}.\n\nLet me know if you're interested.\n\nBest,\n${npcArtistName}`,
+              body: `Hey ${artistProfileForEmail.name},
+
+Big fan of your work. I have a track that I think you'd sound perfect on.
+
+I can offer a payout of $${formatNumber(payout)} for your verse. The song quality is looking to be around ${Math.min(100, songQuality)}${promotion ? `, and we'll be running a ${promotion.name} for ${promotion.durationWeeks} weeks` : ""}.
+
+Let me know if you're interested.
+
+Best,
+${npcArtistName}`,
               date: newDate,
               isRead: false,
               offer: offer,
@@ -3618,7 +4008,13 @@ const gameReducerInternal = (
                   sender: sender,
                   senderIcon: senderIcon,
                   subject: `URGENT: Your song "${song.title}" has leaked!`,
-                  body: `Hi ${artistProfileForEmail?.name || "Artist"},\n\nWe've detected an unauthorized leak of your unreleased song "${song.title}". The track is spreading online via illegal streams and downloads.\n\nThis will likely impact your official release plans. We recommend releasing the song officially as soon as possible to mitigate the damage.\n\n- ${sender}`,
+                  body: `Hi ${artistProfileForEmail?.name || "Artist"},
+
+We've detected an unauthorized leak of your unreleased song "${song.title}". The track is spreading online via illegal streams and downloads.
+
+This will likely impact your official release plans. We recommend releasing the song officially as soon as possible to mitigate the damage.
+
+- ${sender}`,
                   date: newDate,
                   isRead: false,
                   offer: { type: "leak", songId: song.id },
@@ -3642,6 +4038,8 @@ const gameReducerInternal = (
             const playerAccounts = artistData.xUsers.filter((u) => u.isPlayer);
             const suspendedAccountId =
               artistData.selectedPlayerXUserId || playerAccounts[0]?.id;
+            const account = artistData.xUsers.find(u => u.id === suspendedAccountId);
+            if (!account || !account.isVerified) {
             artistData.xSuspensionStatus = {
               isSuspended: true,
               reason: suspensionReason,
@@ -3686,13 +4084,23 @@ const gameReducerInternal = (
                 sender: "X Support",
                 senderIcon: "x",
                 subject: "Your account has been suspended",
-                body: `Hello,\n\nYour account, @${username}, has been suspended for violating the X Rules.\n\nAfter careful review, we determined your account broke the X Rules. Your account is permanently in read-only mode, which means you can’t post, Repost, or Like content. You won’t be able to create new accounts.\n\nIf you think we got this wrong, you can submit an appeal.\n\nThanks,\nX Support`,
+                body: `Hello,
+
+Your account, @${username}, has been suspended for violating the X Rules.
+
+After careful review, we determined your account broke the X Rules. Your account is permanently in read-only mode, which means you can’t post, Repost, or Like content. You won’t be able to create new accounts.
+
+If you think we got this wrong, you can submit an appeal.
+
+Thanks,
+X Support`,
                 date: newDate,
                 isRead: false,
                 offer: { type: "xSuspension", isSuspended: true },
               });
             }
           }
+            }
         } else if (
           artistData.xSuspensionStatus.isSuspended &&
           artistData.xSuspensionStatus.appealSentDate
@@ -3730,7 +4138,14 @@ const gameReducerInternal = (
                   sender: "X Support",
                   senderIcon: "x",
                   subject: "Update on your appeal",
-                  body: `Hello,\n\nAfter a review of your appeal, we've determined that your account, @${username}, did not violate the X Rules. Your account has been reinstated and your suspension has been lifted.\n\nWe apologize for this error.\n\nThanks,\nX Support`,
+                  body: `Hello,
+
+After a review of your appeal, we've determined that your account, @${username}, did not violate the X Rules. Your account has been reinstated and your suspension has been lifted.
+
+We apologize for this error.
+
+Thanks,
+X Support`,
                   date: newDate,
                   isRead: false,
                   offer: { type: "xAppealResult", isSuccessful: true },
@@ -3744,7 +4159,14 @@ const gameReducerInternal = (
                   sender: "X Support",
                   senderIcon: "x",
                   subject: "Update on your appeal",
-                  body: `Hello,\n\nWe've reviewed the appeal for your account, @${artistProfile.name.replace(/\s/g, "").toLowerCase()}.\n\nOur review found that your account broke the X Rules. As a result, your account will remain suspended.\n\nThanks,\nX Support`,
+                  body: `Hello,
+
+We've reviewed the appeal for your account, @${artistProfile.name.replace(/\s/g, "").toLowerCase()}.
+
+Our review found that your account broke the X Rules. As a result, your account will remain suspended.
+
+Thanks,
+X Support`,
                   date: newDate,
                   isRead: false,
                   offer: { type: "xAppealResult", isSuccessful: false },
@@ -3797,7 +4219,11 @@ const gameReducerInternal = (
               sender: "PR Team",
               senderIcon: "default",
               subject: "URGENT: Cheating Allegations",
-              body: `Hi ${artistProfileForEmail.name},\n\nTMZ just published an article alleging that ${activeRelationship.partnerName} was seen getting close with someone else. Social media is blowing up.\n\nHow do you want to handle this scandal?`,
+              body: `Hi ${artistProfileForEmail.name},
+
+TMZ just published an article alleging that ${activeRelationship.partnerName} was seen getting close with someone else. Social media is blowing up.
+
+How do you want to handle this scandal?`,
               date: newDate,
               isRead: false,
               offer: {
@@ -3845,7 +4271,13 @@ const gameReducerInternal = (
                       : "Manager",
                 senderIcon: "business",
                 subject: "Promo Opportunity Secured!",
-                body: `Hey ${artistProfileForEmail.name},\n\nI reached out to my contacts and managed to get you a slot on ${randomShow}! This is a great opportunity to promote your music.\n\nPlease submit a thumbnail, pick some topics, and choose the song we are promoting. It'll get a nice streaming boost for the next 4 weeks.\n\nLet me know!`,
+                body: `Hey ${artistProfileForEmail.name},
+
+I reached out to my contacts and managed to get you a slot on ${randomShow}! This is a great opportunity to promote your music.
+
+Please submit a thumbnail, pick some topics, and choose the song we are promoting. It'll get a nice streaming boost for the next 4 weeks.
+
+Let me know!`,
                 date: newDate,
                 isRead: false,
                 offer: {
@@ -3877,7 +4309,9 @@ const gameReducerInternal = (
                 sender: "Personal Update",
                 senderIcon: "default",
                 subject: "It's Time!",
-                body: `Hi ${artistProfileForEmail.name},\n\nThe big day is here! You're ready to welcome your new baby into the world. It's time to name your child!`,
+                body: `Hi ${artistProfileForEmail.name},
+
+The big day is here! You're ready to welcome your new baby into the world. It's time to name your child!`,
                 date: newDate,
                 isRead: false,
                 offer: { type: "giveBirth" },
@@ -3930,7 +4364,11 @@ const gameReducerInternal = (
         let totalWeeklyStreams = 0;
         let artistStreamIncome = 0;
         const updatedSongs = artistData.songs.map((song) => {
-          if (song.isReleased && !song.isTakenDown) {
+          let effectivelyReleased = song.isReleased;
+          if (!effectivelyReleased && song.releaseDate && ((newDate.year > song.releaseDate.year) || (newDate.year === song.releaseDate.year && newDate.week >= song.releaseDate.week))) {
+            effectivelyReleased = true;
+          }
+          if (effectivelyReleased && !song.isTakenDown) {
             let baseStreams = song.quality ** 2 * 50;
             const difficulty = state.difficultyMode || "normal";
             let diffMultiplier = 1;
@@ -4365,6 +4803,7 @@ const gameReducerInternal = (
                   Math.floor((song.streams || 0) / 150) *
                     STREAM_INCOME_MULTIPLIER *
                     playerCut) + generatedNet,
+              isReleased: effectivelyReleased,
             };
           }
           if (song.isTakenDown) {
@@ -4373,9 +4812,10 @@ const gameReducerInternal = (
               prevWeekStreams: song.lastWeekStreams || 0,
               lastWeekStreams: 0,
               lastWeekRegionalStreams: { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 },
+              isReleased: effectivelyReleased,
             };
           }
-          return song;
+          return effectivelyReleased !== song.isReleased ? { ...song, isReleased: effectivelyReleased } : song;
         });
 
         artistData.songs = updatedSongs;
@@ -4539,6 +4979,7 @@ const gameReducerInternal = (
 
         let totalWeeklyViews = 0;
         const updatedVideos = artistData.videos.map((video) => {
+          if (video.isScheduled) return video;
           const song = updatedSongs.find((s) => s.id === video.songId);
           if (!song) return video;
 
@@ -4772,7 +5213,16 @@ const gameReducerInternal = (
               sender: "OnlyFans",
               senderIcon: "onlyfans",
               subject: "New Content Request from a Subscriber",
-              body: `Hi ${artistProfileForEmail?.name},\n\nA subscriber (@${senderUsername}) has sent a request for custom content.\n\nRequest Type: ${requestType}\nPayout: $${payout.toLocaleString()}\n\nAccepting this will instantly transfer the funds to your account. The content is assumed to be sent privately.\n\n- The OnlyFans Team`,
+              body: `Hi ${artistProfileForEmail?.name},
+
+A subscriber (@${senderUsername}) has sent a request for custom content.
+
+Request Type: ${requestType}
+Payout: $${payout.toLocaleString()}
+
+Accepting this will instantly transfer the funds to your account. The content is assumed to be sent privately.
+
+- The OnlyFans Team`,
               date: newDate,
               isRead: false,
               offer: {
@@ -4861,7 +5311,11 @@ const gameReducerInternal = (
               id: crypto.randomUUID(),
               sender: "X Accounts & Billing",
               subject: "X Premium Receipt",
-              body: `Your X Premium subscription renewed this month.\n\nTotal charged: $${formatNumber(xVerifiedMonthlyCost)}\n\nThank you for trusting X.`,
+              body: `Your X Premium subscription renewed this month.
+
+Total charged: $${formatNumber(xVerifiedMonthlyCost)}
+
+Thank you for trusting X.`,
               date: state.date,
               isRead: false,
             });
@@ -4953,7 +5407,14 @@ const gameReducerInternal = (
                 id: crypto.randomUUID(),
                 sender: "Spotify",
                 subject: "Adjustment to your stream counts",
-                body: `Hi ${artistProfileForEmail.name},\n\nWe're writing to let you know that we've made an adjustment to your stream counts. After a routine review, we identified and removed approximately ${formatNumber(totalRemovedStreams)} artificial streams from songs in your active promotional campaigns.\n\nThis is a standard process to ensure that our data is accurate and reflects genuine listener activity. For more information on artificial streams, please visit Spotify for Artists.\n\nThanks,\nThe Spotify Team`,
+                body: `Hi ${artistProfileForEmail.name},
+
+We're writing to let you know that we've made an adjustment to your stream counts. After a routine review, we identified and removed approximately ${formatNumber(totalRemovedStreams)} artificial streams from songs in your active promotional campaigns.
+
+This is a standard process to ensure that our data is accurate and reflects genuine listener activity. For more information on artificial streams, please visit Spotify for Artists.
+
+Thanks,
+The Spotify Team`,
                 date: newDate,
                 isRead: false,
                 senderIcon: "spotify",
@@ -5053,7 +5514,14 @@ const gameReducerInternal = (
               id: crypto.randomUUID(),
               sender: "X",
               subject: "Your Creator Earnings",
-              body: `Hi ${artistProfile?.name},\n\nYour X monetization earnings for the last month have been processed.\n\nYou earned $${totalXMonetizationEarnings.toLocaleString()} from revenue sharing and subscriptions.\n\nKeep creating!\n- X Team`,
+              body: `Hi ${artistProfile?.name},
+
+Your X monetization earnings for the last month have been processed.
+
+You earned $${totalXMonetizationEarnings.toLocaleString()} from revenue sharing and subscriptions.
+
+Keep creating!
+- X Team`,
               date: newDate,
               isRead: false,
               senderIcon: "x",
@@ -5072,7 +5540,12 @@ const gameReducerInternal = (
             id: crypto.randomUUID(),
             sender: "Spotify",
             subject: "Your Spotify Recap",
-            body: `Congratulations ${artistProfile.name},\n\nHere's your performance recap for the last month. Your tracks generated a total of ${newStreamsThisMonth.toLocaleString()} new streams!\n\nKeep up the great work.\n- The Spotify Team`,
+            body: `Congratulations ${artistProfile.name},
+
+Here's your performance recap for the last month. Your tracks generated a total of ${newStreamsThisMonth.toLocaleString()} new streams!
+
+Keep up the great work.
+- The Spotify Team`,
             date: newDate,
             isRead: false,
             senderIcon: "spotify",
@@ -5097,14 +5570,21 @@ const gameReducerInternal = (
               artistData.money += yppEarnings;
               artistData.youtubePartnerProgram.lifetimeEarnings += yppEarnings;
             }
-            extraText = `\n\nAs a YouTube Partner, you've earned $${yppEarnings.toLocaleString()} from your channel's viewership this quarter!`;
+            extraText = `
+
+As a YouTube Partner, you've earned $${yppEarnings.toLocaleString()} from your channel's viewership this quarter!`;
           }
 
           newEmails.push({
             id: crypto.randomUUID(),
             sender: "YouTube",
             subject: "Your Quarterly Channel Recap",
-            body: `Dear ${artistProfile.name},\n\nLet's check out your channel's growth over the last 3 months. You've gained ${newSubsThisQuarter.toLocaleString()} subscribers and your videos received ${newViewsThisQuarter.toLocaleString()} views.${extraText}\n\nKeep creating!\n- The YouTube Team`,
+            body: `Dear ${artistProfile.name},
+
+Let's check out your channel's growth over the last 3 months. You've gained ${newSubsThisQuarter.toLocaleString()} subscribers and your videos received ${newViewsThisQuarter.toLocaleString()} views.${extraText}
+
+Keep creating!
+- The YouTube Team`,
             date: newDate,
             isRead: false,
             senderIcon: "youtube",
@@ -5135,7 +5615,12 @@ const gameReducerInternal = (
                   id: crypto.randomUUID(),
                   sender: label.name,
                   subject: "Contract Expired",
-                  body: `Dear ${artistProfile.name},\n\nYour contract with ${label.name} has officially ended. You are now an independent artist.\n\nSincerely,\n${label.name}`,
+                  body: `Dear ${artistProfile.name},
+
+Your contract with ${label.name} has officially ended. You are now an independent artist.
+
+Sincerely,
+${label.name}`,
                   date: newDate,
                   isRead: false,
                   senderIcon: "label",
@@ -5175,7 +5660,11 @@ const gameReducerInternal = (
                       id: crypto.randomUUID(),
                       sender: label.name,
                       subject: `Submission Approved: "${sub.release.title}"`,
-                      body: `Great news!\n\nWe've approved your submission for "${sub.release.title}". Please head to the 'Labels' tab to select your pre-release singles and set a release date for the project. Get ready!\n\n- ${label.name}`,
+                      body: `Great news!
+
+We've approved your submission for "${sub.release.title}". Please head to the 'Labels' tab to select your pre-release singles and set a release date for the project. Get ready!
+
+- ${label.name}`,
                       date: newDate,
                       isRead: false,
                       senderIcon: "label",
@@ -5190,7 +5679,11 @@ const gameReducerInternal = (
                       id: crypto.randomUUID(),
                       sender: label.name,
                       subject: `Submission Update: "${sub.release.title}"`,
-                      body: `Hi ${artistProfile?.name},\n\nAfter careful consideration, we've decided to pass on releasing "${sub.release.title}" at this time. ${feedback}\n\n- ${label.name}`,
+                      body: `Hi ${artistProfile?.name},
+
+After careful consideration, we've decided to pass on releasing "${sub.release.title}" at this time. ${feedback}
+
+- ${label.name}`,
                       date: newDate,
                       isRead: false,
                       senderIcon: "label",
@@ -5415,7 +5908,14 @@ const gameReducerInternal = (
                       id: emailId,
                       sender: "Genius",
                       subject: `Verified Interview for "${songToRelease.title}"?`,
-                      body: `Hey ${artistProfile.name},\n\nWe're big fans of your new single "${songToRelease.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.\n\nLet us know if you're interested.\n\nBest,\nThe Genius Team`,
+                      body: `Hey ${artistProfile.name},
+
+We're big fans of your new single "${songToRelease.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.
+
+Let us know if you're interested.
+
+Best,
+The Genius Team`,
                       date: newDate,
                       isRead: false,
                       senderIcon: "genius",
@@ -5559,15 +6059,36 @@ const gameReducerInternal = (
                 switch (selectedOfferType) {
                   case "performance":
                     subject = `Performance on The Tonight Show Starring Jimmy Fallon?`;
-                    body = `Hey ${artistProfile.name},\n\nHuge fans of the new ${release.type.toLowerCase()} "${release.title}"! We'd be thrilled to have you on the show to perform a song from it.\n\nLet us know if you're interested.\n\nBest,\nThe Tonight Show Team`;
+                    body = `Hey ${artistProfile.name},
+
+Huge fans of the new ${release.type.toLowerCase()} "${release.title}"! We'd be thrilled to have you on the show to perform a song from it.
+
+Let us know if you're interested.
+
+Best,
+The Tonight Show Team`;
                     break;
                   case "interview":
                     subject = `Interview on The Tonight Show Starring Jimmy Fallon?`;
-                    body = `Hey ${artistProfile.name},\n\nThe new ${release.type.toLowerCase()} "${release.title}" is all anyone's talking about! Jimmy would love to have you on the show for an interview to discuss the project.\n\nLet us know if you're interested.\n\nBest,\nThe Tonight Show Team`;
+                    body = `Hey ${artistProfile.name},
+
+The new ${release.type.toLowerCase()} "${release.title}" is all anyone's talking about! Jimmy would love to have you on the show for an interview to discuss the project.
+
+Let us know if you're interested.
+
+Best,
+The Tonight Show Team`;
                     break;
                   case "both":
                     subject = `Appearance on The Tonight Show Starring Jimmy Fallon?`;
-                    body = `Hey ${artistProfile.name},\n\nCongratulations on the new ${release.type.toLowerCase()} "${release.title}"! The whole office has it on repeat. Jimmy would love to have you on the show for an interview AND a performance.\n\nLet us know if you're interested.\n\nBest,\nThe Tonight Show Team`;
+                    body = `Hey ${artistProfile.name},
+
+Congratulations on the new ${release.type.toLowerCase()} "${release.title}"! The whole office has it on repeat. Jimmy would love to have you on the show for an interview AND a performance.
+
+Let us know if you're interested.
+
+Best,
+The Tonight Show Team`;
                     break;
                 }
 
@@ -5639,7 +6160,14 @@ const gameReducerInternal = (
               sender: "Pop Base",
               senderIcon: "popbase",
               subject: `Clarification needed regarding recent photos`,
-              body: `Hi ${artistProfileForEmail?.name},\n\nWe're reaching out about some recent photos that have been circulating. We'd like to give you an opportunity to address the situation directly.\n\nCould you clarify what was happening in these photos?\n\nBest,\nPop Base Team`,
+              body: `Hi ${artistProfileForEmail?.name},
+
+We're reaching out about some recent photos that have been circulating. We'd like to give you an opportunity to address the situation directly.
+
+Could you clarify what was happening in these photos?
+
+Best,
+Pop Base Team`,
               date: newDate,
               isRead: false,
               offer: {
@@ -5661,7 +6189,14 @@ const gameReducerInternal = (
               sender: "Pop Base",
               senderIcon: "popbase",
               subject: `Regarding the reviews for "${recentLowScoreRelease.title}"`,
-              body: `Hi ${artistProfileForEmail?.name},\n\nThe reviews for your latest project "${recentLowScoreRelease.title}" have been quite divisive. We'd like to get your thoughts on the reception.\n\nHow do you feel about the critical response to your new music?\n\nBest,\nPop Base Team`,
+              body: `Hi ${artistProfileForEmail?.name},
+
+The reviews for your latest project "${recentLowScoreRelease.title}" have been quite divisive. We'd like to get your thoughts on the reception.
+
+How do you feel about the critical response to your new music?
+
+Best,
+Pop Base Team`,
               date: newDate,
               isRead: false,
               offer: {
@@ -5691,7 +6226,14 @@ const gameReducerInternal = (
               sender: "Pop Base",
               senderIcon: "popbase",
               subject: `Quick Question for Pop Base`,
-              body: `Hi ${artistProfileForEmail?.name},\n\nHope you're doing well! We have a quick question for a piece we're running:\n\n${question}\n\nThanks!\nPop Base Team`,
+              body: `Hi ${artistProfileForEmail?.name},
+
+Hope you're doing well! We have a quick question for a piece we're running:
+
+${question}
+
+Thanks!
+Pop Base Team`,
               date: newDate,
               isRead: false,
               offer: {
@@ -5727,8 +6269,18 @@ const gameReducerInternal = (
             senderIcon: "grammys",
             subject: `Submit Your Music for the ${newDate.year + 1} GRAMMY Awards`,
             body: autoSubmit
-              ? `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Your manager has automatically selected your best work from this year and submitted it for consideration.\n\n- The Recording Academy`
-              : `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in a few weeks.\n\n- The Recording Academy`,
+              ? `Hi ${artistProfileForEmail.name},
+
+The submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Your manager has automatically selected your best work from this year and submitted it for consideration.
+
+- The Recording Academy`
+              : `Hi ${artistProfileForEmail.name},
+
+The submission window for the ${newDate.year + 1} GRAMMY Awards is now open. Please submit your eligible releases from this year for consideration.
+
+Submissions close in a few weeks.
+
+- The Recording Academy`,
             date: newDate,
             isRead: autoSubmit,
             offer: {
@@ -5944,8 +6496,18 @@ const gameReducerInternal = (
             senderIcon: "amas",
             subject: `Submit Your Music for the ${newDate.year} American Music Awards`,
             body: autoSubmit
-              ? `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year} American Music Awards is now open. Your manager has automatically selected your best work from this year and submitted it for consideration.\n\n- AMAs`
-              : `Hi ${artistProfileForEmail.name},\n\nThe submission window for the ${newDate.year} American Music Awards is now open. Please submit your eligible releases from this year for consideration.\n\nSubmissions close in week 23.\n\n- AMAs`,
+              ? `Hi ${artistProfileForEmail.name},
+
+The submission window for the ${newDate.year} American Music Awards is now open. Your manager has automatically selected your best work from this year and submitted it for consideration.
+
+- AMAs`
+              : `Hi ${artistProfileForEmail.name},
+
+The submission window for the ${newDate.year} American Music Awards is now open. Please submit your eligible releases from this year for consideration.
+
+Submissions close in week 23.
+
+- AMAs`,
             date: newDate,
             isRead: autoSubmit,
             offer: {
@@ -6076,7 +6638,13 @@ const gameReducerInternal = (
                 sender: "Spotify",
                 senderIcon: "spotify",
                 subject: `Welcome to the Billions Club: ${song.title}`,
-                body: `Hi ${artistProfile.name},\n\nCongratulations! "${song.title}" has officially surpassed 1 BILLION streams on Spotify.\n\nWe would like to invite you to perform at a special Spotify Billions Club concert. Please upload a high-quality image of yourself to be used for the official Billions Club plaque announcement and playlist cover.\n\n- Spotify Team`,
+                body: `Hi ${artistProfile.name},
+
+Congratulations! "${song.title}" has officially surpassed 1 BILLION streams on Spotify.
+
+We would like to invite you to perform at a special Spotify Billions Club concert. Please upload a high-quality image of yourself to be used for the official Billions Club plaque announcement and playlist cover.
+
+- Spotify Team`,
                 date: newDate,
                 isRead: false,
                 offer: {
@@ -6157,18 +6725,24 @@ const gameReducerInternal = (
                       const albumCert = formatCertification(getAlbumCertification(albumTotalUnits));
                       const albumCertFormatted = albumCert ? `${albumCert} (${(albumTotalUnits).toLocaleString()})` : '';
                       
-                      let text = `${artistProfile.name}'s "${release.title}" era in the US (eligible): 🇺🇸\n\n`;
-                      if (albumCertFormatted) text += `Album — ${albumCertFormatted}\n\n`;
+                      let text = `${artistProfile.name}'s "${release.title}" era in the US (eligible): 🇺🇸
+
+`;
+                      if (albumCertFormatted) text += `Album — ${albumCertFormatted}
+
+`;
                       
                       albumTracks.forEach(t => {
                           const cert = formatCertification(getSongCertification(t.streams));
                           if (cert) {
-                              text += `"${t.title}" — ${cert}\n`;
+                              text += `"${t.title}" — ${cert}
+`;
                           }
                       });
                       
                       const totalStreamsMillion = Math.floor(albumTracks.reduce((sum, s) => sum + s.streams, 0) / 1000000);
-                      text += `\nTotal — ${totalStreamsMillion} Million`;
+                      text += `
+Total — ${totalStreamsMillion} Million`;
                       
                       artistData.xPosts.unshift({
                           id: crypto.randomUUID(),
@@ -6913,7 +7487,13 @@ The Government`,
                 sender: "Spotify",
                 senderIcon: "spotify",
                 subject: `New Release: "${song.title}"`,
-                body: `Hi ${activeArtist.name},\n\nYour collaboration with ${song.npcArtistName}, "${song.title}", has been released today!\n\nIt is now available on your Spotify profile.\n\n- The Spotify Team`,
+                body: `Hi ${activeArtist.name},
+
+Your collaboration with ${song.npcArtistName}, "${song.title}", has been released today!
+
+It is now available on your Spotify profile.
+
+- The Spotify Team`,
                 date: newDate,
                 isRead: false,
                 offer: {
@@ -6944,7 +7524,11 @@ The Government`,
                     sender: song.npcArtistName || "Management",
                     senderIcon: "default",
                     subject: `Music Video: ${song.title}`,
-                    body: `Hey ${activeArtist.name},\n\n"${song.title}" is doing well! We are planning to shoot an official music video for it. Do you want to be part of the shoot and handle the thumbnail upload?\n\n- ${song.npcArtistName}`,
+                    body: `Hey ${activeArtist.name},
+
+"${song.title}" is doing well! We are planning to shoot an official music video for it. Do you want to be part of the shoot and handle the thumbnail upload?
+
+- ${song.npcArtistName}`,
                     date: newDate,
                     isRead: false,
                     offer: {
@@ -6994,7 +7578,9 @@ The Government`,
           return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
         };
 
-        if (baseSong.collaboration) {
+        if (baseSong.features && baseSong.features.length > 0) {
+          displayArtist = `${displayArtist}, ${baseSong.features.join(", ")}`;
+        } else if (baseSong.collaboration) {
           displayArtist = `${displayArtist}, ${baseSong.collaboration.artistName}`;
           displayTitle = displayTitle.replace(
             new RegExp(
@@ -8109,6 +8695,15 @@ The Government`,
               totalWeeklySales += deluxeVersion.preorderSales || 0;
             }
           }
+          
+          if (
+            newDate.year * 52 +
+              newDate.week -
+              (relDate.year * 52 + relDate.week) ===
+            1
+          ) {
+            release.firstWeekSales = totalWeeklySales;
+          }
 
           // Realistic Sales Cap per week
           if (totalWeeklySales > 3800000) {
@@ -8165,7 +8760,7 @@ The Government`,
         );
 
         // Add a baseline boost to ensure Billboard 200 bottom stays around 7000+ units
-        streamActivity += 6000 + (Math.random() * 4000);
+        streamActivity += 4000 + (Math.random() * 2000);
 
         // Use the sales potential to guarantee higher chart positions
         // Sales potential (14k+) ensures chart relevance.
@@ -8181,7 +8776,7 @@ The Government`,
             ? 2.5
             : 1.0;
         const weeklySales = Math.floor(
-          (album.salesPotential || 1000) * variance * eraSalesBoost,
+          (album.salesPotential || 1000) * variance * eraSalesBoost * 0.55,
         );
 
         const weeklyActivity = streamActivity + weeklySales;
@@ -8423,6 +9018,229 @@ The Government`,
 
       // --- AWARDS LOGIC ---
 
+      
+      // --- GOLDEN GLOBES LOGIC ---
+      let newGoldenGlobeNominations: GameState["goldenGlobeCurrentYearNominations"] = state.goldenGlobeCurrentYearNominations;
+
+      // Week 17: Determine Nominations
+      if (newDate.week === 17 && (state.goldenGlobeSubmissions?.length || 0) > 0) {
+        const newNominations: GoldenGlobeCategory[] = [];
+        const categories: GoldenGlobeAward["category"][] = [
+          "Best Actor/Actress",
+          "Best Supporting Actor/Actress",
+          "Best Voice Acting",
+          "Best TV Show",
+          "Best Movie",
+          "Best Soundtrack",
+          "Best Original Song"
+        ];
+
+        for (const categoryName of categories) {
+          const contenders: GoldenGlobeContender[] = [];
+
+          const playerSubmissions = (state.goldenGlobeSubmissions || []).filter(s => s.category === categoryName);
+          for (const sub of playerSubmissions) {
+            const artistData = updatedArtistsData[sub.artistId];
+            const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === sub.artistId);
+            if (!artistData || !artistProfile) continue;
+
+            let score = 0;
+            let coverArt: string | undefined = undefined;
+
+            if (["Best Actor/Actress", "Best Supporting Actor/Actress", "Best Voice Acting"].includes(categoryName)) {
+                const role = (artistData.actingRoles || []).find(g => g.id === sub.itemId);
+                if (role) { score = artistData.popularity + ((role.rating || 50) * 2); coverArt = role.coverUrl; }
+            } else if (["Best TV Show", "Best Movie"].includes(categoryName)) {
+                const role = (artistData.actingRoles || []).find(g => g.id === sub.itemId);
+                if (role) { score = artistData.popularity + ((role.rating || 50) * 3); coverArt = role.coverUrl; }
+            } else if (categoryName === "Best Soundtrack") {
+                 const release = artistData.releases.find(r => r.id === sub.itemId);
+                 if (release) {
+                     score = (release.firstWeekStreams || 0) / 100000 + artistData.popularity;
+                     coverArt = release.coverArt;
+                 }
+            } else if (categoryName === "Best Original Song") {
+                 const song = artistData.songs.find(s => s.id === sub.itemId);
+                 if (song) {
+                     score = song.quality * 2 + (song.firstWeekStreams || 0) / 25000;
+                     coverArt = song.coverArt;
+                 }
+            }
+
+            contenders.push({
+                id: sub.itemId,
+                name: sub.itemName,
+                artistName: artistProfile.name,
+                isPlayer: true,
+                score,
+                coverArt
+            });
+          }
+
+          // Add some NPC contenders
+          for (let i = 0; i < 4; i++) {
+             const npcName = getRandomNpcName(state.npcs.map((n) => n.name), newDate.year);
+             contenders.push({
+                 id: "npc-" + Math.random(),
+                 name: categoryName.includes("Song") || categoryName.includes("Soundtrack") ? "NPC Project" : "NPC Film/Show",
+                 artistName: npcName,
+                 isPlayer: false,
+                 score: Math.random() * 100 + 50,
+                 coverArt: `https://ui-avatars.com/api/?name=${encodeURIComponent(npcName)}&background=random&color=fff&size=250`
+             });
+          }
+
+          const topNominees = contenders.sort((a, b) => b.score - a.score).slice(0, 5);
+          newNominations.push({
+             name: categoryName,
+             nominees: topNominees
+          });
+        }
+        
+        newGoldenGlobeNominations = newNominations;
+        finalState.goldenGlobeCurrentYearNominations = newNominations;
+
+        
+        const majorCatsForPosts: GoldenGlobeAward["category"][] = ["Best Actor/Actress", "Best Movie", "Best Original Song"];
+        
+        for (const category of newNominations) {
+            if (majorCatsForPosts.includes(category.name)) {
+                let nomineesText = '';
+                category.nominees.forEach(n => {
+                    nomineesText += `• ${n.artistName.toUpperCase()} | ${n.name.toUpperCase()}
+`;
+                });
+                const content = `Congratulations to the 85th #GoldenGlobes nominees for ${category.name}:
+
+${nomineesText}`;
+                
+                Object.values(updatedArtistsData).forEach((d) =>
+                  d.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId: "golden_globes",
+                    content,
+                    likes: Math.floor(Math.random() * 4000) + 1500,
+                    retweets: Math.floor(Math.random() * 1000) + 500,
+                    views: Math.floor(Math.random() * 200000) + 100000,
+                    date: newDate,
+                  }),
+                );
+            }
+        }
+        
+        for (const artistId in updatedArtistsData) {
+
+          const artistData = updatedArtistsData[artistId];
+          const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          let gotNominated = false;
+          const nominatedCategories: string[] = [];
+
+          for (const category of newNominations) {
+            const isNominated = category.nominees.some(
+              (n) => n.isPlayer && n.artistName === artistProfile?.name,
+            );
+            if (isNominated) {
+              gotNominated = true;
+              nominatedCategories.push(category.name);
+            }
+          }
+
+          if (gotNominated) {
+             artistData.hype = Math.min(100, artistData.hype + 5);
+             const emailId = crypto.randomUUID();
+             artistData.inbox.unshift({
+               id: emailId,
+               sender: "Hollywood Foreign Press Association",
+               subject: "Congratulations! You're a Golden Globe Nominee!",
+               body: `Congratulations! You have been nominated for ${nominatedCategories.length} Golden Globe${nominatedCategories.length > 1 ? 's' : ''}! We invite you to attend the ceremony in week 20.`,
+               date: newDate,
+               isRead: false,
+               offer: {
+                 type: "goldenGlobeNominations",
+                 emailId,
+               },
+             });
+             artistData.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: artistProfile!.id,
+                content: `Honored to be nominated for ${nominatedCategories.length} Golden Globe${nominatedCategories.length > 1 ? 's' : ''}! Thank you HFPA! 🥂🌍`,
+                likes: Math.floor(Math.random() * 500000) + 100000,
+                retweets: Math.floor(Math.random() * 50000) + 10000,
+                views: Math.floor(Math.random() * 5000000) + 1000000,
+                date: newDate,
+             });
+             
+             // Also invite to red carpet
+             const carpetEmailId = crypto.randomUUID();
+             artistData.inbox.unshift({
+                id: carpetEmailId,
+                sender: "Hollywood Foreign Press Association",
+                subject: "Invitation: Golden Globes Red Carpet",
+                body: `Dear ${artistProfile.name},
+
+Congratulations on your nomination. We would be honored to have you attend the ${newDate.year} Golden Globes and walk the red carpet.
+
+Please accept this invitation by sharing your look for the evening.
+
+Sincerely,
+HFPA`,
+                date: newDate,
+                isRead: false,
+                offer: { type: "goldenGlobeRedCarpet", emailId: carpetEmailId },
+             });
+          }
+        }
+      }
+
+      // Week 20: Golden Globes Ceremony
+      if (newDate.week === 20 && state.goldenGlobeCurrentYearNominations) {
+        for (const category of state.goldenGlobeCurrentYearNominations) {
+           const winner = category.nominees.sort((a, b) => b.score - a.score)[0];
+           category.winner = winner;
+
+           if (winner.isPlayer) {
+              const content = `Congratulations ${winner.artistName} for WINNING ${category.name} win! 🏆 #GoldenGlobes`;
+              Object.values(updatedArtistsData).forEach((d) =>
+                d.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "golden_globes",
+                  content,
+                  image: winner.coverArt,
+                  likes: Math.floor(Math.random() * 40000) + 15000,
+                  retweets: Math.floor(Math.random() * 10000) + 5000,
+                  views: Math.floor(Math.random() * 2000000) + 1000000,
+                  date: newDate,
+                }),
+              );
+           }
+        }
+
+        for (const artistId in updatedArtistsData) {
+            const artistData = updatedArtistsData[artistId];
+            const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+            
+            for (const category of state.goldenGlobeCurrentYearNominations) {
+               const nomination = category.nominees.find(n => n.isPlayer && n.artistName === artistProfile?.name);
+               if (nomination) {
+                   const isWinner = category.winner?.id === nomination.id && category.winner?.artistName === nomination.artistName;
+                   if (isWinner) {
+                       artistData.popularity = Math.min(100, artistData.popularity + 5);
+                   }
+                   artistData.goldenGlobeHistory.push({
+                      year: newDate.year,
+                      category: category.name,
+                      itemId: nomination.id,
+                      itemName: nomination.name,
+                      artistName: artistProfile?.name || "Unknown",
+                      isWinner
+                   });
+               }
+            }
+        }
+        finalState.goldenGlobeSubmissions = [];
+        finalState.goldenGlobeCurrentYearNominations = null;
+      }
+
       // --- OSCARS LOGIC ---
       let newOscarNominations: GameState["oscarCurrentYearNominations"] =
         state.oscarCurrentYearNominations;
@@ -8632,7 +9450,9 @@ The Government`,
                     post: {
                       id: crypto.randomUUID(),
                       authorId: "spotifysnapshot",
-                      content: `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(topPreRelease.lastWeekStreams)} streams on Spotify this week.\n\nIt was the #1 most streamed pre-release on Spotify.`,
+                      content: `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(topPreRelease.lastWeekStreams)} streams on Spotify this week.
+
+It was the #1 most streamed pre-release on Spotify.`,
                       image: `snapshot:${jsonStr}`,
                       likes: Math.floor(Math.random() * 50000) + 10000,
                       retweets: Math.floor(Math.random() * 10000) + 2000,
@@ -8715,7 +9535,9 @@ The Government`,
               });
               let gainerText = "";
               if (biggestGainerSong && biggestGainerPct > -Infinity) {
-                  gainerText = `\n\n—"${biggestGainerSong.title}" was the biggest gainer, ${biggestGainerPct > 0 ? 'up' : 'down'} ${Math.abs(biggestGainerPct).toFixed(2)}% with ${formatNumber(biggestGainerSong.lastWeekStreams)} streams!`;
+                  gainerText = `
+
+—"${biggestGainerSong.title}" was the biggest gainer, ${biggestGainerPct > 0 ? 'up' : 'down'} ${Math.abs(biggestGainerPct).toFixed(2)}% with ${formatNumber(biggestGainerSong.lastWeekStreams)} streams!`;
               }
               
               const jsonStr = JSON.stringify({
@@ -8787,7 +9609,11 @@ The Government`,
               post: {
                 id: crypto.randomUUID(),
                 authorId: spotifyDataId,
-                content: `'${popularTracks[0].title}' is the #1 most popular song by ${artistProfile?.name} on Spotify.\n\nDaily streams:\n#1. ${popularTracks[0].title} - ${formatNumber(popularTracks[0].lastWeekStreams)}\n#2. ${popularTracks[1].title} - ${formatNumber(popularTracks[1].lastWeekStreams)}`,
+                content: `'${popularTracks[0].title}' is the #1 most popular song by ${artistProfile?.name} on Spotify.
+
+Daily streams:
+#1. ${popularTracks[0].title} - ${formatNumber(popularTracks[0].lastWeekStreams)}
+#2. ${popularTracks[1].title} - ${formatNumber(popularTracks[1].lastWeekStreams)}`,
                 image: `snapshot:${jsonStr}`,
                 likes: Math.floor(Math.random() * 15000) + 3000,
                 retweets: Math.floor(Math.random() * 3000) + 500,
@@ -8875,7 +9701,11 @@ The Government`,
                 sender: "The Academy",
                 senderIcon: "oscars",
                 subject: `Submit for the ${newDate.year} Academy Awards`,
-                body: `Hi ${artistProfile.name},\n\nThe submission window for the ${newDate.year} Academy Awards is open. Please submit your eligible soundtrack releases and acting roles from last year.\n\n- The Academy of Motion Picture Arts and Sciences`,
+                body: `Hi ${artistProfile.name},
+
+The submission window for the ${newDate.year} Academy Awards is open. Please submit your eligible soundtrack releases and acting roles from last year.
+
+- The Academy of Motion Picture Arts and Sciences`,
                 date: newDate,
                 isRead: false,
                 offer: { type: "oscarSubmission", emailId, isSubmitted: false },
@@ -8886,12 +9716,12 @@ The Government`,
       }
 
       // Week 5: Determine Oscar Nominations
-      if (newDate.week === 5 && state.oscarSubmissions.length > 0) {
+      if (newDate.week === 5 && (state.oscarSubmissions?.length || 0) > 0) {
         const categoryName = "Best Original Song";
         const contenders: OscarContender[] = [];
 
         // Player contenders
-        for (const sub of state.oscarSubmissions) {
+        for (const sub of (state.oscarSubmissions || [])) {
           const artistData = updatedArtistsData[sub.artistId];
           const artistProfile = allPlayerArtistsAndGroups.find(
             (a) => a.id === sub.artistId,
@@ -8951,11 +9781,18 @@ The Government`,
             if (artistData && artistProfile) {
               artistData.popularity = Math.min(100, artistData.popularity + 5);
               const hasPerformanceOffer = Math.random() < 0.5;
-              let body = `Dear ${artistProfile.name},\n\nCongratulations! The Academy is pleased to announce your nomination for Best Original Song for "${playerNominee.name}".`;
+              let body = `Dear ${artistProfile.name},
+
+Congratulations! The Academy is pleased to announce your nomination for Best Original Song for "${playerNominee.name}".`;
               if (hasPerformanceOffer) {
-                body += `\n\nAdditionally, we would be honored to have you perform at the ceremony. Please respond to accept.`;
+                body += `
+
+Additionally, we would be honored to have you perform at the ceremony. Please respond to accept.`;
               }
-              body += `\n\nSincerely,\nThe Academy`;
+              body += `
+
+Sincerely,
+The Academy`;
               const emailId = crypto.randomUUID();
               artistData.inbox.push({
                 id: emailId,
@@ -8974,7 +9811,9 @@ The Government`,
             }
           }
 
-          let postContent = `The nominees for Best Original Song at the ${newDate.year} #Oscars have been announced:\n\n`;
+          let postContent = `The nominees for Best Original Song at the ${newDate.year} #Oscars have been announced:
+
+`;
           postContent += nominees
             .map(
               (n) =>
@@ -9014,7 +9853,14 @@ The Government`,
                 sender: "The Academy",
                 senderIcon: "oscars",
                 subject: "Invitation: Oscars Red Carpet",
-                body: `Dear ${artistProfile.name},\n\n${reasonText}, we would be honored to have you attend the ${newDate.year} Oscars and walk the red carpet.\n\nPlease accept this invitation by sharing your look for the evening.\n\nSincerely,\nThe Academy`,
+                body: `Dear ${artistProfile.name},
+
+${reasonText}, we would be honored to have you attend the ${newDate.year} Oscars and walk the red carpet.
+
+Please accept this invitation by sharing your look for the evening.
+
+Sincerely,
+The Academy`,
                 date: newDate,
                 isRead: false,
                 offer: { type: "oscarRedCarpet", emailId: redCarpetEmailId },
@@ -9096,8 +9942,20 @@ The Government`,
               senderIcon: "coachella",
               subject: `Coachella ${newDate.year} Lineup Submissions`,
               body: autoSubmit
-                ? `Hi ${artistProfile.name},\n\nWe are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Your manager has automatically submitted your materials for a spot on the lineup.\n\nPlease note: This is not a guarantee of placement, but a request for consideration.\n\n- Coachella Team`
-                : `Hi ${artistProfile.name},\n\nWe are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Based on your recent numbers, we would like to invite you to submit for a spot on the lineup.\n\nPlease note: This is not a guarantee of placement, but a request for consideration.\n\n- Coachella Team`,
+                ? `Hi ${artistProfile.name},
+
+We are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Your manager has automatically submitted your materials for a spot on the lineup.
+
+Please note: This is not a guarantee of placement, but a request for consideration.
+
+- Coachella Team`
+                : `Hi ${artistProfile.name},
+
+We are now preparing the lineup for the ${newDate.year} Coachella Valley Music and Arts Festival. Based on your recent numbers, we would like to invite you to submit for a spot on the lineup.
+
+Please note: This is not a guarantee of placement, but a request for consideration.
+
+- Coachella Team`,
               date: newDate,
               isRead: autoSubmit,
               offer: {
@@ -9106,6 +9964,29 @@ The Government`,
                 isSubmitted: autoSubmit,
               },
             });
+          }
+        }
+      }
+
+      // Week 12: Golden Globe Submissions
+      if (newDate.week === 12) {
+        for (const artistId in updatedArtistsData) {
+          const artistData = updatedArtistsData[artistId];
+          const hasEligibleRoles = (artistData.actingRoles && artistData.actingRoles.length > 0) || (artistData.songs && artistData.songs.some(s => s.soundtrackTitle)) || (artistData.releases && artistData.releases.some(r => r.soundtrackInfo));
+          if (hasEligibleRoles) {
+              const emailId = crypto.randomUUID();
+              artistData.inbox.unshift({
+                id: emailId,
+                sender: "Hollywood Foreign Press Association",
+                subject: "Golden Globe Submissions Now Open",
+                body: "The HFPA is now accepting submissions for the upcoming Golden Globe Awards. Please submit your eligible film and television work for consideration.",
+                date: newDate,
+                isRead: false,
+                offer: {
+                  type: "goldenGlobeSubmission",
+                  emailId,
+                },
+              });
           }
         }
       }
@@ -9158,7 +10039,11 @@ The Government`,
             artistData.coachella.payoutSize = payoutSize;
             artistData.coachella.openingFor = openingFor;
 
-            let body = `Hi ${artistProfile?.name},\n\nWe are thrilled to let you know that you have been selected to perform at Coachella ${newDate.year}!\n\n`;
+            let body = `Hi ${artistProfile?.name},
+
+We are thrilled to let you know that you have been selected to perform at Coachella ${newDate.year}!
+
+`;
             if (status === "headliner")
               body += `You have been selected as a HEADLINER! You will be paid $${formatNumber(payoutSize)} for your headlining set.`;
             else if (status === "opener")
@@ -9419,16 +10304,26 @@ The Government`,
               artistData.popularity + artistNominations.length * 3,
             );
             const hasPerformanceOffer = Math.random() < 0.5;
-            let body = `Dear ${artistProfile.name},\n\nCongratulations! We are pleased to announce your nomination(s) for the ${newDate.year} American Music Awards:\n\n`;
+            let body = `Dear ${artistProfile.name},
+
+Congratulations! We are pleased to announce your nomination(s) for the ${newDate.year} American Music Awards:
+
+`;
             artistNominations.forEach((nom) => {
               const category = newNominations.find((c) =>
                 c.nominees.includes(nom),
               );
-              body += `• ${category?.name} - "${nom.itemName}"\n`;
+              body += `• ${category?.name} - "${nom.itemName}"
+`;
             });
             if (hasPerformanceOffer)
-              body += `\nAdditionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.\n\n`;
-            body += `\nSincerely,\nAMAs`;
+              body += `
+Additionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.
+
+`;
+            body += `
+Sincerely,
+AMAs`;
             const emailId = crypto.randomUUID();
             artistData.inbox.push({
               id: emailId,
@@ -9447,7 +10342,13 @@ The Government`,
               sender: "American Music Awards",
               senderIcon: "amas",
               subject: "Invitation: AMAs Red Carpet",
-              body: `Hi ${artistProfile.name},\n\nWe're excited to invite you to walk the red carpet at this year's AMAs. Pop Base and other outlets will be covering the event.\n\nPlease let us know if you'll be attending by sharing your look.\n\n- AMAs`,
+              body: `Hi ${artistProfile.name},
+
+We're excited to invite you to walk the red carpet at this year's AMAs. Pop Base and other outlets will be covering the event.
+
+Please let us know if you'll be attending by sharing your look.
+
+- AMAs`,
               date: newDate,
               isRead: false,
               offer: { type: "amaRedCarpet", emailId: redCarpetEmailId },
@@ -9461,7 +10362,9 @@ The Government`,
         for (const category of state.amaCurrentYearNominations) {
           if (category.winner) {
             const winner = category.winner;
-            const content = `American Music Awards 🏆\n\nCongrats ${category.name} winner - '${winner.itemName}' @${winner.artistName.replace(/\s/g, "")} #AMAs`;
+            const content = `American Music Awards 🏆
+
+Congrats ${category.name} winner - '${winner.itemName}' @${winner.artistName.replace(/\s/g, "")} #AMAs`;
             Object.values(updatedArtistsData).forEach((d) =>
               d.xPosts.unshift({
                 id: crypto.randomUUID(),
@@ -9592,12 +10495,15 @@ The Government`,
               return catNoms;
            });
 
-           let winText = `${showName} 🏆\n\nThe winners for the ${newDate.year} ${showName} have been announced!`;
+           let winText = `${showName} 🏆
+
+The winners for the ${newDate.year} ${showName} have been announced!`;
            finalizedNoms.forEach(catNom => {
               const cat = state.customAwardShow!.categories.find(c => c.id === catNom.categoryId);
               const winner = catNom.nominees.find(n => n.isWinner);
               if (cat && winner) {
-                  winText += `\n${cat.name}: ${winner.itemName} - ${winner.artistName}`;
+                  winText += `
+${cat.name}: ${winner.itemName} - ${winner.artistName}`;
               }
            });
 
@@ -9624,7 +10530,7 @@ The Government`,
         state.grammyCurrentYearNominations;
 
       // Week 45: Determine Grammy Nominations
-      if (newDate.week === 45 && state.grammySubmissions.length > 0) {
+      if (newDate.week === 45 && (state.grammySubmissions?.length || 0) > 0) {
         const newNominations: GrammyCategory[] = [];
         const categories: GrammyAward["category"][] = [
           "Record of the Year",
@@ -9680,7 +10586,7 @@ The Government`,
               break;
           }
 
-          const playerSubmissions = state.grammySubmissions.filter(
+          const playerSubmissions = (state.grammySubmissions || []).filter(
             (s) => s.category === categoryName,
           );
           for (const sub of playerSubmissions) {
@@ -9872,7 +10778,9 @@ The Government`,
         newNominations.forEach((category) => {
           if (majorCatsForPosts.includes(category.name)) {
             const playerNominee = category.nominees.find((n) => n.isPlayer);
-            let content = `The nominees for ${category.name} at the ${newDate.year + 1} #GRAMMYs have been announced:\n\n`;
+            let content = `The nominees for ${category.name} at the ${newDate.year + 1} #GRAMMYs have been announced:
+
+`;
             content += category.nominees
               .map((n) => `• ${n.isPlayer ? `**${n.name}**` : n.name}`)
               .join("\n");
@@ -9918,16 +10826,26 @@ The Government`,
               artistData.popularity + artistNominations.length * 3,
             );
             const hasPerformanceOffer = Math.random() < 0.5;
-            let body = `Dear ${artistProfile.name},\n\nCongratulations! The Recording Academy is pleased to announce your nomination(s) for the ${newDate.year + 1} GRAMMY Awards:\n\n`;
+            let body = `Dear ${artistProfile.name},
+
+Congratulations! The Recording Academy is pleased to announce your nomination(s) for the ${newDate.year + 1} GRAMMY Awards:
+
+`;
             artistNominations.forEach((nom) => {
               const category = newNominations.find((c) =>
                 c.nominees.includes(nom),
               );
-              body += `• ${category?.name} - "${nom.name}"\n`;
+              body += `• ${category?.name} - "${nom.name}"
+`;
             });
             if (hasPerformanceOffer)
-              body += `\nAdditionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.\n\n`;
-            body += `\nSincerely,\nThe Recording Academy`;
+              body += `
+Additionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.
+
+`;
+            body += `
+Sincerely,
+The Recording Academy`;
             const emailId = crypto.randomUUID();
             artistData.inbox.push({
               id: emailId,
@@ -9950,7 +10868,13 @@ The Government`,
               sender: "Recording Academy",
               senderIcon: "grammys",
               subject: "Invitation: GRAMMYs Red Carpet",
-              body: `Hi ${artistProfile.name},\n\nWe're excited to invite you to walk the red carpet at this year's GRAMMY Awards ceremony. Pop Base and other outlets will be covering the event.\n\nPlease let us know if you'll be attending by sharing your look.\n\n- The Recording Academy`,
+              body: `Hi ${artistProfile.name},
+
+We're excited to invite you to walk the red carpet at this year's GRAMMY Awards ceremony. Pop Base and other outlets will be covering the event.
+
+Please let us know if you'll be attending by sharing your look.
+
+- The Recording Academy`,
               date: newDate,
               isRead: false,
               offer: { type: "grammyRedCarpet", emailId: redCarpetEmailId },
@@ -9964,7 +10888,9 @@ The Government`,
         for (const category of state.grammyCurrentYearNominations) {
           if (category.winner) {
             const winner = category.winner;
-            const content = `Recording Academy / GRAMMYS 🏆\n\nCongrats ${category.name} winner - '${winner.name}' @${winner.artistName.replace(/\s/g, "")} #GRAMMYs`;
+            const content = `Recording Academy / GRAMMYS 🏆
+
+Congrats ${category.name} winner - \'${winner.name}\' @${winner.artistName.replace(/\\s/g, "")} #GRAMMYs`;
             Object.values(updatedArtistsData).forEach((d) =>
               d.xPosts.unshift({
                 id: crypto.randomUUID(),
@@ -10042,23 +10968,34 @@ The Government`,
           );
 
           if (playerHot100Entries.length > 0 || playerAlbumEntries.length > 0) {
-            let body = `Hi ${artistProfileForEmail.name},\n\nHere's your weekly recap of your performance on the Billboard charts.\n`;
+            let body = `Hi ${artistProfileForEmail.name},
+
+Here's your weekly recap of your performance on the Billboard charts.
+`;
 
             if (playerHot100Entries.length > 0) {
-              body += `\n**Billboard Hot 100**\n`;
+              body += `
+**Billboard Hot 100**
+`;
               playerHot100Entries.forEach((entry) => {
-                body += `#${entry.rank} "${entry.title}"\n`;
+                body += `#${entry.rank} "${entry.title}"
+`;
               });
             }
 
             if (playerAlbumEntries.length > 0) {
-              body += `\n**Billboard 200**\n`;
+              body += `
+**Billboard 200**
+`;
               playerAlbumEntries.forEach((entry) => {
-                body += `#${entry.rank} "${entry.title}"\n`;
+                body += `#${entry.rank} "${entry.title}"
+`;
               });
             }
 
-            body += `\nCongratulations on your chart success!\n- The Billboard Team`;
+            body += `
+Congratulations on your chart success!
+- The Billboard Team`;
 
             newChartEmails.push({
               id: crypto.randomUUID(),
@@ -10083,11 +11020,19 @@ The Government`,
           );
 
           if (isStreamingActive && playerSpotifyEntries.length > 0) {
-            let body = `Hi ${artistProfileForEmail.name},\n\nHere are your current entries on the Spotify Global Top 100 chart this week.\n\n**Global Top 100**\n`;
+            let body = `Hi ${artistProfileForEmail.name},
+
+Here are your current entries on the Spotify Global Top 100 chart this week.
+
+**Global Top 100**
+`;
             playerSpotifyEntries.forEach((entry) => {
-              body += `#${entry.rank} "${entry.title}" - ${formatNumber(entry.weeklyStreams)} streams\n`;
+              body += `#${entry.rank} "${entry.title}" - ${formatNumber(entry.weeklyStreams)} streams
+`;
             });
-            body += `\nKeep up the great work!\n- Spotify Charts Team`;
+            body += `
+Keep up the great work!
+- Spotify Charts Team`;
 
             newChartEmails.push({
               id: crypto.randomUUID(),
@@ -10346,6 +11291,8 @@ The Government`,
           spotifyNewEntries: newEntriesCount,
           npcs: newNpcsWithReleases,
           npcAlbums: newNpcAlbums,
+        soundtrackAlbums: updatedSoundtrackAlbums || state.soundtrackAlbums,
+        fifaSingleScheduled: newFifaScheduled !== undefined ? newFifaScheduled : undefined,
           contractRenewalOffer: contractRenewalForActivePlayer,
           currentView: "contractRenewal",
         };
@@ -10391,7 +11338,7 @@ The Government`,
 
       if (autoGrammySubmissions.length > 0) {
         finalState.grammySubmissions = [
-          ...finalState.grammySubmissions,
+          ...(finalState.grammySubmissions || []),
           ...autoGrammySubmissions,
         ];
       }
@@ -10402,8 +11349,188 @@ The Government`,
         ];
       }
 
+
+      // Podcast Simulation
+      let newPodcasts = [...(finalState.podcasts || [])];
+      let newPodcastCharts = [...(finalState.podcastCharts || [])];
+
+      if (isWeeklyUpdate) {
+          newPodcasts = newPodcasts.map(podcast => {
+              if (podcast.episodes.length === 0) return podcast;
+
+              // Generate plays for all episodes
+              let updatedEpisodes = podcast.episodes.map(ep => {
+                  // Older episodes get less plays
+                  const weeksOld = (newDate.year - ep.releaseDate.year) * 52 + (newDate.week - ep.releaseDate.week);
+                  
+                  let newPlays = 0;
+                  if (weeksOld === 0) {
+                      newPlays = podcast.followers * (Math.random() * 0.5 + 0.3); // 30-80% of followers listen week 1
+                  } else {
+                      newPlays = podcast.followers * (Math.random() * 0.1) * Math.pow(0.8, weeksOld); // Decay
+                  }
+                  
+                  newPlays = Math.floor(newPlays);
+                  
+                  // Guest boost
+                  if (ep.guestId) {
+                      newPlays *= (1 + Math.random() * 2); 
+                  }
+                  
+                  const rpm = 0.005; // $5 per 1000 plays
+                  const newRev = newPlays * rpm;
+                  
+                  return {
+                      ...ep,
+                      plays: ep.plays + newPlays,
+                      revenue: ep.revenue + newRev
+                  };
+              });
+              
+              const newTotalPlays = updatedEpisodes.reduce((sum, ep) => sum + ep.plays, 0);
+              
+              // Follower growth
+              let newFollowers = podcast.followers;
+              if (updatedEpisodes.length > 0) {
+                  const latestEpPlays = updatedEpisodes[updatedEpisodes.length - 1].plays;
+                  const newFolls = Math.floor(latestEpPlays * (Math.random() * 0.05));
+                  newFollowers += newFolls;
+              }
+              
+              return {
+                  ...podcast,
+                  episodes: updatedEpisodes,
+                  totalPlays: newTotalPlays,
+                  followers: newFollowers
+              };
+          });
+          
+          // NPC Podcasts automatically release episodes
+          newPodcasts = newPodcasts.map(podcast => {
+              if (podcast.isNpc) {
+                  // 20% chance per week
+                  if (Math.random() < 0.2) {
+                      const newEp = {
+                          id: `ep_npc_${Date.now()}_${Math.random()}`,
+                          title: `Episode ${podcast.episodes.length + 1}`,
+                          description: `A new episode of ${podcast.name}.`,
+                          duration: Math.floor(Math.random() * 60) + 40,
+                          releaseDate: newDate,
+                          plays: 0,
+                          revenue: 0,
+                          hasVideo: Math.random() > 0.5
+                      };
+                      return {
+                          ...podcast,
+                          episodes: [...podcast.episodes, newEp]
+                      };
+                  }
+              }
+              return podcast;
+          });
+          
+          newPodcastCharts = [...newPodcasts].sort((a, b) => b.followers - a.followers).slice(0, 50);
+          
+          // Payout to active artist for their podcasts
+          const activeData = finalState.artistsData[state.activeArtistId];
+          if (activeData) {
+              const myPods = newPodcasts.filter(p => !p.isNpc && p.host === (state.soloArtist?.name || state.group?.name));
+              let totalRev = 0;
+              myPods.forEach(p => {
+                  p.episodes.forEach(ep => {
+                      if (ep.releaseDate.year === newDate.year && ep.releaseDate.week === newDate.week) {
+                           // This is new rev from this week, wait, the revenue was already calculated and added to total.
+                           // Actually, let's just pay the difference.
+                      }
+                  });
+              });
+              
+              // Let's do a simpler payout: sum all episode revenue from this week.
+              totalRev = myPods.reduce((sum, p) => {
+                  return sum + p.episodes.reduce((epSum, ep) => {
+                      const weeksOld = (newDate.year - ep.releaseDate.year) * 52 + (newDate.week - ep.releaseDate.week);
+                      if (weeksOld === 0) return epSum + ep.revenue; // roughly
+                      return epSum;
+                  }, 0);
+              }, 0);
+              // Wait, revenue in ep.revenue is ALL TIME.
+              // We need to calculate just this week's revenue. 
+          }
+      }
+      
+
+         // --- FIFA WORLD CUP ALBUM RELEASE ---
+         let updatedSoundtrackAlbums = [...state.soundtrackAlbums];
+         let newFifaScheduled = state.fifaSingleScheduled;
+         if (state.fifaSingleScheduled && newDate.week === 25 && newDate.year === state.fifaSingleScheduled.year) {
+             const { title, coverArt, collabs } = state.fifaSingleScheduled;
+             
+             const playerTracks = [{
+                isPlayerSong: true,
+                songId: crypto.randomUUID(), 
+                title: title,
+                artist: (state.soloArtist?.name || state.group?.name || "Artist") + ", " + collabs.join(", ") + ", FIFA Sound",
+                streams: 0,
+                lastWeekStreams: 0,
+                prevWeekStreams: 0,
+                duration: 180 + Math.floor(Math.random() * 60),
+                explicit: false
+             }];
+             
+             const npcTracks = state.npcs
+                .slice(0, 10)
+                .map((npc) => ({
+                  isPlayerSong: false,
+                  songId: npc.uniqueId,
+                  title: [
+                      "Goals", "Game Time", "Illuminate", "Victory", "Champion", 
+                      "Rise Up", "The World is Yours", "We Are One", "Glory", "Unstoppable"
+                  ][Math.floor(Math.random() * 10)],
+                  artist: npc.artist + ", FIFA Sound",
+                  streams: 0,
+                  lastWeekStreams: 0,
+                  prevWeekStreams: 0,
+                  duration: 180 + Math.floor(Math.random() * 60),
+                  explicit: false,
+                }));
+                
+             const allTracks = [...playerTracks, ...npcTracks].sort(
+                () => Math.random() - 0.5,
+             );
+             
+             updatedSoundtrackAlbums.push({
+                id: crypto.randomUUID(),
+                title: `Official FIFA World Cup ${newDate.year} Soundtrack`,
+                coverArt: coverArt,
+                releaseDate: newDate,
+                tracks: allTracks,
+                firstWeekStreams: 0,
+                weeksOnChart: 0,
+                peakPosition: 0,
+             });
+             
+             newFifaScheduled = undefined;
+         }
+
+      // Update podcast offers expiration
+      if (isWeeklyUpdate) {
+         for (const [artistId, aData] of Object.entries(updatedArtistsData)) {
+            if (aData.podcastPitchOffers) {
+                // Remove older than 2 weeks
+                aData.podcastPitchOffers = aData.podcastPitchOffers.filter(o => {
+                    const weeksOld = (newDate.year - o.date.year) * 52 + (newDate.week - o.date.week);
+                    return weeksOld <= 2;
+                });
+            }
+         }
+      }
+
       return {
         ...finalState,
+        soundtrackAlbums: typeof updatedSoundtrackAlbums !== "undefined" ? updatedSoundtrackAlbums : state.soundtrackAlbums,
+        fifaSingleScheduled: typeof newFifaScheduled !== "undefined" ? newFifaScheduled : undefined,
+        podcasts: newPodcasts,
+        podcastCharts: newPodcastCharts,
         date: newDate,
         artistsData: updatedArtistsData,
         spotifyPlaylists: newSpotifyPlaylists,
@@ -10626,6 +11753,105 @@ The Government`,
         },
       };
     }
+    case "RELEASE_TOUR_DOCUMENTARY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const tour = activeData.tours.find(t => t.id === action.payload.tourId);
+      if (!tour) return state;
+
+      const newRole = {
+          id: crypto.randomUUID(),
+          title: `${tour.name}: The Documentary`,
+          type: "Tour Documentary",
+          roleName: "Self",
+          year: state.date.year,
+          status: "Released",
+          coverUrl: action.payload.coverUrl,
+          rating: 80 + Math.floor(Math.random() * 15) // Good rating
+      };
+
+      const existingRoles = activeData.actingRoles || [];
+      // Don't release twice
+      if (existingRoles.some(r => r.title === newRole.title)) {
+          return state;
+      }
+
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  actingRoles: [...existingRoles, newRole],
+                  hype: Math.min(100, (activeData.hype || 0) + 20),
+                  popularity: Math.min(100, (activeData.popularity || 0) + 5)
+              }
+          }
+      };
+    }
+    case "CREATE_LIVE_ALBUM": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { tourId, coverArt } = action.payload;
+      const tour = activeData.tours.find(t => t.id === tourId);
+      if (!tour) return state;
+
+      const newSongs = [];
+      const newSongIds = [];
+      
+      for (const originalSongId of tour.setlist) {
+          const originalSong = activeData.songs.find(s => s.id === originalSongId);
+          if (originalSong) {
+              const liveSongId = crypto.randomUUID();
+              newSongs.push({
+                  ...originalSong,
+                  id: liveSongId,
+                  title: `${originalSong.title} (Live from ${tour.name})`,
+                  streams: 0,
+                  lastWeekStreams: 0,
+                  prevWeekStreams: 0,
+                  isReleased: true,
+                  releaseId: undefined,
+                  sales: 0,
+                  isAvailableOnStreaming: true,
+                  coverArt: coverArt
+              });
+              newSongIds.push(liveSongId);
+          }
+      }
+
+      const releaseId = crypto.randomUUID();
+      const newRelease = {
+          id: releaseId,
+          title: `${tour.name} (Live)`,
+          type: "Album",
+          coverArt: coverArt,
+          songIds: newSongIds,
+          releaseDate: state.date,
+          artistId: state.activeArtistId,
+          firstWeekStreams: 0,
+          firstWeekSales: 0,
+          weeksOnChart: 0,
+          peakPosition: 0,
+          isAvailableOnStreaming: true
+      };
+
+      for (const song of newSongs) {
+          song.releaseId = releaseId;
+      }
+
+      return {
+          ...state,
+          artistsData: {
+              ...state.artistsData,
+              [state.activeArtistId]: {
+                  ...activeData,
+                  songs: [...activeData.songs, ...newSongs],
+                  releases: [...activeData.releases, newRelease]
+              }
+          }
+      };
+    }
     case "RELEASE_PROJECT": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -10764,7 +11990,14 @@ The Government`,
               id: emailIdGenius,
               sender: "Genius",
               subject: `Verified Interview for "${song.title}"?`,
-              body: `Hey ${artistName},\n\nWe're big fans of your new single "${song.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.\n\nLet us know if you're interested.\n\nBest,\nThe Genius Team`,
+              body: `Hey ${artistName},
+
+We're big fans of your new single "${song.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.
+
+Let us know if you're interested.
+
+Best,
+The Genius Team`,
               date: releaseWithLabel.releaseDate,
               isRead: false,
               senderIcon: "genius",
@@ -10792,7 +12025,13 @@ The Government`,
                 sender: "On The Radar",
                 senderIcon: "ontheradar",
                 subject: `Performance Invite for "${song.title}"`,
-                body: `Yo ${artistName},\n\nWe've been hearing the buzz around your new single "${song.title}". We'd like to invite you to our studio for an "On The Radar" freestyle performance.\n\nThis is a huge look. Let us know.\n\n- On The Radar Team`,
+                body: `Yo ${artistName},
+
+We've been hearing the buzz around your new single "${song.title}". We'd like to invite you to our studio for an "On The Radar" freestyle performance.
+
+This is a huge look. Let us know.
+
+- On The Radar Team`,
                 date: releaseWithLabel.releaseDate,
                 isRead: false,
                 offer: {
@@ -10809,7 +12048,13 @@ The Government`,
                 sender: "TRSH'D",
                 senderIcon: "trshd",
                 subject: `TRSH'D Performance: ${song.title}`,
-                body: `What's good ${artistName},\n\nYour new track "${song.title}" is making waves. We want you to come through and lay down a performance for TRSH'D.\n\nHit us back if you're down.\n\n- TRSH'D`,
+                body: `What's good ${artistName},
+
+Your new track "${song.title}" is making waves. We want you to come through and lay down a performance for TRSH'D.
+
+Hit us back if you're down.
+
+- TRSH'D`,
                 date: releaseWithLabel.releaseDate,
                 isRead: false,
                 offer: {
@@ -10839,15 +12084,36 @@ The Government`,
         switch (selectedOfferType) {
           case "performance":
             subject = `Performance on The Tonight Show Starring Jimmy Fallon?`;
-            body = `Hey ${artistName},\n\nHuge fans of the new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}"! We'd be thrilled to have you on the show to perform a song from it.\n\nLet us know if you're interested.\n\nBest,\nThe Tonight Show Team`;
+            body = `Hey ${artistName},
+
+Huge fans of the new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}"! We'd be thrilled to have you on the show to perform a song from it.
+
+Let us know if you're interested.
+
+Best,
+The Tonight Show Team`;
             break;
           case "interview":
             subject = `Interview on The Tonight Show Starring Jimmy Fallon?`;
-            body = `Hey ${artistName},\n\nThe new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}" is all anyone's talking about! Jimmy would love to have you on the show for an interview to discuss the project.\n\nLet us know if you're interested.\n\nBest,\nThe Tonight Show Team`;
+            body = `Hey ${artistName},
+
+The new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}" is all anyone's talking about! Jimmy would love to have you on the show for an interview to discuss the project.
+
+Let us know if you're interested.
+
+Best,
+The Tonight Show Team`;
             break;
           case "both":
             subject = `Appearance on The Tonight Show Starring Jimmy Fallon?`;
-            body = `Hey ${artistName},\n\nCongratulations on the new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}"! The whole office has it on repeat. Jimmy would love to have you on the show for an interview AND a performance.\n\nLet us know if you're interested.\n\nBest,\nThe Tonight Show Team`;
+            body = `Hey ${artistName},
+
+Congratulations on the new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}"! The whole office has it on repeat. Jimmy would love to have you on the show for an interview AND a performance.
+
+Let us know if you're interested.
+
+Best,
+The Tonight Show Team`;
             break;
         }
 
@@ -11085,6 +12351,21 @@ The Government`,
         },
       };
     }
+    
+    case "UPDATE_GOLDEN_GLOBE_BANNER": {
+      if (!state.activeArtistId) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...state.artistsData[state.activeArtistId],
+            goldenGlobeBanner: action.payload,
+          },
+        },
+      };
+    }
+
     case "UPDATE_OSCAR_BANNER": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -11457,19 +12738,7 @@ The Government`,
         (a) => a.id === contract.artistId,
       );
 
-      let advance = 0;
-      if (label && !contract.isCustom) {
-        const stdLabel = label as Label;
-        if (stdLabel.contractType === "petty") advance = 1000000;
-        else if (stdLabel.id === "umg") advance = 2500000;
-        else if (
-          stdLabel.tier === "Mid-high" ||
-          stdLabel.tier === "Mid-Low" ||
-          stdLabel.tier === "Top"
-        )
-          advance = 750000;
-        else if (stdLabel.tier === "Low") advance = 300000;
-      }
+      const advance = contract.advance || 0;
 
       let newPosts: XPost[] = [];
       if (label && artist) {
@@ -11543,7 +12812,15 @@ The Government`,
             sender: label.name,
             senderIcon: "label",
             subject: "Regarding Your Departure",
-            body: `Hi ${artistProfile.name},\n\nWe've processed your departure from the label. As per our agreement, a fine of $${formatNumber(fine)} has been deducted from your account.\n\nFurthermore, all projects released under our name have been removed from streaming services and digital storefronts.\n\nWe wish you the best in your future endeavors.\n\n- ${label.name}`,
+            body: `Hi ${artistProfile.name},
+
+We've processed your departure from the label. As per our agreement, a fine of $${formatNumber(fine)} has been deducted from your account.
+
+Furthermore, all projects released under our name have been removed from streaming services and digital storefronts.
+
+We wish you the best in your future endeavors.
+
+- ${label.name}`,
             date: state.date,
             isRead: false,
           });
@@ -12114,7 +13391,15 @@ The Government`,
         sender: "Spotify",
         senderIcon: "spotify",
         subject: `Your Billions Club Plaque & Concert Details`,
-        body: `Hi ${artistProfile.name},\n\nWe have successfully received your image and generated your Billions Club plaque for "${song.title}"!\n\nThe concert in Paris was an absolute success, and the fans loved your performance. The plaque has been shipped to your management team.\n\nKeep breaking records.\n\n- Spotify Team`,
+        body: `Hi ${artistProfile.name},
+
+We have successfully received your image and generated your Billions Club plaque for "${song.title}"!
+
+The concert in Paris was an absolute success, and the fans loved your performance. The plaque has been shipped to your management team.
+
+Keep breaking records.
+
+- Spotify Team`,
         date: state.date,
         isRead: false,
       });
@@ -12406,7 +13691,9 @@ The Government`,
       if (video.type === "Live Performance" && songId) {
         const song = activeData.songs.find((s) => s.id === songId);
         if (song) {
-          postContent = `${artistProfile.name} delivers an incredible performance of '${song.title}' on Jimmy Fallon.\n\nWatch: youtu.be/sIdlL8V83Cc`;
+          postContent = `${artistProfile.name} delivers an incredible performance of '${song.title}' on Jimmy Fallon.
+
+Watch: youtu.be/sIdlL8V83Cc`;
         }
       } else if (video.type === "Interview") {
         const release = activeData.releases.find(
@@ -12671,9 +13958,13 @@ The Government`,
 
       let popBaseContent = "";
       if (offer.type === "popBaseClarification") {
-        popBaseContent = `${playerUser.name} addresses recent controversy regarding ${offer.originalPostContent}:\n\n"${answer}"`;
+        popBaseContent = `${playerUser.name} addresses recent controversy regarding ${offer.originalPostContent}:
+
+"${answer}"`;
       } else if (offer.type === "popBaseInterview") {
-        popBaseContent = `${playerUser.name} on ${offer.question?.toLowerCase()}:\n\n"${answer}"`;
+        popBaseContent = `${playerUser.name} on ${offer.question?.toLowerCase()}:
+
+"${answer}"`;
       }
 
       if (!popBaseContent) return state;
@@ -12841,7 +14132,19 @@ The Government`,
       const { content, image, postType, targetId, songId, quoteOf } =
         action.payload;
       let postContent = content;
+      if (postType === "market_crypto" && !postContent.trim() && activeData.cryptoCoin) {
+          postContent = "Buy $" + activeData.cryptoCoin.ticker + " now!";
+      }
 
+      let newActiveDeals = activeData.activeBrandDeals;
+      if (activeData.activeBrandDeals && activeData.activeBrandDeals.length > 0) {
+        newActiveDeals = activeData.activeBrandDeals.map(deal => {
+            if (content.toLowerCase().includes(deal.hashtag.toLowerCase())) {
+                return { ...deal, lastPostedWeek: state.date.week + (state.date.year * 52) };
+            }
+            return deal;
+        });
+      }
       if (postType === "push" && songId) {
         const song = activeData.songs.find((s) => s.id === songId);
         if (song) {
@@ -13004,6 +14307,32 @@ The Government`,
         xPosts: updatedPosts,
       };
 
+      if (updatedData.cryptoCoin && postContent.includes("$" + updatedData.cryptoCoin.ticker)) {
+          updatedData.cryptoCoin = {
+              ...updatedData.cryptoCoin,
+              reputation: {
+                  ...updatedData.cryptoCoin.reputation,
+                  hype: Math.min(100, updatedData.cryptoCoin.reputation.hype + 10)
+              },
+              currentPrice: updatedData.cryptoCoin.currentPrice * 1.05
+          };
+      }
+
+      if (postType === "market_crypto" && updatedData.cryptoCoin) {
+        if (updatedData.money >= 50000) {
+            updatedData.money -= 50000;
+            updatedData.cryptoCoin = {
+                ...updatedData.cryptoCoin,
+                reputation: {
+                    ...updatedData.cryptoCoin.reputation,
+                    hype: Math.min(100, updatedData.cryptoCoin.reputation.hype + 15)
+                }
+            };
+        } else {
+            // Not enough money
+            return state;
+        }
+      }
       if (postType === "endorse") {
         if (updatedData.lastEndorsementYear !== state.date.year) {
           updatedData.lastEndorsementYear = state.date.year;
@@ -13079,7 +14408,9 @@ The Government`,
               id: crypto.randomUUID(),
               sender: `${targetId === "democrat" ? "Democratic" : "Republican"} National Committee`,
               subject: `Perform at our upcoming rally!`,
-              body: `Hello ${artistName},\n\nWe saw your recent endorsement and would love for you to perform at our upcoming rally to help energize the voters. Let us know if you're interested!`,
+              body: `Hello ${artistName},
+
+We saw your recent endorsement and would love for you to perform at our upcoming rally to help energize the voters. Let us know if you're interested!`,
               date: { ...state.date },
               isRead: false,
             },
@@ -13225,12 +14556,18 @@ The Government`,
         );
         if (popBaseUser && submission) {
           const postContent = action.payload.tracklistImageUrl
-            ? `Tracklist for ${state.artists.find((a) => a.id === state.activeArtistId)?.name}'s new album '${submission.release.title}'\n\nOut Week ${submission.projectReleaseDate?.week || "Soon"}.`
-            : `Tracklist for ${state.artists.find((a) => a.id === state.activeArtistId)?.name}'s new album '${submission.release.title}':\n\n` +
+            ? `Tracklist for ${state.artists.find((a) => a.id === state.activeArtistId)?.name}'s new album '${submission.release.title}'
+
+Out Week ${submission.projectReleaseDate?.week || "Soon"}.`
+            : `Tracklist for ${state.artists.find((a) => a.id === state.activeArtistId)?.name}'s new album '${submission.release.title}':
+
+` +
               (action.payload.tracklist
                 ?.map((t, i) => `#${i + 1}. ${t}`)
                 .join("\n") || "") +
-              `\n\nShow more`;
+              `
+
+Show more`;
           const newPost: XPost = {
             id: crypto.randomUUID(),
             authorId: popBaseUser.id,
@@ -13301,7 +14638,11 @@ The Government`,
         id: crypto.randomUUID(),
         sender: "X Accounts & Billing",
         subject: "Welcome to X Premium",
-        body: `You have successfully subscribed to X Premium (${action.payload.tier === "gold" ? "Gold" : "Blue"}).\n\nYou were charged $${formatNumber(action.payload.cost)} for your first month. Your subscription will renew automatically every month.\n\nThank you for trusting X.`,
+        body: `You have successfully subscribed to X Premium (${action.payload.tier === "gold" ? "Gold" : "Blue"}).
+
+You were charged $${formatNumber(action.payload.cost)} for your first month. Your subscription will renew automatically every month.
+
+Thank you for trusting X.`,
         date: state.date,
         isRead: false,
       };
@@ -14079,7 +15420,9 @@ Let us know if you accept.`,
           id: emailId,
           sender: outletName,
           subject: `${outletName} Interview Request`,
-          body: `We received your request. We would like to sit down for a prime-time interview regarding your new music.\n\nLet us know if you accept.`,
+          body: `We received your request. We would like to sit down for a prime-time interview regarding your new music.
+
+Let us know if you accept.`,
           date: state.date,
           isRead: false,
           senderIcon: "tv",
@@ -14433,7 +15776,15 @@ Let us know if you accept.`,
         }
       });
 
+      const loadedPodcasts = action.payload.podcasts || DEFAULT_PODCASTS;
+      const mergedPodcasts = [...loadedPodcasts];
+      DEFAULT_PODCASTS.forEach((defaultPodcast) => {
+          if (!mergedPodcasts.find(p => p.id === defaultPodcast.id)) {
+              mergedPodcasts.push(defaultPodcast);
+          }
+      });
       const newState = {
+        podcasts: mergedPodcasts,
         ...action.payload,
         spotifyGlobal:
           action.payload.spotifyGlobal ||
@@ -14442,6 +15793,32 @@ Let us know if you accept.`,
         spotifyPlaylists: mergedPlaylists,
         difficultyMode: action.payload.difficultyMode || "normal",
       };
+            if (newState.npcs) {
+        newState.npcs = newState.npcs.map((npc: any) => {
+           if (npc.coverArt && npc.coverArt.includes("ui-avatars.com")) {
+               const baseArtist = npc.artist.split(',')[0].trim();
+               const newImage = NPC_ARTIST_IMAGES[baseArtist] || newState.npcImages?.[baseArtist];
+               if (newImage) {
+                   return { ...npc, coverArt: newImage };
+               }
+           }
+           return npc;
+        });
+      }
+      
+      if (newState.npcAlbums) {
+        newState.npcAlbums = newState.npcAlbums.map((album: any) => {
+           if (album.coverArt && album.coverArt.includes("ui-avatars.com")) {
+               const baseArtist = album.artist.split(',')[0].trim();
+               const newImage = NPC_ARTIST_IMAGES[baseArtist] || newState.npcImages?.[baseArtist];
+               if (newImage) {
+                   return { ...album, coverArt: newImage };
+               }
+           }
+           return album;
+        });
+      }
+
       if (newState.artistsData) {
         for (const id in newState.artistsData) {
           const data = newState.artistsData[id];
@@ -14497,30 +15874,31 @@ Let us know if you accept.`,
       }
 
       // Patch NPC Song Titles and Covers
-      if (newState.npcs) {
-        // track used names to avoid dupes across artists if needed, here just locally
+            if (newState.npcs) {
         const trackCounts: Record<string, number> = {};
         newState.npcs.forEach((npc) => {
-          const realDisco = REAL_WORLD_DISCOGRAPHIES[npc.artist];
+          const baseArtist = npc.artist.split(',')[0].trim();
+          const realDisco = REAL_WORLD_DISCOGRAPHIES[baseArtist];
           if (realDisco && realDisco.songs && realDisco.songs.length > 0) {
             const artistSongsList = realDisco.songs;
-            const count = trackCounts[npc.artist] || 0;
+            const count = trackCounts[baseArtist] || 0;
             if (count < artistSongsList.length) {
               if (!artistSongsList.includes(npc.title)) {
                 npc.title = artistSongsList[count];
               }
             }
-            trackCounts[npc.artist] = count + 1;
+            trackCounts[baseArtist] = count + 1;
           }
-          if (NPC_ARTIST_IMAGES[npc.artist]) {
-            npc.coverArt = NPC_ARTIST_IMAGES[npc.artist];
+          if (NPC_ARTIST_IMAGES[baseArtist]) {
+            npc.coverArt = NPC_ARTIST_IMAGES[baseArtist];
           }
         });
       }
       if (newState.npcAlbums) {
         newState.npcAlbums.forEach((album) => {
-          if (NPC_ARTIST_IMAGES[album.artistName]) {
-            album.coverArt = NPC_ARTIST_IMAGES[album.artistName];
+          const baseArtist = album.artist.split(',')[0].trim();
+          if (NPC_ARTIST_IMAGES[baseArtist]) {
+            album.coverArt = NPC_ARTIST_IMAGES[baseArtist];
           }
         });
       }
@@ -14716,16 +16094,6 @@ Let us know if you accept.`,
       if (!state.activeArtistId) return state;
       const { labelId } = action.payload;
       const activeData = state.artistsData[state.activeArtistId];
-
-      const newContract: Contract = createDefaultContract({
-        labelId,
-        artistId: state.activeArtistId,
-        startDate: state.date,
-        durationWeeks: 156, // 3 years
-        albumQuota: 3,
-        albumsReleased: 0,
-      });
-
       const artist = allPlayerArtistsAndGroups.find(
         (a) => a.id === state.activeArtistId,
       );
@@ -14734,15 +16102,32 @@ Let us know if you accept.`,
       let advance = 0;
 
       if (label && artist) {
-        if (label.contractType === "petty") advance = 1000000;
-        else if (label.id === "umg") advance = 2500000;
-        else if (
+        if (label.isDistributionOnly) {
+          advance = 0;
+        } else if (label.contractType === "petty") {
+          advance = 1000000;
+        } else if (label.id === "umg" || label.id === "sony") {
+          advance = 2500000;
+        } else if (
           label.tier === "Mid-high" ||
           label.tier === "Mid-Low" ||
           label.tier === "Top"
-        )
+        ) {
           advance = 750000;
-        else if (label.tier === "Low") advance = 300000;
+        } else if (label.tier === "Low") {
+          advance = 300000;
+        }
+      }
+
+      const newContract: Contract = createDefaultContract({
+        labelId,
+        artistId: state.activeArtistId,
+        startDate: state.date,
+        durationWeeks: 156, // 3 years
+        albumQuota: 3,
+        albumsReleased: 0,
+        advance
+      });
 
         const playerUser = activeData.selectedPlayerXUserId
           ? activeData.xUsers.find(
@@ -14761,7 +16146,6 @@ Let us know if you accept.`,
             date: state.date,
           });
         }
-      }
 
       return {
         ...state,
@@ -14812,7 +16196,9 @@ Let us know if you accept.`,
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
-          content: `${activeData.name || "Artist"} reveals the meaning of the song "${song.title}":\n\n"${text}"`,
+          content: `${activeData.name || "Artist"} reveals the meaning of the song "${song.title}":
+
+"${text}"`,
           image: activeData.image,
           likes: Math.floor(Math.random() * 40000) + 10000,
           retweets: Math.floor(Math.random() * 10000) + 2000,
@@ -14884,7 +16270,7 @@ Let us know if you accept.`,
             hasSubmittedForBestNewArtist: hasSubmittedBna,
           },
         },
-        grammySubmissions: [...state.grammySubmissions, ...submissions],
+        grammySubmissions: [...(state.grammySubmissions || []), ...submissions],
         currentView: "game",
       };
     }
@@ -15320,6 +16706,13 @@ Let us know if you accept.`,
         activeVmaRedCarpetOffer: null,
       };
     }
+    
+    case "GO_TO_GOLDEN_GLOBE_SUBMISSIONS":
+      return {
+        ...state,
+        currentView: "submit_for_golden_globes",
+      };
+
     case "GO_TO_OSCAR_SUBMISSIONS": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -15341,6 +16734,31 @@ Let us know if you accept.`,
         currentView: "submitForOscars",
       };
     }
+    
+    case "SUBMIT_FOR_GOLDEN_GLOBES": {
+      if (!state.activeArtistId) return state;
+      const { submissions, emailId } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((e) => {
+        if (e.id === emailId && e.offer) {
+          return { ...e, offer: { ...e.offer, isSubmitted: true } };
+        }
+        return e;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: updatedInbox,
+          },
+        },
+        goldenGlobeSubmissions: [...(state.goldenGlobeSubmissions || []), ...submissions],
+        currentView: "game",
+      };
+    }
+
     case "SUBMIT_FOR_OSCARS": {
       if (!state.activeArtistId) return state;
       const { submissions, emailId } = action.payload;
@@ -15360,7 +16778,7 @@ Let us know if you accept.`,
             inbox: updatedInbox,
           },
         },
-        oscarSubmissions: [...state.oscarSubmissions, ...submissions],
+        oscarSubmissions: [...(state.oscarSubmissions || []), ...submissions],
         currentView: "game",
       };
     }
@@ -15506,6 +16924,41 @@ Let us know if you accept.`,
         },
       };
     }
+    case "ACCEPT_GOLDEN_GLOBE_RED_CARPET_INVITE": {
+      if (!state.activeArtistId) return state;
+      return {
+        ...state,
+        activeGoldenGlobeRedCarpetOffer: { emailId: action.payload.emailId },
+        currentView: "goldenGlobeRedCarpet",
+      };
+    }
+    case "ACCEPT_GOLDEN_GLOBE_INVITE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          email.id === action.payload.emailId &&
+          email.offer?.type === "goldenGlobeNominations"
+        ) {
+          return {
+            ...email,
+            offer: { ...email.offer, isAttending: true },
+          };
+        }
+        return email;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: updatedInbox,
+          },
+        },
+      };
+    }
+
     case "ACCEPT_OSCAR_PERFORMANCE": {
       if (!state.activeArtistId) return state;
       return {
@@ -15570,6 +17023,58 @@ Let us know if you accept.`,
         activeOscarPerformanceOffer: null,
         currentView: "inbox",
       };
+    }
+    case "ACCEPT_GOLDEN_GLOBE_RED_CARPET": {
+        if (!state.activeArtistId) return state;
+        const { emailId, lookUrl } = action.payload;
+        if (lookUrl) {
+            const activeData = state.artistsData[state.activeArtistId];
+            const artistName = state.soloArtist?.name || state.group?.name;
+            const popBasePost = {
+              id: crypto.randomUUID(),
+              authorId: "popbase",
+              content: `${artistName} arrives at the #GoldenGlobes red carpet.`,
+              image: lookUrl,
+              likes: Math.floor(Math.random() * 99000) + 16000,
+              retweets: Math.floor(Math.random() * 16000) + 7000,
+              views: Math.floor(Math.random() * 3100000) + 1200000,
+              date: state.date,
+            };
+            const newLook = {
+              id: crypto.randomUUID(),
+              awardShow: "Golden Globes",
+              year: state.date.year,
+              imageUrl: lookUrl,
+            };
+            
+            const updatedInbox = activeData.inbox.map((email) => {
+                if (email.id === emailId && email.offer?.type === "goldenGlobeRedCarpet") {
+                    return { ...email, offer: { ...email.offer, isAccepted: true } };
+                }
+                return email;
+            });
+            
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        inbox: updatedInbox,
+                        xPosts: [popBasePost, ...activeData.xPosts],
+                        pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])],
+                    }
+                },
+                activeGoldenGlobeRedCarpetOffer: null,
+                currentView: "game"
+            };
+        } else {
+             return {
+                ...state,
+                activeGoldenGlobeRedCarpetOffer: null,
+                currentView: "game"
+            };
+        }
     }
     case "ACCEPT_OSCAR_RED_CARPET": {
       if (!state.activeArtistId) return state;
@@ -15655,6 +17160,21 @@ Let us know if you accept.`,
       const artistData = state.artistsData[artistId];
       if (!artistData) return state;
 
+      const allCustomLabels: CustomLabel[] = Object.values(
+        state.artistsData,
+      ).flatMap((d) => d.customLabels);
+      const label = isCustom ? allCustomLabels.find((l) => l.id === labelId) : LABELS.find((l) => l.id === labelId);
+      
+      let advance = 0;
+      if (label && !isCustom) {
+        const stdLabel = label as Label;
+        if (stdLabel.isDistributionOnly) advance = 0;
+        else if (stdLabel.contractType === "petty") advance = 1000000;
+        else if (stdLabel.id === "umg" || stdLabel.id === "sony") advance = 2500000;
+        else if (stdLabel.tier === "Mid-high" || stdLabel.tier === "Mid-Low" || stdLabel.tier === "Top") advance = 750000;
+        else if (stdLabel.tier === "Low") advance = 300000;
+      }
+
       const newContract: Contract = createDefaultContract({
         labelId,
         isCustom,
@@ -15663,9 +17183,11 @@ Let us know if you accept.`,
         durationWeeks: 104, // 2 years
         albumQuota: 2, // A standard renewal deal
         albumsReleased: 0,
+        advance,
+        royaltyPercent: 20 // slightly better royalty for renewal
       });
 
-      const updatedData = { ...artistData, contract: newContract, isBlacklistedByLabel: false };
+      const updatedData = { ...artistData, money: artistData.money + advance, contract: newContract, isBlacklistedByLabel: false };
 
       return {
         ...state,
@@ -15713,7 +17235,15 @@ Let us know if you accept.`,
     }
     case "UPDATE_ARTIST_IMAGE": {
       const { artistId, newImage } = action.payload;
-      const newState = { ...state };
+      const loadedPodcasts = action.payload.podcasts || DEFAULT_PODCASTS;
+      const mergedPodcasts = [...loadedPodcasts];
+      DEFAULT_PODCASTS.forEach((defaultPodcast) => {
+          if (!mergedPodcasts.find(p => p.id === defaultPodcast.id)) {
+              mergedPodcasts.push(defaultPodcast);
+          }
+      });
+      const newState = {
+        podcasts: mergedPodcasts, ...state };
 
       // Update solo artist
       if (newState.soloArtist?.id === artistId) {
@@ -15975,6 +17505,25 @@ Let us know if you accept.`,
     case "SIGN_BRAND_DEAL": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      
+      const artistProfile = state.soloArtist || state.group?.members.find((m) => m.id === state.activeArtistId) || state.group;
+      
+      const newPosts = [...(activeData.xPosts || [])];
+      
+      if (action.payload.name && action.payload.brandImage) {
+          const popBasePost = {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `${artistProfile?.name} is officially a ${action.payload.name} brand ambassador.`,
+            image: `${artistProfile?.image}||${action.payload.brandImage}`,
+            likes: Math.floor(Math.random() * 150000) + 50000,
+            retweets: Math.floor(Math.random() * 30000) + 10000,
+            views: Math.floor(Math.random() * 2000000) + 500000,
+            date: state.date,
+          };
+          newPosts.unshift(popBasePost);
+      }
+
       return {
         ...state,
         artistsData: {
@@ -15986,6 +17535,11 @@ Let us know if you accept.`,
               ...(activeData.signedBrandDeals || []),
               action.payload.id,
             ],
+            activeBrandDeals: [
+              ...(activeData.activeBrandDeals || []),
+              ...(action.payload.name && action.payload.hashtag && action.payload.brandImage ? [{ id: action.payload.id, name: action.payload.name, hashtag: action.payload.hashtag, brandImage: action.payload.brandImage }] : [])
+            ],
+            xPosts: newPosts,
           },
         },
       };
@@ -16081,6 +17635,97 @@ Let us know if you accept.`,
         },
       };
     }
+
+    case "ACCEPT_FIFA_OFFER": {
+      if (!state.activeArtistId) return state;
+      const { emailId, collabs } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (email.id === emailId && email.offer?.type === "fifaWorldCupOffer") {
+          return { ...email, offer: { ...email.offer, isAccepted: true } };
+        }
+        return email;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: updatedInbox,
+          },
+        },
+        activeFifaOffer: { emailId, collabs },
+        currentView: "createFifaWorldCup",
+      };
+    }
+    case "CANCEL_FIFA_OFFER": {
+        return { ...state, activeFifaOffer: null, currentView: "inbox" };
+    }
+    case "CREATE_FIFA_CONTRIBUTION": {
+      if (!state.activeArtistId) return state;
+      const { title, coverArt } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      const collabs = state.activeFifaOffer?.collabs || [];
+      const finalTitle = `${title} (FIFA World Cup ${state.date.year}™)`;
+      // Schedule single for week 23
+      const songId = crypto.randomUUID();
+      const newSong = {
+        id: songId,
+        title: finalTitle,
+        artistId: state.activeArtistId,
+        features: [...collabs, "FIFA Sound"],
+        duration: 180 + Math.floor(Math.random() * 60),
+        explicit: false,
+        streams: 0,
+        lastWeekStreams: 0,
+        prevWeekStreams: 0,
+        sales: 0,
+        quality: 100, // High quality since it's world cup
+        releaseDate: { week: 23, year: state.date.year },
+        weeksOnChart: 0,
+        peakPosition: 0,
+        isPromoted: false,
+        isPerformance: false,
+        isCollab: true,
+        coverArt: coverArt,
+        isAvailableOnStreaming: true
+      };
+
+      const newRelease = {
+        id: crypto.randomUUID(),
+        title: finalTitle,
+        type: "Single",
+        coverArt: coverArt,
+        songIds: [songId],
+        releaseDate: { week: 23, year: state.date.year },
+        firstWeekStreams: 0,
+        firstWeekSales: 0,
+        weeksOnChart: 0,
+        peakPosition: 0,
+        wikipediaSummary: `"${title}" is the official single from the FIFA World Cup ${state.date.year} Soundtrack, performed by ${state.soloArtist?.name || state.group?.name} alongside ${collabs.join(", ")} and FIFA Sound. Released ahead of the tournament, it serves as an anthem for football fans globally.`,
+        certifications: [],
+        isAvailableOnStreaming: true
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: [...activeData.songs, newSong],
+            releases: [...activeData.releases, newRelease],
+          },
+        },
+        activeFifaOffer: null,
+        fifaSingleScheduled: { week: 23, year: state.date.year, title: finalTitle, coverArt, collabs },
+        currentView: "game",
+      };
+    }
+
     case "ACCEPT_SOUNDTRACK_OFFER": {
       if (!state.activeArtistId) return state;
       const { albumTitle, emailId } = action.payload;
@@ -16176,6 +17821,7 @@ Let us know if you accept.`,
           return {
             ...song,
             isReleased: true,
+            isAvailableOnStreaming: true,
             soundtrackTitle: albumTitle,
             releaseId: newRelease.id,
           };
@@ -17014,6 +18660,13 @@ Let us know if you accept.`,
         views: Math.floor(Math.random() * 1000000) + 500000,
         date: state.date,
       };
+      
+      const newLook = {
+          id: crypto.randomUUID(),
+          awardShow: eventInfo.eventType === "afterParty" ? eventInfo.eventName : eventInfo.eventType === "soundtrackPremiere" ? "Premiere: " + eventInfo.associatedSoundtrack : eventInfo.eventName,
+          year: state.date.year,
+          imageUrl: imageUrl || "",
+      };
 
       return {
         ...state,
@@ -17024,6 +18677,7 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             xPosts: [newPost, ...activeData.xPosts],
+            pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])],
             hype: Math.min(100, (activeData.hype || 50) + 10),
             publicImage: Math.min(100, (activeData.publicImage || 50) + 15),
           },
@@ -17108,7 +18762,9 @@ Let us know if you accept.`,
       newPosts.push({
         id: crypto.randomUUID(),
         authorId: "popbase",
-        content: `${activeArtist.name} tells ${photoshoot.magazine} the craziest rumor they have heard about themself:\n\n“${interviewAnswer.answer}”`,
+        content: `${activeArtist.name} tells ${photoshoot.magazine} the craziest rumor they have heard about themself:
+
+“${interviewAnswer.answer}”`,
         image: photoshoot.photoshootImages[1],
         likes: Math.floor(Math.random() * 80000) + 50000,
         retweets: Math.floor(Math.random() * 10000) + 5000,
@@ -17809,7 +19465,26 @@ Let us know if you accept.`,
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
+
             money: Math.max(0, activeData.money + (choice.moneyEffect || 0)),
+            recurringExpenses: (() => {
+              let exps = activeData.recurringExpenses || [];
+              if (choice.label.includes("Annulment")) {
+                exps = [...exps, { id: Date.now().toString(), name: "Annulment", cost: 50000, type: "monthly" }];
+              }
+              if (choice.label.includes("Child Support") || choice.label.includes("Agree to pay")) {
+                exps = [...exps, { id: Date.now().toString(), name: "Child Support", cost: 25000, type: "monthly" }];
+              }
+              return exps;
+            })(),
+            relationships: (() => {
+              let rels = activeData.relationships || [];
+              if (state.activeEncounter?.id === "lawsuit_divorce" || state.activeEncounter?.id === "lawsuit_annulment") {
+                 // End all marriages
+                 return rels.map(r => r.status === 'married' ? { ...r, status: 'ex', endYear: state.date.year, endWeek: state.date.week } : r);
+              }
+              return rels;
+            })(),
             popularity: Math.max(
               0,
               Math.min(
@@ -17867,15 +19542,15 @@ Let us know if you accept.`,
       }
 
       let offer: ActingOffer;
-      const pay = Math.floor(Math.random() * 5000000) + 1000000 * (activeData.popularity / 50);
+
       
       let title = '';
       if (type === 'Movie') {
-          const movies = ['Dune: Part Three', 'Spider-Man 4', 'Knives Out 3', 'Avatar: Fire and Ash', 'Barbie 2', 'Oppenheimer: The Sequel', 'The Batman - Part II', 'Mission: Impossible 9', 'Gladiator III'];
+          const movies = ['Dune: Part Three', 'Spider-Man 4', 'Knives Out 3', 'Avatar: Fire and Ash', 'Barbie 2', 'The Batman - Part II', 'Mission: Impossible 9', 'Gladiator III', 'Star Wars: New Jedi Order', 'Avengers: Secret Wars', 'Jurassic World: Rebirth', 'Fast X: Part 2', 'Deadpool 4', 'Top Gun 3', 'Wicked: Part Two', 'Black Panther 3', 'James Bond 26', 'The Hunger Games: Sunrise on the Reaping', 'The Odyssey'];
           title = movies[Math.floor(Math.random() * movies.length)];
       }
       else if (type === 'TV Show') {
-          const shows = ['The White Lotus', 'Stranger Things', 'House of the Dragon', 'Euphoria', 'The Last of Us', 'Severance', 'Succession Spin-off', 'The Bear'];
+          const shows = ['The White Lotus', 'Stranger Things', 'House of the Dragon', 'Euphoria', 'The Last of Us', 'Severance', 'Succession Spin-off', 'The Bear', 'Yellowjackets', 'Wednesday', 'Squid Game', 'The Boys', 'Bridgerton', 'Peacemaker', 'Fallout', 'Shogun', 'Black Mirror', 'The Mandalorian'];
           title = shows[Math.floor(Math.random() * shows.length)];
       }
       else {
@@ -17883,7 +19558,10 @@ Let us know if you accept.`,
          title = vaTypes[Math.floor(Math.random() * vaTypes.length)];
       }
 
-      const roleType = Math.random() > 0.5 ? 'Leading Role' : 'Supporting Role';
+      const randRole = Math.random();
+      const roleType = randRole > 0.6 ? 'Leading Role' : (randRole > 0.2 ? 'Supporting Role' : 'Extra');
+      let basePay = Math.floor(Math.random() * 5000000) + 1000000 * (activeData.popularity / 50);
+      let pay = roleType === 'Extra' ? Math.floor(basePay * 0.05) : roleType === 'Supporting Role' ? Math.floor(basePay * 0.4) : basePay;
       
       const maleNames = ['John', 'James', 'Michael', 'David', 'William', 'Alex', 'Jack', 'Ryan', 'Liam', 'Noah'];
       const femaleNames = ['Emma', 'Olivia', 'Ava', 'Isabella', 'Sophia', 'Mia', 'Charlotte', 'Amelia', 'Harper', 'Evelyn'];
@@ -18088,6 +19766,9 @@ Let us know if you accept.`,
       const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
       if (!role) return state;
       
+      const email = activeData.inbox.find(e => e.offer?.type === 'actingPremiere' && e.offer.roleId === role.id);
+      const updatedInbox = activeData.inbox.map(e => e.id === email?.id ? { ...e, offer: { ...e.offer, isAccepted: true } } : e);
+
       return {
           ...state,
           artistsData: {
@@ -18095,12 +19776,68 @@ Let us know if you accept.`,
               [state.activeArtistId]: {
                   ...activeData,
                   actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, status: "Released" } : r),
-                  popularity: Math.min(100, activeData.popularity + 2),
-                  publicImage: Math.min(100, (activeData.publicImage || 80) + 5),
-                  hype: Math.min(100, activeData.hype + 5)
+                  inbox: updatedInbox
               }
-          }
+          },
+          activeMoviePremiereOffer: { roleId: role.id, roleTitle: role.title },
+          currentView: "moviePremiereRedCarpet"
       };
+    }
+    
+    case "ACCEPT_MOVIE_PREMIERE_RED_CARPET": {
+        if (!state.activeArtistId) return state;
+        const { lookUrl } = action.payload;
+        if (!state.activeMoviePremiereOffer) return state;
+        
+        if (lookUrl) {
+            const activeData = state.artistsData[state.activeArtistId];
+            const artistName = state.soloArtist?.name || state.group?.name;
+            const title = state.activeMoviePremiereOffer.roleTitle;
+            
+            const locations = ["New York City", "Los Angeles", "Paris", "Dubai", "London", "Tokyo"];
+            const loc = locations[Math.floor(Math.random() * locations.length)];
+            
+            const popBasePost = {
+              id: crypto.randomUUID(),
+              authorId: "popbase",
+              content: `${artistName} stuns for '${title.toUpperCase()}' premiere in ${loc}.`,
+              image: lookUrl,
+              likes: Math.floor(Math.random() * 99000) + 16000,
+              retweets: Math.floor(Math.random() * 16000) + 7000,
+              views: Math.floor(Math.random() * 3100000) + 1200000,
+              date: state.date,
+            };
+            
+            const newLook = {
+              id: crypto.randomUUID(),
+              awardShow: "Movie Premiere: " + title,
+              year: state.date.year,
+              imageUrl: lookUrl,
+            };
+            
+            return {
+                ...state,
+                artistsData: {
+                    ...state.artistsData,
+                    [state.activeArtistId]: {
+                        ...activeData,
+                        xPosts: [popBasePost, ...activeData.xPosts],
+                        pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])],
+                        popularity: Math.min(100, activeData.popularity + 2),
+                        publicImage: Math.min(100, (activeData.publicImage || 80) + 5),
+                        hype: Math.min(100, activeData.hype + 5)
+                    }
+                },
+                activeMoviePremiereOffer: null,
+                currentView: "game"
+            };
+        } else {
+             return {
+                ...state,
+                activeMoviePremiereOffer: null,
+                currentView: "game"
+            };
+        }
     }
     case "DECLINE_ACTING_PREMIERE": {
       if (!state.activeArtistId) return state;
@@ -18148,6 +19885,218 @@ Let us know if you accept.`,
           }
       };
     }
+    case "LAUNCH_CRYPTO_COIN": {
+      const { name, ticker, logo, launchPrice, totalSupply, cost, playerPercent } = action.payload;
+      const artistData = state.artistsData[state.activeArtistId!];
+      if (artistData.money < cost) return state;
+      
+      const playerOwnedCoins = totalSupply * ((playerPercent || 20) / 100);
+      
+      const newCoin = {
+        id: "coin_" + Date.now(),
+        name,
+        ticker,
+        logo,
+        launchPrice,
+        currentPrice: launchPrice,
+        totalSupply,
+        playerOwnedCoins,
+        marketCap: launchPrice * totalSupply,
+        priceHistory: [launchPrice],
+        holders: 100,
+        tradingVolume: 0,
+        reputation: { hype: 50, trust: 50, utility: 0 },
+        utilityEnabled: { merch: false, tickets: false, fanClub: false, voting: false },
+        launchedDate: { ...state.date }
+      };
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId!]: {
+            ...artistData,
+            money: artistData.money - cost,
+            cryptoCoin: newCoin
+          }
+        }
+      };
+    }
+    case "BUY_CRYPTO": {
+      const { amount, cost } = action.payload;
+      const artistData = state.artistsData[state.activeArtistId!];
+      if (!artistData.cryptoCoin || artistData.money < cost) return state;
+      
+      const percentBought = amount / artistData.cryptoCoin.totalSupply;
+      const priceIncreaseMultiplier = 1 + (percentBought * 50);
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId!]: {
+            ...artistData,
+            money: artistData.money - cost,
+            cryptoCoin: {
+              ...artistData.cryptoCoin,
+              playerOwnedCoins: artistData.cryptoCoin.playerOwnedCoins + amount,
+              tradingVolume: artistData.cryptoCoin.tradingVolume + cost,
+              currentPrice: artistData.cryptoCoin.currentPrice * priceIncreaseMultiplier
+            }
+          }
+        }
+      };
+    }
+    case "SELL_CRYPTO": {
+      const { amount, revenue } = action.payload;
+      const artistData = state.artistsData[state.activeArtistId!];
+      if (!artistData.cryptoCoin || artistData.cryptoCoin.playerOwnedCoins < amount) return state;
+
+      const percentSold = amount / artistData.cryptoCoin.totalSupply;
+      const priceDecreaseMultiplier = 1 - (percentSold * 50);
+      const newPrice = Math.max(0.000001, artistData.cryptoCoin.currentPrice * priceDecreaseMultiplier);
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId!]: {
+            ...artistData,
+            money: artistData.money + revenue,
+            cryptoCoin: {
+              ...artistData.cryptoCoin,
+              playerOwnedCoins: artistData.cryptoCoin.playerOwnedCoins - amount,
+              tradingVolume: artistData.cryptoCoin.tradingVolume + revenue,
+              currentPrice: newPrice
+            }
+          }
+        }
+      };
+    }
+    case "BURN_CRYPTO": {
+      const { amount } = action.payload;
+      const artistData = state.artistsData[state.activeArtistId!];
+      if (!artistData.cryptoCoin || artistData.cryptoCoin.playerOwnedCoins < amount) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId!]: {
+            ...artistData,
+            cryptoCoin: {
+              ...artistData.cryptoCoin,
+              playerOwnedCoins: artistData.cryptoCoin.playerOwnedCoins - amount,
+              totalSupply: artistData.cryptoCoin.totalSupply - amount,
+              currentPrice: artistData.cryptoCoin.currentPrice * 1.1,
+              reputation: {
+                ...artistData.cryptoCoin.reputation,
+                trust: Math.min(100, artistData.cryptoCoin.reputation.trust + 10)
+              }
+            }
+          }
+        }
+      };
+    }
+    case "MARKET_CRYPTO": {
+      const { cost, platform } = action.payload;
+      const artistData = state.artistsData[state.activeArtistId!];
+      if (!artistData.cryptoCoin || artistData.money < cost) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId!]: {
+            ...artistData,
+            money: artistData.money - cost,
+            cryptoCoin: {
+              ...artistData.cryptoCoin,
+              reputation: {
+                ...artistData.cryptoCoin.reputation,
+                hype: Math.min(100, artistData.cryptoCoin.reputation.hype + 15)
+              }
+            }
+          }
+        }
+      };
+    }
+    case "RUGPULL_CRYPTO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.cryptoCoin) return state;
+
+      const activeArtist = state.soloArtist || state.group;
+      const artistName = activeArtist?.name || "The artist";
+
+      const cashOutValue = activeData.cryptoCoin.currentPrice * activeData.cryptoCoin.playerOwnedCoins;
+      const rugAmount = (cashOutValue).toFixed(0);
+
+      const tmzPost = {
+        id: crypto.randomUUID(),
+        authorId: "tmz",
+        content: `🚨 RUGPULL ALERT: ${artistName} just rugged their crypto project ${activeData.cryptoCoin.ticker} after cashing out for ${Number(rugAmount).toLocaleString()}! The coin has completely collapsed.`,
+        likes: Math.floor(Math.random() * 80000) + 20000,
+        retweets: Math.floor(Math.random() * 30000) + 10000,
+        views: Math.floor(Math.random() * 1500000) + 500000,
+        date: state.date,
+      };
+
+      const updatedPosts = [tmzPost, ...(activeData.xPosts || [])];
+      
+      const wasMainHolder = activeData.cryptoCoin.playerOwnedCoins >= activeData.cryptoCoin.totalSupply * 0.5;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money + cashOutValue,
+            publicImage: Math.max(0, activeData.publicImage - 40),
+            popularity: Math.max(0, activeData.popularity - 15),
+            hype: Math.max(0, activeData.hype - 300),
+            cryptoCoin: {
+                ...activeData.cryptoCoin,
+                isRugpulled: wasMainHolder,
+                currentPrice: activeData.cryptoCoin.currentPrice * 0.0001,
+                playerOwnedCoins: 0,
+                tradingVolume: activeData.cryptoCoin.tradingVolume + cashOutValue,
+                reputation: {
+                    hype: 0,
+                    trust: 0,
+                    utility: 0
+                }
+            },
+            xPosts: updatedPosts
+          }
+        }
+      };
+    }
+    case "TOGGLE_CRYPTO_UTILITY": {
+      const { utility } = action.payload;
+      const artistData = state.artistsData[state.activeArtistId!];
+      if (!artistData.cryptoCoin) return state;
+      const currentVal = artistData.cryptoCoin.utilityEnabled[utility];
+      const utilityDiff = currentVal ? -25 : 25;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId!]: {
+            ...artistData,
+            cryptoCoin: {
+              ...artistData.cryptoCoin,
+              reputation: {
+                ...artistData.cryptoCoin.reputation,
+                utility: Math.max(0, Math.min(100, artistData.cryptoCoin.reputation.utility + utilityDiff))
+              },
+              utilityEnabled: {
+                ...artistData.cryptoCoin.utilityEnabled,
+                [utility]: !currentVal
+              }
+            }
+          }
+        }
+      };
+    }
     default:
       return state;
   }
@@ -18155,6 +20104,105 @@ Let us know if you accept.`,
 
 const gameReducer = (state: GameState, action: GameAction): GameState => {
   const nextState = gameReducerInternal(state, action);
+  
+  if (action.type === "PROGRESS_WEEK") {
+    const isDailyMode = state.timeMode === "daily";
+    let isWeeklyUpdate = true;
+    if (isDailyMode) {
+      if (state.date.day === 7) isWeeklyUpdate = true;
+      else isWeeklyUpdate = false;
+    }
+    
+    if (isWeeklyUpdate) {
+      let newArtistsData = { ...nextState.artistsData };
+      let modified = false;
+      for (const artistId in newArtistsData) {
+        const artist = newArtistsData[artistId];
+        if (artist.cryptoCoin) {
+          modified = true;
+          const coin = { ...artist.cryptoCoin };
+          
+          // Random event modifier
+          let eventMultiplier = 1;
+          const r = Math.random();
+          if (r < 0.05) eventMultiplier = 1.5; // Pump
+          else if (r < 0.1) eventMultiplier = 0.5; // Crash
+          else if (r < 0.15) eventMultiplier = 1.2; // Exchange listing
+          else if (r < 0.2) eventMultiplier = 1.3; // Celeb endorsement
+          else if (r < 0.25) eventMultiplier = 1.1; // Whale buy
+          else if (r < 0.3) eventMultiplier = 0.9; // Whale sell
+          else if (r < 0.35) eventMultiplier = 1.2; // Token burn
+          else if (r < 0.4) eventMultiplier = 0.8; // Scam rumors
+          else if (r < 0.45) eventMultiplier = 1.4; // Bull run
+          else if (r < 0.5) eventMultiplier = 0.7; // Bear run
+          
+          // Baseline fluctuation
+          const artistPopularityMod = (artist.popularity - 50) / 100 * 0.15;
+          const artistHypeMod = (artist.hype) / 1000 * 0.2;
+          const fluctuation = (Math.random() - 0.5 + artistPopularityMod + artistHypeMod) * 0.2; 
+          
+          // Hype and trust modifiers
+          const hypeMod = (coin.reputation.hype - 50) / 100 * 0.1;
+          const trustMod = (coin.reputation.trust - 50) / 100 * 0.05;
+          const utilityMod = (coin.reputation.utility) / 100 * 0.1;
+          
+          const change = 1 + fluctuation + hypeMod + trustMod + utilityMod;
+          let newPrice = coin.isRugpulled ? coin.currentPrice * (0.5 + Math.random() * 0.4) : coin.currentPrice * change * eventMultiplier;
+          newPrice = Math.max(0.000001, newPrice);
+          
+          // Decay hype and trust
+          coin.reputation.hype = Math.max(0, coin.reputation.hype - 2);
+          
+          coin.currentPrice = newPrice;
+          coin.priceHistory = [...coin.priceHistory, newPrice].slice(-52);
+          coin.marketCap = newPrice * coin.totalSupply;
+          coin.tradingVolume = coin.marketCap * (Math.random() * 0.1);
+          coin.holders = coin.isRugpulled 
+            ? Math.max(0, coin.holders - Math.floor(Math.random() * 1000))
+            : Math.max(10, coin.holders + Math.floor((Math.random() - 0.4 + artistPopularityMod) * 200 * (coin.reputation.hype/50)));
+          
+          if (Math.random() < 0.6) {
+              const cryptoFan = {
+                  id: "crypto_fan_" + Math.random().toString(36).substring(7),
+                  username: "cryptobro_" + Math.floor(Math.random() * 9999),
+                  displayName: "Crypto Whale 🚀",
+                  followersCount: Math.floor(Math.random() * 50000) + 1000,
+                  isVerified: Math.random() > 0.8,
+                  bio: "Web3 | Crypto | NFTs | Not financial advice",
+                  isPlayer: false,
+                  avatar: "https://images.unsplash.com/photo-1622630998477-20b41cd0e074?w=150&h=150&fit=crop&q=80",
+                  joinedDate: { year: 2020, week: 1 },
+              };
+              if (!artist.xUsers.find(u => u.username === cryptoFan.username)) {
+                  artist.xUsers.push(cryptoFan);
+              }
+              const phrases = [
+                  `Just bought more ${coin.ticker}! We are going to the MOON 🚀🌕`,
+                  `${coin.ticker} is looking incredibly bullish right now. Don't miss out.`,
+                  `If you aren't holding ${coin.ticker} you hate money. Simple as that.`,
+                  `The chart on ${coin.ticker} is insane. Big moves incoming.`,
+                  `Just ape'd my life savings into ${coin.ticker}. Let's goooo 📈`
+              ];
+              const newCryptoPost = {
+                  id: crypto.randomUUID(),
+                  authorId: cryptoFan.id,
+                  content: phrases[Math.floor(Math.random() * phrases.length)],
+                  likes: Math.floor(Math.random() * 5000) + 50,
+                  retweets: Math.floor(Math.random() * 1000) + 10,
+                  views: Math.floor(Math.random() * 50000) + 1000,
+                  date: nextState.date,
+              };
+              artist.xPosts.unshift(newCryptoPost);
+          }
+          
+          newArtistsData[artistId] = { ...artist, cryptoCoin: coin };
+        }
+      }
+      if (modified) {
+        nextState.artistsData = newArtistsData;
+      }
+    }
+  }
 
   // Interception to duplicate popbase posts for popcrave and apply public image suppression
   if (nextState.artistsData !== state.artistsData) {
@@ -18358,6 +20406,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [gameState, dispatch] = useReducer(gameReducer, initialState);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState("Loading Game...");
   const { user, isLoading: isAuthLoading } = useFirebase();
 
   // Effect for loading game state
@@ -18379,7 +20429,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (stateToLoad) {
-          const fullyLoadedState = await injectMediaIntoState(stateToLoad);
+          const fullyLoadedState = await injectMediaIntoState(stateToLoad, (prog, msg) => { setLoadingProgress(prog); if (msg) setLoadingMessage(msg); });
           dispatch({ type: "LOAD_GAME", payload: fullyLoadedState });
         }
       } catch (err) {
@@ -18447,8 +20497,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-zinc-900 text-white min-h-screen flex items-center justify-center">
-        <p className="text-xl animate-pulse">Loading Game...</p>
+      <div className="bg-zinc-950 text-white min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md bg-zinc-900 rounded-2xl p-8 shadow-2xl border border-white/5 flex flex-col items-center text-center">
+            <svg viewBox="0 0 24 24" className="w-16 h-16 fill-current text-[#1ed760] mb-6 animate-pulse" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.996 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12 12 12 0 0 0-12-12zm5.772 17.27a.754.754 0 0 1-1.037.248c-2.842-1.735-6.42-2.127-10.638-1.164a.755.755 0 0 1-.341-1.47c4.61-1.054 8.56-.607 11.768 1.35.372.227.491.716.248 1.036zm1.471-3.284a.94.94 0 0 1-1.294.305c-3.242-1.991-8.225-2.584-12.029-1.428a.941.941 0 0 1-.555-1.802c4.341-1.317 9.873-.655 13.573 1.62.43.264.566.837.305 1.295l-.001.01zm.105-3.41c-3.921-2.327-10.37-2.54-14.122-1.405a1.127 1.127 0 1 1-.652-2.155c4.321-1.31 11.455-1.055 16.023 1.656a1.127 1.127 0 1 1-1.25 1.904z"/>
+            </svg>
+            <h1 className="text-2xl font-black mb-2">RED MIC</h1>
+            <p className="text-zinc-400 font-medium mb-8 h-6">{loadingMessage}</p>
+            <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                <div 
+                    className="bg-[#1ed760] h-2.5 rounded-full transition-all duration-300 ease-out" 
+                    style={{ width: `${loadingProgress}%` }}
+                ></div>
+            </div>
+            <p className="text-xs text-zinc-500 mt-4 uppercase tracking-widest">{loadingProgress}% Complete</p>
+        </div>
       </div>
     );
   }

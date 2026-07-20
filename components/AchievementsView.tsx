@@ -86,7 +86,11 @@ const AchievementsView: React.FC = () => {
 
     const topAlbumsFirstWeek = useMemo(() => releases
         .filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && typeof r.firstWeekStreams === 'number')
-        .sort((a, b) => (b.firstWeekStreams ?? 0) - (a.firstWeekStreams ?? 0)), [releases]);
+        .sort((a, b) => {
+            const bSPS = Math.floor((b.firstWeekStreams ?? 0) / 1500) + Math.floor(b.firstWeekSales ?? 0);
+            const aSPS = Math.floor((a.firstWeekStreams ?? 0) / 1500) + Math.floor(a.firstWeekSales ?? 0);
+            return bSPS - aSPS;
+        }), [releases]);
         
     const topVideosFirstWeek = useMemo(() => videos
         .filter(v => typeof v.firstWeekViews === 'number')
@@ -187,7 +191,7 @@ const AchievementsView: React.FC = () => {
                 <AchievementCard title={gameState.date.year >= 2008 ? "Top First Week Album/EP Streams" : "Top First Week Album/EP Sales"} accentColorClass="text-green-400">
                     <ExpandableList 
                         items={topAlbumsFirstWeek} 
-                        getValue={(item) => gameState.date.year >= 2008 ? (item.firstWeekStreams ?? 0) : Math.floor((item.firstWeekStreams ?? 0) / 1500)} 
+                        getValue={(item) => gameState.date.year >= 2008 ? (item.firstWeekStreams ?? 0) : (Math.floor((item.firstWeekStreams ?? 0) / 1500) + Math.floor(item.firstWeekSales ?? 0))} 
                         emptyMessage="No projects with first week data yet." 
                     />
                 </AchievementCard>
@@ -195,7 +199,7 @@ const AchievementsView: React.FC = () => {
                 <AchievementCard title="Highest First Week Album Sales (SPS)" accentColorClass="text-purple-400">
                     <ExpandableList 
                         items={topAlbumsFirstWeek} 
-                        getValue={(item) => Math.floor((item.firstWeekStreams ?? 0) / 1500)} 
+                        getValue={(item) => Math.floor((item.firstWeekStreams ?? 0) / 1500) + Math.floor(item.firstWeekSales ?? 0)} 
                         emptyMessage="No projects with first week data yet." 
                     />
                 </AchievementCard>

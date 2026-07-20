@@ -3,7 +3,7 @@ import { useGame, formatNumber } from '../context/GameContext';
 import { ActingRole } from '../types';
 
 const ImdbView: React.FC = () => {
-    const { activeArtist, activeArtistData, dispatch } = useGame();
+    const { activeArtist, activeArtistData, dispatch, gameState } = useGame();
     const [isEditing, setIsEditing] = useState(false);
     const [editBio, setEditBio] = useState('');
     const [editBirthDate, setEditBirthDate] = useState('');
@@ -32,7 +32,29 @@ const ImdbView: React.FC = () => {
 
     const soundtracks = [...soundtracksSingles, ...soundtracksAlbums];
 
-    const allCredits = [...roles, ...soundtracks].sort((a, b) => b.year - a.year);
+        const podcastRoles = (gameState.podcasts || []).filter(p => p.host === activeArtist.name).map(p => ({
+        id: p.id,
+        title: p.name,
+        type: 'TV Show',
+        roleName: 'Host (Self)',
+        year: p.episodes.length > 0 ? p.episodes[0].releaseDate.year : 2024,
+        status: 'Released' as const,
+        coverUrl: p.coverArt,
+        rating: p.imdbRating
+    }));
+    
+    const guestPodcasts = (gameState.podcasts || []).filter(p => p.episodes.some(ep => ep.guestName === activeArtist.name)).map(p => ({
+        id: p.id + "_guest",
+        title: p.name,
+        type: 'TV Show',
+        roleName: 'Guest (Self)',
+        year: p.episodes.find(ep => ep.guestName === activeArtist.name)?.releaseDate.year || 2024,
+        status: 'Released' as const,
+        coverUrl: p.coverArt,
+        rating: p.imdbRating
+    }));
+
+    const allCredits = [...roles, ...soundtracks, ...podcastRoles, ...guestPodcasts].sort((a, b) => b.year - a.year);
 
     const releasedTrailers = roles.filter(r => r.status === 'Released' && r.trailerUrl);
     const latestTrailer = releasedTrailers.length > 0 ? releasedTrailers[0] : null;

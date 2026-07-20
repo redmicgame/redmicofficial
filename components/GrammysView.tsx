@@ -38,6 +38,17 @@ const GrammysView: React.FC = () => {
         setCurrentYearIndex(prev => Math.min(awardsByYear.length - 1, prev + 1));
     };
 
+    
+        const getItemName = (award: { itemId: string, itemName: string, category: string }) => {
+        if (award.itemName && award.itemName !== 'N/A' && award.itemName !== 'Unknown') return award.itemName;
+        if (award.category === 'Best New Artist') return activeArtist.name;
+        const song = songs.find(s => s.id === award.itemId);
+        if (song) return song.title;
+        const release = releases.find(r => r.id === award.itemId);
+        if (release) return release.title;
+        return award.itemName;
+    };
+
     const getItemCoverArt = (itemId: string) => {
         const song = songs.find(s => s.id === itemId);
         if (song) return song.coverArt;
@@ -114,11 +125,11 @@ const GrammysView: React.FC = () => {
                          <div className="py-4 flex-grow space-y-4 overflow-y-auto">
                             {awardsByYear[currentYearIndex][1].map(award => (
                                 <div key={award.itemId + award.category} className="flex items-center gap-4">
-                                    <img src={getItemCoverArt(award.itemId)} alt={award.itemName} className="w-16 h-16 object-cover" />
+                                    <img src={getItemCoverArt(award.itemId)} alt={getItemName(award)} className="w-16 h-16 object-cover" />
                                     <div className="flex-grow">
                                         <p className={`font-bold ${award.isWinner ? 'text-amber-400' : ''}`}>{award.isWinner ? 'WINNER' : 'NOMINEE'}</p>
                                         <p className="text-sm text-zinc-300">{award.category}</p>
-                                        <p className="text-sm font-semibold">{award.itemName}</p>
+                                        <p className="text-sm font-semibold">{getItemName(award)}</p>
                                     </div>
                                 </div>
                             ))}

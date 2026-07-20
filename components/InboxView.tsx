@@ -220,6 +220,13 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             case 'amaRedCarpet':
                 dispatch({ type: 'ACCEPT_AMA_RED_CARPET', payload: { emailId: email.id, lookUrl: '' } }); 
                 break;
+            case 'goldenGlobeNominations':
+                dispatch({ type: 'ACCEPT_GOLDEN_GLOBE_INVITE', payload: { emailId: email.id } });
+                break;
+
+            case 'goldenGlobeSubmission':
+                dispatch({ type: 'GO_TO_GOLDEN_GLOBE_SUBMISSIONS', payload: { emailId: email.id } });
+                break;
             case 'oscarSubmission':
                 dispatch({ type: 'GO_TO_OSCAR_SUBMISSIONS', payload: { emailId: email.id } });
                 break;
@@ -233,6 +240,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 break;
             case 'soundtrackOffer':
                 setShowSoundtrackConfirm(true);
+                break;
+            case 'fifaWorldCupOffer':
+                dispatch({ type: 'ACCEPT_FIFA_OFFER', payload: { emailId: email.id, collabs: email.offer.collabs }});
                 break;
             case 'eventInvitation':
                 dispatch({ type: 'ACCEPT_EVENT_INVITATION', payload: { emailId: email.id, eventName: email.offer.eventName, hostName: email.offer.hostName, associatedSoundtrack: email.offer.associatedSoundtrack, eventType: email.offer.eventType }});
@@ -549,6 +559,18 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 acceptedText = "You are attending the AMAs";
                 isAccepted = !!email.offer.isAttending;
                 break;
+            case 'goldenGlobeNominations':
+                buttonText = "Attend Ceremony";
+                buttonClass = "bg-amber-400 hover:bg-amber-500 text-black shadow-amber-400/20";
+                acceptedText = "Attending Ceremony";
+                isAccepted = !!email.offer.isAttending;
+                break;
+            case 'goldenGlobeSubmission':
+                buttonText = "Submit For Golden Globes";
+                buttonClass = "bg-amber-400 hover:bg-amber-500 text-black shadow-amber-400/20";
+                acceptedText = "Submissions Sent";
+                isAccepted = email.offer.isSubmitted;
+                break;
             case 'oscarSubmission':
                 buttonText = "Submit For Oscars";
                 buttonClass = "bg-amber-400 hover:bg-amber-500 text-black shadow-amber-400/20";
@@ -570,6 +592,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 buttonClass = "bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20";
                 acceptedText = "Request Fulfilled";
                 isAccepted = email.offer.isFulfilled;
+                break;
+            case 'fifaWorldCupOffer':
+                buttonText = 'Accept FIFA Offer';
+                buttonClass = 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/20';
+                acceptedText = 'Offer Accepted';
+                isAccepted = email.offer.isAccepted;
                 break;
             case 'soundtrackOffer':
                 buttonText = `Contribute to "${email.offer.albumTitle}"`;

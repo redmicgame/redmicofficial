@@ -1,3 +1,4 @@
+import { NPC_ARTIST_IMAGES } from "../constants";
 
 
 import React, { useMemo } from 'react';

@@ -123,14 +123,16 @@ const WikipediaView: React.FC = () => {
                 const grammyPlays = activeArtistData?.grammyHistory || [];
                 const amaPlays = activeArtistData?.amaHistory || [];
                 const oscarPlays = activeArtistData?.oscarHistory || [];
+                const goldenGlobePlays = activeArtistData?.goldenGlobeHistory || [];
 
                 const relatedGrammys = grammyPlays.filter(g => g.itemId === release.id || release.songIds.includes(g.itemId));
                 const relatedAmas = amaPlays.filter(a => a.itemId === release.id || release.songIds.includes(a.itemId));
                 const relatedOscars = oscarPlays.filter(o => release.songIds.includes(o.itemId));
+                const relatedGlobes = goldenGlobePlays.filter(g => g.itemId === release.id || release.songIds.includes(g.itemId));
 
                 const wins: string[] = [];
                 const noms: string[] = [];
-                [...relatedGrammys, ...relatedAmas].forEach(award => {
+                [...relatedGrammys, ...relatedAmas, ...relatedGlobes].forEach(award => {
                     const awardString = `${award.category} ${'year' in award ? `(${award.year})` : ''} for "${award.itemName}"`;
                     if (award.isWinner) wins.push(awardString);
                     else noms.push(awardString);

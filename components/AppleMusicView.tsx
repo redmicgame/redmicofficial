@@ -60,12 +60,12 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
     const isSingle = release.type === 'Single';
     const singleSong = isSingle ? releaseSongs[0] : null;
 
-    const artistDisplay = (isSingle && singleSong && singleSong.collaboration)
-        ? `${activeArtist.name} & ${singleSong.collaboration.artistName}`
+    const artistDisplay = (isSingle && singleSong && (singleSong.collaboration || (singleSong.features && singleSong.features.length > 0)))
+        ? [activeArtist.name, ...(singleSong.features || []), ...(singleSong.collaboration ? [singleSong.collaboration.artistName] : [])].join(" & ")
         : activeArtist.name;
     
     const releaseTitle = (isSingle && singleSong && singleSong.collaboration)
-        ? release.title.replace(` (feat. ${singleSong.collaboration.artistName})`, '')
+        ? release.title.replace(new RegExp(` \\(feat\\. ${singleSong.collaboration.artistName}\\)`), '')
         : release.title;
 
     let distroString = "";
@@ -389,7 +389,7 @@ const AppleMusicView: React.FC = () => {
                                 {topSongs.map((song) => {
                                     const release = releases.find(r => r.id === song.releaseId);
                                     const songTitle = song.collaboration
-                                        ? song.title.replace(` (feat. ${song.collaboration.artistName})`, '')
+                                        ? song.title.replace(new RegExp(` \\(feat\\. ${song.collaboration.artistName}\\)`), '')
                                         : song.title;
                                     
                                     let subTitle = '';

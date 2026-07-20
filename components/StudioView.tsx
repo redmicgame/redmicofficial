@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES, SUBGENRES } from '../constants';
+import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ERAS, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES, SUBGENRES } from '../constants';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -93,7 +93,12 @@ const StudioView: React.FC = () => {
     };
 
     const potentialCollaborators = useMemo(() => {
-        const npcs = NPC_ARTIST_NAMES.slice().sort();
+        const currentYear = gameState.date.year;
+        const npcs = NPC_ARTIST_NAMES.filter(name => {
+            if (!NPC_ERAS[name]) return true;
+            const era = NPC_ERAS[name];
+            return currentYear >= era.start && currentYear <= era.end;
+        }).sort();
         const otherPlayerArtists = allPlayerArtists
             .filter(a => a.id !== activeArtist.id)
             .map(a => a.name)

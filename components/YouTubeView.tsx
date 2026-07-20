@@ -55,7 +55,7 @@ const VideoItem: React.FC<{
                 <div className="flex-grow min-w-0">
                     <h4 className="font-semibold leading-tight line-clamp-2">{video.title}</h4>
                     <p className="text-xs text-zinc-400 truncate">
-                        {channel?.name} • {formatNumber(video.views)} views • {formatTimeAgo(video.releaseDate, date)}
+                        {channel?.name} • {video.isScheduled ? 'Scheduled for ' + video.releaseDate.year + ' W' + video.releaseDate.week : formatNumber(video.views) + ' views • ' + formatTimeAgo(video.releaseDate, date)}
                     </p>
                 </div>
                 <DotsVerticalIcon className="w-5 h-5 text-zinc-400 flex-shrink-0" />
@@ -170,6 +170,7 @@ const YouTubeChannelView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const { date, activeYoutubeChannel, activeArtistId, viewingPastLabelId } = gameState;
     const [filter, setFilter] = useState<'Popular' | 'Latest' | 'Oldest'>('Popular');
+    const [channelTab, setChannelTab] = useState<'Videos' | 'Podcasts'>('Videos');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!activeArtist || !activeArtistData) return null;
@@ -327,16 +328,40 @@ const YouTubeChannelView: React.FC = () => {
             </div>
 
             <div className="mt-4 border-y border-white/10">
+                 
                  <div className="flex gap-4 px-4 overflow-x-auto">
                     <button className="py-3 text-sm font-semibold text-zinc-400">Home</button>
-                    <button className="py-3 text-sm font-semibold border-b-2 border-white">Videos</button>
+                    <button onClick={() => setChannelTab('Videos')} className={`py-3 text-sm font-semibold ${channelTab === 'Videos' ? 'border-b-2 border-white text-white' : 'text-zinc-400'}`}>Videos</button>
                     <button className="py-3 text-sm font-semibold text-zinc-400">Shorts</button>
                     <button className="py-3 text-sm font-semibold text-zinc-400">Live</button>
                     <button className="py-3 text-sm font-semibold text-zinc-400">Releases</button>
+                    {(gameState.podcasts || []).filter(p => p.host === channelData.name).length > 0 && (
+                        <button onClick={() => setChannelTab('Podcasts')} className={`py-3 text-sm font-semibold ${channelTab === 'Podcasts' ? 'border-b-2 border-white text-white' : 'text-zinc-400'}`}>Podcasts</button>
+                    )}
                 </div>
+             
             </div>
             
             <main className="p-4 space-y-4">
+                {channelTab === 'Podcasts' ? (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold">Podcasts</h3>
+                        {(gameState.podcasts || []).filter(p => p.host === channelData.name).map(podcast => (
+                            <div key={podcast.id} className="flex gap-3 bg-zinc-800/50 p-2 rounded-lg cursor-pointer hover:bg-zinc-800 transition" onClick={() => {
+                                dispatch({ type: 'UPDATE_GAME_STATE', payload: { currentView: 'spotifyPodcasts' } });
+                                // We also need to set selected podcast, maybe it's better to just open it via spotifyPodcasts?
+                            }}>
+                                <img src={podcast.coverArt || channelData.avatar} className="w-32 h-32 rounded-lg object-cover flex-shrink-0" />
+                                <div className="flex flex-col py-1">
+                                    <h4 className="font-bold text-xl leading-tight line-clamp-2">{podcast.name}</h4>
+                                    <p className="text-sm text-zinc-400 mt-1 line-clamp-2">{podcast.description}</p>
+                                    <p className="text-xs text-zinc-500 mt-auto">{podcast.episodes.length} episodes</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (<>
+                
                 <div className="flex justify-between items-center">
                     <h3 className="text-lg font-bold">Videos</h3>
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'createVideo'})} className="bg-red-600 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
@@ -365,7 +390,7 @@ const YouTubeChannelView: React.FC = () => {
                                 </div>
                                 <div className="flex-grow w-2/3">
                                     <h4 className="font-semibold leading-tight line-clamp-2">{video.title}</h4>
-                                    <p className="text-xs text-zinc-400">{formatNumber(video.views)} views • {formatTimeAgo(video.releaseDate, date)}</p>
+                                    <p className="text-xs text-zinc-400">{video.isScheduled ? 'Scheduled for ' + video.releaseDate.year + ' W' + video.releaseDate.week : formatNumber(video.views) + ' views • ' + formatTimeAgo(video.releaseDate, date)}</p>
                                 </div>
                                 <div className="self-start">
                                     <DotsVerticalIcon className="w-5 h-5 text-zinc-400"/>
@@ -379,7 +404,7 @@ const YouTubeChannelView: React.FC = () => {
                         <p className="text-zinc-500 text-sm">Create your first video to build your channel!</p>
                     </div>
                 )}
-            </main>
+            </>)}</main>
         </div>
     );
 };

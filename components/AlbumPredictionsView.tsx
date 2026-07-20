@@ -14,7 +14,7 @@ interface PredictionEntry {
 }
 
 const AlbumPredictionsView: React.FC = () => {
-    const { gameState, dispatch, activeArtistData } = useGame();
+    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const [purchased, setPurchased] = useState(false);
 
     if (!activeArtistData) return null;
@@ -41,7 +41,7 @@ const AlbumPredictionsView: React.FC = () => {
                 list.push({
                     id: sub.release.id,
                     title: sub.release.title,
-                    artist: activeArtistData.name || "You",
+                    artist: activeArtist.name || "You",
                     coverArt: sub.release.coverArt,
                     label: sub.release.releasingLabel ? sub.release.releasingLabel.name : (activeArtistData.contract ? activeArtistData.contract.labelId : "Independent"),
                     pureSales: Math.floor(preorderSales * 1.5 + (stableRandom * 5000)), // Prediction
@@ -76,7 +76,7 @@ const AlbumPredictionsView: React.FC = () => {
                         list.push({
                             id: rel.id,
                             title: rel.title,
-                            artist: activeArtistData.name || "You",
+                            artist: activeArtist.name || "You",
                             coverArt: rel.coverArt,
                             label: rel.releasingLabel ? rel.releasingLabel.name : "Independent",
                             pureSales: Math.floor(predictedSales),

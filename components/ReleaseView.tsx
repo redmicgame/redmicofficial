@@ -230,7 +230,24 @@ const ReleaseView: React.FC = () => {
                     </div>
                 </div>
                 
-                {releaseType === 'Album (Deluxe)' ? (
+                {releaseType === 'Live Album' ? (
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="live-tour" className="block text-sm font-medium text-zinc-300">Select Completed Tour</label>
+                            <select
+                                id="live-tour"
+                                value={selectedLiveTourId}
+                                onChange={(e) => setSelectedLiveTourId(e.target.value)}
+                                className="mt-1 block w-full bg-zinc-800 border-zinc-700 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                            >
+                                <option value="">Select a tour</option>
+                                {activeArtistData.tours.filter(t => t.status === 'finished').map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                ) : releaseType === 'Album (Deluxe)' ? (
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="base-album" className="block text-sm font-medium text-zinc-300">Base Album</label>

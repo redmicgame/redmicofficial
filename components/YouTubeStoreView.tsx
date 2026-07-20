@@ -18,7 +18,7 @@ const AddMerchModal: React.FC<{
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const [releaseId, setReleaseId] = useState('');
     const [variantName, setVariantName] = useState('');
-    const [merchType, setMerchType] = useState<'Vinyl' | 'CD' | 'Ringtone'>('Vinyl');
+    const [merchType, setMerchType] = useState<'Vinyl' | 'CD' | 'Ringtone' | 'Cassette' | 'T-Shirt' | 'Hoodie' | 'Tour Exclusive Merch'>('Vinyl');
     const [price, setPrice] = useState(39.98);
     const [stockQty, setStockQty] = useState(1000);
     const [image, setImage] = useState<string | null>(null);
@@ -27,7 +27,7 @@ const AddMerchModal: React.FC<{
 
     const isRingtoneEra = gameState.date.year >= 2006 && gameState.date.year <= 2010;
 
-    const unitCost = merchType === 'Vinyl' ? 12 : merchType === 'CD' ? 3 : 0;
+    const unitCost = merchType === 'Vinyl' ? 12 : merchType === 'CD' ? 3 : merchType === 'Cassette' ? 4 : merchType === 'T-Shirt' ? 15 : merchType === 'Hoodie' ? 25 : merchType === 'Tour Exclusive Merch' ? 20 : 0;
     const totalCost = merchType === 'Ringtone' ? 0 : stockQty * unitCost;
 
     if (!activeArtistData || !activeArtist) return null;
@@ -60,13 +60,13 @@ const AddMerchModal: React.FC<{
         }
     };
     
-    const handleMerchTypeChange = (type: 'Vinyl' | 'CD' | 'Ringtone') => {
+    const handleMerchTypeChange = (type: 'Vinyl' | 'CD' | 'Ringtone' | 'Cassette' | 'T-Shirt' | 'Hoodie' | 'Tour Exclusive Merch') => {
         setMerchType(type);
         if (type === 'Ringtone') {
             setPrice(2.99);
             setStockQty(9999999);
         } else {
-            setPrice(type === 'Vinyl' ? 39.98 : 12.98);
+            setPrice(type === 'Vinyl' ? 39.98 : type === 'CD' ? 12.98 : type === 'Cassette' ? 14.98 : type === 'T-Shirt' ? 35.00 : type === 'Hoodie' ? 65.00 : type === 'Tour Exclusive Merch' ? 50.00 : 12.98);
         }
     };
 

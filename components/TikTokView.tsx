@@ -96,7 +96,110 @@ const TikTokView: React.FC = () => {
     const [createSongId, setCreateSongId] = useState<string>('');
     const [createThumbnail, setCreateThumbnail] = useState<string>('');
 
-    const containerRef = useRef<HTMLDivElement>(null);
+        const containerRef = useRef<HTMLDivElement>(null);
+
+    const [fypVideos, setFypVideos] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (currentTab === 'foryou' && fypVideos.length === 0) {
+            const newFypVideos = [];
+            const playerSongs = activeArtistData?.songs?.filter(s => s.isReleased) || [];
+            const npcSongs = gameState.npcs || [];
+            const allSongs = [...playerSongs, ...npcSongs];
+            
+            const artistCaptions = [
+                "dancing to my new song 🕺",
+                "pov: you just released the song of the summer",
+                "can't stop listening to this",
+                "behind the scenes of the music video!",
+                "drafts 🤪",
+                "obsessed with this sound",
+                "is it giving??",
+                "make sure to stream my new single!!",
+                "tour rehearsals 🎤"
+            ];
+
+            const fanCaptions = [
+                "obsessed with this part 😭",
+                "the bridge is heavenly",
+                "POV: you're listening to the song of the year",
+                "choreography time! ✨",
+                "my new favorite song",
+                "they put something in this song fr",
+                "wait this is a bop",
+                "i cant stop playing this",
+                "stan twitter found its new anthem"
+            ];
+
+            const fanUsernames = [
+                "popcraved", "musicfanatic", "stanaccount123", "daily_updates",
+                "chartdata_fan", "themusictea", "pop_icon", "starlight_22", 
+                "moonlight_babe", "vibe_check", "music_lover99", "tayvoodoo"
+            ];
+            
+            const fanPhotos = activeArtistData?.paparazziPhotos?.filter(p => p.category === 'TikTok Fan') || [];
+
+            for (let i = 0; i < 20; i++) {
+                const isFan = Math.random() > 0.4 && playerSongs.length > 0;
+                let song;
+                let artistName = "";
+                let username = "";
+                let avatar = "";
+                let thumbnail = "";
+                let isVerified = false;
+                let content = "";
+                
+                if (isFan) {
+                    song = playerSongs[Math.floor(Math.random() * playerSongs.length)];
+                    artistName = activeArtist?.name || "Unknown";
+                    username = fanUsernames[Math.floor(Math.random() * fanUsernames.length)] + Math.floor(Math.random() * 100);
+                    
+                    avatar = `https://ui-avatars.com/api/?name=${username[0]}&background=random`;
+                    if (fanPhotos.length > 0) {
+                        const randomPhoto = fanPhotos[Math.floor(Math.random() * fanPhotos.length)];
+                        thumbnail = randomPhoto.image;
+                    } else {
+                        thumbnail = activeArtist?.image || "https://ui-avatars.com/api/?name=F&background=random"; 
+                    }
+                    content = fanCaptions[Math.floor(Math.random() * fanCaptions.length)];
+                    isVerified = false;
+                } else {
+                    song = allSongs[Math.floor(Math.random() * allSongs.length)];
+                    if (!song) continue;
+                    
+                    const isPlayerSong = song.hasOwnProperty('streams');
+                    artistName = isPlayerSong ? (activeArtist?.name || "") : (song.artist || "Unknown");
+                    const defaultAvatar = "https://ui-avatars.com/api/?name=F&background=random";
+                    avatar = isPlayerSong 
+                        ? (activeArtist?.imageUrl || activeArtist?.image || defaultAvatar) 
+                        : (gameState.npcImages?.[artistName] || defaultAvatar);
+                    
+                    thumbnail = avatar;
+                    if (artistName === "Taylor Swift") {
+                        thumbnail = "https://cdn-images.dzcdn.net/images/artist/e528e270424103b527f8a27ac625563b/500x500-000000-80-0-0.jpg"; // Taylor Swift TikTok Image
+                    }
+                    
+                    username = artistName.replace(/\s+/g, '').toLowerCase();
+                    content = artistCaptions[Math.floor(Math.random() * artistCaptions.length)];
+                    isVerified = Math.random() > 0.2;
+                }
+
+                newFypVideos.push({
+                    id: `fyp_${Date.now()}_${i}`,
+                    username: username,
+                    userAvatar: avatar,
+                    content: content,
+                    songName: `${song.title || "Original"} - ${artistName}`,
+                    thumbnail: thumbnail,
+                    likes: Math.floor(Math.random() * (isFan ? 1000000 : 5000000)) + 1000,
+                    comments: Math.floor(Math.random() * (isFan ? 20000 : 100000)) + 100,
+                    views: Math.floor(Math.random() * (isFan ? 5000000 : 20000000)) + 10000,
+                    isVerified: isVerified
+                });
+            }
+            setFypVideos(newFypVideos);
+        }
+    }, [currentTab, fypVideos.length, activeArtist, activeArtistData, gameState.npcs, gameState.npcImages]);
 
     const releasedSongs = useMemo(() => {
         if (!activeArtistData) return [];
@@ -239,19 +342,14 @@ const TikTokView: React.FC = () => {
 
             {/* Content Area */}
             <div className="flex-1 flex flex-col overflow-y-scroll snap-y snap-mandatory hide-scrollbar relative">
-                {currentTab === 'foryou' && (
+                {currentTab === 'foryou' && fypVideos.length > 0 && fypVideos.map(video => (
+                    <TikTokFeedVideo key={video.id} video={video} />
+                ))}
+                {currentTab === 'foryou' && fypVideos.length === 0 && (
                    <div className="h-full w-full bg-black flex flex-col items-center justify-center text-center px-8 relative">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 pointer-events-none"></div>
-                        <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-6 border border-zinc-800 shadow-xl relative mt-[-40px]">
-                            <TikTokIcon className="w-8 h-8 text-[#25F4EE] absolute -translate-x-[2px] opacity-70" />
-                            <TikTokIcon className="w-8 h-8 text-[#FE2C55] absolute translate-x-[2px] opacity-70" />
-                            <TikTokIcon className="w-8 h-8 text-white relative z-10" />
+                        <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-6 animate-pulse">
+                            <TikTokIcon className="w-8 h-8 text-white" />
                         </div>
-                        <h2 className="text-2xl font-bold mb-2">For You Page</h2>
-                        <h3 className="text-[#25F4EE] font-bold text-lg mb-4">Coming Soon</h3>
-                        <p className="text-zinc-400 text-sm max-w-[250px] leading-relaxed">
-                            We're teaching our algorithm how to show you the perfect videos. Check back later!
-                        </p>
                    </div>
                 )}
 

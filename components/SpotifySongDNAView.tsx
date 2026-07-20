@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import type { Song, PlayableGroup } from '../types';
 import { NPC_ARTIST_IMAGES } from '../constants';
+import { SongDNAProfileView } from './SongDNAProfileView';
 
 export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> = ({ song, onBack }) => {
     const { activeArtist, activeArtistData, allPlayerArtists } = useGame();
+    const [selectedContributor, setSelectedContributor] = useState<string | null>(null);
 
     if (!activeArtistData) return null;
 
@@ -44,6 +46,7 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
     // Calculate total contributors count
     const allContributors = new Set([
         mainArtistName,
+        ...(song.features || []),
         ...(song.collaboration ? [song.collaboration.artistName] : []),
         ...(song.isFeatureToNpc && song.npcArtistName ? [song.npcArtistName] : []),
         ...producers,
@@ -70,6 +73,7 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
     };
 
     addRole(mainArtistName, "Main Artist");
+    if (song.features) { song.features.forEach(f => addRole(f, "Featured Artist")); }
     if (song.collaboration) addRole(song.collaboration.artistName, "Featured Artist");
     if (song.isFeatureToNpc && song.npcArtistName) addRole(song.npcArtistName, "Featured Artist");
     producers.forEach(p => addRole(p, "Producer"));
@@ -107,7 +111,7 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
                         <h1 className="text-xl sm:text-2xl font-bold truncate">{song.title}</h1>
                         <p className="text-zinc-400 text-[13px] sm:text-sm flex items-center gap-1.5 mt-1 truncate">
                             {song.explicit && <span className="text-[10px] w-4 h-4 bg-zinc-400 text-black font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
-                            <span className="truncate">{new Date().getFullYear()} • {mainArtistName} {song.collaboration && `and ${song.collaboration.artistName}`}</span>
+                            <span className="truncate">{new Date().getFullYear()} • {[mainArtistName, ...(song.features || []), ...(song.collaboration ? [song.collaboration.artistName] : [])].join(", ")}</span>
                         </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -119,7 +123,7 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
                 <h2 className="text-xl font-bold mb-6 tracking-tight">Contributors</h2>
                 <div className="flex overflow-x-auto gap-4 pb-6 snap-x -mx-5 px-5">
                     {richContributors.map((c, idx) => (
-                        <div key={idx} className="flex-shrink-0 w-32 flex flex-col items-center text-center snap-start">
+                        <div key={idx} className="flex-shrink-0 w-32 flex flex-col items-center text-center snap-start cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setSelectedContributor(c.name)}>
                             {c.image ? (
                                 <img src={c.image} alt={c.name} className="w-24 h-24 rounded-full object-cover mb-3 bg-[#333]" />
                             ) : (
@@ -157,6 +161,18 @@ export const SpotifySongDNAView: React.FC<{ song: Song; onBack: () => void; }> =
                     </div>
                 )}
             </main>
+            
+            {selectedContributor && (
+                <SongDNAProfileView 
+                    contributorName={selectedContributor}
+                    onBack={() => setSelectedContributor(null)}
+                    onClose={() => {
+                        setSelectedContributor(null);
+                        onBack();
+                    }}
+                    onContributorClick={(name) => setSelectedContributor(name)}
+                />
+            )}
         </div>
     );
 };

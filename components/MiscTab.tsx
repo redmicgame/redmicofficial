@@ -472,6 +472,7 @@ const MiscTab: React.FC = () => {
                                     <option>Scandal</option>
                                     <option>Fashion</option>
                                     <option>Candid</option>
+                                    <option>TikTok Fan</option>
                                 </select>
                                 <button onClick={handleAddPaparazziPhoto} disabled={!paparazziImage} className="w-full h-10 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg disabled:bg-zinc-600">
                                     Add Photo
@@ -481,7 +482,7 @@ const MiscTab: React.FC = () => {
                         <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                              {activeArtistData.paparazziPhotos.map((photo) => (
                                 <div key={photo.id} className="relative group">
-                                    <img src={photo.image} className="w-full aspect-square object-cover rounded-md bg-zinc-700"/>
+                                    <img src={photo.image} className={`w-full ${photo.category === 'TikTok Fan' ? 'aspect-[9/16]' : 'aspect-square'} object-cover rounded-md bg-zinc-700`}/>
                                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs text-center p-1 rounded-b-md">{photo.category}</div>
                                     {photo.year && <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1 rounded pointer-events-none">{photo.year}</div>}
                                     <button onClick={() => dispatch({type: 'DELETE_PAPARAZZI_PHOTO', payload: photo.id})} className="absolute top-1 right-1 bg-red-600/90 text-white w-5 h-5 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 flex items-center justify-center z-10">×</button>

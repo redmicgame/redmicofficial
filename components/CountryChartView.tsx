@@ -1,3 +1,4 @@
+import { NPC_ARTIST_IMAGES } from "../constants";
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';

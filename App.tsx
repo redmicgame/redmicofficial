@@ -1,3 +1,5 @@
+import GoldenGlobesView from './components/GoldenGlobesView';
+import SubmitForGoldenGlobesView from './components/SubmitForGoldenGlobesView';
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 
 
@@ -34,6 +36,9 @@ import XCreateSpaceView from './components/XCreateSpaceView';
 import XActiveSpaceView from './components/XActiveSpaceView';
 import XAnalyticsView from './components/XAnalyticsView';
 import XCreatorStudioView from './components/XCreatorStudioView';
+import ManagerPodcastsView from './components/ManagerPodcastsView';
+import SpotifyPodcastsView from './components/SpotifyPodcastsView';
+import SpotifyForCreatorsView from './components/SpotifyForCreatorsView';
 import SpotifyForArtistsView from './components/SpotifyForArtistsView';
 import AppleMusicForArtistsView from './components/AppleMusicForArtistsView';
 import './utils/xContentGenerator';
@@ -69,6 +74,7 @@ import AlbumSalesChartView from './components/AlbumSalesChartView';
 import LabelsView from './components/LabelsView';
 import ReleaseHubView from './components/ReleaseHubView';
 import CreateSoundtrackView from './components/CreateSoundtrackView';
+import CreateFifaWorldCupView from './components/CreateFifaWorldCupView';
 import SpotifySoundtrackDetailView from './components/SpotifySoundtrackDetailView';
 import GameGuideView from './components/GameGuideView';
 import ToursView from './components/ToursView';
@@ -104,6 +110,7 @@ import RiaaView from './components/RiaaView';
 import AttendEventView from './components/AttendEventView';
 
 import MySpaceView from './components/MySpaceView';
+import CryptoView from './components/CryptoView';
 import { ChartPredictionsView } from './components/ChartPredictionsView';
 import KalshiView from './components/KalshiView';
 import ImdbView from './components/ImdbView';
@@ -136,6 +143,12 @@ const AppContent: React.FC = () => {
                 return <SpotifyView />;
             case 'spotifyAlbumCountdown':
                 return <SpotifyAlbumCountdownView />;
+            case 'managerPodcasts':
+                return <ManagerPodcastsView />;
+            case 'spotifyPodcasts':
+                return <SpotifyPodcastsView />;
+            case 'spotifyForCreators':
+                return <SpotifyForCreatorsView />;
             case 'spotifyForArtists':
                 return <SpotifyForArtistsView />;
             case 'spotifyWrapped':
@@ -238,6 +251,8 @@ const AppContent: React.FC = () => {
                 return <CreateFeatureVideoView />;
             case 'myspace':
                 return <MySpaceView />;
+            case 'crypto':
+                return <CryptoView />;
             case 'x':
                 return <XView />;
             case 'xProfile':
@@ -306,6 +321,8 @@ const AppContent: React.FC = () => {
                 return <CreateOnlyFansPostView />;
             case 'createSoundtrack':
                 return <CreateSoundtrackView />;
+            case 'createFifaWorldCup':
+                return <CreateFifaWorldCupView />;
             case 'spotifySoundtrackDetail':
                 return <SpotifySoundtrackDetailView />;
             case 'gameGuide':

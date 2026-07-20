@@ -26,7 +26,13 @@ const CreateLabelView: React.FC = () => {
     const eraConfig = getEraConfiguration(gameState.date.year);
 
     const availableDeals = useMemo(() => {
-        return LABELS.filter(label => careerStreams >= label.streamRequirement);
+        const currentYear = gameState.date.year;
+        return LABELS.filter(label => 
+            careerStreams >= label.streamRequirement && 
+            label.contractType !== 'petty' &&
+            (!label.activeFromYear || currentYear >= label.activeFromYear) &&
+            (!label.activeUntilYear || currentYear <= label.activeUntilYear)
+        );
     }, [careerStreams]);
     
     const groupMembers = careerMode === 'group' ? group?.members.filter(m => m.id !== activeArtist.id) : [];

@@ -279,7 +279,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                                                 <p className="font-semibold truncate">{song.title}</p>
                                                 <div className="flex items-center gap-2">
                                                     {song.explicit && <span className="text-xs w-4 h-4 bg-zinc-600/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center">E</span>}
-                                                    <p className="text-sm text-zinc-400">{activeArtist.name}</p>
+                                                    <p className="text-sm text-zinc-400">{[activeArtist.name, ...(song.features || []), ...(song.collaboration ? [song.collaboration.artistName] : []), ...(song.isFeatureToNpc && song.npcArtistName ? [song.npcArtistName] : [])].join(" • ")}</p>
                                                 </div>
                                             </div>
                                             <button onClick={(e) => { e.stopPropagation(); setShowStatsModalForSong(song); }} className="p-2 -m-2">
@@ -308,8 +308,10 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                                     </div>
                                     <p className="font-bold text-[13px] truncate w-full px-1">{activeArtist.name}</p>
                                     <p className="text-[11px] text-zinc-300 mt-0.5">Main Artist {(() => {
-                                        const c = releaseSongs[0].collaboration;
-                                        return c ? `+ ${1} more` : '';
+                                        const featuresCount = (releaseSongs[0].features || []).length;
+                                        const cCount = releaseSongs[0].collaboration ? 1 : 0;
+                                        const total = featuresCount + cCount;
+                                        return total > 0 ? `+ ${total} more` : '';
                                     })()}</p>
                                 </div>
                                 {releaseSongs[0].samples && releaseSongs[0].samples.length > 0 && (
@@ -329,6 +331,7 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                                     <p className="text-[12px] text-zinc-300">
                                         {Array.from(new Set([
                                             activeArtist.name,
+                                            ...(releaseSongs[0].features || []),
                                             ...(releaseSongs[0].collaboration ? [releaseSongs[0].collaboration.artistName] : []),
                                             ...(releaseSongs[0].isFeatureToNpc && releaseSongs[0].npcArtistName ? [releaseSongs[0].npcArtistName] : []),
                                             ...(releaseSongs[0].producers || []),

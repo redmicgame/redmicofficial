@@ -213,6 +213,12 @@ const ManagementView: React.FC = () => {
                             </div>
                             <div className="mt-6 pt-4 border-t border-zinc-700">
                                 <h3 className="font-bold mb-4">Manager Actions</h3>
+                                                                <button
+                                    onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'managerPodcasts'})}
+                                    className="w-full bg-[#1ed760] text-black font-bold p-2 text-sm rounded-lg hover:bg-[#1db954] mb-3"
+                                >
+                                    Pitch to Podcasts (Promo)
+                                </button>
                                 <button
                                     onClick={() => dispatch({type: 'REQUEST_PROMO_INTERVIEW'})}
                                     disabled={activeArtistData.requestedPromoInterview}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { db, getActiveSaveId, setActiveSaveId } from '../db/db';
+import { db, getActiveSaveId, setActiveSaveId, separateMediaFromState } from '../db/db';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import TrashIcon from './icons/TrashIcon'; // need this? Or use button text
 
@@ -8,6 +8,9 @@ const SwitchSaveView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const [saves, setSaves] = useState<Record<number, any>>({});
     const activeSaveId = getActiveSaveId();
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadMsg, setUploadMsg] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const loadSaves = async () => {
@@ -41,35 +44,96 @@ const SwitchSaveView: React.FC = () => {
         }
     };
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, slotId: number) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, slotId: number) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const content = e.target?.result as string;
-                const parsedState = JSON.parse(content);
-                if (parsedState && parsedState.date && parsedState.careerMode) {
-                    await db.saves.put({ id: slotId, state: parsedState });
-                    if (slotId === activeSaveId) {
-                        dispatch({ type: 'LOAD_GAME', payload: parsedState });
-                        window.location.reload();
-                    } else {
-                        await loadSaves();
-                    }
-                } else {
-                    alert('Invalid save file format.');
+        setIsUploading(true);
+        setUploadProgress(10);
+        setUploadMsg("Reading file...");
+
+        try {
+            // Artificial delay based on file size to prevent UI freeze and give user feedback
+            if (file.size > 185 * 1024 * 1024) { // 185MB+
+                for (let i = 10; i < 30; i += 2) {
+                    setUploadProgress(i);
+                    await new Promise(r => setTimeout(r, 400));
                 }
-            } catch (err) {
-                alert('Error parsing save file.');
+            } else if (file.size > 100 * 1024 * 1024) { // 100MB+
+                for (let i = 10; i < 30; i += 5) {
+                    setUploadProgress(i);
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            } else {
+                await new Promise(r => setTimeout(r, 100));
             }
-        };
-        reader.readAsText(file);
+            
+            const content = await file.text();
+            
+            setUploadProgress(30);
+            setUploadMsg("Parsing save file...");
+            
+            if (file.size > 185 * 1024 * 1024) {
+                await new Promise(r => setTimeout(r, 2000));
+            } else if (file.size > 100 * 1024 * 1024) {
+                await new Promise(r => setTimeout(r, 1000));
+            } else {
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            const parsedState = JSON.parse(content);
+
+            if (parsedState && parsedState.date && parsedState.careerMode) {
+                setUploadProgress(50);
+                setUploadMsg("Extracting media and saving...");
+
+                const processedState = await separateMediaFromState(parsedState, (prog, msg) => {
+                    setUploadProgress(50 + Math.floor(prog / 2));
+                    if (msg) setUploadMsg(msg);
+                });
+
+                await db.saves.put({ id: slotId, state: processedState });
+
+                if (slotId === activeSaveId) {
+                    window.location.reload();
+                } else {
+                    await loadSaves();
+                    setUploadProgress(100);
+                    setUploadMsg("Done!");
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            } else {
+                alert('Invalid save file format.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error parsing save file. It might be corrupt.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const maxSlots = 6;
     const slots = Array.from({ length: maxSlots }, (_, i) => i + 1);
+
+    if (isUploading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 text-center">
+                <svg viewBox="0 0 24 24" className="w-16 h-16 fill-current text-[#1ed760] mb-6 animate-pulse" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11.996 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12 12 12 0 0 0-12-12zm5.772 17.27a.754.754 0 0 1-1.037.248c-2.842-1.735-6.42-2.127-10.638-1.164a.755.755 0 0 1-.341-1.47c4.61-1.054 8.56-.607 11.768 1.35.372.227.491.716.248 1.036zm1.471-3.284a.94.94 0 0 1-1.294.305c-3.242-1.991-8.225-2.584-12.029-1.428a.941.941 0 0 1-.555-1.802c4.341-1.317 9.873-.655 13.573 1.62.43.264.566.837.305 1.295l-.001.01zm.105-3.41c-3.921-2.327-10.37-2.54-14.122-1.405a1.127 1.127 0 1 1-.652-2.155c4.321-1.31 11.455-1.055 16.023 1.656a1.127 1.127 0 1 1-1.25 1.904z"/>
+                </svg>
+                <h2 className="text-xl font-bold mb-4">Uploading Save File...</h2>
+                <p className="text-zinc-400 mb-6">{uploadMsg}</p>
+                <div className="w-full max-w-md bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                    <div 
+                        className="bg-[#1ed760] h-2.5 rounded-full transition-all duration-300 ease-out" 
+                        style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                </div>
+                <p className="text-xs text-zinc-500 mt-4 uppercase tracking-widest">{uploadProgress}% Complete</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 pb-20 p-4">

@@ -76,6 +76,7 @@ const appCategories: AppCategory[] = [
             { name: 'Gigs', description: 'Perform live shows', icon: <MicrophoneIcon className="w-8 h-8"/>, view: 'gigs', bgColor: '#a855f7' },
             { name: 'Merch Store', description: 'Sell vinyls, CDs, and more', icon: <ShoppingBagIcon className="w-8 h-8"/>, view: 'merchStore', bgColor: '#ec4899' },
             { name: 'Catalog', description: 'Manage your assets', icon: <DollarIcon className="w-8 h-8"/>, view: 'catalog', bgColor: '#22c55e' },
+            { name: 'Crypto', description: 'Make and manage your own cryptocurrency', icon: <span className="font-bold text-xl text-white">₿</span>, view: 'crypto', bgColor: '#f59e0b' },
         ]
     },
     {
@@ -84,12 +85,15 @@ const appCategories: AppCategory[] = [
             { name: 'Official UK Charts', description: 'Official Singles Chart', icon: <span className="font-bold text-xl text-white">UK</span>, view: 'ukChart', bgColor: '#0024f0' },
             { name: 'Spotify Charts', description: 'Top 50 Global', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954', iconColor: '#000000' },
             { name: 'Apple Music for Artists', description: 'Artist Dashboard', icon: <ITunesIcon className="w-8 h-8"/>, view: 'itunesDashboard', bgColor: '#ffffff', textColor: '#fa243c' as any },
+                        { name: 'Spotify Podcasts', description: 'Top podcasts', icon: <SpotifyIcon className="w-8 h-8 text-[#a970ff]"/>, view: 'spotifyPodcasts', bgColor: '#000000' },
+            { name: 'Spotify for Creators', description: 'Manage podcasts', icon: <SpotifyIcon className="w-8 h-8 text-[#a970ff]"/>, view: 'spotifyForCreators', bgColor: '#000000' },
             { name: 'Spotify for Artists', description: 'Manage your artist profile', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyForArtists', bgColor: '#000000' },
             { name: 'HITS Daily Double', description: 'Album Sales Predictions', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'albumPredictions', bgColor: '#DC2626', textColor: '#ffffff' as any },
             { name: 'Talk of the Charts', description: 'Early Hot 100 Predictions', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartPredictions', bgColor: '#d99aff' },
             { name: 'Kalshi', description: 'Prediction Markets', icon: <span className="font-bold text-xl text-white">Kalshi</span>, view: 'kalshi', bgColor: '#00D182' },
             { name: 'GRAMMYs', description: 'Your awards history', icon: <TrophyIcon className="w-8 h-8"/>, view: 'grammys', bgColor: '#f59e0b' },
             { name: 'Oscars', description: 'Your film awards history', icon: <OscarAwardIcon className="w-8 h-8" />, view: 'oscars', bgColor: '#c7a34a' },
+            { name: 'Golden Globes', description: 'Your TV & film awards history', icon: <TrophyIcon className="w-8 h-8" />, view: 'goldenGlobes', bgColor: '#d97706' },
             { name: 'Achievements', description: 'View career milestones', icon: <TrophyIcon className="w-8 h-8"/>, view: 'achievements', bgColor: '#ca8a04' },
             { name: 'Chart History', description: 'Your all-time chart stats', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartHistory', bgColor: '#0ea5e9' },
             { name: 'RIAA', description: 'Gold & Platinum Awards', icon: <RiaaIcon className="w-8 h-8"/>, view: 'riaa', bgColor: '#333333', iconColor: '#E5E4E2' },
@@ -146,6 +150,7 @@ const AppsTab: React.FC = () => {
         if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Spotify Charts' || appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
         if (appName === 'iTunes') return eraConfig.digitalSalesActive;
         if (appName === 'X') return eraConfig.xAvailable;
+        if (appName === 'Spotify Podcasts' || appName === 'Spotify for Creators') return gameState.date.year >= 2020;
         if (appName === 'Instagram') return eraConfig.instagramAvailable;
         if (appName === 'TikTok') return eraConfig.tiktokAvailable;
         if (appName === 'MySpace') return eraConfig.myspaceAvailable;

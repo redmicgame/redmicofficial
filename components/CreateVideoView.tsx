@@ -13,6 +13,8 @@ const CreateVideoView: React.FC = () => {
     const [songId, setSongId] = useState('');
     const [videoType, setVideoType] = useState<'Music Video' | 'Lyric Video' | 'Visualizer' | 'Custom'>('Visualizer');
     const [customTitle, setCustomTitle] = useState('');
+    const [isScheduled, setIsScheduled] = useState(false);
+    const [scheduledWeeks, setScheduledWeeks] = useState(1);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const [error, setError] = useState('');
@@ -132,7 +134,8 @@ const CreateVideoView: React.FC = () => {
             type: videoType,
             views: 0,
             thumbnail: thumbnail,
-            releaseDate: date,
+            releaseDate: isScheduled ? { week: ((date.week + scheduledWeeks - 1) % 52) + 1, year: date.year + Math.floor((date.week + scheduledWeeks - 1) / 52) } : date,
+            isScheduled: isScheduled,
             artistId: activeArtist.id,
             channelId: channelId,
             description,

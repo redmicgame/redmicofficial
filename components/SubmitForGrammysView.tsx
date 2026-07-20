@@ -38,7 +38,7 @@ const SubmitForGrammysView: React.FC = () => {
             let itemName = '';
             if (cat === 'Best New Artist') {
                 itemName = activeArtist.name;
-            } else if (cat.endsWith('Album')) {
+            } else if (cat.endsWith('Album') || cat === 'Album of the Year') {
                 itemName = eligibleAlbums.find(a => a.id === itemId)?.title || 'N/A';
             } else {
                 itemName = eligibleSongs.find(s => s.id === itemId)?.title || 'N/A';

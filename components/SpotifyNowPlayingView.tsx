@@ -1,3 +1,4 @@
+import { NPC_ARTIST_IMAGES } from "../constants";
 import React, { useState, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import type { Song } from '../types';
@@ -61,10 +62,10 @@ const SpotifyNowPlayingView: React.FC<{ songs: Song[]; initialSongIndex: number;
         if (collabProfile) {
             artistsToDisplay.push({ name: collabProfile.name, image: collabProfile.image });
         } else {
-            artistsToDisplay.push({ name: song.collaboration.artistName, image: `https://ui-avatars.com/api/?name=${encodeURIComponent(song.collaboration.artistName)}&background=random` });
+            artistsToDisplay.push({ name: song.collaboration.artistName, image: NPC_ARTIST_IMAGES[song.collaboration.artistName] || `https://ui-avatars.com/api/?name=${encodeURIComponent(song.collaboration.artistName)}&background=random` });
         }
     } else if (song.isFeatureToNpc && song.npcArtistName) {
-        artistsToDisplay.unshift({ name: song.npcArtistName, image: `https://ui-avatars.com/api/?name=${encodeURIComponent(song.npcArtistName)}&background=random` });
+        artistsToDisplay.unshift({ name: song.npcArtistName, image: NPC_ARTIST_IMAGES[song.npcArtistName] || `https://ui-avatars.com/api/?name=${encodeURIComponent(song.npcArtistName)}&background=random` });
     }
 
     const defaultHashtags = song.genre.split(/[/,]/).map(g => `#${g.trim().toLowerCase().replace(/\s/g, '')}`);

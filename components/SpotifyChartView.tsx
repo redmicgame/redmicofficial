@@ -1,3 +1,4 @@
+import { NPC_ARTIST_IMAGES } from "../constants";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useGame } from '../context/GameContext';

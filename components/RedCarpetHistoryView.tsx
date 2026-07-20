@@ -12,11 +12,18 @@ const RedCarpetHistoryView: React.FC = () => {
         let allLooks = activeArtistData.pastRedCarpetLooks ? [...activeArtistData.pastRedCarpetLooks] : [];
         if (activeArtistData.xPosts) {
             activeArtistData.xPosts.forEach(post => {
-                if (post.image && post.content.includes('red carpet.')) {
+                if (post.image && (post.content.includes('red carpet.') || post.content.includes('premiere in'))) {
                     let awardShow = 'Unknown';
                     if (post.content.includes('#GRAMMYs')) awardShow = 'GRAMMYs';
                     else if (post.content.includes('#VMAs')) awardShow = 'VMAs';
                     else if (post.content.includes('#AMAs')) awardShow = 'AMAs';
+                    else if (post.content.includes('#GoldenGlobes')) awardShow = 'Golden Globes';
+                    else if (post.content.includes('#Oscars')) awardShow = 'Oscars';
+                    else if (post.content.includes('premiere in')) {
+                        const match = post.content.match(/stuns for '(.*?)' premiere/);
+                        if (match && match[1]) awardShow = 'Premiere: ' + match[1];
+                        else awardShow = 'Movie Premiere';
+                    }
                     
                     // Check if we already have this look (by image URL or a combination of year and award show)
                     const alreadyExists = allLooks.some(look => look.imageUrl === post.image || (look.year === post.date.year && look.awardShow === awardShow));
