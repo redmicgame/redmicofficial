@@ -403,7 +403,7 @@ const CatalogView: React.FC = () => {
     
     const releasedProjects = useMemo(() => {
         const projects = activeArtistData.releases
-            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.standardEditionId || r.type === 'Compilation') && !r.soundtrackInfo);
+            .filter(r => (r.type === 'EP' || r.type === 'Album' || r.standardEditionId || r.type === 'Compilation' || r.type === 'Live Album') && !r.soundtrackInfo);
             
         const deluxeMap = new Map<string, Release>();
         projects.forEach(p => {

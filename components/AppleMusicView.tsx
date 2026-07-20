@@ -325,11 +325,11 @@ const AppleMusicView: React.FC = () => {
         }
 
         const { songs, releases, videos } = activeArtistData;
-        const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc);
+        const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc));
         const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
 
         const latestRelease = [...availableReleases]
-            .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation')
+            .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album')
             .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
 
         const topSongs = [...songs]
@@ -337,7 +337,9 @@ const AppleMusicView: React.FC = () => {
             .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
             .slice(0, 5);
         
-        const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
+        const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
+        const compilations = availableReleases.filter(r => r.type === 'Compilation').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
+        const liveAlbums = availableReleases.filter(r => r.type === 'Live Album').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
         const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.hasCountdownPage).map(s => s.release);
         const musicVideos = videos.filter(v => v.type === 'Music Video').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
         const singlesAndEps = availableReleases.filter(r => r.type === 'Single' || r.type === 'EP').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
@@ -444,6 +446,12 @@ const AppleMusicView: React.FC = () => {
 
                     {albums.length > 0 && (
                         <HorizontalSection title="Albums" items={albums} onSelect={handleSelectRelease} />
+                    )}
+                    {liveAlbums.length > 0 && (
+                        <HorizontalSection title="Live Albums" items={liveAlbums} onSelect={handleSelectRelease} />
+                    )}
+                    {compilations.length > 0 && (
+                        <HorizontalSection title="Compilations" items={compilations} onSelect={handleSelectRelease} />
                     )}
                     {upcomingReleases.length > 0 && (
                         <HorizontalSection title="Coming Soon" items={upcomingReleases} onSelect={handleSelectRelease} />

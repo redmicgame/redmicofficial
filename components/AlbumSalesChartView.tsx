@@ -20,7 +20,7 @@ const AlbumSalesChartView: React.FC = () => {
     const { songs, releases } = activeArtistData;
 
     const albumsWithSales = useMemo<AlbumWithSales[]>(() => {
-        const eligibleReleases = releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.soundtrackInfo);
+        const eligibleReleases = releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album') && !r.soundtrackInfo);
         
         const releaseRawStreams = new Map<string, number>();
         eligibleReleases.forEach(release => {

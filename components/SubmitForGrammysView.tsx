@@ -19,7 +19,7 @@ const SubmitForGrammysView: React.FC = () => {
     }, [activeArtistData.releases, date.year]);
 
     const eligibleAlbums = useMemo(() => {
-        return thisYearReleases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation');
+        return thisYearReleases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album');
     }, [thisYearReleases]);
 
     const eligibleSongs = useMemo(() => {

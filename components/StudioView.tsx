@@ -9,7 +9,8 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 const StudioView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, group, allPlayerArtists } = useGame();
     
-    const [mode, setMode] = useState<'single' | 'remixPack' | 'rerecord' | 'remaster' | 'autoWrite'>('single');
+    const [mode, setMode] = useState<'single' | 'remixPack' | 'rerecord' | 'remaster' | 'autoWrite' | 'liveAlbum'>('single');
+    const [liveAlbumTourId, setLiveAlbumTourId] = useState('');
     const [remasterTargetId, setRemasterTargetId] = useState('');
 
     const [title, setTitle] = useState('');
@@ -68,7 +69,7 @@ const StudioView: React.FC = () => {
     const selectedStudio = STUDIOS[studioIndex];
 
     const hasReleasedAlbum = useMemo(() => {
-        return releases.some(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation');
+        return releases.some(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album');
     }, [releases]);
 
     const potentialRemixTargets = useMemo(() => {
@@ -675,6 +676,65 @@ const StudioView: React.FC = () => {
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
 
+    const handleLiveAlbum = () => {
+        setError('');
+        if (!liveAlbumTourId) {
+            setError('Please select a finished tour to record a live album from.');
+            return;
+        }
+
+        const tour = activeArtistData?.tours.find(t => t.id === liveAlbumTourId);
+        if (!tour) return;
+        
+        const liveSongs = [];
+        for (const songId of tour.setlist) {
+            const original = activeArtistData?.songs.find(s => s.id === songId);
+            if (original) {
+                liveSongs.push({
+                    ...original,
+                    id: crypto.randomUUID(),
+                    title: original.title + " - Live",
+                    coverArt: coverArt || original.coverArt,
+                    isReleased: false,
+                    isFeatureToNpc: false,
+                    npcArtistName: undefined,
+                    releaseId: undefined,
+                    releaseDate: undefined,
+                    streams: 0,
+                    sales: 0,
+                    revenue: 0,
+                    netRevenue: 0,
+                    weeklyStreams: 0,
+                    prevWeekStreams: 0,
+                    lastWeekStreams: 0,
+                    actualLastWeekStreams: 0,
+                    dailyStreams: [],
+                    isVaulted: false
+                });
+            }
+        }
+        
+        if (liveSongs.length === 0) {
+            setError("No valid songs found in the tour setlist.");
+            return;
+        }
+
+        const totalCost = liveSongs.length * selectedStudio.cost;
+        if (money < totalCost) {
+            setError("Not enough money to record all live tracks at this studio.");
+            return;
+        }
+
+        for (const song of liveSongs) {
+            // Apply studio quality bonus
+            const qualityBonus = Math.floor(Math.random() * (selectedStudio.qualityRange[1] - selectedStudio.qualityRange[0] + 1)) + selectedStudio.qualityRange[0];
+            song.quality = Math.min(100, Math.max(1, (song.quality || 50) + Math.floor(qualityBonus / 2))); // slightly lower boost than normal studio
+            
+            dispatch({ type: 'RECORD_SONG', payload: { song, cost: selectedStudio.cost } });
+        }
+        dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
+    };
+
     const handleAddSample = (artistName: string, type: 'Sample' | 'Interpolation') => {
         const dummyTitles = ["Greatest Hit", "Classic Vibe", "Love Song", "Summer Night", "The Anthem", "Heartbreak", "Memories"];
         const songTitle = dummyTitles[Math.floor(Math.random() * dummyTitles.length)];
@@ -726,10 +786,99 @@ const StudioView: React.FC = () => {
                     >
                         Auto Write (Spotify)
                     </button>
+                    <button
+                        onClick={() => { setMode('liveAlbum'); setError(''); }}
+                        className={`px-4 py-1 rounded-md text-sm font-semibold transition-colors shrink-0 ${mode === 'liveAlbum' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                        Live Album
+                    </button>
                 </div>
             </header>
             
             <div className="p-4 space-y-6">
+                {mode === 'liveAlbum' && (
+                    <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-xl space-y-6">
+                        <h2 className="text-lg font-bold mb-4">Record Live Album</h2>
+                        <p className="text-sm text-zinc-400 mb-6">Select a finished tour to convert its setlist into a collection of live songs in your vault. Quality is based on the selected studio.</p>
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-300 mb-1">Select Tour</label>
+                            <select 
+                                value={liveAlbumTourId} 
+                                onChange={(e) => { setLiveAlbumTourId(e.target.value); setError(''); }}
+                                className="w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                            >
+                                <option value="">Select a finished tour</option>
+                                {activeArtistData?.tours.filter(t => t.status === 'finished').map(t => (
+                                    <option key={t.id} value={t.id}>{t.name} ({t.setlist.length} tracks)</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {liveAlbumTourId && (() => {
+                            const selectedTour = activeArtistData?.tours.find(t => t.id === liveAlbumTourId);
+                            if (!selectedTour) return null;
+                            const trackCount = selectedTour.setlist.length;
+                            const totalCost = trackCount * selectedStudio.cost;
+                            return (
+                                <>
+                                    <div className="mt-6">
+                                        <h3 className="block text-sm font-medium text-zinc-300 mb-2">Setlist Preview</h3>
+                                        <div className="bg-zinc-900 rounded-lg max-h-40 overflow-y-auto p-3 text-sm text-zinc-400">
+                                            {selectedTour.setlist.map((songId, i) => {
+                                                const song = activeArtistData?.songs.find(s => s.id === songId);
+                                                return <div key={i}>{i+1}. {song?.title || 'Unknown'} - Live</div>;
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6">
+                                        <div className="mt-6 mb-6">
+                                        <h3 className="block text-sm font-medium text-zinc-300 mb-2">Live Album Cover Art (Optional)</h3>
+                                        <div className="flex justify-center">
+                                            <label htmlFor="live-cover-art" className="cursor-pointer">
+                                                <div className="w-48 h-48 rounded-lg bg-zinc-900 border-2 border-dashed border-zinc-600 flex items-center justify-center hover:border-red-500 transition-colors">
+                                                    {coverArt ? (
+                                                        <img src={coverArt} alt="Cover Art" className="w-full h-full rounded-lg object-cover" />
+                                                    ) : (
+                                                        <span className="text-zinc-500 text-sm text-center">Upload Cover Art<br/>(If not uploaded, uses original cover)</span>
+                                                    )}
+                                                </div>
+                                            </label>
+                                            <input id="live-cover-art" type="file" accept="image/*" className="hidden" onChange={handleCoverArtUpload} />
+                                        </div>
+                                    </div>
+                                    <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {STUDIOS.map((studio, index) => (
+                                                <button key={studio.name} onClick={() => setStudioIndex(index)} className={`p-4 rounded-lg text-left transition-all border-2 ${studioIndex === index ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
+                                                    <p className="font-bold">{studio.name}</p>
+                                                    <p className="text-sm text-green-400">-${studio.cost.toLocaleString()} / track</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {error && <p className="text-red-400 text-sm text-center mt-4">{error}</p>}
+                                    
+                                    <div className="mt-8 pt-6 border-t border-zinc-700">
+                                        <div className="flex justify-between items-center mb-4 text-zinc-300">
+                                            <span>Studio Cost ({trackCount} tracks x ${formatNumber(selectedStudio.cost)})</span>
+                                            <span>${formatNumber(totalCost)}</span>
+                                        </div>
+                                        <button 
+                                            onClick={handleLiveAlbum} 
+                                            className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none mt-4" 
+                                            disabled={money < totalCost}
+                                        >
+                                            Record Live Setlist (-${formatNumber(totalCost)})
+                                        </button>
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+                )}
                 {mode === 'single' && (
                     <>
                         <div className="flex justify-center">

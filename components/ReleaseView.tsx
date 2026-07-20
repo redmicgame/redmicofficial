@@ -30,6 +30,7 @@ const ReleaseView: React.FC = () => {
     const [error, setError] = useState('');
     const [baseAlbumForDeluxe, setBaseAlbumForDeluxe] = useState<string>('');
     const [deluxeCoverArt, setDeluxeCoverArt] = useState<string | null>(null);
+    const [selectedLiveTourId, setSelectedLiveTourId] = useState<string>('');
 
     if (!activeArtistData || !activeArtist) return null;
     const { songs, contract, releases, customLabels, redMicPro } = activeArtistData;
@@ -37,7 +38,7 @@ const ReleaseView: React.FC = () => {
     const availableSongs = useMemo(() => {
         const songsInEPOrAlbum = new Set<string>();
         releases.forEach(r => {
-            if (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') {
+            if (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album') {
                 r.songIds.forEach(songId => songsInEPOrAlbum.add(songId));
             }
         });
@@ -45,8 +46,12 @@ const ReleaseView: React.FC = () => {
         if (releaseType === 'Compilation') {
             return songs.filter(s => s.isReleased && !s.isVaulted);
         }
+        
+        if (releaseType === 'Live Album') {
+            return songs.filter(s => s.title.endsWith(' - Live') && !s.isReleased && !s.isVaulted);
+        }
 
-        return songs.filter(s => (!s.isReleased || !songsInEPOrAlbum.has(s.id)) && !s.isVaulted);
+        return songs.filter(s => (!s.isReleased || !songsInEPOrAlbum.has(s.id)) && !s.isVaulted && !s.title.endsWith(' - Live'));
     }, [songs, releases, releaseType]);
 
     const coverArt = useMemo(() => {
@@ -119,6 +124,9 @@ const ReleaseView: React.FC = () => {
             }
             if (releaseType === 'Album' && count < 8 && !allRemixes) {
                 setError('An album must have at least 8 songs.'); return;
+            }
+            if (releaseType === 'Live Album' && count < 5) {
+                setError('A live album must have at least 5 songs.'); return;
             }
             if (releaseType === 'Compilation' && count < 2) {
                 setError('A compilation must have at least 2 songs.'); return;
@@ -222,7 +230,7 @@ const ReleaseView: React.FC = () => {
                 <div>
                     <label className="block text-sm font-medium text-zinc-300">Release Type</label>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                        {(['Single', 'EP', 'Album', 'Album (Deluxe)', 'Compilation'] as ReleaseType[]).map(type => (
+                        {(['Single', 'EP', 'Album', 'Album (Deluxe)', 'Compilation', 'Live Album'] as ReleaseType[]).map(type => (
                             <button key={type} onClick={() => { setReleaseType(type); setSelectedSongIds(new Set()); setBaseAlbumForDeluxe(''); setTitle(''); }} className={`py-2 px-4 rounded-md text-sm font-semibold transition-colors ${releaseType === type ? 'bg-red-600 text-white' : 'bg-zinc-700 hover:bg-zinc-600'}`}>
                                 {type}
                             </button>
@@ -230,24 +238,7 @@ const ReleaseView: React.FC = () => {
                     </div>
                 </div>
                 
-                {releaseType === 'Live Album' ? (
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="live-tour" className="block text-sm font-medium text-zinc-300">Select Completed Tour</label>
-                            <select
-                                id="live-tour"
-                                value={selectedLiveTourId}
-                                onChange={(e) => setSelectedLiveTourId(e.target.value)}
-                                className="mt-1 block w-full bg-zinc-800 border-zinc-700 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
-                            >
-                                <option value="">Select a tour</option>
-                                {activeArtistData.tours.filter(t => t.status === 'finished').map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                ) : releaseType === 'Album (Deluxe)' ? (
+                {releaseType === 'Album (Deluxe)' ? (
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="base-album" className="block text-sm font-medium text-zinc-300">Base Album</label>

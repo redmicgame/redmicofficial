@@ -34,9 +34,9 @@ const AddMerchModal: React.FC<{
     const { merch, releases, money } = activeArtistData;
 
     const availableReleases = useMemo(() => {
-        const released = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Single');
+        const released = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album' || r.type === 'Single');
         const scheduled = activeArtistData.labelSubmissions
-            .filter(s => s.release.type === 'Album' || s.release.type === 'EP' || s.release.type === 'Album (Deluxe)' || s.release.type === 'Compilation' || s.release.type === 'Single')
+            .filter(s => s.release.type === 'Album' || s.release.type === 'EP' || s.release.type === 'Album (Deluxe)' || s.release.type === 'Compilation' || s.release.type === 'Live Album' || s.release.type === 'Single')
             .map(s => s.release);
         return [...released, ...scheduled];
     }, [releases, activeArtistData.labelSubmissions]);

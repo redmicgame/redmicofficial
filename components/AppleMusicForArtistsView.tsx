@@ -17,7 +17,7 @@ const AppleMusicForArtistsView: React.FC = () => {
     
     // Found upcoming releases
     const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.status === 'scheduled');
-    const albums = activeArtistData.releases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !r.isTakenDown);
+    const albums = activeArtistData.releases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album') && !r.isTakenDown);
     const hasEnoughAlbumsForEssential = albums.length >= 3;
 
     const handleBack = () => {

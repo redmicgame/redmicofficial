@@ -25,7 +25,7 @@ const ReleaseItem: React.FC<{ release: Release, large?: boolean, onClick: () => 
     }
 
     const featureSong = activeArtistData?.songs.find(s => release.songIds.includes(s.id) && s.isFeatureToNpc);
-    const isFeature = release.isFeatureToNpc || !!featureSong;
+    const isFeature = release.type !== 'Live Album' && (release.isFeatureToNpc || !!featureSong);
     const featureArtistName = release.npcArtistName || featureSong?.npcArtistName;
 
     const subText = isFeature 
@@ -76,10 +76,10 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
     const latestRelease = sortedReleases.length > 0 ? sortedReleases[0] : null;
 
     const filteredReleases = useMemo(() => {
-        const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc);
+        const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => activeArtistData?.songs.find(s => s.id === id)?.isFeatureToNpc));
         
         if (filter === 'Albums') {
-            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation') && !isFeature(r));
+            return sortedReleases.filter(r => (r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album') && !isFeature(r));
         }
         if (filter === 'Singles and EPs') {
             return sortedReleases.filter(r => (r.type === 'Single' || r.type === 'EP') && !isFeature(r));

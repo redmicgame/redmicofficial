@@ -94,7 +94,7 @@ const WikipediaView: React.FC = () => {
                 }
 
                 const artistProjects = releases
-                    .filter(r => r.artistId === release.artistId && (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation'))
+                    .filter(r => r.artistId === release.artistId && (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album'))
                     .sort((a,b) => (a.releaseDate.year * 52 + a.releaseDate.week) - (b.releaseDate.year * 52 + b.releaseDate.week));
 
                 const projectIndex = artistProjects.findIndex(p => p.id === release.id);
@@ -213,7 +213,7 @@ Based on all this detailed information, write a comprehensive, neutral, and ency
     const previousRelease = useMemo(() => {
         if (!release) return null;
         return releases
-            .filter(r => r.artistId === release.artistId && (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation'))
+            .filter(r => r.artistId === release.artistId && (r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album'))
             .filter(r => (r.releaseDate.year * 52 + r.releaseDate.week) < (release.releaseDate.year * 52 + release.releaseDate.week))
             .sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
     }, [releases, release]);

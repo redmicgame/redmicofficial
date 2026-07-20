@@ -100,7 +100,7 @@ const ManagerPodcastsView: React.FC = () => {
                     className="w-full bg-zinc-700 border border-zinc-600 rounded-lg p-3 font-bold"
                 >
                     <option value="">-- Select a Release --</option>
-                    {(activeArtistData.releases || []).filter(r => r.isReleased).map(r => (
+                    {(activeArtistData.releases || []).map(r => (
                         <option key={r.id} value={r.id}>{r.title} ({r.type})</option>
                     ))}
                 </select>
@@ -115,7 +115,7 @@ const ManagerPodcastsView: React.FC = () => {
                     return (
                         <div key={podcast.id} className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 flex flex-col">
                             <div className="flex items-start gap-4 mb-4">
-                                <img src={podcast.coverArt || ''} alt={podcast.name} className="w-16 h-16 rounded-md object-cover bg-zinc-900" />
+                                <img src={podcast.coverArt || ''} alt={podcast.name} className="w-16 h-16 rounded-md object-cover bg-zinc-900" onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(podcast.name) + '&background=18181b&color=fff&size=128'; }} />
                                 <div>
                                     <h3 className="font-bold text-lg leading-tight">{podcast.name}</h3>
                                     <p className="text-sm text-zinc-400">Host: {podcast.host}</p>

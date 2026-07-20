@@ -292,7 +292,7 @@ const SpotifyView: React.FC = () => {
     const popularSongsToShow = isPopularExpanded ? topSongs : topSongs.slice(0, 5);
 
     const popularReleases = (() => {
-        const isFeature = (r: Release) => r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc);
+        const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc));
         const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
 
         if (availableReleases.length === 0) {

@@ -6295,7 +6295,7 @@ Submissions close in a few weeks.
               (r) => r.releaseDate.year === newDate.year,
             );
             const eligibleAlbums = thisYearReleases.filter((r) =>
-              ["Album", "EP", "Album (Deluxe)", "Compilation"].includes(r.type),
+              ["Album", "EP", "Album (Deluxe)", "Compilation", "Live Album"].includes(r.type),
             );
             const songIds = new Set(thisYearReleases.flatMap((r) => r.songIds));
             const eligibleSongs = artistData.songs.filter((s) =>
@@ -6522,7 +6522,7 @@ Submissions close in week 23.
               (r) => r.releaseDate.year === newDate.year,
             );
             const eligibleAlbums = thisYearReleases.filter((r) =>
-              ["Album", "EP", "Album (Deluxe)", "Compilation"].includes(r.type),
+              ["Album", "EP", "Album (Deluxe)", "Compilation", "Live Album"].includes(r.type),
             );
             const songIds = new Set(thisYearReleases.flatMap((r) => r.songIds));
             const eligibleSongs = artistData.songs.filter((s) =>
@@ -8544,7 +8544,8 @@ It is now available on your Spotify profile.
             r.type === "EP" ||
             r.type === "Album" ||
             
-            r.type === "Compilation",
+            r.type === "Compilation" || r.type === "Live Album",
+
         )
         .forEach((release) => {
           const artistData = updatedArtistsData[release.artistId];
@@ -9319,7 +9320,8 @@ HFPA`,
               r.type === "Album" ||
               r.type === "EP" ||
               
-              r.type === "Compilation",
+              r.type === "Compilation" || r.type === "Live Album",
+
           )
           .forEach((release) => {
             const albumSongs = release.songIds
@@ -11603,6 +11605,9 @@ Keep up the great work!
         }
       }
 
+      let safeQuality = action.payload.song.quality;
+      if (typeof safeQuality !== 'number' || Number.isNaN(safeQuality)) safeQuality = 50;
+      action.payload.song.quality = safeQuality;
       const newSong: Song = {
         ...action.payload.song,
         trait: generateSongTrait(action.payload.song.quality, state.difficultyMode || "normal"), traitGenerated: true,

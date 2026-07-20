@@ -173,12 +173,13 @@ const CreateTourView: React.FC = () => {
                             {bannerImage ? <img src={bannerImage} className="w-full h-full object-cover"/> : <span className="text-zinc-400">Upload Tour Banner</span>}
                         </label>
                         <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
-                        <input type="text" value={tourName} onChange={e => setTourName(e.target.value)} placeholder="Tour Name" className="w-full bg-zinc-700 p-3 rounded-md focus:outline-none" />
+                        <input type="text" value={tourName} onChange={e => setTourName(e.target.value)} placeholder="Tour Name (Required)" className="w-full bg-zinc-700 p-3 rounded-md focus:outline-none border border-transparent focus:border-red-500" />
+                        {!tourName.trim() && <p className="text-xs text-red-400 font-bold">Please enter a tour name to select a tier.</p>}
                         <div className="grid grid-cols-2 gap-3">
                             {Object.entries(TOUR_TIER_REQUIREMENTS).map(([tierName, req]) => {
                                 const isAvailable = popularity >= req;
                                 return (
-                                    <button key={tierName} onClick={() => handleTierSelect(tierName as TourTier)} disabled={!isAvailable} className="bg-zinc-800 p-3 rounded-lg disabled:opacity-50 text-left hover:bg-zinc-700 transition-colors">
+                                    <button key={tierName} onClick={() => handleTierSelect(tierName as TourTier)} disabled={!isAvailable || !tourName.trim()} className="bg-zinc-800 p-3 rounded-lg disabled:opacity-50 text-left hover:bg-zinc-700 transition-colors">
                                         <h3 className="font-bold">{tierName}</h3>
                                         <p className="text-xs text-zinc-400">Requires: {req} Popularity</p>
                                     </button>
@@ -228,7 +229,7 @@ const CreateTourView: React.FC = () => {
                                 </label>
                             ))}
                         </div>
-                        <button onClick={() => setStep(3)} className="w-full bg-red-600 hover:bg-red-500 transition-colors p-3 rounded-lg font-bold">Next: Support & Merch</button>
+                        <button onClick={() => setStep(3)} disabled={chosenVenueIds.size === 0} className="w-full bg-red-600 hover:bg-red-500 disabled:bg-zinc-600 disabled:text-zinc-400 transition-colors p-3 rounded-lg font-bold">Next: Support & Merch</button>
                     </div>
                 );
             case 3: // Merch and Support Acts
@@ -331,7 +332,7 @@ const CreateTourView: React.FC = () => {
                                 </button>
                             )})}
                         </div>
-                        <button onClick={() => setStep(5)} className="w-full bg-red-600 hover:bg-red-500 transition-colors p-3 rounded-lg font-bold">Next: Presale</button>
+                        <button onClick={() => setStep(5)} disabled={setlist.size < 10} className="w-full bg-red-600 hover:bg-red-500 disabled:bg-zinc-600 disabled:text-zinc-400 transition-colors p-3 rounded-lg font-bold">{setlist.size < 10 ? 'Select at least 10 songs' : 'Next: Presale'}</button>
                     </div>
                 );
             case 5: // Presale
@@ -356,8 +357,8 @@ const CreateTourView: React.FC = () => {
                         {error && <p className="text-red-500 font-bold text-sm bg-red-900/20 p-3 rounded-lg">{error}</p>}
                         <button 
                             onClick={handleCreateTour} 
-                            disabled={chosenVenueIds.size === 0 || !tourName || setlist.size < 10} 
-                            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors p-4 rounded-lg font-bold text-lg"
+                             
+                            className="w-full bg-blue-600 hover:bg-blue-500 transition-colors p-4 rounded-lg font-bold text-lg"
                         >
                             Finalize Tour & Pay Booking (${formatNumber(totalUpfrontCost)})
                         </button>
