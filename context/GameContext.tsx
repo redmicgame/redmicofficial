@@ -7701,8 +7701,8 @@ It is now available on your Spotify profile.
       allContendersRaw.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
 
       const isFormatCompatible = (genre: string, format: string) => {
-        const g = genre.toLowerCase();
-        const f = format.toLowerCase();
+        const g = (genre || "").toLowerCase();
+        const f = (format || "").toLowerCase();
         if (f === "pop") {
           if (g.includes("hip hop") || g.includes("rap")) return 0.2;
           if (g.includes("country")) return 0.05;
@@ -7832,7 +7832,7 @@ It is now available on your Spotify profile.
                   const weeksOn = s.weeksOnRadio || 0;
                   s.weeksOnRadio = weeksOn + 1;
 
-              const formatMultiplier = isFormatCompatible(song.genre, rFormat);
+              const formatMultiplier = isFormatCompatible(song.genre || "", rFormat);
               const radioEraBoost =
                 state.date.year < 2010
                   ? state.date.year < 2000
@@ -7923,7 +7923,7 @@ It is now available on your Spotify profile.
               const rFormat = s.ukRadioFormat || "pop";
               const weeksOn = s.ukWeeksOnRadio || 0;
               s.ukWeeksOnRadio = weeksOn + 1;
-              const formatMultiplier = isFormatCompatible(song.genre, rFormat);
+              const formatMultiplier = isFormatCompatible(song.genre || "", rFormat);
               const radioEraBoost = state.date.year < 2010 ? (state.date.year < 2000 ? 5.0 : 3.0) : 1.0;
               const previousPlays = s.ukRadioPlays || 0;
               const traitRadioBoost = s.trait === "Radio Hit" ? 3.0 : 1.0;
@@ -7960,7 +7960,7 @@ It is now available on your Spotify profile.
             isOnRadio = true;
 
             // Decide format for NPC based on genre
-            const g = song.genre.toLowerCase();
+            const g = (song.genre || "").toLowerCase();
             if (g.includes("holiday") || g.includes("christmas")) {
               if (newDate.week > 2 && newDate.week < 40) {
                 rPlays = 0;

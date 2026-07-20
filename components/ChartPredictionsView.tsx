@@ -177,8 +177,8 @@ export const ChartPredictionsView: React.FC = () => {
                             const qualityBoost = (s.quality || 50) + (aData.popularity || 0);
                             
                             const isFormatCompatible = (genre: string, format: string) => {
-                                const g = genre.toLowerCase();
-                                const f = format.toLowerCase();
+                                const g = (genre || "").toLowerCase();
+                                const f = (format || "").toLowerCase();
                                 if (f === 'pop') {
                                     if (g.includes('hip hop') || g.includes('rap')) return 0.2;
                                     if (g.includes('country')) return 0.05;
