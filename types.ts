@@ -273,6 +273,9 @@ export interface Video {
   firstWeekViews?: number;
   description?: string;
   mentionedNpcs?: string[];
+  isOnSpotify?: boolean;
+  spotifyViews?: number;
+  spotifyDailyViews?: number[];
   isFeatureVideo?: boolean;
   isMtv?: boolean;
 }
@@ -1956,6 +1959,8 @@ export interface ActiveEncounter {
 }
 
 export type GameAction =
+  | { type: "UPDATE_ARTIST_FUNDS"; payload: number }
+  | { type: "UPDATE_VIDEO"; payload: { id: string; updates: Partial<Video> } }
   | { type: "LAUNCH_CRYPTO_COIN"; payload: { name: string; ticker: string; logo: string; launchPrice: number; totalSupply: number; cost: number; playerPercent?: number } }
   | { type: "BUY_CRYPTO"; payload: { amount: number; cost: number } }
   | { type: "SELL_CRYPTO"; payload: { amount: number; revenue: number } }

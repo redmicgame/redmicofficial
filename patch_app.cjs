@@ -1,18 +1,18 @@
 const fs = require('fs');
-let content = fs.readFileSync('App.tsx', 'utf-8');
+const file = '/app/applet/App.tsx';
+let content = fs.readFileSync(file, 'utf8');
 
-const importTarget = `import MySpaceView from './components/MySpaceView';`;
-const importReplacement = `import MySpaceView from './components/MySpaceView';
-import CryptoView from './components/CryptoView';`;
+content = content.replace(
+    /import YouTubeView from '\.\/components\/YouTubeView';/g,
+    `import YouTubeView from './components/YouTubeView';\nimport VevoView from './components/VevoView';`
+);
 
-const viewTarget = `return <MySpaceView />;`;
-const viewReplacement = `return <MySpaceView />;
-            case 'crypto':
-                return <CryptoView />;`;
+content = content.replace(
+    /case 'youtube':\s*return <YouTubeView \/>;/g,
+    `case 'youtube':
+                    return <YouTubeView />;
+                case 'vevo':
+                    return <VevoView />;`
+);
 
-if (content.includes(importTarget)) {
-    content = content.replace(importTarget, importReplacement);
-    content = content.replace(viewTarget, viewReplacement);
-    fs.writeFileSync('App.tsx', content);
-    console.log('patched App.tsx');
-}
+fs.writeFileSync(file, content);

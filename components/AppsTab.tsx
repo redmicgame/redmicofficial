@@ -60,6 +60,7 @@ const appCategories: AppCategory[] = [
             { name: 'X', description: 'Connect with fans worldwide', icon: <XIcon className="w-7 h-7"/>, view: 'x', bgColor: '#000000' },
             { name: 'MTV', description: 'Music Television', icon: <span className="font-black text-2xl italic">MTV</span>, view: 'mtv', bgColor: '#000000' },
             { name: 'YouTube', description: 'Watch and share videos', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtube', bgColor: '#FF0000' },
+            { name: 'Vevo', description: 'Distribute your music videos', icon: <span className="font-black text-2xl italic">vevo</span>, view: 'vevo', bgColor: '#FF0000' },
             { name: 'YT Studio', description: 'Analyze your channel performance', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtubeStudio', bgColor: '#282828'},
             { name: 'OnlyFans', description: 'Monetize exclusive content', icon: <span className="font-bold text-2xl">OF</span>, view: 'onlyfansSetup', bgColor: '#00AFF0' },
         ]

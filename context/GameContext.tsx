@@ -5053,10 +5053,27 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           }
 
           totalWeeklyViews += weeklyViews;
+          
+          let spotifyViewsData = {};
+          if (video.isOnSpotify) {
+            const spotifyWeeklyViews = Math.floor(weeklyViews * 0.8);
+            const currentSpotifyDaily = video.spotifyDailyViews || [];
+            const newSpotifyDailyViews = [
+              ...currentSpotifyDaily.slice(-6),
+              Math.floor(spotifyWeeklyViews / 7)
+            ];
+            
+            spotifyViewsData = {
+              spotifyViews: (video.spotifyViews || 0) + spotifyWeeklyViews,
+              spotifyDailyViews: newSpotifyDailyViews
+            };
+          }
+          
           return {
             ...video,
             views: video.views + weeklyViews,
             ...firstWeekViewsData,
+            ...spotifyViewsData,
           };
         });
         artistData.videos = updatedVideos;
@@ -20138,6 +20155,35 @@ Let us know if you accept.`,
                 [utility]: !currentVal
               }
             }
+          }
+        }
+      };
+    }
+    case "UPDATE_ARTIST_FUNDS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money + action.payload,
+          }
+        }
+      };
+    }
+    case "UPDATE_VIDEO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedVideos = activeData.videos.map(v => v.id === action.payload.id ? { ...v, ...action.payload.updates } : v);
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            videos: updatedVideos,
           }
         }
       };

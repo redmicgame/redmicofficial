@@ -924,240 +924,158 @@ const StudioView: React.FC = () => {
                         </div>
 
                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <label htmlFor="collaboration" className="block text-sm font-medium text-zinc-300">Features (Max 3)</label>
-                                {gameState.hasRedMicPro && collaborations.length < 3 && (
-                                    <button onClick={() => { setIsCustomCollab(!isCustomCollab); }} className="text-xs text-blue-400 font-bold hover:underline">
-                                        {isCustomCollab ? 'Choose Existing' : 'Custom Feature'}
-                                    </button>
+                            
+                                
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium text-zinc-300">Features (Max 3)</label>
+                                    {gameState.hasRedMicPro && collaborations.length < 3 && (
+                                        <button onClick={() => { setIsCustomCollab(!isCustomCollab); }} className="text-xs text-blue-400 font-bold hover:underline">
+                                            {isCustomCollab ? 'Choose Existing' : 'Custom Feature'}
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                {!isCustomCollab ? (
+                                    <div className="space-y-3 mb-2">
+                                        {[0, 1, 2].map(index => {
+                                            const collab = collaborations[index];
+                                            return (
+                                                <div key={index} className="flex gap-2 items-center">
+                                                    <select 
+                                                        value={collab ? collab.artistName : ''}
+                                                        onChange={e => {
+                                                            const name = e.target.value;
+                                                            const newCollabs = [...collaborations];
+                                                            if (name) {
+                                                                newCollabs[index] = { artistName: name, cost: getFeatureCost(name) };
+                                                            } else {
+                                                                newCollabs.splice(index, 1);
+                                                            }
+                                                            setCollaborations(newCollabs.filter(Boolean));
+                                                        }} 
+                                                        className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3 text-white"
+                                                    >
+                                                        <option value="">Feature ${index + 1}...</option>
+                                                        {potentialCollaborators
+                                                            .filter(name => !collaborations.some((c, i) => i !== index && c.artistName === name))
+                                                            .map(name => <option key={name} value={name}>{name}</option>)}
+                                                    </select>
+                                                    {collab && (
+                                                        <span className="text-yellow-400 text-sm whitespace-nowrap min-w-[60px] text-right">
+                                                            ${formatNumber(collab.cost)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 mt-1">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Artist Name" 
+                                            value={customCollabArtist}
+                                            onChange={e => setCustomCollabArtist(e.target.value)}
+                                            className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 sm:text-sm h-10 px-3 text-white"
+                                        />
+                                        <input 
+                                            type="number" 
+                                            placeholder="Cost" 
+                                            value={customCollabCost || ''}
+                                            onChange={e => setCustomCollabCost(Number(e.target.value))}
+                                            className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 sm:text-sm h-10 px-3 text-white"
+                                        />
+                                        <button onClick={addCustomCollaboration} className="w-full bg-blue-600 text-white font-bold py-2 rounded text-sm hover:bg-blue-500">
+                                            Add Custom Feature
+                                        </button>
+                                        <div className="space-y-2 mt-2">
+                                            {collaborations.map((c, i) => (
+                                                <div key={i} className="flex justify-between items-center bg-zinc-800 p-2 rounded text-sm text-white">
+                                                    <span>{c.artistName}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-yellow-400">${formatNumber(c.cost)}</span>
+                                                        <button onClick={() => removeCollaboration(i)} className="text-red-400 hover:text-red-300 font-bold">X</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-                            
-                            <div className="space-y-2 mb-2">
-                                {collaborations.map((c, i) => (
-                                    <div key={i} className="flex justify-between items-center bg-zinc-800 p-2 rounded text-sm text-white">
-                                        <span>{c.artistName}</span>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-yellow-400">${formatNumber(c.cost)}</span>
-                                            <button onClick={() => removeCollaboration(i)} className="text-red-400 hover:text-red-300 font-bold">X</button>
-                                        </div>
+
+                            <div className="mt-8 pt-6 border-t border-zinc-700">
+                                <div className="flex justify-between items-center mb-4 text-zinc-300">
+                                    <span>Studio Cost</span>
+                                    <span>${formatNumber(selectedStudio.cost)}</span>
+                                </div>
+                                <div className="flex justify-between items-center mb-4 text-zinc-300">
+                                    <span>Features Cost</span>
+                                    <span>${formatNumber(totalCost - selectedStudio.cost - getContributorCost())}</span>
+                                </div>
+                                {getContributorCost() > 0 && (
+                                    <div className="flex justify-between items-center mb-4 text-zinc-300">
+                                        <span>Band Members Cost</span>
+                                        <span>${formatNumber(getContributorCost())}</span>
                                     </div>
-                                ))}
+                                )}
+                                <div className="flex justify-between items-center mb-6 text-xl font-bold text-white">
+                                    <span>Total Valid Cost</span>
+                                    <span>${formatNumber(totalCost)}</span>
+                                </div>
+
+                                {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
+
+                                <button 
+                                    onClick={handleRecordSong} 
+                                    className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none"
+                                    disabled={money < totalCost || !title.trim()}
+                                >
+                                    Record Song (-${formatNumber(totalCost)})
+                                </button>
                             </div>
+                    </>
+                )}
+
+                {mode === 'remixPack' && (
+                    <>
+                        <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-xl space-y-6">
+                            <h2 className="text-lg font-bold mb-4">Create a Remix Pack</h2>
+                            <p className="text-sm text-zinc-400 mb-6">Create alternative versions of an existing song to boost its streaming numbers and chart position. Remixes share streams with the original song.</p>
                             
-                            {collaborations.length < 3 && !isCustomCollab && (
-                                <select id="collaboration" value="" onChange={handleAddCollaboration} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                    <option value="">Add a feature...</option>
-                                    {potentialCollaborators.filter(name => !collaborations.some(c => c.artistName === name)).map(name => <option key={name} value={name}>{name}</option>)}
-                                </select>
-                            )}
-                            {collaborations.length < 3 && isCustomCollab && (
-                                <div className="space-y-2 mt-1">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Artist Name" 
-                                        value={customCollabArtist}
-                                        onChange={e => setCustomCollabArtist(e.target.value)}
-                                        className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 sm:text-sm h-10 px-3 text-white"
-                                    />
-                                    <input 
-                                        type="number" 
-                                        placeholder="Cost ($)" 
-                                        value={customCollabCost || ''}
-                                        onChange={e => setCustomCollabCost(parseInt(e.target.value) || 0)}
-                                        className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 sm:text-sm h-10 px-3 text-white"
-                                    />
-                                    <button onClick={addCustomCollaboration} className="w-full bg-blue-600 text-white font-bold py-2 rounded text-sm hover:bg-blue-500">
-                                        Add Custom Feature
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <label htmlFor="genre" className="block text-sm font-medium text-zinc-300">Genre</label>
-                            <select id="genre" value={genre} onChange={e => setGenre(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                {GENRES.map(g => <option key={g}>{g}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label htmlFor="subgenre" className="block text-sm font-medium text-zinc-300">Subgenre / Trend</label>
-                            <select id="subgenre" value={subgenre} onChange={e => setSubgenre(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                {SUBGENRES.map(g => <option key={g}>{g}</option>)}
-                            </select>
-                        </div>
-                        
-                        <div className="pt-4 border-t border-zinc-700/50 mt-4 space-y-2">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <div>
-                                    <h3 className="text-lg font-bold">Contributors (SongDNA)</h3>
-                                    <p className="text-xs text-zinc-400">Add up to 20 for each category.</p>
-                                </div>
-                                <div className="flex bg-zinc-800 rounded-lg p-1">
-                                    <button 
-                                        onClick={() => setContributorPaymentMethod('split')}
-                                        className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${contributorPaymentMethod === 'split' ? 'bg-red-500 text-white' : 'text-zinc-400 hover:text-white'}`}
-                                    >
-                                        Give % Split
-                                    </button>
-                                    <button 
-                                        onClick={() => setContributorPaymentMethod('upfront')}
-                                        className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${contributorPaymentMethod === 'upfront' ? 'bg-red-500 text-white' : 'text-zinc-400 hover:text-white'}`}
-                                    >
-                                        Pay Upfront (${(CONTRIBUTOR_UPFRONT_COST).toLocaleString()}/each)
-                                    </button>
-                                </div>
-                            </div>
-                            {renderMultiSelect('Producers', producers, setProducers, potentialProducers)}
-                            {renderMultiSelect('Songwriters', songwriters, setSongwriters, potentialCollaborators)}
-                            {renderMultiSelect('Mix & Mastering Engineers', engineers, setEngineers, potentialEngineers)}
-                            {renderMultiSelect('A&R', anr, setAnr, potentialAnR)}
-
-                            <div className="mt-6 border-t border-zinc-700/50 pt-4">
-                                <label className="block text-sm font-medium text-zinc-300 mb-2">Samples & Interpolations</label>
-                                <div className="space-y-2 mb-2">
-                                    {samples.map((s, i) => (
-                                        <div key={i} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
-                                            <div>
-                                                <p className="text-sm font-bold">{s.songTitle}</p>
-                                                <p className="text-xs text-zinc-400">{s.artistName} • {s.type}</p>
-                                            </div>
-                                            <button onClick={() => setSamples(arr => arr.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-300 text-sm">Remove</button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                                    <select id="sampleArtist" className="flex-1 bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                        <option value="">Select Artist to Sample...</option>
-                                        {potentialCollaborators.filter(name => !collaborations.some(c => c.artistName === name)).map(name => <option key={name} value={name}>{name}</option>)}
-                                    </select>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => {
-                                            const select = document.getElementById('sampleArtist') as HTMLSelectElement;
-                                            if(select.value) { handleAddSample(select.value, 'Sample'); select.value = ''; }
-                                        }} className="bg-zinc-600 px-3 py-2 rounded-md text-sm hover:bg-zinc-500 font-bold whitespace-nowrap">Sample</button>
-                                        <button onClick={() => {
-                                            const select = document.getElementById('sampleArtist') as HTMLSelectElement;
-                                            if(select.value) { handleAddSample(select.value, 'Interpolation'); select.value = ''; }
-                                        }} className="bg-zinc-600 px-3 py-2 rounded-md text-sm hover:bg-zinc-500 font-bold whitespace-nowrap">Interpolate</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center">
-                            <input
-                                id="explicit-checkbox"
-                                type="checkbox"
-                                checked={isExplicit}
-                                onChange={(e) => setIsExplicit(e.target.checked)}
-                                className="h-4 w-4 rounded border-zinc-500 bg-zinc-700 text-red-600 focus:ring-red-500"
-                            />
-                            <label htmlFor="explicit-checkbox" className="ml-2 block text-sm text-zinc-300">
-                                Explicit Content <span className="text-xs text-zinc-400">(more hype on release)</span>
-                            </label>
-                        </div>
-
-                        <div className="flex items-center">
-                            <input
-                                id="remix-checkbox"
-                                type="checkbox"
-                                checked={isRemix}
-                                onChange={(e) => handleRemixToggle(e.target.checked)}
-                                disabled={potentialRemixTargets.length === 0}
-                                className="h-4 w-4 rounded border-zinc-500 bg-zinc-700 text-red-600 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <label htmlFor="remix-checkbox" className="ml-2 block text-sm text-zinc-300">
-                                Manual Song Remix
-                            </label>
-                        </div>
-
-                        {isRemix && (
                             <div>
-                                <label htmlFor="remix-target" className="block text-sm font-medium text-zinc-300">Select Song to Remix</label>
-                                <select id="remix-target" value={remixOfSongId} onChange={e => setRemixOfSongId(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                    <option value="">Select a song</option>
-                                    {potentialRemixTargets.map(song => (
+                                <label className="block text-sm font-medium text-zinc-300 mb-2">Select Song to Remix</label>
+                                <select 
+                                    value={remixPackTargetId || ''} 
+                                    onChange={e => setRemixPackTargetId(e.target.value)} 
+                                    className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"
+                                >
+                                    <option value="">Select a song...</option>
+                                    {activeArtistData.songs.filter(s => s.type !== 'remix').map(song => (
                                         <option key={song.id} value={song.id}>{song.title}</option>
                                     ))}
                                 </select>
-                                {remixOfSongId && (
-                                   <p className="text-xs text-zinc-400 mt-1">
-                                       Remixes: {songs.filter(s => s.remixOfSongId === remixOfSongId).length} / 8
-                                   </p>
-                                )}
                             </div>
-                        )}
 
-                        <div>
-                            <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                {STUDIOS.map((studio, index) => (
-                                    <button key={studio.name} onClick={() => setStudioIndex(index)} className={`p-4 rounded-lg text-left transition-all border-2 ${studioIndex === index ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
-                                        <p className="font-bold">{studio.name}</p>
-                                        <p className="text-sm text-green-400">-${studio.cost.toLocaleString()}</p>
-                                        <p className="text-xs text-zinc-400 mt-1">Est. Quality: ???</p>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-                        
-                        <button onClick={handleRecord} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none" disabled={money < totalCost}>
-                            Record Song (-${totalCost.toLocaleString()})
-                        </button>
-                    </>
-                )}
-                {mode === 'remixPack' && (
-                    <>
-                        <div className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-xl">
-                            <h2 className="text-lg font-bold mb-4">Auto Remix Pack Maker</h2>
-                            <p className="text-sm text-zinc-400 mb-6">Instantly generate a bundle of remixes for a track. Remixed songs share cover art and automatically link to the original track on charts.</p>
-                            
-                            <div className="space-y-6">
-                                <div>
-                                    <label htmlFor="pack-remix-target" className="block text-sm font-medium text-zinc-300">Original Song</label>
-                                    <select id="pack-remix-target" value={remixPackTargetId} onChange={e => { setRemixPackTargetId(e.target.value); setSelectedRemixTypes(new Set()); setError(''); }} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                        <option value="">Select a song</option>
-                                        {potentialRemixTargets.map(song => (
-                                            <option key={song.id} value={song.id}>{song.title}</option>
-                                        ))}
-                                    </select>
-                                    {remixPackTargetId && (
-                                       <p className="text-xs text-zinc-400 mt-2">
-                                           Existing Remixes: {songs.filter(s => s.remixOfSongId === remixPackTargetId).length} / 8 allowable
-                                       </p>
-                                    )}
-                                </div>
-
-                                {remixPackTargetId && (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-zinc-300 mb-3">Select Remix Types <span className="text-zinc-500 text-xs font-normal ml-2">(${formatNumber(selectedStudio.cost)} studio time per track)</span></label>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                                {REMIX_TYPES.map(type => {
-                                                    const isSelected = selectedRemixTypes.has(type);
-                                                    return (
-                                                        <button 
-                                                            key={type}
-                                                            onClick={() => toggleRemixType(type)}
-                                                            className={`p-3 rounded-lg border flex flex-col items-start transition-all ${isSelected ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-500'}`}
-                                                        >
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'border-red-500 bg-red-500' : 'border-zinc-500'}`}>
-                                                                    {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
-                                                                </div>
-                                                                <span className="font-semibold text-sm">{type}</span>
-                                                            </div>
-                                                            <span className="text-xs text-zinc-500 text-left w-full pl-6">+1 track</span>
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
+                            {remixPackTargetId && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-zinc-300 mb-2">Select Remix Types to Include</label>
+                                        <div className="space-y-2 bg-zinc-800 p-4 rounded-lg border border-zinc-700">
+                                            {['Sped Up', 'Slowed Down', 'Acapella', 'Instrumental', 'Feature 1', 'Feature 2'].map(type => (
+                                                <label key={type} className="flex items-center gap-3 cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedRemixTypes.has(type)}
+                                                        onChange={() => toggleRemixType(type)}
+                                                        className="rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700 w-5 h-5"
+                                                    />
+                                                    <span className="text-zinc-300 font-medium">{type}</span>
+                                                </label>
+                                            ))}
                                         </div>
-
+                                    </div>
+                                    
+                                    <div className="space-y-4">
                                         {selectedRemixTypes.has('Feature 1') && (
                                             <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
                                                 <div className="flex justify-between items-center mb-1">
@@ -1233,8 +1151,9 @@ const StudioView: React.FC = () => {
                                                 {feature2 && !isCustomFeature2 && (
                                                     <p className="text-sm text-yellow-400 mt-2">Feature Cost: ${formatNumber(feature2.cost)}</p>
                                                 )}
-                                            </div>
+                                        </div>
                                         )}
+                                    </div>
                                         
                                         <div>
                                             <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio (Affects all remixes in pack)</h3>
@@ -1274,7 +1193,6 @@ const StudioView: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                        </div>
                     </>
                 )}
                 {mode === 'rerecord' && (

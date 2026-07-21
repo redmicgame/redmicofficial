@@ -13,6 +13,7 @@ import StudioView from './components/StudioView';
 import ReleaseView from './components/ReleaseView';
 import PitchforkView from './components/PitchforkView';
 import YouTubeView from './components/YouTubeView';
+import VevoView from './components/VevoView';
 import MTVView from './components/MTVView';
 import CreateMagazineInterviewView from './components/CreateMagazineInterviewView';
 import CreateTvInterviewView from './components/CreateTvInterviewView';
@@ -24,6 +25,7 @@ import PromoteView from './components/PromoteView';
 import BillboardView from './components/BillboardView';
 import BillboardAlbumsView from './components/BillboardAlbumsView';
 import SpotifyChartView from './components/SpotifyChartView';
+import SpotifyVideoChartView from './components/SpotifyVideoChartView';
 import YouTubeVideoDetailView from './components/YouTubeVideoDetailView';
 import YouTubeStudioView from './components/YouTubeStudioView';
 import GigsView from './components/GigsView';
@@ -163,7 +165,9 @@ const AppContent: React.FC = () => {
             case 'pitchfork':
                 return <PitchforkView />;
             case 'youtube':
-                return <YouTubeView />;
+                    return <YouTubeView />;
+                case 'vevo':
+                    return <VevoView />;
             case 'mtv':
                 return <MTVView />;
             case 'youtubeVideoDetail':
@@ -189,7 +193,9 @@ const AppContent: React.FC = () => {
             case 'billboardAlbums':
                 return <BillboardAlbumsView />;
             case 'spotifyChart':
-                return <SpotifyChartView />;
+                    return <SpotifyChartView />;
+                case 'spotifyVideoChart':
+                    return <SpotifyVideoChartView />;
             case 'ukChart':
                 return <UKChartView />;
             case 'hotPopSongs':

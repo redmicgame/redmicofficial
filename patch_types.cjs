@@ -1,10 +1,19 @@
 const fs = require('fs');
-let file = '/app/applet/types.ts';
+const file = '/app/applet/types.ts';
 let content = fs.readFileSync(file, 'utf8');
 
-const target = `  | { type: "DECLINE_ACTING_PREMIERE"; payload: { roleId: string } }`;
-const replacement = `  | { type: "DECLINE_ACTING_PREMIERE"; payload: { roleId: string } }
-  | { type: "ACCEPT_MOVIE_PREMIERE_RED_CARPET"; payload: { emailId: string, lookUrl: string, location?: string } }`;
+content = content.replace(
+    /type:\s*\| "Music Video"/g,
+    `type:
+    | "Music Video"`
+);
 
-content = content.replace(target, replacement);
+content = content.replace(
+    /mentionedNpcs\?: string\[\];/g,
+    `mentionedNpcs?: string[];
+  isOnSpotify?: boolean;
+  spotifyViews?: number;
+  spotifyDailyViews?: number[];`
+);
+
 fs.writeFileSync(file, content);

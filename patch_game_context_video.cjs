@@ -1,22 +1,31 @@
 const fs = require('fs');
+const file = '/app/applet/context/GameContext.tsx';
+let content = fs.readFileSync(file, 'utf8');
 
-const file_path = '/app/applet/context/GameContext.tsx';
-let content = fs.readFileSync(file_path, 'utf8');
+content = content.replace(
+    /\| \{ type: 'UPDATE_YOUTUBE_CHANNEL'; payload: Partial<YouTubeChannel> \}/g,
+    `| { type: 'UPDATE_YOUTUBE_CHANNEL'; payload: Partial<YouTubeChannel> }
+  | { type: 'UPDATE_VIDEO'; payload: { id: string, updates: Partial<Video> } }`
+);
 
-// Wait, where should I put this check? During week advance!
-const replaceStr = `          const updatedSoundtracks = [...artistData.offeredSoundtracks];`;
-const insertStr = `          artistData.videos = artistData.videos.map(v => {
-              if (v.isScheduled) {
-                  if (newDate.year > v.releaseDate.year || (newDate.year === v.releaseDate.year && newDate.week >= v.releaseDate.week)) {
-                      return { ...v, isScheduled: false };
-                  }
-              }
-              return v;
-          });
-          
-          const updatedSoundtracks = [...artistData.offeredSoundtracks];`;
+content = content.replace(
+    /case 'UPDATE_YOUTUBE_CHANNEL': \{/g,
+    `case 'UPDATE_VIDEO': {
+      if (!state.activeArtistId) return state;
+      const artistData = state.artistsData[state.activeArtistId];
+      if (!artistData) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...artistData,
+            videos: artistData.videos.map(v => v.id === action.payload.id ? { ...v, ...action.payload.updates } : v)
+          }
+        }
+      };
+    }
+    case 'UPDATE_YOUTUBE_CHANNEL': {`
+);
 
-content = content.replace(replaceStr, insertStr);
-
-fs.writeFileSync(file_path, content);
-console.log("Patched GameContext videos");
+fs.writeFileSync(file, content);
