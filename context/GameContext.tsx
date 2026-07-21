@@ -11297,8 +11297,8 @@ Keep up the great work!
           spotifyNewEntries: newEntriesCount,
           npcs: newNpcsWithReleases,
           npcAlbums: newNpcAlbums,
-        soundtrackAlbums: updatedSoundtrackAlbums || state.soundtrackAlbums,
-        fifaSingleScheduled: newFifaScheduled !== undefined ? newFifaScheduled : undefined,
+        soundtrackAlbums: state.soundtrackAlbums,
+        fifaSingleScheduled: state.fifaSingleScheduled,
           contractRenewalOffer: contractRenewalForActivePlayer,
           currentView: "contractRenewal",
         };
@@ -11466,8 +11466,8 @@ Keep up the great work!
       
 
          // --- FIFA WORLD CUP ALBUM RELEASE ---
-         let updatedSoundtrackAlbums = [...state.soundtrackAlbums];
-         let newFifaScheduled = state.fifaSingleScheduled;
+         var updatedSoundtrackAlbums = [...state.soundtrackAlbums];
+         var newFifaScheduled = state.fifaSingleScheduled;
          if (state.fifaSingleScheduled && newDate.week === 25 && newDate.year === state.fifaSingleScheduled.year) {
              const { title, coverArt, collabs } = state.fifaSingleScheduled;
              
