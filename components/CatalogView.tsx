@@ -371,7 +371,7 @@ const CatalogView: React.FC = () => {
     const allReleases = Object.values(gameState.artistsData).flatMap(d => d.releases);
 
     const songsForArtist = useMemo(() => {
-        return allSongs.filter(s => s.artistId === activeArtist.id || s.collaboration?.artistName === activeArtist.name);
+        return allSongs.filter(s => s.artistId === activeArtist.id || s.collaboration?.artistName === activeArtist.name || (s.features && s.features.includes(activeArtist.name)));
     }, [allSongs, activeArtist]);
 
     const handleCoverArtChange = (e: React.ChangeEvent<HTMLInputElement>, releaseId: string) => {

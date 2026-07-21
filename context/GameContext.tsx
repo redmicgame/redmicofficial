@@ -7584,6 +7584,7 @@ It is now available on your Spotify profile.
 
         if (baseSong.features && baseSong.features.length > 0) {
           displayArtist = `${displayArtist}, ${baseSong.features.join(", ")}`;
+          displayTitle = displayTitle.replace(/ \(feat\. [^)]+\)/g, '');
         } else if (baseSong.collaboration) {
           displayArtist = `${displayArtist}, ${baseSong.collaboration.artistName}`;
           displayTitle = displayTitle.replace(
@@ -11057,7 +11058,22 @@ Keep up the great work!
       const newSpotifyPlaylists = (
         state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS
       ).map((playlist) => {
-        let playlistContenders = allContenders;
+        let playlistContenders = allContenders.filter((c) => {
+             const existingTrack = playlist.tracks.find(t => t.songId === c.uniqueId);
+             if (existingTrack && existingTrack.addedDate) {
+                  const weeksInPlaylist = (newDate.year - existingTrack.addedDate.year) * 52 + (newDate.week - existingTrack.addedDate.week);
+                  let maxWeeks = Infinity;
+                  if (playlist.id === "newmusicfriday") maxWeeks = 1;
+                  else if (playlist.id === "rapcaviar") maxWeeks = 10;
+                  else if (playlist.id === "tth") maxWeeks = 10;
+                  else if (playlist.id === "hiphopcentral") maxWeeks = 12;
+                  else if (playlist.id === "rockclassics") maxWeeks = 10;
+                  else if (playlist.id === "latin") maxWeeks = 10;
+                  
+                  if (weeksInPlaylist >= maxWeeks) return false;
+             }
+             return true;
+        });
         if (playlist.type === "genre" && playlist.genre) {
           playlistContenders = playlistContenders.filter((c) => {
             if (playlist.genre === "Pop" && c.genre === "Pop") return true;
@@ -18038,14 +18054,35 @@ Let us know if you accept.`,
         explicit: false,
         artistId: state.activeArtistId,
         isFeatureToNpc: true,
+        isAvailableOnStreaming: true,
         npcArtistName: npcArtistName,
         playlistBoostWeeks: promotion?.durationWeeks || 0,
+      };
+
+      const releaseId = crypto.randomUUID();
+      newFeatureSong.releaseId = releaseId;
+      const newFeatureRelease = {
+        id: releaseId,
+        title: `${songTitle} (feat. ${activeArtist.name})`,
+        type: "Single" as const,
+        coverArt: coverArt,
+        releaseDate: releaseDate,
+        songIds: [newFeatureSong.id],
+        isFeatureToNpc: true,
+        npcArtistName: npcArtistName,
+        totalStreams: 0,
+        lastWeekStreams: 0,
+        marketingBudget: 0,
+        marketingSpent: 0,
+        artistId: state.activeArtistId,
+        labelId: activeData.contract?.labelId,
       };
 
       const updatedData = {
         ...activeData,
         money: activeData.money + payout,
         songs: [...activeData.songs, newFeatureSong],
+        releases: [...activeData.releases, newFeatureRelease],
       };
 
       return {

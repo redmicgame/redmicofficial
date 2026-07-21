@@ -1401,7 +1401,8 @@ const S4AProfile: React.FC = () => {
   const pitchableSongs = useMemo(() => {
     return songs.filter((s) => {
       const release = releases.find((r) => r.id === s.releaseId);
-      if (!release || pitchedSongIds.has(s.id)) return false;
+      if (pitchedSongIds.has(s.id)) return false;
+      if (!release && !s.isFeatureToNpc) return false;
       const weeksSinceRelease =
         date.year * 52 +
         date.week -

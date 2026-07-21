@@ -19,7 +19,7 @@ const StudioView: React.FC = () => {
     const [studioIndex, setStudioIndex] = useState(0);
     const [isExplicit, setIsExplicit] = useState(false);
     const [coverArt, setCoverArt] = useState<string | null>(null);
-    const [collaboration, setCollaboration] = useState<{ artistName: string; cost: number } | null>(null);
+    const [collaborations, setCollaborations] = useState<{ artistName: string; cost: number }[]>([]);
     const [isCustomCollab, setIsCustomCollab] = useState(false);
     const [isRemix, setIsRemix] = useState(false);
     const [remixOfSongId, setRemixOfSongId] = useState<string>('');
@@ -154,13 +154,26 @@ const StudioView: React.FC = () => {
         return Math.floor(Math.random() * (7000000 - 25000 + 1)) + 25000;
     };
 
-    const handleCollaborationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const artistName = e.target.value;
-        if (artistName) {
-            setCollaboration({ artistName, cost: getFeatureCost(artistName) });
-        } else {
-            setCollaboration(null);
-        }
+    const handleAddCollaboration = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const name = e.target.value;
+        if (!name || collaborations.length >= 3) return;
+        setCollaborations([...collaborations, { artistName: name, cost: getFeatureCost(name) }]);
+        e.target.value = '';
+    };
+    
+    const removeCollaboration = (index: number) => {
+        setCollaborations(collaborations.filter((_, i) => i !== index));
+    };
+    
+    const [customCollabArtist, setCustomCollabArtist] = useState('');
+    const [customCollabCost, setCustomCollabCost] = useState(0);
+    
+    const addCustomCollaboration = () => {
+        if (!customCollabArtist || collaborations.length >= 3) return;
+        setCollaborations([...collaborations, { artistName: customCollabArtist, cost: customCollabCost }]);
+        setCustomCollabArtist('');
+        setCustomCollabCost(0);
+        setIsCustomCollab(false);
     };
 
     const handleFeature1Change = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -217,38 +230,32 @@ const StudioView: React.FC = () => {
                 return;
             }
         }
-        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0) + getContributorCost();
+        const totalCost = selectedStudio.cost + collaborations.reduce((sum, c) => sum + c.cost, 0) + getContributorCost();
         if (money < totalCost) {
             setError("You don't have enough money for this session.");
             return;
         }
         
         const [min, max] = selectedStudio.qualityRange;
-        const qualityBoost = collaboration ? Math.floor(Math.random() * 10) + 1 : 0;
+        const qualityBoost = collaborations.reduce((sum) => sum + Math.floor(Math.random() * 10) + 1, 0);
         const quality = (Math.floor(Math.random() * (max - min + 1)) + min) + qualityBoost;
         const finalQuality = Math.min(100, quality);
         
         let songTitle = title.trim();
-        let currentCollaboration = collaboration;
+        let currentCollaborations = [...collaborations];
         
         if (isSoloMemberSong && soloMemberId && gameState.group) {
             const member = gameState.group.members.find(m => m.id === soloMemberId);
             if (member) {
                 songTitle = `${songTitle} (${member.name} Solo)`;
-                // If they also picked a feature, we can just keep currentCollaboration as is,
-                // but the user said "and will feature the solo member on the song".
-                // We could set currentCollaboration to the member, but then we lose the feature.
-                // If we want to strictly follow "will feature the solo member on the song", we override it:
-                if (!currentCollaboration) {
-                     currentCollaboration = { artistName: member.name, cost: 0 };
+                if (currentCollaborations.length === 0) {
+                     currentCollaborations.push({ artistName: member.name, cost: 0 });
                 } else {
-                     // If they picked a feature, it's (Member Solo) (feat. Collaborator). 
-                     // They already get the benefit. But let's just make it clear.
-                     songTitle = `${songTitle} (feat. ${currentCollaboration.artistName})`;
+                     songTitle = `${songTitle} (feat. ${currentCollaborations.map(c => c.artistName).join(', ')})`;
                 }
             }
-        } else if (currentCollaboration) {
-            songTitle = `${songTitle} (feat. ${currentCollaboration.artistName})`;
+        } else if (currentCollaborations.length > 0) {
+            songTitle = `${songTitle} (feat. ${currentCollaborations.map(c => c.artistName).join(', ')})`;
         }
 
         const CONTROVERSIAL_PRODUCERS = ["Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"];
@@ -287,7 +294,7 @@ const StudioView: React.FC = () => {
             explicit: isExplicit,
             artistId: activeArtist.id,
             removedStreams: 0,
-            collaboration: currentCollaboration ? { ...currentCollaboration, qualityBoost } : undefined,
+            features: currentCollaborations.map(c => c.artistName),
             remixOfSongId: isRemix ? remixOfSongId : undefined,
             dailyStreams: [],
             producers,
@@ -317,7 +324,7 @@ const StudioView: React.FC = () => {
             return;
         }
         
-        const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0) + getContributorCost();
+        const totalCost = selectedStudio.cost + collaborations.reduce((sum, c) => sum + c.cost, 0) + getContributorCost();
         if (money < totalCost) {
             setError("You don't have enough money for this session.");
             return;
@@ -332,7 +339,7 @@ const StudioView: React.FC = () => {
         // Boost quality for re-recorded songs to make them viable replacements
         baseQuality += 10;
         
-        const qualityBoost = collaboration ? 15 : 0; 
+        const qualityBoost = collaborations.length * 15; 
         const finalQuality = Math.min(100, Math.max(1, Math.floor(baseQuality + qualityBoost)));
 
         // Fixed contributors for re-recording (same cost applies)
@@ -367,7 +374,7 @@ const StudioView: React.FC = () => {
             explicit: isExplicit,
             artistId: activeArtist.id,
             removedStreams: 0,
-            collaboration: collaboration ? { ...collaboration, qualityBoost } : undefined,
+            features: collaborations.map(c => c.artistName),
             remixOfSongId: undefined, // Re-recordings are standalone versions
             dailyStreams: [],
             producers: producersList,
@@ -495,7 +502,7 @@ const StudioView: React.FC = () => {
                 lastWeekStreams: 0,
                 prevWeekStreams: 0,
                 dailyStreams: [],
-                collaboration: currentFeature ? { ...currentFeature, qualityBoost } : undefined,
+                features: currentFeature ? [currentFeature.artistName] : [],
                 remixOfSongId: targetSong.id,
                 soundtrackTitle: undefined,
                 producers,
@@ -515,7 +522,7 @@ const StudioView: React.FC = () => {
         dispatch({ type: 'CHANGE_VIEW', payload: 'game' });
     };
 
-    const totalCost = selectedStudio.cost + (collaboration ? collaboration.cost : 0) + getContributorCost();
+    const totalCost = selectedStudio.cost + collaborations.reduce((sum, c) => sum + c.cost, 0) + getContributorCost();
     
     let packFeatureCost = 0;
     if (selectedRemixTypes.has('Feature 1') && feature1) packFeatureCost += feature1.cost;
@@ -918,40 +925,52 @@ const StudioView: React.FC = () => {
 
                          <div>
                             <div className="flex justify-between items-center mb-1">
-                                <label htmlFor="collaboration" className="block text-sm font-medium text-zinc-300">Collaboration (Optional)</label>
-                                {gameState.hasRedMicPro && (
-                                    <button onClick={() => { setIsCustomCollab(!isCustomCollab); setCollaboration(null); }} className="text-xs text-blue-400 font-bold hover:underline">
+                                <label htmlFor="collaboration" className="block text-sm font-medium text-zinc-300">Features (Max 3)</label>
+                                {gameState.hasRedMicPro && collaborations.length < 3 && (
+                                    <button onClick={() => { setIsCustomCollab(!isCustomCollab); }} className="text-xs text-blue-400 font-bold hover:underline">
                                         {isCustomCollab ? 'Choose Existing' : 'Custom Feature'}
                                     </button>
                                 )}
                             </div>
                             
-                            {!isCustomCollab ? (
-                                <select id="collaboration" onChange={handleCollaborationChange} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                    <option value="">None</option>
-                                    {potentialCollaborators.map(name => <option key={name} value={name}>{name}</option>)}
+                            <div className="space-y-2 mb-2">
+                                {collaborations.map((c, i) => (
+                                    <div key={i} className="flex justify-between items-center bg-zinc-800 p-2 rounded text-sm text-white">
+                                        <span>{c.artistName}</span>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-yellow-400">${formatNumber(c.cost)}</span>
+                                            <button onClick={() => removeCollaboration(i)} className="text-red-400 hover:text-red-300 font-bold">X</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {collaborations.length < 3 && !isCustomCollab && (
+                                <select id="collaboration" value="" onChange={handleAddCollaboration} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                    <option value="">Add a feature...</option>
+                                    {potentialCollaborators.filter(name => !collaborations.some(c => c.artistName === name)).map(name => <option key={name} value={name}>{name}</option>)}
                                 </select>
-                            ) : (
+                            )}
+                            {collaborations.length < 3 && isCustomCollab && (
                                 <div className="space-y-2 mt-1">
                                     <input 
                                         type="text" 
                                         placeholder="Artist Name" 
-                                        value={collaboration?.artistName || ''}
-                                        onChange={e => setCollaboration({ artistName: e.target.value, cost: collaboration?.cost || 0 })}
+                                        value={customCollabArtist}
+                                        onChange={e => setCustomCollabArtist(e.target.value)}
                                         className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 sm:text-sm h-10 px-3 text-white"
                                     />
                                     <input 
                                         type="number" 
                                         placeholder="Cost ($)" 
-                                        value={collaboration?.cost ?? ''}
-                                        onChange={e => setCollaboration({ artistName: collaboration?.artistName || '', cost: parseInt(e.target.value) || 0 })}
+                                        value={customCollabCost || ''}
+                                        onChange={e => setCustomCollabCost(parseInt(e.target.value) || 0)}
                                         className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 sm:text-sm h-10 px-3 text-white"
                                     />
+                                    <button onClick={addCustomCollaboration} className="w-full bg-blue-600 text-white font-bold py-2 rounded text-sm hover:bg-blue-500">
+                                        Add Custom Feature
+                                    </button>
                                 </div>
-                            )}
-
-                            {collaboration && !isCustomCollab && (
-                                <p className="text-sm text-yellow-400 mt-2">Feature Cost: ${formatNumber(collaboration.cost)}</p>
                             )}
                         </div>
 
@@ -1011,7 +1030,7 @@ const StudioView: React.FC = () => {
                                 <div className="flex flex-col sm:flex-row gap-2 mt-2">
                                     <select id="sampleArtist" className="flex-1 bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
                                         <option value="">Select Artist to Sample...</option>
-                                        {potentialCollaborators.map(name => <option key={name} value={name}>{name}</option>)}
+                                        {potentialCollaborators.filter(name => !collaborations.some(c => c.artistName === name)).map(name => <option key={name} value={name}>{name}</option>)}
                                     </select>
                                     <div className="flex gap-2">
                                         <button onClick={() => {
@@ -1152,7 +1171,7 @@ const StudioView: React.FC = () => {
                                                 {!isCustomFeature1 ? (
                                                     <select id="feature1" onChange={handleFeature1Change} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
                                                         <option value="">None</option>
-                                                        {potentialCollaborators.map(name => <option key={name} value={name}>{name}</option>)}
+                                                        {potentialCollaborators.filter(name => !collaborations.some(c => c.artistName === name)).map(name => <option key={name} value={name}>{name}</option>)}
                                                     </select>
                                                 ) : (
                                                     <div className="space-y-2 mt-1">
@@ -1191,7 +1210,7 @@ const StudioView: React.FC = () => {
                                                 {!isCustomFeature2 ? (
                                                     <select id="feature2" onChange={handleFeature2Change} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
                                                         <option value="">None</option>
-                                                        {potentialCollaborators.map(name => <option key={name} value={name}>{name}</option>)}
+                                                        {potentialCollaborators.filter(name => !collaborations.some(c => c.artistName === name)).map(name => <option key={name} value={name}>{name}</option>)}
                                                     </select>
                                                 ) : (
                                                     <div className="space-y-2 mt-1">

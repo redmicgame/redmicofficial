@@ -100,7 +100,7 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
                         if (!r.isTakenDown && !r.soundtrackInfo) {
                             const hasFeature = r.songIds.some(songId => {
                                 const song = data.songs.find(s => s.id === songId);
-                                return song?.collaboration?.artistName === activeArtist.name;
+                                return song?.collaboration?.artistName === activeArtist.name || (song?.features && song.features.includes(activeArtist.name));
                             });
                             if (hasFeature && !playerFeatureReleases.find(existing => existing.id === r.id)) {
                                 playerFeatureReleases.push(r);
@@ -109,7 +109,25 @@ const SpotifyDiscographyView: React.FC<{ onBack: () => void; onSelectRelease: (r
                     });
                 });
             }
-            const allFeatures = [...sortedReleases.filter(r => isFeature(r)), ...playerFeatureReleases];
+            const mockFeatureReleases = activeArtistData.songs
+                .filter(s => s.isFeatureToNpc && !s.releaseId)
+                .map(s => ({
+                    id: 'mock_rel_' + s.id,
+                    title: s.title,
+                    type: 'Single' as const,
+                    coverArt: s.coverArt,
+                    releaseDate: s.releaseDate || {year: 0, week: 0},
+                    songIds: [s.id],
+                    isFeatureToNpc: true,
+                    npcArtistName: s.npcArtistName,
+                    totalStreams: s.streams,
+                    lastWeekStreams: s.lastWeekStreams,
+                    marketingBudget: 0,
+                    marketingSpent: 0,
+                    artistId: s.artistId,
+                    labelId: undefined
+                }));
+            const allFeatures = [...sortedReleases.filter(r => isFeature(r)), ...playerFeatureReleases, ...mockFeatureReleases];
             return allFeatures.sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
         }
         // Placeholder for other filters

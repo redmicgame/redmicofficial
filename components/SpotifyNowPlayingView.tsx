@@ -57,7 +57,16 @@ const SpotifyNowPlayingView: React.FC<{ songs: Song[]; initialSongIndex: number;
 
     const artistsToDisplay = [{ name: activeArtist.name, image: activeArtist.image }];
     
-    if (song.collaboration) {
+    if (song.features && song.features.length > 0) {
+        song.features.forEach(f => {
+            const collabProfile = allPlayerArtists.find(a => a.name === f);
+            if (collabProfile) {
+                artistsToDisplay.push({ name: collabProfile.name, image: collabProfile.image });
+            } else {
+                artistsToDisplay.push({ name: f, image: NPC_ARTIST_IMAGES[f] || `https://ui-avatars.com/api/?name=${encodeURIComponent(f)}&background=random` });
+            }
+        });
+    } else if (song.collaboration) {
         const collabProfile = allPlayerArtists.find(a => a.name === song.collaboration?.artistName);
         if (collabProfile) {
             artistsToDisplay.push({ name: collabProfile.name, image: collabProfile.image });

@@ -32,6 +32,7 @@ export const SongDNAProfileView: React.FC<{
             const isMain = songArtist ? (songArtist.name === contributorName) : false;
             if (isMain) return true;
             if (song.collaboration && song.collaboration.artistName === contributorName) return true;
+            if (song.features && song.features.includes(contributorName)) return true;
             if (song.isFeatureToNpc && song.npcArtistName === contributorName) return true;
             if (song.songwriters?.includes(contributorName)) return true;
             if (song.producers?.includes(contributorName)) return true;
@@ -48,6 +49,7 @@ export const SongDNAProfileView: React.FC<{
                 const isMain = songArtist ? (songArtist.name === person) : false;
                 if (isMain) return true;
                 if (song.collaboration && song.collaboration.artistName === person) return true;
+                if (song.features && song.features.includes(person)) return true;
                 if (song.isFeatureToNpc && song.npcArtistName === person) return true;
                 if (song.songwriters?.includes(person)) return true;
                 if (song.producers?.includes(person)) return true;
@@ -61,6 +63,7 @@ export const SongDNAProfileView: React.FC<{
                 const mainName = activeArtistData.group ? activeArtistData.group.name : activeArtist.name;
                 if (mainName) uniqueCollabs.add(mainName);
                 if (song.collaboration && song.collaboration.artistName) uniqueCollabs.add(song.collaboration.artistName);
+                if (song.features) song.features.forEach(f => uniqueCollabs.add(f));
                 if (song.isFeatureToNpc && song.npcArtistName) uniqueCollabs.add(song.npcArtistName);
                 song.songwriters?.forEach(s => { if (s) uniqueCollabs.add(s); });
                 song.producers?.forEach(p => { if (p) uniqueCollabs.add(p); });
@@ -81,6 +84,7 @@ export const SongDNAProfileView: React.FC<{
             const mainName = activeArtistData.group ? activeArtistData.group.name : activeArtist.name;
             if (mainName) theirCollabs.add(mainName);
             if (song.collaboration && song.collaboration.artistName) theirCollabs.add(song.collaboration.artistName);
+            if (song.features) song.features.forEach(f => theirCollabs.add(f));
             if (song.isFeatureToNpc && song.npcArtistName) theirCollabs.add(song.npcArtistName);
             song.songwriters?.forEach(s => { if (s) theirCollabs.add(s); });
             song.producers?.forEach(p => { if (p) theirCollabs.add(p); });
@@ -123,6 +127,7 @@ export const SongDNAProfileView: React.FC<{
         const mainName = songArtist ? songArtist.name : undefined;
         if (mainName === person) roles.push("Main Artist");
         if (song.collaboration && song.collaboration.artistName === person) roles.push("Featured Artist");
+        if (song.features && song.features.includes(person)) roles.push("Featured Artist");
         if (song.isFeatureToNpc && song.npcArtistName === person) roles.push("Featured Artist");
         if (song.songwriters?.includes(person)) roles.push("Writer");
         if (song.producers?.includes(person)) roles.push("Producer");

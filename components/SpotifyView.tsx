@@ -24,7 +24,7 @@ const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boo
             <div className="text-zinc-400 font-semibold w-5 text-right">{index + 1}</div>
             <img src={song.coverArt} alt={song.title} className="w-10 h-10 rounded-sm object-cover" />
             <div className="flex-grow min-w-0">
-                <p className="font-semibold text-white truncate">{song.title}</p>
+                <p className="font-semibold text-white truncate">{song.title.replace(/ \(feat\. [^)]+\)/g, '')}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                     {song.explicit && <span className="text-[10px] w-3.5 h-3.5 bg-zinc-400 text-zinc-900 font-bold rounded-sm flex-shrink-0 flex items-center justify-center">E</span>}
                     {hasMusicVideo && (
@@ -272,7 +272,7 @@ const SpotifyView: React.FC = () => {
             Object.entries(gameState.artistsData).forEach(([artistId, data]) => {
                 if (artistId === activeArtist?.id) return;
                 data.songs.forEach(song => {
-                    if (song.isReleased && !song.isTakenDown && song.collaboration?.artistName === activeArtistName) {
+                    if (song.isReleased && !song.isTakenDown && (song.collaboration?.artistName === activeArtistName || (song.features && song.features.includes(activeArtistName)))) {
                         playerFeatureSongs.push(song);
                     }
                 });
@@ -283,7 +283,7 @@ const SpotifyView: React.FC = () => {
 
     const streamingSongs = useMemo(() => {
         return allSongs
-            .filter(s => s.isReleased && !s.isTakenDown && s.isAvailableOnStreaming === true)
+            .filter(s => s.isReleased && !s.isTakenDown && (s.isAvailableOnStreaming === true || s.isFeatureToNpc))
             .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0));
     }, [allSongs]);
 

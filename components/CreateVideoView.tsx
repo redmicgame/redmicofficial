@@ -105,12 +105,13 @@ const CreateVideoView: React.FC = () => {
         
         let artistsForTitle = activeArtist.name;
         let songForTitle = selectedSong.title;
-
-        if (selectedSong.collaboration) {
+        if (selectedSong.features && selectedSong.features.length > 0) {
+            artistsForTitle = `${activeArtist.name}, ${selectedSong.features.join(", ")}`;
+            songForTitle = songForTitle.replace(/ \\(feat\\. [^)]+\\)/g, "");
+        } else if (selectedSong.collaboration) {
             artistsForTitle = `${activeArtist.name}, ${selectedSong.collaboration.artistName}`;
-            songForTitle = songForTitle.replace(` (feat. ${selectedSong.collaboration.artistName})`, '');
+            songForTitle = songForTitle.replace(/ \\(feat\\. [^)]+\\)/g, "");
         }
-
         const baseTitle = videoType === 'Custom' ? customTitle.trim() : `${songForTitle} (${videoType})`;
         const title = `${artistsForTitle} - ${baseTitle}`;
         

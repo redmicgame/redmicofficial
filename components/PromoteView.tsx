@@ -149,8 +149,10 @@ const PromoteView: React.FC = () => {
     const promotableOldSongs = useMemo(() => {
         return songs.filter(s => {
             const release = releases.find(r => r.id === s.releaseId);
-            if (!s.isReleased || !release || promotedItemIds.has(s.id)) return false;
-            return date.year - release.releaseDate.year >= 3;
+            if (!s.isReleased || promotedItemIds.has(s.id)) return false;
+            if (!release && !s.isFeatureToNpc) return false;
+            const releaseDateToUse = release ? release.releaseDate : s.releaseDate;
+            return releaseDateToUse ? (date.year - releaseDateToUse.year >= 3) : false;
         });
     }, [songs, releases, date, promotedItemIds]);
     
