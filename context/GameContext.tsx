@@ -1363,7 +1363,9 @@ const initialState: GameState = {
   billboardTopAlbums: [],
   albumChartHistory: {},
   chartHistory: {},
+  videoChartHistory: {},
   spotifyGlobal: [],
+  spotifyGlobalMusicVideos: [],
   ukSinglesChart: [],
   ukSinglesChartHistory: {},
   spotifyUS: [],
@@ -8338,6 +8340,94 @@ It is now available on your Spotify profile.
       const newSpotifyAsia = generateSpotifyChart("Asia", (state as any).spotifyAsia || []);
       const newSpotifyAfrica = generateSpotifyChart("Africa", (state as any).spotifyAfrica || []);
 
+      // --- SPOTIFY GLOBAL MUSIC VIDEOS ---
+      let newSpotifyGlobalMusicVideos = [];
+      let newVideoChartHistory = { ...state.videoChartHistory };
+      
+      const allVideoContenders = [];
+      
+      // Add Player Videos
+      Object.entries(updatedArtistsData).forEach(([artistId, aData]) => {
+        if (!aData || !aData.videos) return;
+        const playerArtist = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+        const artistName = playerArtist ? playerArtist.name : "Unknown Artist";
+        
+        const playerMusicVideos = aData.videos.filter(v => v.isOnSpotify && v.type === 'Music Video');
+        playerMusicVideos.forEach(v => {
+          const song = aData.songs.find(s => s.id === v.songId);
+          const weeklyViews = v.spotifyDailyViews?.length ? v.spotifyDailyViews[v.spotifyDailyViews.length - 1] * 7 : 0;
+          if (weeklyViews > 0) {
+            allVideoContenders.push({
+              title: song ? song.title : v.title.replace(' (Music Video)', ''),
+              artist: artistName,
+              thumbnail: v.thumbnail,
+              isPlayerVideo: true,
+              videoId: v.id,
+              uniqueId: v.id,
+              weeklyViews: weeklyViews
+            });
+          }
+        });
+      });
+      
+      // Add NPC Videos (simulate from Top 100 Global songs)
+      const topGlobalSongs = [...allContenders].sort((a, b) => b.weeklyStreams - a.weeklyStreams).slice(0, 100);
+      topGlobalSongs.forEach((song, index) => {
+        if (!song.isPlayerSong) {
+          // Fake some music video views based on their streams
+          // Top #1 should be ~ 5M views. If #1 stream is ~ 40M, 40M * 0.125 = 5M
+          // Let's use a non-linear scaling so #30 is ~300k
+          
+          let baseMultiplier = 0.125 * (Math.pow(0.92, index));
+          const fakeViews = Math.floor(song.weeklyStreams * baseMultiplier);
+          
+          if (fakeViews > 5000) {
+            allVideoContenders.push({
+              title: song.title,
+              artist: song.artist,
+              thumbnail: song.coverArt, // reuse cover art as thumbnail
+              isPlayerVideo: false,
+              uniqueId: 'vid_' + song.uniqueId,
+              weeklyViews: fakeViews
+            });
+          }
+        }
+      });
+      
+      allVideoContenders.sort((a, b) => b.weeklyViews - a.weeklyViews);
+      const top50Videos = allVideoContenders.slice(0, 50);
+      
+      const prevVideoChartMap = new Map((state.spotifyGlobalMusicVideos || []).map(entry => [entry.uniqueId, entry.rank]));
+      
+      top50Videos.forEach((vid, index) => {
+        const rank = index + 1;
+        const lastWeekRank = prevVideoChartMap.get(vid.uniqueId) ?? null;
+        
+        const peak = newVideoChartHistory[vid.uniqueId]?.peak ?? rank;
+        const weeksOnChart = newVideoChartHistory[vid.uniqueId]?.weeksOnChart ?? 1;
+        
+        newSpotifyGlobalMusicVideos.push({
+          rank,
+          lastWeek: lastWeekRank,
+          peak: Math.min(peak, rank),
+          weeksOnChart: lastWeekRank === null ? 1 : weeksOnChart + 1,
+          title: vid.title,
+          artist: vid.artist,
+          thumbnail: vid.thumbnail,
+          isPlayerVideo: vid.isPlayerVideo,
+          videoId: vid.videoId,
+          uniqueId: vid.uniqueId,
+          weeklyViews: vid.weeklyViews,
+        });
+        
+        newVideoChartHistory[vid.uniqueId] = {
+          peak: Math.min(peak, rank),
+          weeksOnChart: lastWeekRank === null ? 1 : weeksOnChart + 1,
+          chartRun: [...(newVideoChartHistory[vid.uniqueId]?.chartRun || []), rank],
+        };
+      });
+
+
       // --- UK OFFICIAL SINGLES CHART ---
       let newUkSinglesChart: ChartEntry[] = state.ukSinglesChart || [];
       let newUkSinglesChartHistory: ChartHistory = state.ukSinglesChartHistory || {};
@@ -11305,6 +11395,8 @@ Keep up the great work!
           chartHistory: newChartHistory,
           albumChartHistory: newAlbumChartHistory,
           spotifyGlobal: newSpotifyGlobal,
+          spotifyGlobalMusicVideos: newSpotifyGlobalMusicVideos,
+          videoChartHistory: newVideoChartHistory,
           spotifyUS: newSpotifyUS,
           spotifyCanada: newSpotifyCanada,
           spotifyUK: newSpotifyUK,
@@ -11580,6 +11672,8 @@ Keep up the great work!
         chartHistory: newChartHistory,
         albumChartHistory: newAlbumChartHistory,
         spotifyGlobal: newSpotifyGlobal,
+          spotifyGlobalMusicVideos: newSpotifyGlobalMusicVideos,
+          videoChartHistory: newVideoChartHistory,
         spotifyUS: newSpotifyUS,
         spotifyCanada: newSpotifyCanada,
         spotifyUK: newSpotifyUK,

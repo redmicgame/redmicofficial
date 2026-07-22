@@ -735,6 +735,20 @@ export interface ChartEntry {
   regionalStreams?: Record<string, number>;
 }
 
+export interface VideoChartEntry {
+  rank: number;
+  lastWeek: number | null;
+  peak: number;
+  weeksOnChart: number;
+  title: string;
+  artist: string;
+  thumbnail: string;
+  isPlayerVideo: boolean;
+  videoId?: string;
+  uniqueId: string;
+  weeklyViews: number;
+}
+
 export interface AlbumChartEntry {
   rank: number;
   lastWeek: number | null;
@@ -1770,7 +1784,9 @@ export interface GameState {
   billboardTopAlbums: AlbumChartEntry[];
   albumChartHistory: ChartHistory;
   chartHistory: ChartHistory;
+  videoChartHistory: ChartHistory;
   spotifyGlobal: ChartEntry[];
+  spotifyGlobalMusicVideos: VideoChartEntry[];
   spotifyUS?: ChartEntry[];
   spotifyCanada?: ChartEntry[];
   spotifyUK?: ChartEntry[];

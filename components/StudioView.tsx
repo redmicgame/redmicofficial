@@ -1026,7 +1026,7 @@ const StudioView: React.FC = () => {
                                 {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
 
                                 <button 
-                                    onClick={handleRecordSong} 
+                                    onClick={handleRecord} 
                                     className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none"
                                     disabled={money < totalCost || !title.trim()}
                                 >

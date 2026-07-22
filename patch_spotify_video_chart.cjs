@@ -1,4 +1,10 @@
-import React from 'react';
+const fs = require('fs');
+let content = fs.readFileSync('/app/applet/components/SpotifyVideoChartView.tsx', 'utf8');
+
+// The original component computes videoChart using useMemo from allSongs.
+// We should replace that completely to use gameState.spotifyGlobalMusicVideos.
+
+const newComponent = `import React from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 
@@ -13,7 +19,7 @@ const SpotifyVideoChartView: React.FC = () => {
     const displayChart = videoChart.slice(0, 30);
 
     return (
-        <div className="bg-[#121212] h-full overflow-y-auto text-white pb-20">
+        <div className="bg-[#121212] min-h-full text-white pb-20">
             <header className="sticky top-0 bg-[#121212]/90 backdrop-blur-md p-4 flex items-center z-10">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotifyChart' })} className="p-1 -ml-1 rounded-full hover:bg-white/10" aria-label="Go back">
                     <ChevronLeftIcon className="w-6 h-6" />
@@ -34,7 +40,12 @@ const SpotifyVideoChartView: React.FC = () => {
                                 <h1 className="text-3xl font-black text-white leading-tight">Charts</h1>
                                 <h1 className="text-3xl font-black text-white leading-tight">Global</h1>
                             </div>
-                            
+                            <div className="absolute bottom-4 right-4 bg-white text-black text-xs font-bold px-1.5 py-0.5 rounded flex items-center">
+                                <svg className="w-3 h-3 mr-0.5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M5 21V3l16 9-16 9z"/>
+                                </svg>
+                                Daily Music Charts
+                            </div>
                         </div>
                     </div>
                     <p className="text-sm text-zinc-400 mt-2">Your daily update of the most played music videos right now - Global.</p>
@@ -58,26 +69,7 @@ const SpotifyVideoChartView: React.FC = () => {
                     {displayChart.length === 0 && (
                         <p className="text-center text-zinc-500 italic mt-8">No music videos on the chart yet. Try advancing the week!</p>
                     )}
-                    {displayChart.map((item, index) => {
-                        let displayTitle = item.title;
-                        let displayArtist = item.artist;
-                        
-                        if (displayTitle.includes(' - ')) {
-                            const parts = displayTitle.split(' - ');
-                            const extractedArtist = parts[0];
-                            const extractedTitle = parts.slice(1).join(' - ');
-                            
-                            if (displayArtist === "Unknown Artist" || item.isPlayerVideo) {
-                                if (extractedArtist) {
-                                    displayArtist = extractedArtist;
-                                }
-                            }
-                            displayTitle = extractedTitle;
-                        }
-                        
-                        displayTitle = displayTitle.replace(/\s*\([^)]*(Video|Visualizer)\)[^]*$/i, '').trim();
-
-                        return (
+                    {displayChart.map((item, index) => (
                         <div key={item.uniqueId} className="flex items-center gap-3">
                             <div className="w-6 text-center text-zinc-400 font-bold text-sm flex flex-col items-center">
                                 <span>{item.rank}</span>
@@ -91,15 +83,14 @@ const SpotifyVideoChartView: React.FC = () => {
                                 <div className="absolute bottom-1 right-1 bg-black/70 text-[10px] px-1 rounded text-white">4:32</div>
                             </div>
                             <div className="flex-grow min-w-0">
-                                <p className="text-white text-base truncate font-semibold">{displayTitle}</p>
+                                <p className="text-white text-base truncate font-semibold">{item.title}</p>
                                 <div className="flex items-center text-sm text-zinc-400 truncate gap-1 mt-0.5">
-                                    <span className="truncate">{displayArtist}</span>
+                                    <span className="truncate">{item.artist}</span>
                                 </div>
                                 <p className="text-xs text-zinc-500 mt-1">{formatNumber(item.weeklyViews)} views</p>
                             </div>
                         </div>
-                        );
-                    })}
+                    ))}
                 </div>
             </div>
         </div>
@@ -107,3 +98,7 @@ const SpotifyVideoChartView: React.FC = () => {
 };
 
 export default SpotifyVideoChartView;
+`;
+
+fs.writeFileSync('/app/applet/components/SpotifyVideoChartView.tsx', newComponent);
+console.log("Updated SpotifyVideoChartView.tsx");
