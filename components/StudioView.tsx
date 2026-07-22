@@ -6,6 +6,41 @@ import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ERAS, NPC_ARTIST_GENRES, NPC_ART
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
+const MultiSelect = ({ options, selected, onChange, placeholder, max = 5 }: { options: string[], selected: string[], onChange: (val: string[]) => void, placeholder: string, max?: number }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    return (
+        <div className="relative">
+            <div 
+                className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm sm:text-sm min-h-10 px-3 py-2 cursor-pointer text-zinc-300"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                {selected.length > 0 ? selected.join(', ') : placeholder}
+            </div>
+            {isOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-zinc-800 border border-zinc-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {options.map(opt => (
+                        <label key={opt} className="flex items-center px-3 py-2 hover:bg-zinc-700 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={selected.includes(opt)}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        if (selected.length < max) onChange([...selected, opt]);
+                                    } else {
+                                        onChange(selected.filter(s => s !== opt));
+                                    }
+                                }}
+                                className="mr-2 rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700"
+                            />
+                            {opt}
+                        </label>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
 const StudioView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, group, allPlayerArtists } = useGame();
     
@@ -921,6 +956,43 @@ const StudioView: React.FC = () => {
                         <div>
                             <label htmlFor="song-title" className="block text-sm font-medium text-zinc-300">Song Title</label>
                             <input type="text" id="song-title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-300 mb-1">Genre</label>
+                                <select value={genre} onChange={e => { setGenre(e.target.value); setSubgenre(SUBGENRES[0]); }} className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                    {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-300 mb-1">Subgenre</label>
+                                <select value={subgenre} onChange={e => setSubgenre(e.target.value)} className="block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
+                                    {SUBGENRES.map(sg => <option key={sg} value={sg}>{sg}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-300 mb-1">Producers (Max 3)</label>
+                            <MultiSelect options={potentialProducers} selected={producers} onChange={setProducers} placeholder="Select Producers..." max={3} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-300 mb-1">Songwriters (Max 4)</label>
+                            <MultiSelect options={potentialCollaborators} selected={songwriters} onChange={setSongwriters} placeholder="Select Songwriters..." max={4} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-300 mb-1">Engineers (Max 2)</label>
+                            <MultiSelect options={potentialEngineers} selected={engineers} onChange={setEngineers} placeholder="Select Engineers..." max={2} />
+                        </div>
+                        <div>
+                            <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {STUDIOS.map((studio, index) => (
+                                    <button key={studio.name} onClick={() => setStudioIndex(index)} className={`p-4 rounded-lg text-left transition-all border-2 ${studioIndex === index ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
+                                        <p className="font-bold text-white">{studio.name}</p>
+                                        <p className="text-sm text-green-400">-${formatNumber(studio.cost)}</p>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                          <div>
