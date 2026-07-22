@@ -681,7 +681,7 @@ const StudioView: React.FC = () => {
                 lastWeekStreams: 0,
                 prevWeekStreams: 0,
                 duration: track.duration ? Math.floor(track.duration / 1000) : (Math.floor(Math.random() * (240 - 120 + 1)) + 120),
-                explicit: false,
+                explicit: isExplicit,
                 artistId: activeArtist.id,
                 removedStreams: 0,
                 dailyStreams: [],
@@ -691,7 +691,6 @@ const StudioView: React.FC = () => {
                 anr: [],
                 features: [],
                 samples: [],
-                isExplicit: false,
                 revenue: 0,
                 weeksAtNumberOne: 0,
                 isLeadSingle: false,
@@ -956,6 +955,10 @@ const StudioView: React.FC = () => {
                         <div>
                             <label htmlFor="song-title" className="block text-sm font-medium text-zinc-300">Song Title</label>
                             <input type="text" id="song-title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" id="is-explicit" checked={isExplicit} onChange={e => setIsExplicit(e.target.checked)} className="rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700 w-4 h-4"/>
+                            <label htmlFor="is-explicit" className="text-sm font-medium text-zinc-300">Explicit Content</label>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1311,6 +1314,10 @@ const StudioView: React.FC = () => {
                                         <label htmlFor="rerecord-title" className="block text-sm font-medium text-zinc-300">New Song Title</label>
                                         <input type="text" id="rerecord-title" value={reRecordTitle} onChange={e => setReRecordTitle(e.target.value)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3"/>
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                        <input type="checkbox" id="rerecord-explicit" checked={isExplicit} onChange={e => setIsExplicit(e.target.checked)} className="rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700 w-4 h-4"/>
+                                        <label htmlFor="rerecord-explicit" className="text-sm font-medium text-zinc-300">Explicit Content</label>
+                                    </div>
 
                                     <div>
                                         <h3 className="block text-sm font-medium text-zinc-300 mb-2">Select Studio</h3>
@@ -1443,6 +1450,10 @@ const StudioView: React.FC = () => {
                                                 {SUBGENRES.map(sg => <option key={sg} value={sg}>{sg}</option>)}
                                             </select>
                                         </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-4 mb-2">
+                                        <input type="checkbox" id="autowrite-explicit" checked={isExplicit} onChange={e => setIsExplicit(e.target.checked)} className="rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700 w-4 h-4"/>
+                                        <label htmlFor="autowrite-explicit" className="text-sm font-medium text-zinc-300">Explicit Content</label>
                                     </div>
                                     
                                     <div>
