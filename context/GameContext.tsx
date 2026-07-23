@@ -11299,7 +11299,7 @@ Keep up the great work!
               title: c.title || "Unknown Title",
               coverArt: c.coverArt,
               position: index + 1,
-              addedDate: existingTrack ? existingTrack.addedDate : newDate,
+              addedDate: (existingTrack && existingTrack.addedDate) ? existingTrack.addedDate : newDate,
             };
           },
         );
@@ -11389,7 +11389,7 @@ Keep up the great work!
                   title: song.title,
                   coverArt: song.coverArt,
                   position: index + 1,
-                  addedDate: existingTrack ? existingTrack.addedDate : newDate,
+                  addedDate: (existingTrack && existingTrack.addedDate) ? existingTrack.addedDate : newDate,
                   explicit: song.explicit || false,
                 };
               },
