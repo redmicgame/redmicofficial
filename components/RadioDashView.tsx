@@ -63,6 +63,16 @@ const RadioDashView: React.FC = () => {
     };
 
     const handlePromote = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
+        const activePayolaCount = activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0;
+        if (gameState.difficultyMode === 'hard' && activePayolaCount >= 2) {
+            alert('You can only have 2 songs active in payola on Hard mode.');
+            return;
+        }
+        if (gameState.difficultyMode === 'extreme' && activePayolaCount >= 1) {
+            alert('You can only have 1 song active in payola on Extreme mode.');
+            return;
+        }
+
         if (promoSource === 'personal' && (activeArtistData?.money || 0) < promoAmount) {
             alert("Not enough personal funds.");
             return;
@@ -122,6 +132,10 @@ const RadioDashView: React.FC = () => {
                             {promoSongId === song.id && (
                                 <div className="mt-4 pt-4 border-t border-zinc-200">
                                     <h4 className="font-bold text-sm mb-2 text-blue-800">Radio Promotion (Payola)</h4>
+                                    {(gameState.difficultyMode === 'hard' && (activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0) >= 2) || (gameState.difficultyMode === 'extreme' && (activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0) >= 1) ? (
+                                        <p className="text-sm text-red-600 font-bold mb-2">Payola limit reached for {gameState.difficultyMode === 'extreme' ? 'Extreme' : 'Hard'} Mode. Remove a song's promotion to add more.</p>
+                                    ) : (
+                                        <>
                                     <p className="text-xs text-zinc-600 mb-4">Invest money to boost spins and impressions this week.</p>
                                     <div className="mb-4">
                                         <label className="text-xs font-bold text-zinc-700">Amount: ${formatNumber(promoAmount)}</label>
@@ -158,6 +172,8 @@ const RadioDashView: React.FC = () => {
                                     >
                                         Confirm Campaign
                                     </button>
+                                    </>
+                                    )}
                                 </div>
                             )}
                         </div>

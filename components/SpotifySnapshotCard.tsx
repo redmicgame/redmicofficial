@@ -70,6 +70,135 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
       );
     }
 
+    
+    if (data.type === "weekly_top_albums") {
+      const top1 = data.topAlbums[0];
+      const rest = data.topAlbums.slice(1, 15);
+      
+      const getMonthName = (week: number) => {
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return months[Math.floor(week / 4.33) % 12];
+      };
+      const day = Math.floor(Math.random() * 28) + 1; // mock day
+
+      return (
+        <div className="mt-2 rounded-xl bg-[#98A8AA] border border-zinc-600 p-0 text-white font-sans max-w-full overflow-hidden flex flex-col relative w-full" style={{aspectRatio: '16/9'}}>
+          <div className="flex w-full h-full p-4 gap-4">
+            
+            {/* LEFT SIDE - #1 ALBUM */}
+            <div className="w-[45%] flex flex-col justify-between">
+              <div>
+                <h2 className="text-[1.1rem] sm:text-[1.3rem] font-bold uppercase tracking-tight text-white drop-shadow-md mb-2 flex flex-col leading-none">
+                  <span className="text-transparent font-outline-2 font-outline-white text-stroke text-stroke-white text-fill-transparent tracking-widest text-lg sm:text-xl">Weekly Top</span> 
+                  <span className="font-black">ALBUMS</span>
+                </h2>
+                
+                <div className="relative mt-2 w-[85%] aspect-square shadow-2xl mx-auto rounded-sm overflow-hidden border border-white/20">
+                   <img src={top1.coverArt || "https://images.unsplash.com/photo-1614680376593-902f74a7cecb?auto=format&fit=crop&q=80"} className="w-full h-full object-cover" />
+                   <div className="absolute top-2 right-2 bg-white text-black text-[6px] font-bold px-1 py-0.5 rounded-sm">
+                     PARENTAL<br/>ADVISORY<br/>EXPLICIT CONTENT
+                   </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center mt-4">
+                <div className="bg-[#98A8AA] text-white font-bold text-lg sm:text-xl px-4 py-1.5 shadow-md -mt-8 relative z-10 border border-white/20" style={{backgroundColor: 'rgba(255,255,255,0.3)'}}>
+                  #1
+                </div>
+                
+                <div className="mt-4 text-center w-full">
+                  <div className="text-white font-bold text-lg sm:text-xl leading-tight truncate px-2">{top1.albumName}</div>
+                  <div className="text-white/90 text-sm font-semibold truncate px-2">{top1.artistName}</div>
+                </div>
+
+                <div className="mt-3 w-[80%] bg-white/30 text-white font-bold text-lg sm:text-xl text-center py-1 rounded-sm shadow-inner">
+                  +{top1.weeklyStreams.toLocaleString()}
+                </div>
+                
+                <div className="mt-2 font-bold text-white text-base sm:text-lg">
+                  {top1.changePct > 0 ? "+" : ""}{top1.changePct.toFixed(2)}%
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-end mt-4 pt-2">
+                <div className="flex items-center gap-1.5 opacity-90">
+                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                  </svg>
+                  <div className="flex flex-col leading-none">
+                     <span className="text-xs font-bold">SpotifySnapshot</span>
+                     <span className="text-[8px] font-semibold opacity-70">Layout by: @socasuallygay</span>
+                  </div>
+                </div>
+                <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 17l9.2-9.2M17 17V7H7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* RIGHT SIDE - LIST */}
+            <div className="w-[55%] flex flex-col h-full bg-[#879698] rounded-md shadow-xl overflow-hidden relative">
+               <div className="absolute top-2 right-3 text-white font-bold text-sm sm:text-base z-10 drop-shadow-md">
+                 {getMonthName(data.date?.week || 1)} {day}, {data.date?.year || 2026}
+               </div>
+               
+               <div className="flex-1 flex flex-col w-full h-full pt-10 pb-2 overflow-y-auto scrollbar-hide">
+                  {rest.map((album: any, i: number) => {
+                     const isUp = album.previousRank > album.rank;
+                     const isDown = album.previousRank < album.rank;
+                     return (
+                        <div key={i} className="flex items-center w-full h-1/14 text-white text-xs sm:text-sm px-1 my-[1px]">
+                           {/* Change indicator */}
+                           <div className="w-6 sm:w-8 flex justify-center">
+                              {isUp ? (
+                                <div className="bg-[#4CAF50] text-white font-bold text-[10px] sm:text-xs w-full h-full py-0.5 text-center flex items-center justify-center">
+                                   +{album.previousRank - album.rank}
+                                </div>
+                              ) : isDown ? (
+                                <div className="bg-[#D32F2F] text-white font-bold text-[10px] sm:text-xs w-full h-full py-0.5 text-center flex items-center justify-center">
+                                   -{album.rank - album.previousRank}
+                                </div>
+                              ) : null}
+                           </div>
+
+                           {/* Rank */}
+                           <div className="w-6 sm:w-8 text-center font-bold text-[11px] sm:text-sm opacity-90 shrink-0">
+                             #{album.rank}
+                           </div>
+                           
+                           {/* Cover */}
+                           <div className="w-7 h-7 sm:w-9 sm:h-9 shrink-0 mx-1 border border-white/20 shadow-sm overflow-hidden bg-black">
+                              <img src={album.coverArt || "https://images.unsplash.com/photo-1614680376593-902f74a7cecb?auto=format&fit=crop&q=80"} className="w-full h-full object-cover" />
+                           </div>
+
+                           {/* Title */}
+                           <div className="flex-1 min-w-0 font-bold text-[10px] sm:text-sm truncate px-1">
+                             {album.albumName}
+                           </div>
+
+                           {/* Streams */}
+                           <div className="font-bold text-[10px] sm:text-sm text-right min-w-[70px] sm:min-w-[90px] pr-1">
+                             +{album.weeklyStreams.toLocaleString()}
+                           </div>
+                           
+                           {/* Change Pct */}
+                           <div className="font-semibold text-[9px] sm:text-xs text-right min-w-[45px] sm:min-w-[55px] opacity-90 pr-1">
+                             {album.changePct > 0 ? "+" : ""}{album.changePct.toFixed(2)}%
+                           </div>
+                        </div>
+                     )
+                  })}
+               </div>
+            </div>
+          </div>
+          
+          <style dangerouslySetInnerHTML={{__html: `
+            .text-stroke { -webkit-text-stroke: 1px white; color: transparent; }
+          `}} />
+        </div>
+      );
+    }
+
     if (data.type === "prerelease_streams") {
       return (
         <div className="mt-2 rounded-xl bg-[#87a5a8] border border-[#6b8587] p-4 pb-0 text-white font-sans max-w-full overflow-hidden">

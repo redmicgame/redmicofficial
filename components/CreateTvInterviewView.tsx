@@ -58,7 +58,7 @@ const CreateTvInterviewView: React.FC = () => {
                                     <button
                                         key={opt.type}
                                         onClick={() => handleAnswer(i, opt.type)}
-                                        className={\`w-full p-3 text-left rounded-lg border-2 transition-colors \${answers[i] === opt.type ? 'border-red-500 bg-red-900/30' : 'border-zinc-700 hover:border-zinc-500'}\`}
+                                        className={`w-full p-3 text-left rounded-lg border-2 transition-colors ${answers[i] === opt.type ? 'border-red-500 bg-red-900/30' : 'border-zinc-700 hover:border-zinc-500'}`}
                                     >
                                         {opt.text}
                                     </button>

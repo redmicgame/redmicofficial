@@ -17,6 +17,7 @@
     "express": "^5.2.1",
     "fast-average-color": "^9.5.2",
     "firebase": "^12.12.1",
+    "glob": "^13.0.6",
     "isomorphic-unfetch": "^4.0.2",
     "lucide-react": "^1.24.0",
     "node-fetch": "^3.3.2",

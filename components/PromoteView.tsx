@@ -152,7 +152,7 @@ const PromoteView: React.FC = () => {
             if (!s.isReleased || promotedItemIds.has(s.id)) return false;
             if (!release && !s.isFeatureToNpc) return false;
             const releaseDateToUse = release ? release.releaseDate : s.releaseDate;
-            return releaseDateToUse ? (date.year - releaseDateToUse.year >= 3) : false;
+            return releaseDateToUse ? (date.year - releaseDateToUse.year >= 1) : false;
         });
     }, [songs, releases, date, promotedItemIds]);
     
@@ -196,13 +196,36 @@ const PromoteView: React.FC = () => {
         if (newSelection.has(songId)) {
             newSelection.delete(songId);
         } else {
+            const activeSongPromotionsCount = activeArtistData?.promotions.filter(p => p.itemType === 'song').length || 0;
+            if (gameState.difficultyMode === 'hard' && (newSelection.size + activeSongPromotionsCount) >= 2) {
+                alert('You can only have 2 songs active in payola on Hard mode.');
+                return;
+            }
+            if (gameState.difficultyMode === 'extreme' && (newSelection.size + activeSongPromotionsCount) >= 1) {
+                alert('You can only have 1 song active in payola on Extreme mode.');
+                return;
+            }
             newSelection.add(songId);
         }
         setSelectedSongIds(newSelection);
     };
 
     const handleSelectAllSongs = () => {
-        setSelectedSongIds(new Set(promotableSongs.map(s => s.id)));
+        const activeSongPromotionsCount = activeArtistData?.promotions.filter(p => p.itemType === 'song').length || 0;
+        let limit = promotableSongs.length;
+        if (gameState.difficultyMode === 'hard') limit = 2 - activeSongPromotionsCount;
+        if (gameState.difficultyMode === 'extreme') limit = 1 - activeSongPromotionsCount;
+        
+        if (limit <= 0) {
+            alert(`You can only have ${gameState.difficultyMode === 'extreme' ? 1 : 2} songs active in payola on ${gameState.difficultyMode} mode.`);
+            return;
+        }
+
+        const toSelect = promotableSongs.slice(0, limit).map(s => s.id);
+        if (promotableSongs.length > limit) {
+             alert(`Selected ${limit} songs due to ${gameState.difficultyMode} mode payola limits.`);
+        }
+        setSelectedSongIds(new Set(toSelect));
     };
     
     const handleDeselectAllSongs = () => {
@@ -237,6 +260,17 @@ const PromoteView: React.FC = () => {
     };
     
     const handleSelectPackageForSingleItem = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
+        const activeSongPromotionsCount = activeArtistData?.promotions.filter(p => p.itemType === 'song').length || 0;
+        if (selectedSingleItem?.type === 'song') {
+            if (gameState.difficultyMode === 'hard' && activeSongPromotionsCount >= 2) {
+                alert('You can only have 2 songs active in payola on Hard mode.');
+                return;
+            }
+            if (gameState.difficultyMode === 'extreme' && activeSongPromotionsCount >= 1) {
+                alert('You can only have 1 song active in payola on Extreme mode.');
+                return;
+            }
+        }
         const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
         const totalCost = pkg.weeklyCost * qualityMultiplier;
         const totalFunds = money + (contract?.marketingBudget || 0);
@@ -273,6 +307,13 @@ const PromoteView: React.FC = () => {
             case 'songs':
                 if (!contract) {
                     return <div className="text-center text-zinc-400 p-8 bg-zinc-800 rounded-lg">You must be signed to a label to run song promotion campaigns. Visit the 'Labels' tab to get a deal.</div>;
+                }
+                const activeSongPromotionsCount = activeArtistData?.promotions.filter(p => p.itemType === 'song').length || 0;
+                if (gameState.difficultyMode === 'hard' && activeSongPromotionsCount >= 2) {
+                     return <div className="text-center text-zinc-400 p-8 bg-zinc-800 rounded-lg">Payola limit reached for Hard Mode (2 songs max). Remove a song to add more.</div>;
+                }
+                if (gameState.difficultyMode === 'extreme' && activeSongPromotionsCount >= 1) {
+                     return <div className="text-center text-zinc-400 p-8 bg-zinc-800 rounded-lg">Payola limit reached for Extreme Mode (1 song max). Remove a song to add more.</div>;
                 }
                 return (
                     <>
@@ -316,6 +357,13 @@ const PromoteView: React.FC = () => {
             case 'resurgence':
                 if (!contract) {
                      return <div className="text-center text-zinc-400 p-8 bg-zinc-800 rounded-lg">You must be signed to a label to run resurgence campaigns.</div>;
+                }
+                const activeResurgencePromotionsCount = activeArtistData?.promotions.filter(p => p.itemType === 'song').length || 0;
+                if (gameState.difficultyMode === 'hard' && activeResurgencePromotionsCount >= 2) {
+                     return <div className="text-center text-zinc-400 p-8 bg-zinc-800 rounded-lg">Payola limit reached for Hard Mode (2 songs max). Remove a song to add more.</div>;
+                }
+                if (gameState.difficultyMode === 'extreme' && activeResurgencePromotionsCount >= 1) {
+                     return <div className="text-center text-zinc-400 p-8 bg-zinc-800 rounded-lg">Payola limit reached for Extreme Mode (1 song max). Remove a song to add more.</div>;
                 }
                 return (
                     <div className="space-y-2">

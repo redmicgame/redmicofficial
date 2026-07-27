@@ -1,22 +1,27 @@
 const fs = require('fs');
-const file = '/app/applet/context/GameContext.tsx';
-let content = fs.readFileSync(file, 'utf8');
+let content = fs.readFileSync('context/GameContext.tsx', 'utf8');
 
-const regex = /if \(baseSong\.features && baseSong\.features\.length > 0\) \{[\s\S]*?\} else if \(baseSong\.isFeatureToNpc && baseSong\.npcArtistName\)/;
+const importTarget = 'import { loadGameFromCloud, saveGameToCloud } from "../firebase";';
+content = content.replace(importTarget, '');
 
-const replacement = `if (baseSong.features && baseSong.features.length > 0) {
-          displayArtist = \`\${displayArtist}, \${baseSong.features.join(", ")}\`;
-          displayTitle = displayTitle.replace(/ \\(feat\\\. [^)]+\\)/g, '');
-        } else if (baseSong.collaboration) {
-          displayArtist = \`\${displayArtist}, \${baseSong.collaboration.artistName}\`;
-          displayTitle = displayTitle.replace(
-            new RegExp(
-              \`\\\\s*\\\\(feat\\\\.\\\\s*\${escapeRegExp(baseSong.collaboration.artistName)}\\\\)\`,
-              "i",
-            ),
-            "",
-          );
-        } else if (baseSong.isFeatureToNpc && baseSong.npcArtistName)`;
+const targetEffect = `  useEffect(() => {
+    if (!isLoading && !isAuthLoading && gameState.careerMode && user) {
+      const timeout = setTimeout(async () => {
+        try {
+          let currentSaveId = gameState.cloudSaveId;
+          if (!currentSaveId) {
+            currentSaveId = \`save_\${Date.now()}_\${Math.random().toString(36).substring(7)}\`;
+            dispatch({ type: "SET_CLOUD_SAVE_ID", payload: currentSaveId });
+          }
+          await saveGameToCloud(user.uid, currentSaveId, gameState);
+        } catch (err) {
+          console.error("Could not background save to Cloud DB", err);
+        }
+      }, 10000); // 10 seconds debounce
 
-content = content.replace(regex, replacement);
-fs.writeFileSync(file, content);
+      return () => clearTimeout(timeout);
+    }
+  }, [gameState, isLoading, isAuthLoading, user]);`;
+
+content = content.replace(targetEffect, '');
+fs.writeFileSync('context/GameContext.tsx', content);

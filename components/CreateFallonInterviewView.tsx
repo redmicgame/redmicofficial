@@ -20,7 +20,7 @@ const CreateFallonInterviewView: React.FC = () => {
 
     if (!activeArtist || !activeFallonOffer || !release) {
         return (
-            <div className="p-4 bg-zinc-900 text-white min-h-full">
+            <div className="p-4 bg-zinc-900 text-white h-full overflow-y-auto">
                 <p>Error loading page.</p>
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'inbox' })} className="text-red-500 mt-2">Back to Inbox</button>
             </div>

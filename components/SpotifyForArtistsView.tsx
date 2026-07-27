@@ -710,7 +710,7 @@ const S4AHome: React.FC = () => {
   }, [songs]);
 
   return (
-    <div className="bg-[#402000] text-white min-h-full">
+    <div className="bg-[#402000] text-white h-full overflow-y-auto">
       <div className="p-4 space-y-6">
         {latestRelease && (
           <div className="flex items-center gap-4">
@@ -978,7 +978,7 @@ const S4AMusic: React.FC<{
   ];
 
   return (
-    <div className="bg-white text-black min-h-full">
+    <div className="bg-white text-black h-full overflow-y-auto">
       <header className="p-4 border-b">
         <h1 className="text-3xl font-bold">Music</h1>
         <div className="flex gap-6 mt-4 text-sm font-semibold text-zinc-600 border-b">
@@ -1301,7 +1301,7 @@ const S4AAudience: React.FC = () => {
   };
 
   return (
-    <div className="bg-white text-black min-h-full">
+    <div className="bg-white text-black h-full overflow-y-auto">
       <header className="p-4 border-b">
         <h1 className="text-3xl font-bold">Audience</h1>
       </header>
@@ -1767,7 +1767,7 @@ const S4AMonetization: React.FC<{ onSelectSong: (song: Song) => void }> = ({
     .slice(0, 50); // Show top 50
 
   return (
-    <div className="bg-white text-black min-h-full">
+    <div className="bg-white text-black h-full overflow-y-auto">
       <header className="p-4 border-b">
         <h1 className="text-3xl font-bold">Monetization</h1>
         <p className="text-zinc-600 text-sm mt-1">

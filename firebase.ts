@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc, serverTimestamp, query, where, orderBy, limit } from 'firebase/firestore';
 import firebaseConfig from './firebase-applet-config.json';
 import type { GameState } from './types';
 
@@ -27,65 +27,44 @@ export const logout = async () => {
     }
 };
 
-export const getUserSaves = async (userId: string) => {
+
+
+
+
+export const uploadLeaderboardStats = async (
+    userId: string,
+    mode: string,
+    category: string,
+    score: number,
+    artistName: string,
+    itemName: string,
+    imageUrl: string
+) => {
     try {
-        const querySnapshot = await getDocs(collection(db, 'users', userId, 'saves'));
+        await setDoc(doc(db, `leaderboards_${mode}_${category}`, userId), {
+            userId,
+            score,
+            artistName,
+            itemName,
+            imageUrl: imageUrl.length > 2000 ? "https://ui-avatars.com/api/?name=" + encodeURIComponent(artistName) + "&background=random" : imageUrl,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    } catch (error) {
+        console.error("Error uploading leaderboard stat:", error);
+    }
+};
+
+export const getLeaderboard = async (mode: string, category: string) => {
+    try {
+        const q = query(
+            collection(db, `leaderboards_${mode}_${category}`),
+            orderBy("score", "desc"),
+            limit(50)
+        );
+        const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-        console.error("Error fetching user saves:", error);
+        console.error("Error fetching leaderboard:", error);
         return [];
-    }
-};
-
-export const deleteCloudSave = async (userId: string, saveId: string) => {
-    try {
-        await deleteDoc(doc(db, 'users', userId, 'saves', saveId));
-    } catch (error) {
-        console.error("Error deleting cloud save:", error);
-        throw error;
-    }
-};
-
-export const saveGameToCloud = async (userId: string, saveId: string, gameState: GameState) => {
-    try {
-        const saveRef = doc(db, 'users', userId, 'saves', saveId);
-        let artistName = "Unknown";
-        if (gameState.careerMode === 'solo' && gameState.soloArtist) {
-            artistName = gameState.soloArtist.name;
-        } else if (gameState.careerMode === 'group' && gameState.group) {
-            artistName = gameState.group.name;
-        }
-
-        // Firebase Firestore does not support 'undefined' values. 
-        // We stringify and parse to seamlessly strip all 'undefined' properties.
-        const cleanGameState = JSON.parse(JSON.stringify(gameState));
-
-        await setDoc(saveRef, {
-            userId,
-            saveId,
-            gameState: cleanGameState,
-            artistName,
-            year: gameState.date.year,
-            week: gameState.date.week,
-            updatedAt: serverTimestamp()
-        });
-        return saveId;
-    } catch (error) {
-        console.error("Error saving game to cloud:", error);
-        throw error;
-    }
-};
-
-// Also keep a legacy loader in case they have an old /saves/userId doc they try to load later
-export const loadLegacyGameFromCloud = async (userId: string): Promise<GameState | null> => {
-    try {
-        const _doc = await getDoc(doc(db, 'saves', userId));
-        if (_doc.exists()) {
-            return _doc.data().gameState as GameState;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error loading legacy game from cloud:", error);
-        return null;
     }
 };

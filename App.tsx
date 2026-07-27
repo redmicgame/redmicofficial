@@ -13,6 +13,7 @@ import StudioView from './components/StudioView';
 import ReleaseView from './components/ReleaseView';
 import PitchforkView from './components/PitchforkView';
 import YouTubeView from './components/YouTubeView';
+import YouTubeMusicView from './components/YouTubeMusicView';
 import VevoView from './components/VevoView';
 import MTVView from './components/MTVView';
 import CreateMagazineInterviewView from './components/CreateMagazineInterviewView';
@@ -103,9 +104,15 @@ import CreateOscarPerformanceView from './components/CreateOscarPerformanceView'
 import OscarRedCarpetView from './components/OscarRedCarpetView';
 import MoviePremiereRedCarpetView from './components/MoviePremiereRedCarpetView';
 import SwitchSaveView from './components/SwitchSaveView';
+import LiveLeaderboardView from './components/LiveLeaderboardView';
 import RedCarpetHistoryView from './components/RedCarpetHistoryView';
 import DatingView from './components/DatingView';
 import GoogleView from './components/GoogleView';
+import RedditSiteView from './components/RedditSiteView';
+import { VogueSiteView } from './components/VogueSiteView';
+import { RollingStoneSiteView } from './components/RollingStoneSiteView';
+import BillboardSiteView from './components/BillboardSiteView';
+
 import TikTokView from './components/TikTokView';
 import InstagramView from './components/InstagramView';
 import TmzArticleView from './components/TmzArticleView';
@@ -122,7 +129,7 @@ import { getEraConfiguration } from './utils/eraUtils';
 import UKChartView from './components/UKChartView';
 
 const AppContent: React.FC = () => {
-    const { gameState, activeArtistData } = useGame();
+    const { gameState, activeArtistData, dispatch } = useGame();
     const { careerMode, currentView } = gameState;
     const isGoldTheme = activeArtistData?.isGoldTheme ?? false;
     
@@ -140,6 +147,16 @@ const AppContent: React.FC = () => {
                 return <InstagramView />;
             case 'tiktok':
                 return <TikTokView />;
+            
+            case 'vogue':
+                return <VogueSiteView onClose={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} />;
+            case 'rollingstone':
+                return <RollingStoneSiteView onClose={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} />;
+            case 'billboard_news':
+                return <BillboardSiteView initialArticle={{title: 'Music Industry Updates', content: 'Catch up on all the latest news, releases, and rumors across the industry.\n\nStay tuned as we update this section.'}} onClose={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} />;
+
+            case 'reddit':
+                return <RedditSiteView onClose={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} />;
             case 'google':
                 return <GoogleView />;
             case 'spotify':
@@ -165,7 +182,9 @@ const AppContent: React.FC = () => {
             case 'pitchfork':
                 return <PitchforkView />;
             case 'youtube':
-                    return <YouTubeView />;
+                return <YouTubeView />;
+            case 'youtubeMusic':
+                return <YouTubeMusicView />;
                 case 'vevo':
                     return <VevoView />;
             case 'mtv':
@@ -308,6 +327,8 @@ const AppContent: React.FC = () => {
                 return <MoviePremiereRedCarpetView />;
             case 'switchSave':
                 return <SwitchSaveView />;
+            case 'leaderboard':
+                return <LiveLeaderboardView />;
             case 'redCarpetHistory':
                 return <RedCarpetHistoryView />;
             case 'dating':

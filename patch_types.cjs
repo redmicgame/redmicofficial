@@ -1,19 +1,15 @@
 const fs = require('fs');
-const file = '/app/applet/types.ts';
-let content = fs.readFileSync(file, 'utf8');
-
-content = content.replace(
-    /type:\s*\| "Music Video"/g,
-    `type:
-    | "Music Video"`
-);
-
-content = content.replace(
-    /mentionedNpcs\?: string\[\];/g,
-    `mentionedNpcs?: string[];
-  isOnSpotify?: boolean;
-  spotifyViews?: number;
-  spotifyDailyViews?: number[];`
-);
-
-fs.writeFileSync(file, content);
+let content = fs.readFileSync('types.ts', 'utf8');
+content = content.replace(/export interface SpotifyPlaylist \{[\s\S]*?tracks: SpotifyPlaylistTrack\[\];\n\}/, 
+`export interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  description: string;
+  followers: number;
+  coverArt: string;
+  type: "global" | "genre" | "viral" | "new" | "this_is";
+  genre?: string;
+  tracks: SpotifyPlaylistTrack[];
+  bannedTrackIds?: string[];
+}`);
+fs.writeFileSync('types.ts', content);

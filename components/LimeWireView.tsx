@@ -18,7 +18,7 @@ const LimeWireView: React.FC = () => {
     }, [activeArtistData]);
 
     return (
-        <div className="bg-[#E4F1E1] min-h-full font-sans text-black pt-12 pb-24 relative overflow-y-auto">
+        <div className="bg-[#E4F1E1] h-full overflow-y-auto font-sans text-black pt-12 pb-24 relative overflow-y-auto">
             <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#2B8B3B] to-[#1E6B2A] flex items-center px-4 shadow-[0_2px_4px_rgba(0,0,0,0.3)] z-10">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="text-white hover:text-green-200 p-1 bg-black/20 rounded shadow-inner">
                     <ArrowLeftIcon className="w-5 h-5"/>

@@ -19,7 +19,7 @@ import { TikTokVideo } from '../types';
 const TikTokFeedVideo: React.FC<{ video: TikTokVideo & { username: string, userAvatar: string, songName?: string, isVerified?: boolean }, onDelete?: () => void }> = ({ video, onDelete }) => {
     const [showOptions, setShowOptions] = useState(false);
     return (
-        <div className="relative w-full h-full min-h-full bg-black snap-start flex-shrink-0 flex flex-col justify-end text-white pb-20 px-4">
+        <div className="relative w-full h-full h-full overflow-y-auto bg-black snap-start flex-shrink-0 flex flex-col justify-end text-white pb-20 px-4">
             {/* Background "video" placeholder */}
             <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-900 opacity-50 z-0 flex items-center justify-center overflow-hidden">
                 <img src={video.thumbnail || video.userAvatar} className={`w-full h-full object-cover ${!video.thumbnail ? 'blur-sm opacity-30' : 'opacity-80'}`} />

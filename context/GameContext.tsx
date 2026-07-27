@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { db, getActiveSaveId, separateMediaFromState, injectMediaIntoState } from "../db/db";
 import { useFirebase } from "./FirebaseContext";
-import { loadGameFromCloud, saveGameToCloud } from "../firebase";
+
 import type {
   GameState,
   GameAction,
@@ -4402,7 +4402,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             effectivelyReleased = true;
           }
           if (effectivelyReleased && !song.isTakenDown) {
-            let baseStreams = song.quality ** 2 * 50;
+            let baseStreams = song.quality ** 2 * 250;
             const difficulty = state.difficultyMode || "normal";
             let diffMultiplier = 1;
             if (difficulty === "easy") diffMultiplier = 2.0;
@@ -4469,6 +4469,9 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               if (song.duration < 150) trendMultiplier *= 1.5; // Short songs algorithmic boost
             }
 
+            if (song.isInterlude) {
+              baseStreams = baseStreams * 0.5;
+            }
             let weeklyStreams = Math.floor(
               baseStreams *
                 hypeMultiplier *
@@ -5901,6 +5904,8 @@ After careful consideration, we've decided to pass on releasing "${sub.release.t
                           isReleased: true,
                           releaseId: singleRelease.id,
                           isPreReleaseSingle: true,
+                          isInterlude: single.singleType === 'interlude',
+                          singleType: single.singleType,
                           coverArt: sub.release.coverArt,
                           rightsSoldPercent:
                             rightsSoldPercent > 0
@@ -7671,22 +7676,24 @@ It is now available on your Spotify profile.
       const songTargetStreams: number[] = [];
       for (let i = 0; i < newNpcsWithReleases.length; i++) {
         let act = 0;
-        if (i === 0) act = 20000000 + Math.random() * 20000000; // 20m-40m
-        else if (i === 1) act = 16000000 + Math.random() * 9000000;   // 16m-25m
-        else if (i === 2) act = 14000000 + Math.random() * 8000000;   // 14m-22m
-        else if (i === 3) act = 12000000 + Math.random() * 6000000;   // 12m-18m
-        else if (i === 4) act = 10000000 + Math.random() * 6000000;   // 10m-16m
-        else if (i === 5) act = 9000000 + Math.random() * 5000000;    // 9m-14m
-        else if (i === 6) act = 8000000 + Math.random() * 5000000;    // 8m-13m
-        else if (i === 7) act = 7000000 + Math.random() * 5000000;    // 7m-12m
-        else if (i === 8) act = 6500000 + Math.random() * 4500000;    // 6.5m-11m
-        else if (i === 9) act = 6000000 + Math.random() * 4000000;    // 6m-10m
-        else if (i < 20) act = 4000000 + Math.random() * 4000000;     // 4m-8m
-        else if (i < 40) act = 2500000 + Math.random() * 2500000;     // 2.5m-5m
-        else if (i < 60) act = 1800000 + Math.random() * 1200000;     // 1.8m-3m
-        else if (i < 80) act = 1200000 + Math.random() * 800000;      // 1.2m-2m
-        else if (i < 100) act = 700000 + Math.random() * 800000;      // 700k-1.5m
-        else act = 300000 + Math.random() * 400000;                   // < 700k
+        if (i === 0) act = 40000000 + Math.random() * 15000000;       // 40m-55m
+        else if (i === 1) act = 34000000 + Math.random() * 8000000;   // 34m-42m
+        else if (i === 2) act = 30000000 + Math.random() * 6000000;   // 30m-36m
+        else if (i === 3) act = 27000000 + Math.random() * 5000000;   // 27m-32m
+        else if (i === 4) act = 25000000 + Math.random() * 3000000;   // 25m-28m
+        else if (i === 5) act = 24000000 + Math.random() * 2000000;   // 24m-26m (rank 6)
+        else if (i === 6) act = 23000000 + Math.random() * 1000000;   // 23m-24m
+        else if (i === 7) act = 22000000 + Math.random() * 1000000;   // 22m-23m
+        else if (i === 8) act = 21000000 + Math.random() * 1000000;   // 21m-22m
+        else if (i === 9) act = 20000000 + Math.random() * 1000000;   // 20m-21m
+        else if (i < 20) act = 16000000 + Math.random() * 3000000;    // 16m-19m
+        else if (i < 40) act = 14000000 + Math.random() * 2000000;    // 14m-16m
+        else if (i < 60) act = 12500000 + Math.random() * 1500000;    // 12.5m-14m
+        else if (i < 80) act = 11000000 + Math.random() * 1500000;    // 11m-12.5m
+        else if (i < 100) act = 10000000 + Math.random() * 1000000;   // 10m-11m (rank 100)
+        else if (i < 150) act = 8000000 + Math.random() * 2000000;    // 8m-10m
+        else if (i < 200) act = 6500000 + Math.random() * 1500000;    // 6.5m-8m
+        else act = 3000000 + Math.random() * 3500000;                 // < 6.5m
         songTargetStreams.push(Math.floor(act));
       }
       songTargetStreams.sort((a, b) => b - a);
@@ -9770,6 +9777,50 @@ Daily streams:
         }
       }
 
+      
+      // SPOTIFY SNAPSHOT: WEEKLY TOP ALBUMS
+      if (newDate.week % 2 === 0) {
+          const streamingAlbums = [...allAlbumContenders].sort((a, b) => (b.weeklyStreams || 0) - (a.weeklyStreams || 0));
+          const top15Streaming = streamingAlbums.slice(0, 15);
+          
+          if (top15Streaming.length > 0 && top15Streaming[0].weeklyStreams > 0) {
+              const top15Data = top15Streaming.map((a, i) => {
+                  return {
+                      rank: i + 1,
+                      albumName: a.title,
+                      artistName: a.artist,
+                      coverArt: a.coverArt,
+                      weeklyStreams: a.weeklyStreams || 0,
+                      // mock a change pct for now since we don't have historical streaming data
+                      changePct: (Math.random() * 20) - 10,
+                      previousRank: (i + 1) + Math.floor(Math.random() * 3) - 1,
+                  };
+              });
+              
+              const jsonStr = JSON.stringify({
+                  type: "weekly_top_albums",
+                  date: newDate,
+                  topAlbums: top15Data
+              });
+              
+              // We want to add this post to the player's feed, but who's the active artist?
+              // Let's add it to the active artist's feed so the player sees it.
+              const activePlayerId = state.activeArtistId;
+              if (activePlayerId && updatedArtistsData[activePlayerId]) {
+                  updatedArtistsData[activePlayerId].xPosts.unshift({
+                      id: crypto.randomUUID(),
+                      authorId: "spotifysnapshot",
+                      content: `Top 15 Most Streamed Albums of the Week on Spotify! 📊\n\n#1. ${top15Data[0].albumName}\n#2. ${top15Data[1]?.albumName}\n#3. ${top15Data[2]?.albumName}`,
+                      image: `snapshot:${jsonStr}`,
+                      likes: Math.floor(Math.random() * 100000) + 20000,
+                      retweets: Math.floor(Math.random() * 20000) + 5000,
+                      views: Math.floor(Math.random() * 2000000) + 500000,
+                      date: newDate,
+                  });
+              }
+          }
+      }
+      
       // Add top 2 Snapshot posts per artist
       const artistSnapshots: Record<string, any[]> = {};
       snapshotCandidates.forEach((candidate) => {
@@ -11196,14 +11247,18 @@ Keep up the great work!
       const newSpotifyPlaylists = (
         state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS
       ).map((playlist) => {
+        const newBannedTrackIds = new Set(playlist.bannedTrackIds || []);
+        
         let playlistContenders = allContenders.filter((c) => {
+             if (newBannedTrackIds.has(c.uniqueId)) return false;
+             
              const existingTrack = playlist.tracks.find(t => t.songId === c.uniqueId);
              if (existingTrack && existingTrack.addedDate) {
                   const weeksInPlaylist = (newDate.year - existingTrack.addedDate.year) * 52 + (newDate.week - existingTrack.addedDate.week);
                   
                   const limits: Record<string, number> = {
                       "tth": 12,
-                      "global50": Infinity,
+                      "global50": 52,
                       "rapcaviar": 14,
                       "latin": 14,
                       "megahit": 16,
@@ -11227,26 +11282,29 @@ Keep up the great work!
                       "kpop": 26,
                       "christmas": 26,
                       "teenparty": 28,
-                      "newmusicfriday": 28,
+                      "newmusicfriday": 1,
                       "danceparty": 28,
                       "bighit": 28,
                       "goodvibes": 28,
                       "justhits": 30,
                       "essentialindie": 30,
-                      "poprising": 32,
-                      "chilledrnb": 32,
-                      "viralhits": 32,
-                      "afrobeats": 34,
-                      "countrycoffeehouse": 36,
-                      "viral50": 36,
-                      "indie": 36,
-                      "coffeetable": 40,
-                      "reggae": 40
+                      "poprising": 12,
+                      "chilledrnb": 12,
+                      "viralhits": 10,
+                      "afrobeats": 12,
+                      "countrycoffeehouse": 15,
+                      "viral50": 10,
+                      "indie": 12,
+                      "coffeetable": 20,
+                      "reggae": 20
                   };
                   
                   let maxWeeks = limits[playlist.id] !== undefined ? limits[playlist.id] : Infinity;
                   
-                  if (weeksInPlaylist >= maxWeeks) return false;
+                  if (weeksInPlaylist >= maxWeeks) {
+                      newBannedTrackIds.add(c.uniqueId);
+                      return false;
+                  }
              }
              return true;
         });
@@ -11382,7 +11440,7 @@ Keep up the great work!
           .slice(0, 50)
           .map((t, i) => ({ ...t, position: i + 1 }));
 
-        return { ...playlist, tracks: newTracks };
+        return { ...playlist, tracks: newTracks, bannedTrackIds: Array.from(newBannedTrackIds) };
       });
 
       // Generate "This Is [Artist]" playlists for any player artists with >= 10 songs
@@ -11575,6 +11633,128 @@ Keep up the great work!
         }
       }
       // --- END TMZ LOGIC ---
+
+      // --- DYNAMIC GENERAL TWEETS ---
+      for (const artistId in updatedArtistsData) {
+        const aData = updatedArtistsData[artistId];
+        const aProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
+        if (!aProfile) continue;
+        
+        // 20% chance per week per artist for generic tweets
+        if (Math.random() < 0.20) {
+            let tweetContent = "";
+            let authorId = "popbase";
+            
+            const pop = aData.popularity || 0;
+            const r = Math.random();
+            
+            let possibleUsers = aData.xUsers.filter(u => !["tmz", "popbase", "popcrave", "chartdata"].includes(u.id));
+            if (possibleUsers.length === 0) possibleUsers = aData.xUsers;
+            const randomFan = possibleUsers[Math.floor(Math.random() * possibleUsers.length)]?.id || "popbase";
+            
+            if (pop < 20) {
+                const options = [
+                    `Who is ${aProfile.name}? Kept seeing them on my timeline.`,
+                    `Honestly ${aProfile.name} has some good songs, y'all sleeping on them.`,
+                    `Local artist ${aProfile.name} is performing at a mall near me lol`,
+                    `${aProfile.name} needs a better PR team...`,
+                    `I actually really like ${aProfile.name}'s vibe.`,
+                    `Does anyone actually listen to ${aProfile.name}?`
+                ];
+                tweetContent = options[Math.floor(Math.random() * options.length)];
+                authorId = randomFan;
+            } else if (pop >= 20 && pop < 50) {
+                const options = [
+                    `${aProfile.name} is definitely the next big thing. Mark my words.`,
+                    `I'm obsessed with ${aProfile.name}'s style lately.`,
+                    `Did anyone see ${aProfile.name}'s latest look? 😍`,
+                    `${aProfile.name} could totally crossover into acting.`,
+                    `Can we talk about ${aProfile.name} for a second??`,
+                    `${aProfile.name} spotted leaving a recording studio in LA 👀`,
+                    `I feel like ${aProfile.name} is about to drop the song of the summer.`,
+                    `Is ${aProfile.name} dating anyone right now? Asking for a friend.`
+                ];
+                tweetContent = options[Math.floor(Math.random() * options.length)];
+                authorId = r < 0.2 ? "popbase" : randomFan;
+            } else if (pop >= 50 && pop < 80) {
+                const options = [
+                    `Everyone is talking about ${aProfile.name} right now!`,
+                    `Pop Crave: ${aProfile.name} has officially surpassed 10 Million monthly listeners!`,
+                    `BREAKING: ${aProfile.name} spotted in Paris for Fashion Week.`,
+                    `${aProfile.name} is literally the music industry right now.`,
+                    `Why does ${aProfile.name} look so good in EVERYTHING?`,
+                    `Stan Twitter is currently at war over ${aProfile.name}'s latest chart position.`,
+                    `I met ${aProfile.name} today and they were so sweet 😭`,
+                    `${aProfile.name} just posted a new selfie on IG and the internet is breaking.`,
+                    `Imagine going to a ${aProfile.name} concert and not knowing all the words... couldn't be me.`
+                ];
+                tweetContent = options[Math.floor(Math.random() * options.length)];
+                
+                if (tweetContent.startsWith("Pop Crave")) {
+                     tweetContent = tweetContent.replace("Pop Crave: ", "");
+                     authorId = "popcrave";
+                } else if (tweetContent.startsWith("BREAKING")) {
+                     authorId = "popbase";
+                } else {
+                     authorId = r < 0.5 ? "popbase" : randomFan;
+                }
+            } else {
+                const options = [
+                    `${aProfile.name} breaks the internet once again!`,
+                    `TMZ: ${aProfile.name} buys a new $20 Million mansion in Beverly Hills.`,
+                    `${aProfile.name} is a global icon at this point.`,
+                    `You can't go anywhere without hearing ${aProfile.name}!`,
+                    `Is ${aProfile.name} the biggest artist in the world right now?`,
+                    `ChartData: ${aProfile.name} remains at the top of the charts for another week!`,
+                    `I literally named my child after ${aProfile.name}.`,
+                    `${aProfile.name} spotted at an exclusive VIP party with A-list actors.`,
+                    `The grip ${aProfile.name} has on pop culture needs to be studied.`
+                ];
+                tweetContent = options[Math.floor(Math.random() * options.length)];
+                
+                if (tweetContent.startsWith("TMZ")) {
+                    tweetContent = tweetContent.replace("TMZ: ", "");
+                    authorId = "tmz";
+                }
+                else if (tweetContent.startsWith("ChartData")) {
+                    tweetContent = tweetContent.replace("ChartData: ", "");
+                    authorId = "chartdata";
+                }
+                else {
+                    authorId = r < 0.4 ? "popbase" : randomFan;
+                }
+            }
+            
+            if (tweetContent) {
+                 let postImage = undefined;
+                 if (Math.random() < 0.25) { // 25% chance of image
+                     // Try to grab a recent album or single cover, or artist avatar
+                     const recentReleases = aData.releases || [];
+                     const recentSingles = aData.songs || [];
+                     if (recentReleases.length > 0 && Math.random() < 0.5) {
+                         postImage = recentReleases[0].coverArt;
+                     } else if (recentSingles.length > 0 && Math.random() < 0.5) {
+                         postImage = recentSingles[recentSingles.length - 1].coverArt;
+                     } else {
+                         postImage = aProfile.image;
+                     }
+                 }
+
+                 const newGenPost = {
+                     id: crypto.randomUUID(),
+                     authorId: authorId,
+                     content: tweetContent,
+                     image: postImage,
+                     likes: Math.floor(Math.random() * (pop * 1000)) + 500,
+                     retweets: Math.floor(Math.random() * (pop * 200)) + 100,
+                     views: Math.floor(Math.random() * (pop * 50000)) + 10000,
+                     date: newDate,
+                 };
+                 aData.xPosts.unshift(newGenPost);
+            }
+        }
+      }
+      // --- END DYNAMIC GENERAL TWEETS ---
 
       if (tourArrestEncounter && !finalState.disableEncounters) {
         finalState.activeEncounter = tourArrestEncounter;
@@ -13221,6 +13401,7 @@ We wish you the best in your future endeavors.
     case "EDIT_SUBMISSION_DATE": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      
       const updatedSubmissions = activeData.labelSubmissions.map((s) => {
         if (s.id === action.payload.submissionId) {
           return { ...s, projectReleaseDate: action.payload.newDate };
@@ -13347,6 +13528,189 @@ We wish you the best in your future endeavors.
           newPosts.unshift(popBasePost);
       }
 
+
+      const pronoun = artistProfile?.pronouns === "he/him" ? "HE" : (artistProfile?.pronouns === "they/them" ? "THEY" : "SHE");
+      const pronounLower = artistProfile?.pronouns === "he/him" ? "he" : (artistProfile?.pronouns === "they/them" ? "they" : "she");
+      
+      const newRedditPosts = [...(activeData.redditPosts || [])];
+
+      for (const single of singles) {
+          const songIndex = activeData.songs.findIndex(s => s.id === single.songId);
+          if (songIndex === -1) continue;
+          
+          const song = activeData.songs[songIndex];
+          const updatedSongs = [...activeData.songs];
+          updatedSongs[songIndex] = {
+              ...song,
+              isInterlude: single.singleType === 'interlude',
+              singleType: single.singleType
+          };
+          activeData.songs = updatedSongs;
+
+          // X Posts
+          if (single.eraImages && single.eraImages.length > 0) {
+              const fanImage = single.eraImages[0];
+              const haterImage = single.eraImages[1] || single.eraImages[0];
+              const popbaseImage = single.eraImages[2] || single.eraImages[0];
+
+              newPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "fan_acc1",
+                  content: `IM SO EXCITED FOR ${song.title} ${pronoun} ATE THIS LOOK SO BADDD 😭🔥`,
+                  image: fanImage,
+                  likes: Math.floor(Math.random() * 20000) + 5000,
+                  retweets: Math.floor(Math.random() * 5000) + 1000,
+                  views: Math.floor(Math.random() * 300000) + 50000,
+                  date: state.date,
+              });
+
+              newPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "hater_acc",
+                  content: `This looks so cheap and basic... what happened to real aesthetics? ${song.title} better be good because this is giving nothing.`,
+                  image: haterImage,
+                  likes: Math.floor(Math.random() * 5000) + 500,
+                  retweets: Math.floor(Math.random() * 1000) + 100,
+                  views: Math.floor(Math.random() * 100000) + 10000,
+                  date: state.date,
+              });
+
+              const typeText = single.singleType === 'lead' ? 'lead single' : (single.singleType === 'interlude' ? 'interlude' : 'standalone single');
+              newPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "popbase",
+                  content: `${artistProfile?.name} officially announces their upcoming ${typeText} "${song.title}".`,
+                  image: popbaseImage,
+                  likes: Math.floor(Math.random() * 80000) + 20000,
+                  retweets: Math.floor(Math.random() * 20000) + 5000,
+                  views: Math.floor(Math.random() * 1000000) + 200000,
+                  date: state.date,
+              });
+          }
+
+          // Reddit Post
+          let redditComments = [];
+          if (single.singleType === 'lead') {
+              redditComments = [
+                  { id: crypto.randomUUID(), author: 'popstan', timeAgo: '1h', content: 'OMG the new era is coming!! We are so back!', upvotes: 450 },
+                  { id: crypto.randomUUID(), author: 'musiclover', timeAgo: '2h', content: 'The images look insane. Cannot wait.', upvotes: 320 }
+              ];
+          } else if (single.singleType === 'interlude') {
+              redditComments = [
+                  { id: crypto.randomUUID(), author: 'chartwatcher', timeAgo: '1h', content: `Why are ${pronounLower} releasing an interlude as a single?`, upvotes: 500 },
+                  { id: crypto.randomUUID(), author: 'sadfan', timeAgo: '2h', content: 'We lost... this better be a long interlude at least.', upvotes: 420 }
+              ];
+          } else {
+              redditComments = [
+                  { id: crypto.randomUUID(), author: 'user99', timeAgo: '1h', content: 'Just a standalone? I wanted an album era.', upvotes: 300 },
+                  { id: crypto.randomUUID(), author: 'casualfan', timeAgo: '2h', content: 'Looks cute but I need the album to be announced soon.', upvotes: 210 }
+              ];
+          }
+
+          const typeTag = single.singleType === 'lead' ? 'Lead Single' : (single.singleType === 'interlude' ? 'Interlude' : 'Standalone Single');
+          newRedditPosts.unshift({
+              id: crypto.randomUUID(),
+              author: "AutoModerator",
+              timeAgo: "Just now",
+              title: `[FRESH ANNOUNCEMENT] ${artistProfile?.name} - ${song.title} (${typeTag})`,
+              content: `Official announcement for the new ${single.singleType} "${song.title}". Discuss here!`,
+              upvotes: Math.floor(Math.random() * 2000) + 500,
+              commentCount: redditComments.length + Math.floor(Math.random() * 50),
+              image: single.eraImages && single.eraImages.length > 0 ? single.eraImages[0] : null,
+              comments: redditComments
+          });
+      }
+
+
+      // Process main project if it's a single
+      if (submission?.release.type === 'Single' && action.payload.projectSingleType) {
+          const songIndex = activeData.songs.findIndex(s => s.id === submission.release.songIds[0]);
+          const song = activeData.songs[songIndex];
+          if (songIndex !== -1 && song) {
+              // Create a new array for songs to ensure immutable update
+              const updatedSongs = [...activeData.songs];
+              updatedSongs[songIndex] = {
+                  ...song,
+                  isInterlude: action.payload.projectSingleType === 'interlude',
+                  singleType: action.payload.projectSingleType
+              };
+              activeData.songs = updatedSongs; // We will attach this updated array below
+
+              // X Posts
+              if (action.payload.projectEraImages && action.payload.projectEraImages.length > 0) {
+                  const fanImage = action.payload.projectEraImages[0];
+                  const haterImage = action.payload.projectEraImages[1] || action.payload.projectEraImages[0];
+                  const popbaseImage = action.payload.projectEraImages[2] || action.payload.projectEraImages[0];
+
+                  newPosts.unshift({
+                      id: crypto.randomUUID(),
+                      authorId: "fan_acc1",
+                      content: `IM SO EXCITED FOR ${song.title} ${pronoun} ATE THIS LOOK SO BADDD 😭🔥`,
+                      image: fanImage,
+                      likes: Math.floor(Math.random() * 20000) + 5000,
+                      retweets: Math.floor(Math.random() * 5000) + 1000,
+                      views: Math.floor(Math.random() * 300000) + 50000,
+                      date: state.date,
+                  });
+
+                  newPosts.unshift({
+                      id: crypto.randomUUID(),
+                      authorId: "hater_acc",
+                      content: `This looks so cheap and basic... what happened to real aesthetics? ${song.title} better be good because this is giving nothing.`,
+                      image: haterImage,
+                      likes: Math.floor(Math.random() * 5000) + 500,
+                      retweets: Math.floor(Math.random() * 1000) + 100,
+                      views: Math.floor(Math.random() * 100000) + 10000,
+                      date: state.date,
+                  });
+
+                  const typeText = action.payload.projectSingleType === 'lead' ? 'lead single' : (action.payload.projectSingleType === 'interlude' ? 'interlude' : 'standalone single');
+                  newPosts.unshift({
+                      id: crypto.randomUUID(),
+                      authorId: "popbase",
+                      content: `${artistProfile?.name} officially announces their upcoming ${typeText} "${song.title}".`,
+                      image: popbaseImage,
+                      likes: Math.floor(Math.random() * 80000) + 20000,
+                      retweets: Math.floor(Math.random() * 20000) + 5000,
+                      views: Math.floor(Math.random() * 1000000) + 200000,
+                      date: state.date,
+                  });
+              }
+
+              // Reddit Post
+              let redditComments = [];
+              if (action.payload.projectSingleType === 'lead') {
+                  redditComments = [
+                      { id: crypto.randomUUID(), author: 'popstan', timeAgo: '1h', content: 'OMG the new era is coming!! We are so back!', upvotes: 450 },
+                      { id: crypto.randomUUID(), author: 'musiclover', timeAgo: '2h', content: 'The images look insane. Cannot wait.', upvotes: 320 }
+                  ];
+              } else if (action.payload.projectSingleType === 'interlude') {
+                  redditComments = [
+                      { id: crypto.randomUUID(), author: 'chartwatcher', timeAgo: '1h', content: `Why are ${pronounLower} releasing an interlude as a single?`, upvotes: 500 },
+                      { id: crypto.randomUUID(), author: 'sadfan', timeAgo: '2h', content: 'We lost... this better be a long interlude at least.', upvotes: 420 }
+                  ];
+              } else {
+                  redditComments = [
+                      { id: crypto.randomUUID(), author: 'user99', timeAgo: '1h', content: 'Just a standalone? I wanted an album era.', upvotes: 300 },
+                      { id: crypto.randomUUID(), author: 'casualfan', timeAgo: '2h', content: 'Looks cute but I need the album to be announced soon.', upvotes: 210 }
+                  ];
+              }
+
+              const typeTag = action.payload.projectSingleType === 'lead' ? 'Lead Single' : (action.payload.projectSingleType === 'interlude' ? 'Interlude' : 'Standalone Single');
+              newRedditPosts.unshift({
+                  id: crypto.randomUUID(),
+                  author: "AutoModerator",
+                  timeAgo: "Just now",
+                  title: `[FRESH ANNOUNCEMENT] ${artistProfile?.name} - ${song.title} (${typeTag})`,
+                  content: `Official announcement for the new ${action.payload.projectSingleType} "${song.title}". Discuss here!`,
+                  upvotes: Math.floor(Math.random() * 2000) + 500,
+                  commentCount: redditComments.length + Math.floor(Math.random() * 50),
+                  image: action.payload.projectEraImages && action.payload.projectEraImages.length > 0 ? action.payload.projectEraImages[0] : null,
+                  comments: redditComments
+              });
+          }
+      }
+
       const updatedSubmissions = activeData.labelSubmissions.map(
         (sub): LabelSubmission => {
           if (sub.id === submissionId) {
@@ -13355,6 +13719,8 @@ We wish you the best in your future endeavors.
               status: "scheduled",
               singlesToRelease: singles,
               projectReleaseDate: projectReleaseDate,
+              projectSingleType: action.payload.projectSingleType,
+              projectEraImages: action.payload.projectEraImages,
               promoBudget: promoBudget,
               promoBudgetSpent: 0,
             };
@@ -13371,6 +13737,7 @@ We wish you the best in your future endeavors.
             ...activeData,
             labelSubmissions: updatedSubmissions,
             xPosts: newPosts,
+            redditPosts: newRedditPosts,
           },
         },
         activeSubmissionId: null,
@@ -20799,7 +21166,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
             currentSaveId = `save_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             dispatch({ type: "SET_CLOUD_SAVE_ID", payload: currentSaveId });
           }
-          await saveGameToCloud(user.uid, currentSaveId, gameState);
+          // Cloud saving disabled to prevent lag
         } catch (err) {
           console.error("Could not background save to Cloud DB", err);
         }

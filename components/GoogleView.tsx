@@ -6,6 +6,7 @@ import ChevronDownIcon from './icons/ChevronDownIcon';
 import { Artist, Group } from '../types';
 import VogueSiteView from './VogueSiteView';
 import RedditSiteView from './RedditSiteView';
+import BillboardSiteView from './BillboardSiteView';
 
 export const GoogleView: React.FC = () => {
     const { gameState, activeArtistData, dispatch } = useGame();
@@ -101,7 +102,7 @@ export const GoogleView: React.FC = () => {
     if (readingArticle) {
         if (readingArticle.type === 'wikipedia') {
             return (
-                <div className="bg-[#202124] text-black min-h-full font-sans relative pb-16">
+                <div className="bg-[#202124] text-black h-full overflow-y-auto font-sans relative pb-16">
                     <header className="p-4 border-b border-zinc-200 sticky top-0 bg-[#202124] z-10 w-full flex items-center justify-between">
                         <button onClick={() => setReadingArticle(null)} className="flex items-center gap-2 text-zinc-600 hover:text-black transition-colors">
                             <ArrowLeftIcon className="w-5 h-5" />
@@ -149,7 +150,7 @@ export const GoogleView: React.FC = () => {
 
         if (readingArticle.type === 'tmz') {
             return (
-                <div className="bg-black text-white min-h-full font-sans relative pb-16">
+                <div className="bg-black text-white h-full overflow-y-auto font-sans relative pb-16">
                     <header className="p-3 border-b-4 border-red-600 sticky top-0 bg-black z-10 w-full flex items-center justify-between shadow-2xl">
                         <button onClick={() => setReadingArticle(null)} className="p-2 text-white hover:text-red-500 transition-colors">
                             <ArrowLeftIcon className="w-6 h-6" />
@@ -180,7 +181,7 @@ export const GoogleView: React.FC = () => {
 
         if (readingArticle.type === 'rollingstone') {
             return (
-                <div className="bg-[#202124] text-black min-h-full font-sans relative pb-16">
+                <div className="bg-[#202124] text-black h-full overflow-y-auto font-sans relative pb-16">
                     <header className="p-4 border-b-2 border-black sticky top-0 bg-[#202124] z-10 w-full flex items-center justify-between shadow-sm">
                         <button onClick={() => setReadingArticle(null)} className="p-2 text-red-600 hover:text-black transition-colors">
                             <ArrowLeftIcon className="w-6 h-6" />
@@ -211,10 +212,13 @@ export const GoogleView: React.FC = () => {
         if (readingArticle.type === 'reddit') {
             return <RedditSiteView initialPost={readingArticle} onClose={() => setReadingArticle(null)} />;
         }
+        if (readingArticle.type === 'news') {
+            return <BillboardSiteView initialArticle={readingArticle} onClose={() => setReadingArticle(null)} />;
+        }
 
         if (readingArticle.type === 'popcrave') {
             return (
-                <div className="bg-[#202124] text-black min-h-full font-sans relative pb-16">
+                <div className="bg-[#202124] text-black h-full overflow-y-auto font-sans relative pb-16">
                     <header className="px-4 py-3 border-b border-zinc-700 sticky top-0 bg-[#202124]/95 backdrop-blur z-10 w-full flex items-center shadow-sm">
                         <button onClick={() => setReadingArticle(null)} className="p-2 mr-4 text-black hover:bg-gray-100 rounded-full transition-colors">
                             <ArrowLeftIcon className="w-5 h-5" />
@@ -224,7 +228,7 @@ export const GoogleView: React.FC = () => {
                             <div className="text-xs text-gray-400">12.5K posts</div>
                         </div>
                     </header>
-                    <main className="max-w-xl mx-auto border-x border-zinc-700 min-h-full">
+                    <main className="max-w-xl mx-auto border-x border-zinc-700 h-full overflow-y-auto">
                         <div className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer">
                             <div className="flex gap-3">
                                 <div className="w-12 h-12 bg-blue-600 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-xl uppercase italic">PC</div>
@@ -260,7 +264,7 @@ export const GoogleView: React.FC = () => {
         }
 
         return (
-            <div className="bg-[#202124] text-gray-200 min-h-full flex flex-col font-sans relative pb-16">
+            <div className="bg-[#202124] text-gray-200 h-full overflow-y-auto flex flex-col font-sans relative pb-16">
                 <header className="flex items-center p-3 border-b border-zinc-700 sticky top-0 bg-[#202124]/95 backdrop-blur z-10 w-full shadow-sm">
                     <button onClick={() => setReadingArticle(null)} className="p-2 mr-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeftIcon className="w-5 h-5 text-gray-200" />
@@ -318,7 +322,7 @@ export const GoogleView: React.FC = () => {
     }
 
     return (
-        <div className="bg-[#202124] text-gray-200 min-h-full flex flex-col font-sans relative pb-16">
+        <div className="bg-[#202124] text-gray-200 h-full overflow-y-auto flex flex-col font-sans relative pb-16">
             <header className="flex items-center p-3 border-b border-zinc-700 sticky top-0 bg-[#202124] z-10 w-full shadow-sm">
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="p-2 mr-2 hover:bg-gray-100 rounded-full">
                     <ArrowLeftIcon className="w-5 h-5 text-gray-400" />
@@ -401,7 +405,7 @@ export const GoogleView: React.FC = () => {
                                 <p className="text-xs text-gray-400 mb-1 tracking-wider uppercase">Top Story</p>
                                 <h3 className="text-xl font-medium text-[#8ab4f8] hover:underline text-[#8ab4f8] cursor-pointer mb-2" onClick={() => setReadingArticle({
                                     title: `${activeQuery} Breaks Internet With Latest Move`,
-                                    url: 'https://news.example.com/top-story',
+                                    url: 'https://www.variety.com/music/news/top-story',
                                     content: `The entire timeline is talking about ${activeQuery} right now.\n\nFollowing a series of highly analyzed moves, industry insiders suggest this might be part of a larger strategy. Millions of fans have flooded social media to share their thoughts.\n\n"We haven't seen anything like this in years," an expert reported.`,
                                     type: 'news'
                                 })}>
@@ -412,7 +416,7 @@ export const GoogleView: React.FC = () => {
                             </div>
                             <div className="border border-zinc-700 rounded-lg overflow-hidden shadow-sm bg-[#202124] p-4 flex gap-4">
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-medium text-[#8ab4f8] hover:underline text-[#8ab4f8] cursor-pointer mb-1" onClick={() => setReadingArticle({title: `What's Next For ${activeQuery}?`, url: 'https://news.example.com/speculation', content: `Rumors are swirling about upcoming announcements. Several insiders hint at a massive new project.`, type: 'news'})}>What's Next For {activeQuery}?</h3>
+                                    <h3 className="text-lg font-medium text-[#8ab4f8] hover:underline text-[#8ab4f8] cursor-pointer mb-1" onClick={() => setReadingArticle({title: `What's Next For ${activeQuery}?`, url: 'https://www.hollywoodreporter.com/news/music/speculation', content: `Rumors are swirling about upcoming announcements. Several insiders hint at a massive new project.`, type: 'news'})}>What's Next For {activeQuery}?</h3>
                                     <p className="text-sm text-gray-400 mb-2 line-clamp-2">Inside sources spill the details on what could be the biggest drop of the year.</p>
                                     <div className="text-xs text-gray-400">5 hours ago</div>
                                 </div>
@@ -1111,10 +1115,10 @@ export const GoogleView: React.FC = () => {
                     {activeTab === 'All' && (
                          <div className="space-y-6 mt-6">
                             <div className="max-w-xl">
-                                <p className="text-sm text-gray-200 mb-1">https://www.example.com › news</p>
+                                <p className="text-sm text-gray-200 mb-1">https://www.billboard.com › music › music-news</p>
                                 <h3 className="text-xl text-[#8ab4f8] hover:underline text-[#8ab4f8] cursor-pointer leading-tight mb-1" onClick={() => setReadingArticle({
                                     title: `${activeQuery} - Latest News and Updates`,
-                                    url: 'https://www.example.com/news',
+                                    url: 'https://www.billboard.com/music/music-news',
                                     content: `In recent news, ${activeQuery} has been making headlines across the entertainment industry. Sources indicate that there are major announcements coming soon.\n\nFans have been eagerly awaiting new developments, with social media speculation reaching an all-time high. Stay tuned for exclusive interviews and behind-the-scenes coverage.`,
                                     type: 'news'
                                 })}>
@@ -1170,7 +1174,7 @@ export const GoogleView: React.FC = () => {
                                 </p>
                             </div>
 
-                            <div className="max-w-xl">
+                            {gameState.date.year >= 2012 && (<div className="max-w-xl">
                                 <p className="text-sm text-gray-200 mb-1">https://www.reddit.com › r › popheads › comments</p>
                                 <h3 className="text-xl text-[#8ab4f8] hover:underline text-[#8ab4f8] cursor-pointer leading-tight mb-1" onClick={() => setReadingArticle({
                                     title: `Discussion: Unpopular Opinions about ${activeQuery}?`,
@@ -1183,7 +1187,7 @@ export const GoogleView: React.FC = () => {
                                 <p className="text-sm text-gray-400 line-clamp-2">
                                     I've been thinking a lot about the trajectory of {activeQuery} lately and wanted to see what the subreddit thinks. Let's discuss...
                                 </p>
-                            </div>
+                            </div>)}
 
                             <div className="max-w-xl">
                                 <p className="text-sm text-gray-200 mb-1">https://www.rollingstone.com › reviews › {activeQuery.replace(/ /g, '-')}</p>

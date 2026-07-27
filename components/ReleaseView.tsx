@@ -1,6 +1,6 @@
 
 
-import React, { useState, useMemo } from 'react';
+import React, {  useState, useMemo , useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import type { Release, ReleaseType, Song, LabelSubmission } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -66,7 +66,30 @@ const ReleaseView: React.FC = () => {
         return null;
     }, [selectedSongIds, songs, releaseType, deluxeCoverArt]);
     
+    
+    const leadSingles = useMemo(() => {
+        return availableSongs.filter(s => s.singleType === 'lead' && s.isReleased);
+    }, [availableSongs]);
+
+    useEffect(() => {
+        if (releaseType === 'Album' || releaseType === 'EP') {
+            const newSelection = new Set(selectedSongIds);
+            let changed = false;
+            leadSingles.forEach(s => {
+                if (!newSelection.has(s.id)) {
+                    newSelection.add(s.id);
+                    changed = true;
+                }
+            });
+            if (changed) setSelectedSongIds(newSelection);
+        }
+    }, [leadSingles, releaseType]);
+
     const handleToggleSong = (songId: string) => {
+        if (leadSingles.find(s => s.id === songId)) {
+            setError("Lead singles must be included in your next album/EP.");
+            return;
+        }
         const newSelection = new Set(selectedSongIds);
         if (newSelection.has(songId)) {
             newSelection.delete(songId);

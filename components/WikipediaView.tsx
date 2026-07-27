@@ -229,7 +229,7 @@ Based on all this detailed information, write a comprehensive, neutral, and ency
             .filter((s): s is { title: string; releaseDate: GameDate } => !!s.releaseDate);
     }, [songs, releases, release]);
 
-    if (!release || !artist) return <div className="bg-white text-black min-h-full p-4">Loading article...</div>;
+    if (!release || !artist) return <div className="bg-white text-black h-full overflow-y-auto p-4">Loading article...</div>;
 
     return (
         <div className="bg-white text-black h-full w-full overflow-y-auto pb-24 font-sans">

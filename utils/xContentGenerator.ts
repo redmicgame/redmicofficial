@@ -594,6 +594,55 @@ export const generateWeeklyXContent = (
     });
   }
 
+
+  // Spotify Snapshot Weekly Top Albums
+  if (date.week % 2 === 0 && gameState.billboardTopAlbums && gameState.billboardTopAlbums.length >= 15) {
+    const topAlbums = gameState.billboardTopAlbums.slice(0, 15);
+    const spotifySnapshotAlbums = topAlbums.map(album => {
+      const streams = Math.floor((album.weeklySES || (album.weeklyActivity * 0.85)) * 1500);
+      const percentChange = (Math.random() * 20 - 10).toFixed(2);
+      let move: string | number = '-';
+      if (album.lastWeek) {
+          const m = album.lastWeek - album.rank;
+          move = m > 0 ? `+${m}` : m < 0 ? `${m}` : '-';
+      } else {
+          move = 'NEW';
+      }
+      return {
+         rank: album.rank,
+         title: album.title,
+         streams: streams,
+         coverArt: album.coverArt || `https://api.dicebear.com/7.x/shapes/svg?seed=${album.title.replace(/ /g, '')}`,
+         move: move,
+         percentChange: parseFloat(percentChange)
+      }
+    });
+
+    newPosts.push({
+      id: `spotify_snapshot_${date.year}_${date.week}`,
+      authorId: "spotify_snapshot",
+      content: `Weekly Top Albums Update (${date.week}w ${date.year}) 🔥\n\nWho are you streaming the most this week? 👇`,
+      date: date,
+      likes: Math.floor(Math.random() * 50000) + 10000,
+      retweets: Math.floor(Math.random() * 10000) + 5000,
+      views: Math.floor(Math.random() * 500000) + 100000,
+      spotifySnapshotAlbums: spotifySnapshotAlbums
+    });
+
+    const hasUser = artistData.xUsers?.find(u => u.id === "spotify_snapshot");
+    if (!hasUser) {
+      newUsers.push({
+         id: "spotify_snapshot",
+         username: "SpotifySnapshot",
+         name: "Spotify Snapshot",
+         isPlayer: false,
+         isVerified: true,
+         followers: 5400000,
+         avatarUrl: "https://api.dicebear.com/7.x/identicon/svg?seed=spotify"
+      });
+    }
+  }
+
   // Check for Debut Release this week
   const debutRelease = releases.find(
     (r) =>

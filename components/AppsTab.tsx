@@ -19,6 +19,11 @@ import TicketIcon from './icons/TicketIcon';
 import AppleMusicIcon from './icons/AppleMusicIcon';
 import OscarAwardIcon from './icons/OscarAwardIcon';
 import GoogleIcon from './icons/GoogleIcon';
+import RedditIcon from './icons/RedditIcon';
+import VogueIcon from './icons/VogueIcon';
+import BillboardIcon from './icons/BillboardIcon';
+import RollingStoneIcon from './icons/RollingStoneIcon';
+
 import TikTokIcon from './icons/TikTokIcon';
 import RiaaIcon from './icons/RiaaIcon';
 import { getEraConfiguration } from '../utils/eraUtils';
@@ -57,11 +62,19 @@ const appCategories: AppCategory[] = [
             { name: 'TikTok', description: 'Make short videos', icon: <TikTokIcon className="w-8 h-8"/>, view: 'tiktok', bgColor: '#000000', iconColor: '#25F4EE' },
             { name: 'Instagram', description: 'Share photos visually', icon: <span className="font-bold text-2xl font-serif text-white">Ig</span>, view: 'instagram', bgColor: '#E1306C' },
             { name: 'Google', description: 'Search the web', icon: <GoogleIcon className="w-8 h-8"/>, view: 'google', bgColor: '#FFFFFF', iconColor: '#000000' },
+            { name: 'Reddit', description: 'Read popheads', icon: <RedditIcon className="w-8 h-8"/>, view: 'reddit', bgColor: '#FF4500', iconColor: '#FFFFFF' },
+
+            { name: 'Vogue', description: 'Fashion & Style', icon: <VogueIcon className="w-8 h-8"/>, view: 'vogue', bgColor: '#FFFFFF', iconColor: '#000000' },
+            { name: 'Billboard', description: 'Music News', icon: <BillboardIcon className="w-8 h-8"/>, view: 'billboard_news', bgColor: '#000000', iconColor: '#FFFFFF' },
+            { name: 'Rolling Stone', description: 'Culture & Music', icon: <RollingStoneIcon className="w-8 h-8"/>, view: 'rollingstone', bgColor: '#DC2626', iconColor: '#FFFFFF' },
+
+
             { name: 'X', description: 'Connect with fans worldwide', icon: <XIcon className="w-7 h-7"/>, view: 'x', bgColor: '#000000' },
             { name: 'MTV', description: 'Music Television', icon: <span className="font-black text-2xl italic">MTV</span>, view: 'mtv', bgColor: '#000000' },
             { name: 'YouTube', description: 'Watch and share videos', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtube', bgColor: '#FF0000' },
             { name: 'Vevo', description: 'Distribute your music videos', icon: <span className="font-black text-2xl italic">vevo</span>, view: 'vevo', bgColor: '#FF0000' },
             { name: 'YT Studio', description: 'Analyze your channel performance', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtubeStudio', bgColor: '#282828'},
+            { name: 'YT Music', description: 'Stream ad-free music', icon: <YouTubeIcon className="w-8 h-8"/>, view: 'youtubeMusic', bgColor: '#000000' },
             { name: 'OnlyFans', description: 'Monetize exclusive content', icon: <span className="font-bold text-2xl">OF</span>, view: 'onlyfansSetup', bgColor: '#00AFF0' },
         ]
     },
@@ -156,8 +169,10 @@ const AppsTab: React.FC = () => {
         if (appName === 'TikTok') return eraConfig.tiktokAvailable;
         if (appName === 'MySpace') return eraConfig.myspaceAvailable;
         if (appName === 'YouTube' || appName === 'YT Studio') return eraConfig.youtubeAvailable;
+        if (appName === 'YT Music') return eraConfig.youtubeAvailable && gameState.date.year >= 2015;
         if (appName === 'MTV') return gameState.date.year >= 1975 && gameState.date.year <= 2007;
         if (appName === 'OnlyFans') return eraConfig.onlyfansAvailable;
+        if (appName === 'Reddit') return gameState.date.year >= 2012;
         if (appName === 'Piracy') return gameState.date.year >= 1999 && gameState.date.year <= 2008;
         if (appName === 'ASCAP') return gameState.date.year >= 2008;
         if (appName === 'Merch Store' && gameState.date.year >= 2005) {
@@ -233,7 +248,7 @@ const AppsTab: React.FC = () => {
     };
 
     return (
-        <div className="bg-[#121212] min-h-full p-4 text-white pb-24">
+        <div className="bg-[#121212] h-full overflow-y-auto p-4 text-white pb-24">
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h1 className="text-4xl font-bold">Apps</h1>

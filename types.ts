@@ -86,6 +86,8 @@ export interface Song {
   explicit: boolean;
   artistId: string;
   isPreReleaseSingle?: boolean;
+  isInterlude?: boolean;
+  singleType?: 'lead' | 'standalone' | 'interlude';
   firstWeekStreams?: number;
   firstWeekSales?: number;
   removedStreams?: number;
@@ -499,6 +501,7 @@ export interface SpotifyPlaylist {
   type: "global" | "genre" | "viral" | "new" | "this_is";
   genre?: string;
   tracks: SpotifyPlaylistTrack[];
+  bannedTrackIds?: string[];
 }
 
 export interface FeatureOffer {
@@ -907,14 +910,20 @@ export interface LabelSubmission {
   status: "pending" | "awaiting_player_input" | "rejected" | "scheduled";
   decisionDate?: GameDate;
   projectReleaseDate?: GameDate;
+  projectSingleType?: 'lead' | 'standalone' | 'interlude';
+  projectEraImages?: string[];
   isProjectAnnounced?: boolean;
   feedback?: string;
   singlesToRelease?: {
     songId: string;
     releaseDate: GameDate;
-  isScheduled?: boolean;
+    isScheduled?: boolean;
     isAnnounced?: boolean;
+    singleType?: 'lead' | 'standalone' | 'interlude';
+    eraImages?: string[];
   }[];
+  projectSingleType?: 'lead' | 'standalone' | 'interlude';
+  projectEraImages?: string[];
   promoBudget?: number;
   promoBudgetSpent?: number;
   hasCountdownPage?: boolean;
@@ -1032,6 +1041,7 @@ export interface XPost {
     isEnded?: boolean;
   };
   billionsClubSongTitle?: string;
+  spotifySnapshotAlbums?: { rank: number; title: string; streams: number; coverArt: string; move: number | string; percentChange: number }[];
 }
 
 export interface XMessage {
@@ -1239,6 +1249,7 @@ export type GameView =
   | "spotifyChart"
   | "youtubeVideoDetail"
   | "youtubeStudio"
+  | "youtubeMusic"
   | "gigs"
   | "labelReleasePlan"
   | "createGeniusInterview"
@@ -2139,8 +2150,10 @@ export type GameAction =
       type: "PLAN_LABEL_RELEASE";
       payload: {
         submissionId: string;
-        singles: { songId: string; releaseDate: GameDate }[];
+        singles: { songId: string; releaseDate: GameDate; singleType?: 'lead' | 'standalone' | 'interlude'; eraImages?: string[]; }[];
         projectReleaseDate: GameDate;
+        projectSingleType?: 'lead' | 'standalone' | 'interlude';
+        projectEraImages?: string[];
       };
     }
   | {

@@ -19,10 +19,19 @@ const LabelReleasePlanView: React.FC = () => {
         return submission.release.songIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as Song[];
     }, [submission, songs]);
 
-    const [selectedSingles, setSelectedSingles] = useState<Map<string, GameDate>>(new Map());
+    
+    interface SinglePlanData {
+        date: GameDate;
+        singleType: 'lead' | 'standalone' | 'interlude';
+        eraImages: string[];
+    }
+    const [selectedSingles, setSelectedSingles] = useState<Map<string, SinglePlanData>>(new Map());
+
     
     const nextWeek = { week: date.week === 52 ? 1 : date.week + 1, year: date.week === 52 ? date.year + 1 : date.year };
     const [projectDate, setProjectDate] = useState<GameDate>({ week: nextWeek.week + 8, year: nextWeek.year });
+    const [projectSingleType, setProjectSingleType] = useState<'lead' | 'standalone' | 'interlude'>('standalone');
+    const [projectEraImages, setProjectEraImages] = useState<string[]>([]);
     const [error, setError] = useState('');
 
     if (!submission) {
@@ -38,7 +47,7 @@ const LabelReleasePlanView: React.FC = () => {
         } else {
             if (newSelection.size < maxSingles) {
                 const newDate = { week: nextWeek.week + (newSelection.size * 2), year: nextWeek.year };
-                newSelection.set(songId, newDate);
+                newSelection.set(songId, { date: newDate, singleType: 'lead', eraImages: [] });
             }
         }
         setSelectedSingles(newSelection);
@@ -46,11 +55,10 @@ const LabelReleasePlanView: React.FC = () => {
 
     const handleSingleDateChange = (songId: string, part: 'week' | 'year', value: number) => {
         const newSelection = new Map(selectedSingles);
-        const currentDate = newSelection.get(songId);
-        if (currentDate) {
-            // FIX: Replaced indexed property assignment with object spread to resolve a type error where GameDate lacks an index signature.
-            const newDate: GameDate = { ...currentDate, [part]: value };
-            newSelection.set(songId, newDate);
+        const current = newSelection.get(songId);
+        if (current) {
+            const newDate: GameDate = { ...current.date, [part]: value };
+            newSelection.set(songId, { ...current, date: newDate });
         }
         setSelectedSingles(newSelection);
     };
@@ -61,7 +69,7 @@ const LabelReleasePlanView: React.FC = () => {
 
     const handleSubmit = () => {
         setError('');
-        const singleDates: GameDate[] = Array.from(selectedSingles.values());
+        const singleDates: GameDate[] = Array.from(selectedSingles.values()).map(s => s.date);
         
         // Validation
         const toTotalWeeks = (d: GameDate) => d.year * 52 + d.week;
@@ -75,10 +83,21 @@ const LabelReleasePlanView: React.FC = () => {
                 setError('All singles must be released before the main project.'); return;
             }
         }
+        if (submission.release.type === 'Single') {
+            if (projectEraImages.filter(Boolean).length < 3) {
+                setError('You must upload 3 era images for the single.'); return;
+            }
+        }
         if(toTotalWeeks(projectDate) <= nowTotalWeeks) {
             setError('Project release date must be in the future.'); return;
         }
 
+        
+        for (const [songId, data] of selectedSingles.entries()) {
+            if (!data.eraImages || data.eraImages.filter(Boolean).length < 3) {
+                setError('You must upload 3 era images for each single.'); return;
+            }
+        }
         // Check for date clashes
         const allDates = [...singleDates, projectDate];
         const uniqueDates = new Set(allDates.map(d => `${d.year}-${d.week}`));
@@ -90,8 +109,10 @@ const LabelReleasePlanView: React.FC = () => {
             type: 'PLAN_LABEL_RELEASE',
             payload: {
                 submissionId: submission.id,
-                singles: Array.from(selectedSingles.entries()).map(([songId, releaseDate]) => ({ songId, releaseDate })),
+                singles: Array.from(selectedSingles.entries()).map(([songId, data]) => ({ songId, releaseDate: data.date, singleType: data.singleType, eraImages: data.eraImages })),
                 projectReleaseDate: projectDate,
+                projectSingleType: submission.release.type === 'Single' ? projectSingleType : undefined,
+                projectEraImages: submission.release.type === 'Single' ? projectEraImages : undefined,
             }
         });
     };
@@ -107,6 +128,7 @@ const LabelReleasePlanView: React.FC = () => {
                 <h1 className="text-2xl font-bold">Plan Release: {submission.release.title}</h1>
             </header>
             <div className="flex-grow p-4 space-y-6 overflow-y-auto">
+                {submission.release.type !== 'Single' && (
                 <div>
                     <h2 className="text-lg font-bold">1. Select Pre-Release Singles ({selectedSingles.size}/{maxSingles})</h2>
                     <p className="text-sm text-zinc-400">Your label recommends releasing {submission.recommendedSingles?.length || 0} single{submission.recommendedSingles?.length !== 1 ? 's' : ''}.</p>
@@ -125,21 +147,90 @@ const LabelReleasePlanView: React.FC = () => {
                     </div>
                 </div>
 
-                {selectedSingles.size > 0 && (
+                )}
+                {submission.release.type !== 'Single' && selectedSingles.size > 0 && (
                     <div>
                         <h2 className="text-lg font-bold">2. Schedule Single Releases</h2>
                         <div className="space-y-3 mt-2">
-                            {Array.from(selectedSingles.entries()).map(([songId, releaseDate]) => {
+                            {Array.from(selectedSingles.entries()).map(([songId, data]) => {
                                 const song = projectSongs.find(s => s.id === songId);
                                 return (
-                                    <div key={songId} className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
+                                    <div key={songId}><div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
                                         <p className="font-semibold flex-grow">{song?.title}</p>
                                         <div className="flex items-center gap-2">
                                             <label className="text-sm text-zinc-400">W:</label>
-                                            <input type="number" value={releaseDate.week || ''} onChange={e => handleSingleDateChange(songId, 'week', parseInt(e.target.value) || 0)} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
+                                            <input type="number" value={data.date.week || ''} onChange={e => handleSingleDateChange(songId, 'week', parseInt(e.target.value) || 0)} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
                                             <label className="text-sm text-zinc-400">Y:</label>
-                                            <input type="number" value={releaseDate.year || ''} onChange={e => handleSingleDateChange(songId, 'year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
+                                            <input type="number" value={data.date.year || ''} onChange={e => handleSingleDateChange(songId, 'year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
                                         </div>
+                                    </div>
+                                    <div className="mt-2 flex flex-col gap-2">
+                                        <select 
+                                            value={data.singleType} 
+                                            onChange={(e) => {
+                                                const newSelection = new Map(selectedSingles);
+                                                const current = newSelection.get(songId);
+                                                if (current) {
+                                                    newSelection.set(songId, { ...current, singleType: e.target.value as any });
+                                                }
+                                                setSelectedSingles(newSelection);
+                                            }}
+                                            className="w-full bg-zinc-700 text-white p-2 rounded-md"
+                                        >
+                                            <option value="lead">Lead Single (must be added to your next album)</option>
+                                            <option value="standalone">Standalone Single</option>
+                                            <option value="interlude">Interlude (-50% streams permanently)</option>
+                                        </select>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-sm text-zinc-400">Era Images (Upload 3)</label>
+                                            <div className="flex gap-2">
+                                                {[0, 1, 2].map((idx) => (
+                                                    <div key={idx} className="flex-1">
+                                                        {data.eraImages[idx] ? (
+                                                            <div className="relative aspect-square">
+                                                                <img src={data.eraImages[idx]} className="w-full h-full object-cover rounded-md" />
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        const newSelection = new Map(selectedSingles);
+                                                                        const current = newSelection.get(songId);
+                                                                        if (current) {
+                                                                            const newImages = [...current.eraImages];
+                                                                            newImages.splice(idx, 1);
+                                                                            newSelection.set(songId, { ...current, eraImages: newImages });
+                                                                            setSelectedSingles(newSelection);
+                                                                        }
+                                                                    }}
+                                                                    className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold cursor-pointer z-10"
+                                                                >✕</button>
+                                                            </div>
+                                                        ) : (
+                                                            <label className="w-full aspect-square bg-zinc-700 hover:bg-zinc-600 rounded-md flex items-center justify-center cursor-pointer border border-dashed border-zinc-500">
+                                                                <span className="text-xl text-zinc-400">+</span>
+                                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) {
+                                                                        const reader = new FileReader();
+                                                                        reader.onload = (ev) => {
+                                                                            const url = ev.target?.result;
+                                                                            const newSelection = new Map(selectedSingles);
+                                                                            const current = newSelection.get(songId);
+                                                                            if (current) {
+                                                                                const newImages = [...current.eraImages];
+                                                                                newImages[idx] = url;
+                                                                                newSelection.set(songId, { ...current, eraImages: newImages });
+                                                                                setSelectedSingles(newSelection);
+                                                                            }
+                                                                        };
+                                                                        reader.readAsDataURL(file);
+                                                                    }
+                                                                }} />
+                                                            </label>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                     </div>
                                 );
                             })}
@@ -158,6 +249,58 @@ const LabelReleasePlanView: React.FC = () => {
                             <input type="number" value={projectDate.year || ''} onChange={e => handleProjectDateChange('year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
                         </div>
                     </div>
+                    {submission.release.type === 'Single' && (
+                        <div className="mt-4 flex flex-col gap-2">
+                            <select 
+                                value={projectSingleType} 
+                                onChange={(e) => setProjectSingleType(e.target.value as any)}
+                                className="w-full bg-zinc-700 text-white p-2 rounded-md"
+                            >
+                                <option value="lead">Lead Single (must be added to your next album)</option>
+                                <option value="standalone">Standalone Single</option>
+                                <option value="interlude">Interlude (-50% streams permanently)</option>
+                            </select>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-sm text-zinc-400">Era Images (Upload 3)</label>
+                                <div className="flex gap-2">
+                                    {[0, 1, 2].map((idx) => (
+                                        <div key={idx} className="flex-1">
+                                            {projectEraImages[idx] ? (
+                                                <div className="relative aspect-square">
+                                                    <img src={projectEraImages[idx]} className="w-full h-full object-cover rounded-md" />
+                                                    <button 
+                                                        onClick={() => {
+                                                            const newImages = [...projectEraImages];
+                                                            newImages.splice(idx, 1);
+                                                            setProjectEraImages(newImages);
+                                                        }}
+                                                        className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold cursor-pointer z-10"
+                                                    >✕</button>
+                                                </div>
+                                            ) : (
+                                                <label className="w-full aspect-square bg-zinc-700 hover:bg-zinc-600 rounded-md flex items-center justify-center cursor-pointer border border-dashed border-zinc-500">
+                                                    <span className="text-xl text-zinc-400">+</span>
+                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            const reader = new FileReader();
+                                                            reader.onload = (ev) => {
+                                                                const url = ev.target?.result;
+                                                                const newImages = [...projectEraImages];
+                                                                newImages[idx] = url;
+                                                                setProjectEraImages(newImages);
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                    }} />
+                                                </label>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {error && <p className="text-red-400 text-sm text-center">{error}</p>}

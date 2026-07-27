@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, {  useState , useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Song, Label, XUser } from '../types';
 import { LABELS } from '../constants';

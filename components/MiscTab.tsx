@@ -23,6 +23,28 @@ const MiscTab: React.FC = () => {
 
     const unreadCount = activeArtistData.inbox.filter(e => !e.isRead).length;
     
+    
+    const [adLoading, setAdLoading] = useState(false);
+    const handleWatchAd = () => {
+        setAdLoading(true);
+        // Simulate ad watch
+        setTimeout(() => {
+            let reward = 100000;
+            const pop = activeArtist.popularity;
+            if (pop >= 100) reward = 30000000;
+            else if (pop >= 75) reward = 20000000;
+            else if (pop >= 50) reward = 10000000;
+            else if (pop >= 30) reward = 5000000;
+            else if (pop >= 20) reward = 3000000;
+            else if (pop >= 10) reward = 1000000;
+            
+            dispatch({ type: 'UPDATE_MONEY', payload: reward });
+            dispatch({ type: 'ADD_MESSAGE', payload: `Watched a sponsored ad and earned ${formatNumber(reward)}!` });
+            setAdLoading(false);
+            alert(`Thanks for watching! You earned ${formatNumber(reward)}.`);
+        }, 3000);
+    };
+
     const handleInboxClick = () => {
         dispatch({ type: 'CHANGE_VIEW', payload: 'inbox' });
     };
@@ -495,6 +517,18 @@ const MiscTab: React.FC = () => {
 
                 <div className="bg-zinc-800 p-4 rounded-lg">
                     <h3 className="font-bold text-lg mb-2">Options</h3>
+                    <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
+                        <div>
+                            <p className="font-bold">Live Leaderboard</p>
+                            <p className="text-xs text-zinc-400">Compete with other players worldwide in different categories.</p>
+                        </div>
+                        <button 
+                            onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'leaderboard' })}
+                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm font-bold transition-colors"
+                        >
+                            View
+                        </button>
+                    </div>
                     <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
                         <div className="flex-grow pr-4">
                             <p className="font-bold">Artist Location</p>
