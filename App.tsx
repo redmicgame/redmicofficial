@@ -319,6 +319,8 @@ const AppContent: React.FC = () => {
                 return <OscarsView />;
             case 'submitForOscars':
                 return <SubmitForOscarsView />;
+            case 'submit_for_golden_globes':
+                return <SubmitForGoldenGlobesView />;
             case 'createOscarPerformance':
                 return <CreateOscarPerformanceView />;
             case 'oscarRedCarpet':

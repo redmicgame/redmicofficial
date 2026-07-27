@@ -323,6 +323,7 @@ export const Post: React.FC<{
 
   const isChartPost = post.image && post.image.startsWith("chart:");
   const isSnapshotPost = post.image && post.image.startsWith("snapshot:");
+  const isLeaderboardPost = post.image && post.image.startsWith("leaderboard:");
   const isTmzPost = author.id === "tmz";
 
   return (
@@ -468,6 +469,8 @@ export const Post: React.FC<{
           <YearEndChart dataString={post.image!} />
         ) : isSnapshotPost ? (
           <SpotifySnapshotCard dataString={post.image!} />
+        ) : isLeaderboardPost ? (
+          <LeaderboardGridCard dataString={post.image!} />
         ) : isTmzPost ? (
           <div
             onClick={() =>

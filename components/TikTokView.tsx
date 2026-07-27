@@ -201,6 +201,10 @@ const TikTokView: React.FC = () => {
         }
     }, [currentTab, fypVideos.length, activeArtist, activeArtistData, gameState.npcs, gameState.npcImages]);
 
+    const viralNpcSongs = useMemo(() => {
+        return gameState.spotifyGlobal.slice(0, 50).filter(entry => entry.isNpc);
+    }, [gameState.spotifyGlobal]);
+
     const releasedSongs = useMemo(() => {
         if (!activeArtistData) return [];
         return activeArtistData.songs.filter(s => s.isReleased).sort((a,b) => b.streams! - a.streams!);
@@ -370,9 +374,18 @@ const TikTokView: React.FC = () => {
                                 className="w-full bg-zinc-800 p-4 rounded-xl text-white outline-none focus:ring-1 focus:ring-[#25F4EE] appearance-none"
                             >
                                 <option value="">Original Sound</option>
-                                {releasedSongs.map(s => (
-                                    <option key={s.id} value={s.id}>{s.title}</option>
-                                ))}
+                                <optgroup label="Your Songs">
+                                    {releasedSongs.map(s => (
+                                        <option key={s.id} value={s.id}>{s.title}</option>
+                                    ))}
+                                </optgroup>
+                                {viralNpcSongs.length > 0 && (
+                                    <optgroup label="Viral TikTok Sounds">
+                                        {viralNpcSongs.map(s => (
+                                            <option key={s.uniqueId} value={`npc_${s.uniqueId}`}>{s.title} - {s.artist}</option>
+                                        ))}
+                                    </optgroup>
+                                )}
                             </select>
                         </div>
 

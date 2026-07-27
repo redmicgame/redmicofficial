@@ -9534,38 +9534,35 @@ HFPA`,
             sub.status === "scheduled" &&
             sub.release.type.includes("Album")
           ) {
-            const preSaves = sub.preSaves || 0;
-            if (preSaves > 10000) {
-              const surge = Math.floor(Math.random() * 40) + 5;
-              const d1 = Math.floor(preSaves * 0.1);
-              const d2 = Math.floor(preSaves * 0.12);
-              const d3 = Math.floor(preSaves * 0.15);
+            const oldPreSaves = sub.preSaves || 0;
+            const popularity = artistData.popularity || 0;
+            const weeksSinceSubmit = Math.max(0, (newDate.year * 52 + newDate.week) - (sub.submittedDate.year * 52 + sub.submittedDate.week));
+            // Removed streams from pre-save calculation to meet prompt requirement
+            const newPreSaves = ((popularity * 15000)) * (1 + (weeksSinceSubmit * 0.25));
+            sub.preSaves = newPreSaves;
 
-              const jsonStr = JSON.stringify({
-                type: "presave",
-                albumName: sub.release.title,
-                artistName: artistProfile?.name || "Unknown",
-                coverArt: sub.release.coverArt,
-                preSaves: preSaves,
-                surge,
-                d1,
-                d2,
-                d3,
-                date: newDate,
-                releaseDate: sub.projectReleaseDate,
-              });
+            const preSaves = sub.preSaves;
+            const milestones = [1000000, 3000000, 5000000, 10000000];
+            
+            let reachedMilestone = 0;
+            for (const m of milestones) {
+                if (oldPreSaves < m && preSaves >= m) {
+                    reachedMilestone = m;
+                }
+            }
 
+            if (reachedMilestone > 0) {
               snapshotCandidates.push({
                 artistId,
                 streams: preSaves * 10,
                 post: {
                   id: crypto.randomUUID(),
-                  authorId: "spotifysnapshot",
-                  content: `"${sub.release.title}" by ${artistProfile?.name} has now surpassed ${formatNumber(preSaves)} pre-saves on Spotify, including a ${surge}% surge yesterday!`,
-                  image: `snapshot:${jsonStr}`,
-                  likes: Math.floor(Math.random() * 20000) + 5000,
-                  retweets: Math.floor(Math.random() * 5000) + 1000,
-                  views: Math.floor(Math.random() * 500000) + 100000,
+                  authorId: "popcore",
+                  content: `"${sub.release.title}" by ${artistProfile?.name} has officially surpassed ${formatNumber(reachedMilestone)} pre-saves on Spotify.`,
+                  image: sub.release.coverArt,
+                  likes: Math.floor(Math.random() * 50000) + 10000,
+                  retweets: Math.floor(Math.random() * 10000) + 1000,
+                  views: Math.floor(Math.random() * 1000000) + 500000,
                   date: newDate,
                 },
               });
@@ -9849,6 +9846,18 @@ Daily streams:
         // 50% chance to create Pop Crave account each year if it doesn't exist
         for (const artistId in updatedArtistsData) {
           const artistData = updatedArtistsData[artistId];
+          if (!artistData.xUsers.some(u => u.id === "popcore")) {
+            artistData.xUsers.push({
+              id: "popcore",
+              name: "Pop Core",
+              username: "TheePopCore",
+              avatar: "https://ui-avatars.com/api/?name=Pop+Core&background=E8115B&color=fff",
+              isVerified: true,
+              bio: "The pulse of pop culture. Charts, trends, and records.",
+              followersCount: 2300000,
+              followingCount: 15,
+            });
+          }
           if (
             !artistData.xUsers.some((u) => u.id === "popcrave") &&
             Math.random() < 0.5
@@ -9924,7 +9933,7 @@ The submission window for the ${newDate.year} Academy Awards is open. Please sub
           );
           const song = artistData.songs.find((s) => s.id === sub.itemId);
           if (artistData && artistProfile && song) {
-            const score = song.quality * 3 + song.streams / 1000000;
+            const score = (song.quality * 50) + (song.streams / 1000000) + 500; // Massive boost for player Oscar chances
             contenders.push({
               id: song.id,
               name: song.title,
@@ -9946,7 +9955,7 @@ The submission window for the ${newDate.year} Academy Awards is open. Please sub
             name: song.title,
             artistName: song.artist,
             isPlayer: false,
-            score: (song.basePopularity / 100000) * 1.5,
+            score: (song.basePopularity / 1000000) * 8 + (Math.random() * 200),
             coverArt:
               song.coverArt ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250`,
@@ -13963,10 +13972,25 @@ We wish you the best in your future endeavors.
         views = Math.floor(Math.random() * (75000000 - 1000000)) + 1000000;
       }
 
+      let songNameForPost = "";
+      let isNpcSong = false;
+      let generatePopCorePost = false;
+      
       if (action.payload.songId) {
-        const song = activeData.songs.find(s => s.id === action.payload.songId);
-        if (song && song.trait === "TikTok Hit") {
-          views *= 3;
+        if (action.payload.songId.startsWith("npc_")) {
+          isNpcSong = true;
+          const npcId = action.payload.songId.replace("npc_", "");
+          const npcSong = state.npcs.find((s: any) => s.uniqueId === npcId);
+          if (npcSong) {
+              songNameForPost = npcSong.title;
+              generatePopCorePost = true;
+              views *= 2;
+          }
+        } else {
+          const song = activeData.songs.find(s => s.id === action.payload.songId);
+          if (song && song.trait === "TikTok Hit") {
+            views *= 3;
+          }
         }
       }
 
@@ -13997,8 +14021,25 @@ We wish you the best in your future endeavors.
         );
       }
 
+      let updatedSocialFeed = [...state.socialFeed];
+      if (generatePopCorePost && songNameForPost) {
+        const actorOrSinger = (activeData.actingRoles?.length || 0) > (activeData.songs?.length || 0) ? "actor" : "singer";
+        const artistName = state.soloArtist?.name || state.group?.name || "Unknown";
+        
+        updatedSocialFeed.unshift({
+            id: crypto.randomUUID(),
+            authorId: "popcore",
+            content: `${artistName}, a famous ${actorOrSinger} joins the viral '${songNameForPost}' TikTok trend.`,
+            likes: Math.floor(Math.random() * 50000) + 10000,
+            retweets: Math.floor(Math.random() * 10000) + 1000,
+            views: Math.floor(Math.random() * 1000000) + 500000,
+            date: state.date,
+        });
+      }
+
       return {
         ...state,
+        socialFeed: updatedSocialFeed,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: {
@@ -16921,7 +16962,7 @@ Let us know if you accept.`,
           },
         },
         grammySubmissions: [...(state.grammySubmissions || []), ...submissions],
-        currentView: "game",
+        currentView: "inbox",
       };
     }
     case "ACCEPT_GRAMMY_PERFORMANCE": {
@@ -17357,11 +17398,27 @@ Let us know if you accept.`,
       };
     }
     
-    case "GO_TO_GOLDEN_GLOBE_SUBMISSIONS":
+    case "GO_TO_GOLDEN_GLOBE_SUBMISSIONS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (email.id === action.payload.emailId) {
+          return { ...email, isRead: true };
+        }
+        return email;
+      });
       return {
         ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: updatedInbox,
+          },
+        },
         currentView: "submit_for_golden_globes",
       };
+    }
 
     case "GO_TO_OSCAR_SUBMISSIONS": {
       if (!state.activeArtistId) return state;
@@ -17405,7 +17462,7 @@ Let us know if you accept.`,
           },
         },
         goldenGlobeSubmissions: [...(state.goldenGlobeSubmissions || []), ...submissions],
-        currentView: "game",
+        currentView: "inbox",
       };
     }
 
@@ -17429,7 +17486,7 @@ Let us know if you accept.`,
           },
         },
         oscarSubmissions: [...(state.oscarSubmissions || []), ...submissions],
-        currentView: "game",
+        currentView: "inbox",
       };
     }
     case "CHANGE_LOCATION": {
