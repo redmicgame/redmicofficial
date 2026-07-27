@@ -167,22 +167,7 @@ const LiveLeaderboardView: React.FC = () => {
                 </div>
             </div>
 
-            {!user ? (
-                <div className="p-8 flex flex-col items-center justify-center h-full text-center">
-                    <TrophyIcon className="w-16 h-16 text-zinc-600 mb-4" />
-                    <h2 className="text-2xl font-bold mb-2">Sign in Required</h2>
-                    <p className="text-zinc-400 mb-6 max-w-md">
-                        You must be signed in with Google to view and participate in the live leaderboards.
-                    </p>
-                    <button 
-                        onClick={login}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition-colors"
-                    >
-                        Sign in with Google
-                    </button>
-                </div>
-            ) : (
-                <div className="p-4 overflow-y-auto pb-24">
+            <div className="p-4 overflow-y-auto pb-24">
                     <div className="mb-6">
                         <div className="flex gap-2 p-1 bg-zinc-900 rounded-lg mb-4 overflow-x-auto no-scrollbar">
                             {MODES.map(mode => (
@@ -216,12 +201,13 @@ const LiveLeaderboardView: React.FC = () => {
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="font-bold text-lg">Top Players</h2>
-                            <button 
-                                onClick={handleSync}
-                                disabled={syncing}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold ${syncing ? 'bg-zinc-700 text-zinc-400' : 'bg-green-600 hover:bg-green-500 text-white'} transition-colors`}
+                            <button
+                                onClick={!user ? undefined : handleSync}
+                                disabled={!user || syncing}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold ${!user ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed' : syncing ? 'bg-zinc-700 text-zinc-400' : 'bg-green-600 hover:bg-green-500 text-white'} transition-colors`}
+                                title={!user ? "Sign in via Settings to sync saves" : ""}
                             >
-                                {syncing ? `Syncing... ${syncProgress}%` : 'Sync My Saves'}
+                                {!user ? 'Sign in to Sync' : syncing ? `Syncing... ${syncProgress}%` : 'Sync My Saves'}
                             </button>
                         </div>
 
@@ -272,7 +258,6 @@ const LiveLeaderboardView: React.FC = () => {
                         )}
                     </div>
                 </div>
-            )}
         </div>
     );
 };
