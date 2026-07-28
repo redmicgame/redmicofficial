@@ -82,6 +82,7 @@ export interface Song {
   actualLastWeekStreams?: number;
   actualPrevWeekStreams?: number;
   pitchforkBoost?: boolean;
+  interviewBoost?: boolean;
   duration: number; // in seconds
   explicit: boolean;
   artistId: string;

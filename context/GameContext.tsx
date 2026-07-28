@@ -4518,7 +4518,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             effectivelyReleased = true;
           }
           if (effectivelyReleased && !song.isTakenDown) {
-            let baseStreams = song.quality ** 2 * 250;
+            let baseStreams = song.quality ** 2 * 80;
             const difficulty = state.difficultyMode || "normal";
             let diffMultiplier = 1;
             if (difficulty === "easy") diffMultiplier = 2.0;
@@ -4692,7 +4692,12 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklyStreams = Math.floor(weeklyStreams * 1.1); // 10% boost
             }
 
-            if (song.pitchforkBoost) {
+            if (song.pitchforkBoost && state.difficultyMode === "easy") {
+              weeklyStreams = Math.floor(
+                weeklyStreams * (Math.random() * 2 + 2),
+              );
+            }
+            if (song.interviewBoost) {
               weeklyStreams = Math.floor(
                 weeklyStreams * (Math.random() * 2 + 2),
               );
@@ -5198,7 +5203,10 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             );
           }
 
-          if (song.pitchforkBoost) {
+          if (song.pitchforkBoost && state.difficultyMode === "easy") {
+            weeklyViews = Math.floor(weeklyViews * (Math.random() * 2 + 2));
+          }
+          if (song.interviewBoost) {
             weeklyViews = Math.floor(weeklyViews * (Math.random() * 2 + 2));
           }
 
@@ -14307,7 +14315,7 @@ Keep breaking records.
 
       const updatedSongs = activeData.songs.map((song) => {
         if (song.id === state.activeGeniusOffer!.songId) {
-          return { ...song, pitchforkBoost: true };
+          return { ...song, interviewBoost: true };
         }
         return song;
       });
@@ -14366,7 +14374,7 @@ Keep breaking records.
 
       const updatedSongs = activeData.songs.map((song) => {
         if (song.id === state.activeOnTheRadarOffer!.songId) {
-          return { ...song, pitchforkBoost: true }; // Re-using for generic boost
+          return { ...song, interviewBoost: true }; // Re-using for generic boost
         }
         return song;
       });
@@ -14425,7 +14433,7 @@ Keep breaking records.
 
       const updatedSongs = activeData.songs.map((song) => {
         if (song.id === state.activeTrshdOffer!.songId) {
-          return { ...song, pitchforkBoost: true }; // Re-using for generic boost
+          return { ...song, interviewBoost: true }; // Re-using for generic boost
         }
         return song;
       });
