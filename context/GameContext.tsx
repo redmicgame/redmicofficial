@@ -535,10 +535,10 @@ const formatCertification = (
   return cert.level;
 };
 
-const getRandomNpcName = (excludedNames: string[] = [], currentYear?: number): string => {
+const getRandomNpcName = (excludedNames: (string | undefined)[] = [], currentYear?: number): string => {
   let name = "";
   let attempts = 0;
-  const lowerExcluded = excludedNames.map((n) => n.toLowerCase());
+  const lowerExcluded = excludedNames.filter((n): n is string => !!n).map((n) => n.toLowerCase());
   
   // Filter available artists by era if currentYear is provided
   let availableArtists = NPC_ARTIST_NAMES;
@@ -3670,7 +3670,7 @@ Music Supervisor`,
             sender: "FIFA Sound",
             senderIcon: "soundtrack",
             subject: `Invitation: Official FIFA World Cup ${newDate.year} Soundtrack`,
-            body: `Hello ${artistProfileForEmail.name},\n\nWe are thrilled to invite you to be a lead artist on a featured track for the upcoming Official FIFA World Cup ${newDate.year} Soundtrack!\n\nWe envision this as a powerful collaboration and would like to pair you with ${collabs.join(" and ")}.\n\nIf you accept, you will need to provide the song title and cover art, and the single will drop on week 23, building hype before the full soundtrack release on week 25.\n\nPlease let us know if you accept.\n\nBest,\nFIFA Sound`,
+            body: `Hello ${artistProfileForEmail.name},\n\nWe are thrilled to invite you to be a lead artist on a featured track for the upcoming Official FIFA World Cup ${newDate.year} Soundtrack!\n\nWe envision this as a powerful collaboration and would like to pair you with ${collabs.join(", ")}.\n\nIf you accept, you will need to provide the song title and cover art, and the single will drop on week 23, building hype before the full soundtrack release on week 25.\n\nPlease let us know if you accept.\n\nBest,\nFIFA Sound`,
             date: newDate,
             isRead: false,
             offer: {
@@ -9358,7 +9358,7 @@ It is now available on your Spotify profile.
 
           // Add some NPC contenders
           for (let i = 0; i < 4; i++) {
-             const npcName = getRandomNpcName(state.npcs.map((n) => n.name), newDate.year);
+             const npcName = getRandomNpcName(state.npcs.map((n) => n.artist), newDate.year);
              contenders.push({
                  id: "npc-" + Math.random(),
                  name: categoryName.includes("Song") || categoryName.includes("Soundtrack") ? "NPC Project" : "NPC Film/Show",
@@ -10050,157 +10050,148 @@ The submission window for the ${newDate.year} Academy Awards is open. Please sub
 
       // Week 5: Determine Oscar Nominations
       if (newDate.week === 5 && (state.oscarSubmissions?.length || 0) > 0) {
-        const categoryName = "Best Original Song";
-        const contenders: OscarContender[] = [];
+        const categories: OscarCategory["name"][] = ["Best Original Song", "Best Actor/Actress", "Best Supporting Actor/Actress", "Best Voice Actor/Actress"];
+        const newNominations: OscarCategory[] = [];
 
-        // Player contenders
-        for (const sub of (state.oscarSubmissions || [])) {
-          const artistData = updatedArtistsData[sub.artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === sub.artistId,
-          );
-          const song = artistData.songs.find((s) => s.id === sub.itemId);
-          if (artistData && artistProfile && song) {
-            const score = (song.quality * 50) + (song.streams / 1000000) + 500; // Massive boost for player Oscar chances
-            contenders.push({
-              id: song.id,
-              name: song.title,
-              artistName: artistProfile.name,
-              isPlayer: true,
-              score,
-              coverArt: song.coverArt,
-            });
-          }
+        for (const categoryName of categories) {
+            const contenders: OscarContender[] = [];
+            const playerSubmissions = (state.oscarSubmissions || []).filter(s => s.category === categoryName);
+            
+            for (const sub of playerSubmissions) {
+              const artistData = updatedArtistsData[sub.artistId];
+              const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === sub.artistId);
+              if (!artistData || !artistProfile) continue;
+
+              let score = 0;
+              let coverArt: string | undefined = undefined;
+
+              if (categoryName === "Best Original Song") {
+                  const song = artistData.songs.find(s => s.id === sub.itemId);
+                  if (song) {
+                      score = (song.quality * 50) + (song.streams / 1000000) + 500;
+                      coverArt = song.coverArt;
+                  }
+              } else {
+                  const role = (artistData.actingRoles || []).find(r => r.id === sub.itemId);
+                  if (role) {
+                      score = artistData.popularity + ((role.rating || 50) * 3) + 300;
+                      coverArt = role.coverUrl;
+                  }
+              }
+
+              contenders.push({
+                  id: sub.itemId,
+                  name: sub.itemName,
+                  artistName: artistProfile.name,
+                  isPlayer: true,
+                  score,
+                  coverArt
+              });
+            }
+
+            // NPC contenders
+            if (categoryName === "Best Original Song") {
+                const npcSongsForOscars = [...newNpcsList].sort((a, b) => b.basePopularity - a.basePopularity).slice(0, 10);
+                npcSongsForOscars.forEach((song) => {
+                  contenders.push({
+                    id: song.uniqueId,
+                    name: song.title,
+                    artistName: song.artist,
+                    isPlayer: false,
+                    score: (song.basePopularity / 1000000) * 8 + (Math.random() * 200),
+                    coverArt: song.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250`,
+                  });
+                });
+            } else {
+                for (let i = 0; i < 6; i++) {
+                     const npcName = getRandomNpcName(state.npcs.map(n => n.artist), newDate.year);
+                     contenders.push({
+                         id: "npc-" + Math.random(),
+                         name: "NPC Film",
+                         artistName: npcName,
+                         isPlayer: false,
+                         score: Math.random() * 200 + 100,
+                         coverArt: `https://ui-avatars.com/api/?name=${encodeURIComponent(npcName)}&background=random&color=fff&size=250`
+                     });
+                }
+            }
+
+            contenders.sort((a, b) => b.score - a.score);
+            const nominees = contenders.slice(0, 5);
+            if (nominees.length > 0) {
+                newNominations.push({ name: categoryName, nominees });
+            }
         }
 
-        // NPC contenders
-        const npcSongsForOscars = [...newNpcsList]
-          .sort((a, b) => b.basePopularity - a.basePopularity)
-          .slice(0, 10);
-        npcSongsForOscars.forEach((song) => {
-          contenders.push({
-            id: song.uniqueId,
-            name: song.title,
-            artistName: song.artist,
-            isPlayer: false,
-            score: (song.basePopularity / 1000000) * 8 + (Math.random() * 200),
-            coverArt:
-              song.coverArt ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250`,
-          });
-        });
+        newOscarNominations = newNominations;
+        finalState.oscarCurrentYearNominations = newNominations;
 
-        contenders.sort((a, b) => b.score - a.score);
-        const nominees = contenders.slice(0, 5);
+        for (const category of newNominations) {
+            let postContent = `The nominees for ${category.name} at the ${newDate.year} #Oscars have been announced:
+`;
+            postContent += category.nominees.map((n) => `• ${n.artistName} - "${n.name}"`).join("\n");
 
-        if (nominees.length > 0) {
-          newOscarNominations = [
-            { name: categoryName, nominees, winner: nominees[0] },
-          ];
-          finalState.oscarCurrentYearNominations = newOscarNominations;
-
-          const playerNominee = nominees.find((n) => n.isPlayer);
-          if (playerNominee) {
-            const artistData =
-              updatedArtistsData[
-                playerNominee.artistName === state.soloArtist?.name
-                  ? state.soloArtist.id
-                  : state.group!.id
-              ];
-            const artistProfile = allPlayerArtistsAndGroups.find(
-              (a) => a.name === playerNominee.artistName,
+            Object.values(updatedArtistsData).forEach((d) =>
+              d.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content: postContent,
+                likes: Math.floor(Math.random() * 50000) + 10000,
+                retweets: Math.floor(Math.random() * 10000) + 5000,
+                views: Math.floor(Math.random() * 1000000) + 500000,
+                date: newDate,
+              }),
             );
+        }
 
-            if (artistData && artistProfile) {
-              artistData.popularity = Math.min(100, artistData.popularity + 5);
-              const hasPerformanceOffer = Math.random() < 0.5;
-              let body = `Dear ${artistProfile.name},
+        // Notify players
+        for (const artistId in updatedArtistsData) {
+            const artistData = updatedArtistsData[artistId];
+            const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+            
+            let gotNominated = false;
+            const nominatedCategories: string[] = [];
+            for (const category of newNominations) {
+                if (category.nominees.some(n => n.isPlayer && n.artistName === artistProfile?.name)) {
+                    gotNominated = true;
+                    nominatedCategories.push(category.name);
+                }
+            }
 
-Congratulations! The Academy is pleased to announce your nomination for Best Original Song for "${playerNominee.name}".`;
-              if (hasPerformanceOffer) {
-                body += `
+            if (gotNominated) {
+                artistData.popularity = Math.min(100, artistData.popularity + 5);
+                const hasPerformanceOffer = nominatedCategories.includes("Best Original Song") && Math.random() < 0.5;
+
+                let body = `Dear ${artistProfile?.name},
+
+Congratulations! The Academy is pleased to announce your nomination for ${nominatedCategories.join(", ")}.`;
+                if (hasPerformanceOffer) {
+                    body += `
 
 Additionally, we would be honored to have you perform at the ceremony. Please respond to accept.`;
-              }
-              body += `
+                }
+                body += `
 
 Sincerely,
 The Academy`;
-              const emailId = crypto.randomUUID();
-              artistData.inbox.push({
-                id: emailId,
-                sender: "The Academy",
-                senderIcon: "oscars",
-                subject: "Congratulations! You're an Oscar Nominee!",
-                body,
-                date: newDate,
-                isRead: false,
-                offer: {
-                  type: "oscarNominations",
-                  emailId,
-                  hasPerformanceOffer,
-                },
-              });
+
+                const emailId = crypto.randomUUID();
+                artistData.inbox.push({
+                    id: emailId,
+                    sender: "The Academy",
+                    senderIcon: "oscars",
+                    subject: "Congratulations! You're an Oscar Nominee!",
+                    body,
+                    date: newDate,
+                    isRead: false,
+                    offer: {
+                        type: "oscarNominations",
+                        emailId,
+                        hasPerformanceOffer,
+                    },
+                });
             }
-          }
-
-          let postContent = `The nominees for Best Original Song at the ${newDate.year} #Oscars have been announced:
-
-`;
-          postContent += nominees
-            .map(
-              (n) =>
-                `• ${n.isPlayer ? `**${n.name}**` : n.name} (${n.artistName})`,
-            )
-            .join("\n");
-          Object.values(updatedArtistsData).forEach((d) =>
-            d.xPosts.unshift({
-              id: crypto.randomUUID(),
-              authorId: "popbase",
-              content: postContent,
-              likes: Math.floor(Math.random() * 60000) + 30000,
-              retweets: Math.floor(Math.random() * 15000) + 7000,
-              views: Math.floor(Math.random() * 2000000) + 800000,
-              date: newDate,
-            }),
-          );
         }
-
-        // Send Red Carpet invites
-        allPlayerArtistsAndGroups.forEach((artistProfile) => {
-          const artistData = updatedArtistsData[artistProfile.id];
-          if (artistData) {
-            const isNominated = newOscarNominations?.some((cat) =>
-              cat.nominees.some(
-                (n) => n.isPlayer && n.artistName === artistProfile.name,
-              ),
-            );
-            if (isNominated || artistData.popularity >= 80) {
-              const redCarpetEmailId = crypto.randomUUID();
-              const reasonText = isNominated
-                ? `Because of your nomination`
-                : `Due to your undeniable impact on pop culture this year`;
-
-              artistData.inbox.push({
-                id: redCarpetEmailId,
-                sender: "The Academy",
-                senderIcon: "oscars",
-                subject: "Invitation: Oscars Red Carpet",
-                body: `Dear ${artistProfile.name},
-
-${reasonText}, we would be honored to have you attend the ${newDate.year} Oscars and walk the red carpet.
-
-Please accept this invitation by sharing your look for the evening.
-
-Sincerely,
-The Academy`,
-                date: newDate,
-                isRead: false,
-                offer: { type: "oscarRedCarpet", emailId: redCarpetEmailId },
-              });
-            }
-          }
-        });
       }
 
       // Week 10: Oscar Ceremony
@@ -14149,30 +14140,31 @@ We wish you the best in your future endeavors.
         );
       }
 
-      let updatedSocialFeed = [...state.socialFeed];
+      let updatedXPosts = activeData.xPosts ? [...activeData.xPosts] : [];
       if (generatePopCorePost && songNameForPost) {
         const actorOrSinger = (activeData.actingRoles?.length || 0) > (activeData.songs?.length || 0) ? "actor" : "singer";
         const artistName = state.soloArtist?.name || state.group?.name || "Unknown";
         
-        updatedSocialFeed.unshift({
+        updatedXPosts.unshift({
             id: crypto.randomUUID(),
-            authorId: "popcore",
+            authorId: "popbase",
             content: `${artistName}, a famous ${actorOrSinger} joins the viral '${songNameForPost}' TikTok trend.`,
             likes: Math.floor(Math.random() * 50000) + 10000,
             retweets: Math.floor(Math.random() * 10000) + 1000,
             views: Math.floor(Math.random() * 1000000) + 500000,
             date: state.date,
+            comments: [],
         });
       }
 
       return {
         ...state,
-        socialFeed: updatedSocialFeed,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
             songs: updatedSongs,
+            xPosts: updatedXPosts,
             tiktokVideos: [newTiktok, ...(activeData.tiktokVideos || [])],
             hype: Math.min(100, activeData.hype + hypeGained),
             tiktokFollowers: followers + Math.floor(views * 0.01),
