@@ -9,6 +9,8 @@ const TourDetailView: React.FC = () => {
     const { dispatch, gameState, activeArtistData } = useGame();
     const { activeTourId } = gameState;
     const [error, setError] = useState('');
+    const [isEditingSetlist, setIsEditingSetlist] = useState(false);
+    const [tempSetlist, setTempSetlist] = useState<string[]>([]);
     
     if (!activeTourId || !activeArtistData) {
         dispatch({ type: 'CHANGE_VIEW', payload: 'tours' });
@@ -24,6 +26,7 @@ const TourDetailView: React.FC = () => {
     const progress = (tour.currentVenueIndex / tour.venues.length) * 100;
 
     const handleSaveSetlist = () => {
+        console.log("Saving setlist. Temp setlist:", tempSetlist);
         const added = tempSetlist.filter(id => !tour.setlist.includes(id));
         const removed = tour.setlist.filter(id => !tempSetlist.includes(id));
         if (added.length > 0 || removed.length > 0) {
@@ -31,7 +34,7 @@ const TourDetailView: React.FC = () => {
                 type: 'EDIT_TOUR_SETLIST',
                 payload: {
                     tourId: tour.id,
-                    newSetlist: tempSetlist,
+                    newSetlist: [...tempSetlist],
                     addedSongs: added,
                     removedSongs: removed
                 }
@@ -344,7 +347,7 @@ const TourDetailView: React.FC = () => {
                         </div>
                         <button
                             onClick={handleSaveSetlist}
-                            disabled={tempSetlist.length < 5}
+                            disabled={tempSetlist.length < 1}
                             className="w-full py-3 bg-white text-black font-bold rounded-lg disabled:opacity-50"
                         >
                             Save Setlist
