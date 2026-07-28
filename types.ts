@@ -2475,6 +2475,7 @@ export type GameAction =
   | { type: "CREATE_TOUR"; payload: Tour }
   | { type: "START_TOUR"; payload: { tourId: string } }
   | { type: "CANCEL_TOUR"; payload: { tourId: string } }
+  | { type: "EDIT_TOUR_SETLIST"; payload: { tourId: string; newSetlist: string[]; addedSongs: string[]; removedSongs: string[] } }
   | { type: "COLLECT_PRESALE"; payload: { tourId: string } }
   | {
       type: "ADD_PRESALE_ALLOCATION";
