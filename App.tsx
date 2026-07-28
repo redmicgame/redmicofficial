@@ -1,5 +1,6 @@
 import GoldenGlobesView from './components/GoldenGlobesView';
 import SubmitForGoldenGlobesView from './components/SubmitForGoldenGlobesView';
+import KaiStreamSetupView from "./components/KaiStreamSetupView";
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 
 
@@ -321,6 +322,8 @@ const AppContent: React.FC = () => {
                 return <SubmitForOscarsView />;
             case 'submit_for_golden_globes':
                 return <SubmitForGoldenGlobesView />;
+            case 'kaiStreamSetup':
+                return <KaiStreamSetupView />;
             case 'createOscarPerformance':
                 return <CreateOscarPerformanceView />;
             case 'oscarRedCarpet':

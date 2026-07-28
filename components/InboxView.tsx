@@ -230,6 +230,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             case 'oscarSubmission':
                 dispatch({ type: 'GO_TO_OSCAR_SUBMISSIONS', payload: { emailId: email.id } });
                 break;
+            case 'kaiStreamSetup':
+                dispatch({ type: 'GO_TO_KAI_STREAM_SETUP', payload: { emailId: email.id } });
+                break;
             case 'oscarNominations':
                 if (email.offer.hasPerformanceOffer) {
                     dispatch({ type: 'ACCEPT_OSCAR_PERFORMANCE', payload: { emailId: email.id } });
@@ -574,6 +577,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
             case 'oscarSubmission':
                 buttonText = "Submit For Oscars";
                 buttonClass = "bg-amber-400 hover:bg-amber-500 text-black shadow-amber-400/20";
+            case 'kaiStreamSetup':
+                buttonText = "Setup Twitch Stream";
+                buttonClass = "bg-[#9146FF] hover:bg-[#7d5bbe] text-white shadow-[#9146FF]/20";
+                acceptedText = "Stream Setup Completed";
+                isAccepted = email.offer.isSubmitted;
+                break;
                 acceptedText = "Submissions Sent";
                 isAccepted = email.offer.isSubmitted;
                 break;

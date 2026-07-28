@@ -2646,3 +2646,18 @@ export interface PodcastPitchOffer {
   releaseIdToPromote: string;
   date: { year: number; week: number };
 }
+
+export type StreamLocation = 'Disneyworld' | 'Normal Stream' | 'LA Pop Up' | 'Petting Zoo';
+
+export interface TwitchStreamSchedule {
+    id: string;
+    streamer: string;
+    location: StreamLocation;
+    songId: string;
+    promoBanner: string;
+    ytThumbnail: string;
+    scheduledDate: GameDate;
+    announceDate: GameDate;
+    hasAnnounced: boolean;
+    hasStreamed: boolean;
+}

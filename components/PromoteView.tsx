@@ -458,6 +458,7 @@ const PromoteView: React.FC = () => {
                     </div>
                 </main>
 
+
                 {activeSection === 'songs' && selectedSongIds.size > 0 && (
                     <div className="fixed bottom-0 left-0 right-0 bg-zinc-800/80 backdrop-blur-sm p-4 border-t border-zinc-700 z-20">
                         <button onClick={() => setIsSongModalOpen(true)} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
