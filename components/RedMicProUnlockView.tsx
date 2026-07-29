@@ -19,7 +19,6 @@ const RedMicProUnlockView: React.FC = () => {
     "RMP-9603-2A95-4A7A",
     "RMP-BBB4-6F53-34B7",
     "RMP-5A64-DA5E-A6FC",
-    "RMP-8880-B322-BCA4",
     "RMP-7F40-3939-C355",
     "RMP-80DC-ED70-D7D2",
     "RMP-FB26-5332-21DD",
