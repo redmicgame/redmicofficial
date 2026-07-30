@@ -14,29 +14,63 @@ const SubmitForGoldenGlobesView: React.FC = () => {
 
     if (!activeArtistData || !activeArtist) return null;
 
-    const previousYearAlbums = useMemo(() => {
-        return activeArtistData.releases.filter(r => r.releaseDate.year === date.year - 1 && r.type === 'Album');
+    const currentYearAlbums = useMemo(() => {
+        return activeArtistData.releases.filter(r => r.releaseDate?.year === date.year && r.type === 'Album');
     }, [activeArtistData.releases, date.year]);
 
-    const eligibleSoundtracks = previousYearAlbums.filter(r => r.isSoundtrack);
+    const eligibleSoundtracks = useMemo(() => {
+        const currentSoundtracks = currentYearAlbums.filter(r => r.isSoundtrack || r.soundtrackInfo);
+        if (currentSoundtracks.length > 0) return currentSoundtracks;
+        return activeArtistData.releases.filter(r => (r.isSoundtrack || r.soundtrackInfo) && r.type === 'Album');
+    }, [currentYearAlbums, activeArtistData.releases]);
 
     const eligibleSongs = useMemo(() => {
-        const previousYearReleases = activeArtistData.releases.filter(r => r.releaseDate.year === date.year - 1);
-        const songIdsFromPreviousYear = new Set(previousYearReleases.flatMap(r => r.songIds));
-        return activeArtistData.songs.filter(s => songIdsFromPreviousYear.has(s.id) && s.soundtrackTitle);
+        const currentYearReleases = activeArtistData.releases.filter(r => r.releaseDate?.year === date.year);
+        const currentYearReleaseIds = new Set(currentYearReleases.map(r => r.id));
+        const currentYearSongIds = new Set(currentYearReleases.flatMap(r => r.songIds || []));
+        const currentSongs = activeArtistData.songs.filter(s => 
+            s.soundtrackTitle && (
+                (s.releaseId && currentYearReleaseIds.has(s.releaseId)) ||
+                currentYearSongIds.has(s.id)
+            )
+        );
+        if (currentSongs.length > 0) return currentSongs;
+        return activeArtistData.songs.filter(s => s.soundtrackTitle);
     }, [activeArtistData.releases, activeArtistData.songs, date.year]);
         
     const eligibleActingRoles = useMemo(() => {
-        return (activeArtistData.actingRoles || []).filter(g => 
-           g.year === date.year - 1 && g.status === 'Released'
-        ); // In this simplified model we'll assume gigs from recent time or just completed gigs.
-    }, [activeArtistData.actingRoles]);
+        const roles = activeArtistData.actingRoles || [];
+        const currentYearRoles = roles.filter(g => 
+           (g.year === date.year || !g.year) && (g.status === 'Released' || g.status === 'Completed')
+        );
+        if (currentYearRoles.length > 0) return currentYearRoles;
+        return roles.filter(g => g.status === 'Released' || g.status === 'Completed');
+    }, [activeArtistData.actingRoles, date.year]);
         
-    const eligibleMovies = eligibleActingRoles.filter(r => r.type === 'Movie');
-    const eligibleLeading = eligibleActingRoles.filter(r => (!r.roleType || r.roleType === 'Leading Role') && r.type !== 'Voice Acting');
-    const eligibleSupporting = eligibleActingRoles.filter(r => r.roleType === 'Supporting Role' && r.type !== 'Voice Acting');
-    const eligibleVoice = eligibleActingRoles.filter(r => r.type === 'Voice Acting');
-    const eligibleTVShows = eligibleActingRoles.filter(r => r.type === 'TV Show');
+    const eligibleMovies = useMemo(() => {
+        const movies = eligibleActingRoles.filter(r => r.type === 'Movie' || r.type === 'Tour Documentary');
+        return movies.length > 0 ? movies : eligibleActingRoles;
+    }, [eligibleActingRoles]);
+
+    const eligibleTVShows = useMemo(() => {
+        const tv = eligibleActingRoles.filter(r => r.type === 'TV Show');
+        return tv.length > 0 ? tv : eligibleActingRoles;
+    }, [eligibleActingRoles]);
+
+    const eligibleLeading = useMemo(() => {
+        const leading = eligibleActingRoles.filter(r => r.type !== 'Voice Acting' && r.roleType !== 'Supporting Role');
+        return leading.length > 0 ? leading : eligibleActingRoles.filter(r => r.type !== 'Voice Acting');
+    }, [eligibleActingRoles]);
+
+    const eligibleSupporting = useMemo(() => {
+        const supporting = eligibleActingRoles.filter(r => r.type !== 'Voice Acting' && r.roleType !== 'Leading Role');
+        return supporting.length > 0 ? supporting : eligibleActingRoles.filter(r => r.type !== 'Voice Acting');
+    }, [eligibleActingRoles]);
+
+    const eligibleVoice = useMemo(() => {
+        const voice = eligibleActingRoles.filter(r => r.type === 'Voice Acting');
+        return voice.length > 0 ? voice : eligibleActingRoles;
+    }, [eligibleActingRoles]);
 
     const handleSelect = (category: CategoryName, itemId: string) => {
         setSelections(prev => {
@@ -54,19 +88,19 @@ const SubmitForGoldenGlobesView: React.FC = () => {
            const category = cat as CategoryName;
            let itemName = 'Unknown';
            if (category === 'Best Original Song') {
-               itemName = eligibleSongs.find(s => s.id === itemId)?.title || 'Unknown';
+               itemName = activeArtistData.songs.find(s => s.id === itemId)?.title || 'Unknown';
            } else if (category === 'Best Soundtrack') {
-               itemName = eligibleSoundtracks.find(s => s.id === itemId)?.title || 'Unknown';
+               itemName = activeArtistData.releases.find(r => r.id === itemId)?.title || 'Unknown';
            } else {
-               itemName = eligibleActingRoles.find(r => r.id === itemId)?.title || 'Unknown';
+               itemName = (activeArtistData.actingRoles || []).find(r => r.id === itemId)?.title || 'Unknown';
            }
            submissions.push({ artistId: activeArtist.id, category, itemId, itemName });
         });
         
-        const emailId = activeArtistData.inbox.find(e => e.offer?.type === 'goldenGlobeSubmission' && !e.offer.isSubmitted)?.id;
-        if (emailId) {
-            dispatch({ type: 'SUBMIT_FOR_GOLDEN_GLOBES', payload: { submissions, emailId } });
-        }
+        if (submissions.length === 0) return;
+
+        const emailId = activeArtistData.inbox.find(e => e.offer?.type === 'goldenGlobeSubmission' && !e.offer.isSubmitted)?.id || '';
+        dispatch({ type: 'SUBMIT_FOR_GOLDEN_GLOBES', payload: { submissions, emailId } });
     };
 
     const categories: { name: CategoryName; description: string; options: {id: string, name: string}[] }[] = [
@@ -91,7 +125,7 @@ const SubmitForGoldenGlobesView: React.FC = () => {
             <main className="flex-grow overflow-y-auto p-4 space-y-6">
                 <div className="bg-amber-400/10 border border-amber-400/30 p-4 rounded-xl text-amber-100">
                     <p className="font-bold text-amber-400 mb-1">Hollywood Foreign Press Association</p>
-                    <p className="text-sm">Submit your eligible work for Golden Globe consideration. Only work from the previous year is eligible.</p>
+                    <p className="text-sm">Submit your eligible film and television work from this year for Golden Globe consideration.</p>
                 </div>
 
                 <div className="space-y-6">

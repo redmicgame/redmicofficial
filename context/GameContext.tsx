@@ -10123,8 +10123,13 @@ Daily streams:
                 release.releaseDate?.year === newDate.year - 1
               );
             });
+            const eligibleRoles = (artistData.actingRoles || []).filter(
+              (r) =>
+                (r.year === newDate.year - 1 || !r.year) &&
+                (r.status === "Released" || r.status === "Completed")
+            );
 
-            if (eligibleSongs.length > 0) {
+            if (eligibleSongs.length > 0 || eligibleRoles.length > 0 || (artistData.actingRoles && artistData.actingRoles.length > 0)) {
               const emailId = crypto.randomUUID();
               artistData.inbox.push({
                 id: emailId,

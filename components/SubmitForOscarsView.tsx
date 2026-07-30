@@ -17,44 +17,67 @@ const SubmitForOscarsView: React.FC = () => {
     if (!activeArtistData || !activeArtist) return null;
 
     const eligibleSongs = useMemo(() => {
-        const previousYearReleases = activeArtistData.releases.filter(r => r.releaseDate.year === date.year - 1);
-        const songIdsFromPreviousYear = new Set(previousYearReleases.flatMap(r => r.songIds));
-        return activeArtistData.songs.filter(s => songIdsFromPreviousYear.has(s.id) && s.soundtrackTitle);
+        const previousYearReleases = activeArtistData.releases.filter(r => r.releaseDate?.year === date.year - 1);
+        const songIdsFromPreviousYear = new Set(previousYearReleases.flatMap(r => r.songIds || []));
+        const previousYearReleaseIds = new Set(previousYearReleases.map(r => r.id));
+        const prevYearSongs = activeArtistData.songs.filter(s => 
+            s.soundtrackTitle && (
+                (s.releaseId && previousYearReleaseIds.has(s.releaseId)) ||
+                songIdsFromPreviousYear.has(s.id)
+            )
+        );
+        if (prevYearSongs.length > 0) return prevYearSongs;
+        return activeArtistData.songs.filter(s => s.soundtrackTitle);
     }, [activeArtistData.releases, activeArtistData.songs, date.year]);
     
     const eligibleActingRoles = useMemo(() => {
-        return (activeArtistData.actingRoles || []).filter(r => r.year === date.year - 1 && r.status === 'Released');
+        const roles = activeArtistData.actingRoles || [];
+        const lastYearRoles = roles.filter(r => 
+            (r.year === date.year - 1 || !r.year) && 
+            (r.status === 'Released' || r.status === 'Completed')
+        );
+        if (lastYearRoles.length > 0) return lastYearRoles;
+        return roles.filter(r => r.status === 'Released' || r.status === 'Completed');
     }, [activeArtistData.actingRoles, date.year]);
     
-    const eligibleLeading = eligibleActingRoles.filter(r => (!r.roleType || r.roleType === 'Leading Role') && r.type !== 'Voice Acting');
-    const eligibleSupporting = eligibleActingRoles.filter(r => r.roleType === 'Supporting Role' && r.type !== 'Voice Acting');
-    const eligibleVoice = eligibleActingRoles.filter(r => r.type === 'Voice Acting');
+    const eligibleLeading = useMemo(() => {
+        const leading = eligibleActingRoles.filter(r => r.type !== 'Voice Acting' && r.roleType !== 'Supporting Role');
+        return leading.length > 0 ? leading : eligibleActingRoles.filter(r => r.type !== 'Voice Acting');
+    }, [eligibleActingRoles]);
+
+    const eligibleSupporting = useMemo(() => {
+        const supporting = eligibleActingRoles.filter(r => r.type !== 'Voice Acting' && r.roleType !== 'Leading Role');
+        return supporting.length > 0 ? supporting : eligibleActingRoles.filter(r => r.type !== 'Voice Acting');
+    }, [eligibleActingRoles]);
+
+    const eligibleVoice = useMemo(() => {
+        const voice = eligibleActingRoles.filter(r => r.type === 'Voice Acting');
+        return voice.length > 0 ? voice : eligibleActingRoles;
+    }, [eligibleActingRoles]);
 
     const handleSubmit = () => {
         const submissions: any[] = [];
         if (songSelection) {
-            const song = eligibleSongs.find(s => s.id === songSelection);
+            const song = activeArtistData.songs.find(s => s.id === songSelection);
             if (song) submissions.push({ artistId: activeArtist.id, category: 'Best Original Song' as CategoryName, itemId: song.id, itemName: song.title });
         }
         if (leadingSelection) {
-            const role = eligibleLeading.find(r => r.id === leadingSelection);
+            const role = (activeArtistData.actingRoles || []).find(r => r.id === leadingSelection);
             if (role) submissions.push({ artistId: activeArtist.id, category: 'Best Actor/Actress' as CategoryName, itemId: role.id, itemName: role.title });
         }
         if (supportingSelection) {
-            const role = eligibleSupporting.find(r => r.id === supportingSelection);
+            const role = (activeArtistData.actingRoles || []).find(r => r.id === supportingSelection);
             if (role) submissions.push({ artistId: activeArtist.id, category: 'Best Supporting Actor/Actress' as CategoryName, itemId: role.id, itemName: role.title });
         }
         if (voiceSelection) {
-            const role = eligibleVoice.find(r => r.id === voiceSelection);
+            const role = (activeArtistData.actingRoles || []).find(r => r.id === voiceSelection);
             if (role) submissions.push({ artistId: activeArtist.id, category: 'Best Voice Actor/Actress' as CategoryName, itemId: role.id, itemName: role.title });
         }
         
         if (submissions.length === 0) return;
         
-        const emailId = activeArtistData.inbox.find(e => e.offer?.type === 'oscarSubmission' && !e.offer.isSubmitted)?.id;
-        if (emailId) {
-            dispatch({ type: 'SUBMIT_FOR_OSCARS', payload: { submissions, emailId } });
-        }
+        const emailId = activeArtistData.inbox.find(e => e.offer?.type === 'oscarSubmission' && !e.offer.isSubmitted)?.id || '';
+        dispatch({ type: 'SUBMIT_FOR_OSCARS', payload: { submissions, emailId } });
     };
 
     const hasAnySelection = !!songSelection || !!leadingSelection || !!supportingSelection || !!voiceSelection;
