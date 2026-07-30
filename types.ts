@@ -1763,6 +1763,7 @@ export interface GameState {
   timeMode?: "weekly" | "daily";
   disableEncounters?: boolean;
   disableLoadingScreens?: boolean;
+  spotifySnapshotStyle?: "normal" | "ugly";
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
@@ -2014,6 +2015,7 @@ export type GameAction =
     }
   | { type: "TOGGLE_ENCOUNTERS" }
   | { type: "TOGGLE_LOADING_SCREENS" }
+  | { type: "TOGGLE_SPOTIFY_SNAPSHOT_STYLE"; payload: "normal" | "ugly" }
   | {
       type: "START_SOLO_GAME";
       payload: {

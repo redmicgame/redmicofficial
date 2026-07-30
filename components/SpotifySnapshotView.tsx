@@ -65,6 +65,183 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         return { weekStreams, prevStreams, changePercentDisplay, changeDisplay, netWeekly: weekStreams };
     };
 
+    // Responsive scaling
+    const [scale, setScale] = useState(1);
+    
+    useEffect(() => {
+        const updateScale = () => {
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Base width of the snapshot
+            const targetWidth = 800;
+            
+            // Estimate height (banner 192px + date 40px + header 48px + footer 44px + rows ~37px each)
+            const rowCount = standardSongs.length + deluxeSongs.length + (hasDeluxe ? 2 : 0) + 1;
+            const estimatedHeight = 192 + 40 + 60 + 60 + (rowCount * 45) + 64; // +64 for extra safe margin // 32px for padding
+            
+            const widthScale = (viewportWidth - 32) / targetWidth; // 32px padding
+            const heightScale = (viewportHeight - 32) / estimatedHeight;
+            
+            // Use the smaller scale so it fits entirely, cap at 1
+            setScale(Math.min(1, widthScale, heightScale));
+        };
+        
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, [standardSongs.length, deluxeSongs.length, hasDeluxe]);
+
+    const isUglyStyle = gameState.spotifySnapshotStyle === 'ugly';
+
+    if (isUglyStyle) {
+        const totalStreams = releaseSongs.reduce((acc, song) => acc + (song.streams || 0), 0);
+        const totalWeeklyStreams = releaseSongs.reduce((acc, song) => {
+            const w = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
+            return acc + w;
+        }, 0);
+        const totalPrevWeeklyStreams = releaseSongs.reduce((acc, song) => {
+            const p = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
+            return acc + p;
+        }, 0);
+
+        const overallNetChange = totalWeeklyStreams - totalPrevWeeklyStreams;
+        const overallPct = totalPrevWeeklyStreams > 0 ? (overallNetChange / totalPrevWeeklyStreams) * 100 : 0;
+        const isOverallPos = overallNetChange >= 0;
+
+        const year = date?.year || 2026;
+        const week = date?.week || 1;
+        const dayValue = date?.day !== undefined ? date.day : 7;
+        const dateObj = new Date(year, 0, (week - 1) * 7 + dayValue);
+        const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+        const day = dateObj.getDate();
+        const yearNum = dateObj.getFullYear();
+        const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+
+        return (
+            <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={onBack}>
+                <div 
+                    className="w-full max-w-4xl bg-[#121212] border border-zinc-800 p-5 sm:p-8 text-white font-mono shadow-2xl rounded-md flex flex-col my-auto" 
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Header Area */}
+                    <div className="flex gap-5 sm:gap-8 items-start mb-6 border-b border-zinc-700/50 pb-6 shrink-0">
+                        {/* Left: Cover Art & Artist Name */}
+                        <div className="w-[28%] sm:w-[24%] flex flex-col items-center shrink-0">
+                            <img src={release.coverArt} className="w-full aspect-square object-cover shadow-[0_0_25px_rgba(0,0,0,0.85)] border border-zinc-800 rounded-sm" alt="Cover" />
+                            <div className="text-zinc-200 font-mono text-sm sm:text-base font-bold mt-3 uppercase tracking-widest text-center truncate w-full">
+                                {activeArtist.name}
+                            </div>
+                        </div>
+
+                        {/* Right: Album Title, Date, Large Stream Stat */}
+                        <div className="w-[72%] sm:w-[76%] flex flex-col justify-between min-h-[150px] pl-2">
+                            <div>
+                                <h1 className="text-3xl sm:text-5xl font-mono font-black text-white leading-none tracking-tight uppercase mb-2 truncate">
+                                    {release.title}
+                                </h1>
+                                <div className="text-zinc-400 text-sm sm:text-base flex items-center gap-2 uppercase font-mono tracking-wider mb-5">
+                                    <span className="text-base">📅</span> {monthName} {day}, {yearNum} | {weekdayName}
+                                </div>
+                            </div>
+
+                            {/* Large Streams Box */}
+                            <div className="flex items-center gap-3 sm:gap-5 mb-4 flex-wrap">
+                                <span className="text-zinc-400 text-2xl sm:text-3xl font-bold font-mono">↗</span>
+                                <div className="text-4xl sm:text-6xl font-mono font-black text-white tracking-tight">
+                                    {totalWeeklyStreams.toLocaleString()}
+                                </div>
+                                <div className={`${isOverallPos ? 'bg-[#22c55e] text-black' : 'bg-[#ef4444] text-white'} text-base sm:text-2xl font-bold font-mono px-3.5 py-1.5 flex items-center gap-1.5 rounded-xs`}>
+                                    {isOverallPos ? '↑' : '↓'} {Math.abs(overallPct).toFixed(2)}%
+                                </div>
+                            </div>
+
+                            {/* Total Streams Bar */}
+                            <div className="flex items-center gap-2.5 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider border-t border-zinc-700/50 pt-2.5">
+                                <span className="text-base">📈</span>
+                                <span className="text-zinc-200 font-bold text-sm sm:text-base">{totalStreams.toLocaleString()}</span>
+                                <span className="opacity-60">| total streams</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="w-full flex flex-col flex-1 min-h-0">
+                        {/* Header Row */}
+                        <div className="grid grid-cols-[2rem_1fr_6rem_5rem_4.5rem_6rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold text-[#22c55e] border-b border-zinc-700/50 font-mono uppercase tracking-wide shrink-0">
+                            <div></div>
+                            <div>track</div>
+                            <div className="text-right">daily streams</div>
+                            <div className="text-right">change</div>
+                            <div className="text-right">%change</div>
+                            <div className="text-right">total</div>
+                        </div>
+
+                        {/* Track Rows */}
+                        <div className="py-1 pr-1 space-y-0.5">
+                            {releaseSongs.map((song, i) => {
+                                const data = getRowData(song);
+                                const streamCount = data.weekStreams;
+                                const prev = data.prevStreams;
+                                const rawChange = streamCount - prev;
+                                const pctChange = prev > 0 ? (rawChange / prev) * 100 : 0;
+                                const isPos = rawChange >= 0;
+
+                                return (
+                                    <div 
+                                        key={song.id} 
+                                        className="grid grid-cols-[2rem_1fr_6rem_5rem_4.5rem_6rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 px-2 py-2 text-xs sm:text-sm items-center hover:bg-zinc-800/50 transition-colors rounded-xs"
+                                    >
+                                        <div className="text-xs sm:text-sm text-[#22c55e] font-mono font-bold text-left">
+                                            {i + 1}
+                                        </div>
+                                        <div className="truncate font-sans font-semibold text-white tracking-wide text-xs sm:text-sm">
+                                            {song.title}
+                                        </div>
+                                        <div className="text-right text-zinc-100 font-mono text-xs sm:text-sm">
+                                            {streamCount.toLocaleString()}
+                                        </div>
+                                        <div className={`text-right font-mono text-xs sm:text-sm ${isPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                                            {isPos ? '+' : ''}{rawChange.toLocaleString()}
+                                        </div>
+                                        <div className={`text-right font-mono text-xs sm:text-sm ${isPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                                            {isPos ? '↑' : '↓'} {Math.abs(pctChange).toFixed(2)}%
+                                        </div>
+                                        <div className="text-right text-zinc-100 font-mono text-xs sm:text-sm">
+                                            {(song.streams || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* TOTAL Footer Row */}
+                        <div className="grid grid-cols-[2rem_1fr_6rem_5rem_4.5rem_6rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold items-center border-t border-zinc-700/50 mt-2 pt-3 font-mono shrink-0">
+                            <div className="bg-[#22c55e] text-black text-xs font-black px-1.5 text-center py-0.5 rounded-xs">
+                                TOTAL
+                            </div>
+                            <div className="uppercase tracking-widest text-zinc-300 font-mono">
+                                
+                            </div>
+                            <div className="text-right text-zinc-100 font-mono">
+                                {totalWeeklyStreams.toLocaleString()}
+                            </div>
+                            <div className={`text-right font-mono ${isOverallPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                                {isOverallPos ? '+' : ''}{overallNetChange.toLocaleString()}
+                            </div>
+                            <div className={`text-right font-mono ${isOverallPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                                {isOverallPos ? '+' : ''}{overallPct.toFixed(2)}%
+                            </div>
+                            <div className="text-right text-zinc-100 font-mono">
+                                {totalStreams.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const renderRows = (songsToRender: Song[]) => {
         return songsToRender.map((song, index) => {
             const data = getRowData(song);
@@ -140,33 +317,6 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
             reader.readAsDataURL(file);
         }
     };
-
-    // Responsive scaling
-    const [scale, setScale] = useState(1);
-    
-    useEffect(() => {
-        const updateScale = () => {
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            
-            // Base width of the snapshot
-            const targetWidth = 800;
-            
-            // Estimate height (banner 192px + date 40px + header 48px + footer 44px + rows ~37px each)
-            const rowCount = standardSongs.length + deluxeSongs.length + (hasDeluxe ? 2 : 0) + 1;
-            const estimatedHeight = 192 + 40 + 60 + 60 + (rowCount * 45) + 64; // +64 for extra safe margin // 32px for padding
-            
-            const widthScale = (viewportWidth - 32) / targetWidth; // 32px padding
-            const heightScale = (viewportHeight - 32) / estimatedHeight;
-            
-            // Use the smaller scale so it fits entirely, cap at 1
-            setScale(Math.min(1, widthScale, heightScale));
-        };
-        
-        updateScale();
-        window.addEventListener('resize', updateScale);
-        return () => window.removeEventListener('resize', updateScale);
-    }, [standardSongs.length, deluxeSongs.length, hasDeluxe]);
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center overflow-hidden" onClick={onBack}>

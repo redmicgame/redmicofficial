@@ -1,4 +1,5 @@
 import React from "react";
+import { useGame } from "../context/GameContext";
 
 const formatNumber = (num: number) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -6,9 +7,19 @@ const formatNumber = (num: number) => {
   return num.toString();
 };
 
-export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
+export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal' | 'ugly' }> = ({
+  style,
   dataString,
 }) => {
+  let gameState: any;
+  try {
+    const game = useGame();
+    gameState = game?.gameState;
+  } catch (e) {
+    // Fallback if rendered outside context
+  }
+
+  const effectiveStyle = style || gameState?.spotifySnapshotStyle || 'normal';
   try {
     const jsonStr = dataString.replace("snapshot:", "");
     const data = JSON.parse(jsonStr);
@@ -272,8 +283,156 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string }> = ({
     if (
       data.type === "album_weekly" ||
       data.type === "album" ||
-      data.type === "popular_tracks"
+      data.type === "popular_tracks" ||
+      data.type === "song"
     ) {
+
+
+      if (effectiveStyle === 'ugly') {
+          const displayTracks = (data.tracks && data.tracks.length > 0)
+            ? data.tracks
+            : [{
+                title: data.songName || data.title || "Track 1",
+                weekly: data.streams || 0,
+                dailyStreams: Math.floor((data.streams || 0) / 7),
+                streams: data.totalStreams || data.streams || 0,
+                changeVal: data.changeVal || 0,
+                changePct: data.changePct || 0,
+              }];
+
+          const overallChangeVal = displayTracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) || 0;
+          const overallPrev = displayTracks.reduce((acc: number, t: any) => acc + ((t.weekly !== undefined ? t.weekly : (t.dailyStreams || 0)) - (t.changeVal || 0)), 0) || 0;
+          const overallPct = overallPrev > 0 ? (overallChangeVal / overallPrev) * 100 : 0;
+          const pctStr = Math.abs(overallPct).toFixed(2) + "%";
+          const isOverallPos = overallChangeVal >= 0;
+          
+          const yearNum = data.date?.year || gameState?.date?.year || 2026;
+          const weekNum = data.date?.week || gameState?.date?.week || 1;
+          const dayVal = data.date?.day !== undefined ? data.date.day : (gameState?.date?.day !== undefined ? gameState.date.day : 7);
+          const dateObj = new Date(yearNum, 0, (weekNum - 1) * 7 + dayVal);
+          const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+          const day = dateObj.getDate();
+          const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+
+          const albumTitle = data.songName || data.albumName || data.title || "RELEASE";
+          const artistName = data.artistName || "ARTIST";
+          const totalStreams = data.totalStreams || data.streams || 0;
+          const weeklyStreams = data.streams || 0;
+
+          return (
+              <div className="mt-2 bg-[#121212] p-4 sm:p-6 text-white font-mono max-w-full shadow-2xl border border-zinc-800 rounded-sm">
+                
+                {/* Header Section */}
+                <div className="flex gap-4 sm:gap-6 items-start mb-5 border-b border-zinc-700/50 pb-5">
+                  {/* Left Column - Cover Art */}
+                  <div className="w-[32%] sm:w-[30%] flex flex-col items-center shrink-0">
+                    <img src={data.coverArt} className="w-full aspect-square object-cover shadow-[0_0_20px_rgba(0,0,0,0.8)] border border-zinc-800" alt="Cover" />
+                    <div className="text-zinc-300 font-mono text-xs sm:text-sm font-bold mt-2.5 uppercase tracking-widest text-center truncate w-full">
+                      {artistName}
+                    </div>
+                  </div>
+
+                  {/* Right Column - Stats */}
+                  <div className="w-[68%] sm:w-[70%] flex flex-col justify-between min-h-[130px] pl-1">
+                    <div>
+                      <h2 className="text-2xl sm:text-4xl font-mono font-black text-white leading-none tracking-tight uppercase mb-2 truncate">
+                        {albumTitle}
+                      </h2>
+                      <div className="text-zinc-400 text-xs sm:text-sm flex items-center gap-1.5 uppercase font-mono tracking-wider mb-4">
+                        <span className="text-sm">📅</span> {monthName} {day}, {yearNum} | {weekdayName}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 sm:gap-4 mb-3 flex-wrap">
+                      <span className="text-zinc-400 text-xl font-bold font-mono">↗</span>
+                      <div className="text-3xl sm:text-5xl font-mono font-black text-white tracking-tight">
+                        {weeklyStreams.toLocaleString()}
+                      </div>
+                      <div className={`${isOverallPos ? "bg-[#22c55e] text-black" : "bg-[#ef4444] text-white"} text-sm sm:text-xl font-bold font-mono px-3 py-1 flex items-center gap-1`}>
+                        {isOverallPos ? "↑ " : "↓ "}{pctStr}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider border-t border-zinc-700/50 pt-2">
+                      <span className="text-sm">📈</span>
+                      <span className="text-zinc-300 font-bold">{totalStreams.toLocaleString()}</span>
+                      <span className="opacity-60">| total streams</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table Section */}
+                {displayTracks && displayTracks.length > 0 && (
+                  <div className="w-full">
+                    <div className="grid grid-cols-[1.5rem_1fr_4.5rem_4rem_4rem_5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-1.5 p-1 text-[10px] sm:text-xs font-bold text-[#22c55e] border-b border-zinc-700/50 font-mono uppercase tracking-wide">
+                      <div></div>
+                      <div>track</div>
+                      <div className="text-right">daily streams</div>
+                      <div className="text-right">change</div>
+                      <div className="text-right">%change</div>
+                      <div className="text-right">total</div>
+                    </div>
+                    
+                    <div className="py-1">
+                      {displayTracks.map((t: any, i: number) => {
+                         const cVal = t.changeVal || 0;
+                         const pct = t.changePct || 0;
+                         const streamCount = t.weekly !== undefined ? t.weekly : (t.dailyStreams || 0);
+                         const totalCount = t.streams !== undefined ? t.streams : (t.totalStreams || 0);
+                         const isPos = cVal >= 0;
+                         
+                         return (
+                        <div
+                          key={i}
+                          className="grid grid-cols-[1.5rem_1fr_4.5rem_4rem_4rem_5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-1.5 px-1 py-1.5 text-[11px] sm:text-xs items-center hover:bg-zinc-800/40 transition-colors"
+                        >
+                          <div className="text-[10px] sm:text-xs text-[#22c55e] font-mono font-bold text-left">
+                            {i + 1}
+                          </div>
+                          <div className="truncate font-sans font-medium text-white tracking-wide text-xs">
+                            {t.title}
+                          </div>
+                          <div className="text-right text-zinc-100 font-mono text-[11px] sm:text-xs">
+                            {streamCount.toLocaleString()}
+                          </div>
+                          <div className={`text-right font-mono text-[11px] sm:text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                            {cVal > 0 ? "+" : ""}{cVal.toLocaleString()}
+                          </div>
+                          <div className={`text-right font-mono text-[11px] sm:text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                            {isPos ? "↑ " : "↓ "}{Math.abs(pct).toFixed(2)}%
+                          </div>
+                          <div className="text-right text-zinc-100 font-mono text-[11px] sm:text-xs">
+                            {totalCount.toLocaleString()}
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+
+                    {/* Footer Section */}
+                    <div className="grid grid-cols-[1.5rem_1fr_4.5rem_4rem_4rem_5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-1.5 p-1 text-xs sm:text-sm font-bold items-center border-t border-zinc-700/50 mt-1 pt-3 font-mono">
+                      <div className="bg-[#22c55e] text-black text-[9px] sm:text-xs font-black px-1 text-center py-0.5">
+                        TOTAL
+                      </div>
+                      <div></div>
+                      <div className="text-right text-zinc-100 font-mono">
+                        {weeklyStreams.toLocaleString()}
+                      </div>
+                      <div className={`text-right font-mono ${isOverallPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                        {overallChangeVal > 0 ? "+" : ""}{overallChangeVal.toLocaleString()}
+                      </div>
+                      <div className={`text-right font-mono ${isOverallPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                        {isOverallPos ? "+" : ""}{overallPct.toFixed(2)}%
+                      </div>
+                      <div className="text-right text-zinc-100 font-mono">
+                        {totalStreams.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+          );
+      }
+
       // Shared generic style for spotify data (like drake style)
       return (
         <div className="mt-2 rounded-xl bg-[#2a2a2a] border border-[#1a1a1a] p-5 text-[#dcdcdc] font-mono max-w-full overflow-hidden">

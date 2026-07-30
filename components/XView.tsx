@@ -22,6 +22,96 @@ import XPremiumModal from "./XPremiumModal";
 import { SpotifySnapshotCard } from "./SpotifySnapshotCard";
 
 // Sub-component for the Year End Chart visualization
+const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, activeArtist?: any): XUser => {
+  if (!id) {
+    const entityName = gameState?.group?.name || activeArtist?.name || "Artist";
+    const cleanEntity = entityName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    return {
+      id: "fallback_fan",
+      name: `${entityName} Fan`,
+      username: `stan_${cleanEntity}`,
+      avatar: "https://i.imgur.com/3Y3j3jQ.png",
+      isVerified: false,
+    };
+  }
+
+  let found = xUsersList.find((u) => u.id === id);
+  if (found) return found;
+
+  if (gameState?.artistsData) {
+    for (const aData of Object.values(gameState.artistsData) as any[]) {
+      if (aData?.xUsers) {
+        found = aData.xUsers.find((u: XUser) => u.id === id);
+        if (found) return found;
+      }
+    }
+  }
+
+  const entityName = gameState?.group?.name || activeArtist?.name || "Artist";
+  const cleanEntity = entityName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+  if (id.startsWith("charts_")) {
+    const mId = id.replace("charts_", "");
+    const member = gameState?.group?.members?.find((m: any) => m.id === mId);
+    const mName = member ? member.name : entityName;
+    const mTag = mName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    return {
+      id,
+      name: `${mName} Charts`,
+      username: `${mTag}charts`,
+      avatar: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzFEQTFGMiIvPjxyZWN0IHg9IjE2IiB5PSIzMiIgd2lkdGg9IjgiIGhlaWdodD0iMTYiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iMjgiIHk9IjI0IiB3aWR0aD0iOCIgaGVpZHRoPSIyNCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSI0MCIgeT0iMTYiIHdpZHRoPSI4IiBoZWlnaHQ9IjMyIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==",
+      isVerified: false,
+    };
+  }
+
+  if (id.startsWith("addiction_fan_")) {
+    const mId = id.replace("addiction_fan_", "");
+    const member = gameState?.group?.members?.find((m: any) => m.id === mId);
+    const mName = member ? member.name : entityName;
+    const mTag = mName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    return {
+      id,
+      name: `addiction to ${mName}`,
+      username: `addiction${mTag}`,
+      avatar: member?.image || activeArtist?.image || "https://i.imgur.com/3Y3j3jQ.png",
+      isVerified: false,
+    };
+  }
+
+  if (id.startsWith("stats_")) {
+    const mId = id.replace("stats_", "");
+    const member = gameState?.group?.members?.find((m: any) => m.id === mId);
+    const mName = member ? member.name : entityName;
+    const mTag = mName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    return {
+      id,
+      name: `${mName} Stats`,
+      username: `${mTag}stats`,
+      avatar: "https://i.imgur.com/3Y3j3jQ.png",
+      isVerified: false,
+    };
+  }
+
+  if (id.includes("fan") || id.includes("stan") || id.startsWith("fan_") || id.startsWith("hater_")) {
+    const cleanId = id.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    return {
+      id,
+      name: `${entityName} Fan`,
+      username: `stan_${cleanEntity}_${cleanId.slice(-3) || "1"}`,
+      avatar: "https://i.imgur.com/3Y3j3jQ.png",
+      isVerified: false,
+    };
+  }
+
+  return {
+    id,
+    name: `${entityName} Fan`,
+    username: `stan_${cleanEntity}`,
+    avatar: "https://i.imgur.com/3Y3j3jQ.png",
+    isVerified: false,
+  };
+};
+
 const YearEndChart: React.FC<{ dataString: string }> = ({ dataString }) => {
   try {
     const data = JSON.parse(dataString.replace("chart:", ""));
@@ -135,7 +225,7 @@ export const Post: React.FC<{
   onQuote?: (post: XPost) => void;
   onQuoteHold?: (post: XPost) => void;
 }> = ({ post, author, onQuote, onQuoteHold }) => {
-  const { dispatch, activeArtistData } = useGame();
+  const { dispatch, activeArtistData, gameState, activeArtist } = useGame();
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commentImage, setCommentImage] = useState<string | null>(null);
@@ -468,7 +558,7 @@ export const Post: React.FC<{
         {isChartPost ? (
           <YearEndChart dataString={post.image!} />
         ) : isSnapshotPost ? (
-          <SpotifySnapshotCard dataString={post.image!} />
+          <SpotifySnapshotCard dataString={post.image!} style={gameState.spotifySnapshotStyle} />
         ) : isLeaderboardPost ? (
           <LeaderboardGridCard dataString={post.image!} />
         ) : isTmzPost ? (
@@ -575,56 +665,50 @@ export const Post: React.FC<{
             </div>
           </div>
         )}
-        {post.quoteOf && (
-          <div className="mt-2 border border-zinc-700 rounded-xl p-3">
-            <div className="flex items-center gap-1.5 text-sm mb-1">
-              <img
-                src={
-                  activeArtistData?.xUsers.find(
-                    (u) => u.id === post.quoteOf?.authorId,
-                  )?.avatar || "https://via.placeholder.com/150"
-                }
-                alt="Avatar"
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              <span className="font-bold">
-                {activeArtistData?.xUsers.find(
-                  (u) => u.id === post.quoteOf?.authorId,
-                )?.name || "User"}
-              </span>
-              <span className="text-zinc-500">
-                @
-                {activeArtistData?.xUsers.find(
-                  (u) => u.id === post.quoteOf?.authorId,
-                )?.username || "user"}
-              </span>
-              <span className="text-zinc-500 flex-shrink-0">·</span>
-              <span className="text-zinc-500 flex-shrink-0">
-                {timeAgo(post.quoteOf.date)}
-              </span>
+        {post.quoteOf && (() => {
+          const qAuthor = resolveUser(post.quoteOf.authorId, activeArtistData?.xUsers || [], gameState, activeArtist);
+          return (
+            <div className="mt-2 border border-zinc-700 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-sm mb-1">
+                <img
+                  src={qAuthor.avatar}
+                  alt="Avatar"
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+                <span className="font-bold">
+                  {qAuthor.name}
+                </span>
+                <span className="text-zinc-500">
+                  @{qAuthor.username}
+                </span>
+                <span className="text-zinc-500 flex-shrink-0">·</span>
+                <span className="text-zinc-500 flex-shrink-0">
+                  {timeAgo(post.quoteOf.date)}
+                </span>
+              </div>
+              <p className="text-sm text-white whitespace-pre-wrap">
+                {post.quoteOf.content}
+              </p>
+              {post.quoteOf.video ? (
+                <video
+                  src={post.quoteOf.video}
+                  className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 w-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              ) : post.quoteOf.image &&
+                !post.quoteOf.image.startsWith("chart:") ? (
+                <img
+                  src={post.quoteOf.image}
+                  alt="Quoted image"
+                  className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 object-cover"
+                />
+              ) : null}
             </div>
-            <p className="text-sm text-white whitespace-pre-wrap">
-              {post.quoteOf.content}
-            </p>
-            {post.quoteOf.video ? (
-              <video
-                src={post.quoteOf.video}
-                className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 w-full object-cover"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            ) : post.quoteOf.image &&
-              !post.quoteOf.image.startsWith("chart:") ? (
-              <img
-                src={post.quoteOf.image}
-                alt="Quoted image"
-                className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto max-h-48 object-cover"
-              />
-            ) : null}
-          </div>
-        )}
+          );
+        })()}
         <div className="flex justify-between items-center mt-3 text-zinc-500 max-w-sm">
           <div className="flex items-center gap-1 group">
             <button
@@ -812,7 +896,7 @@ const FeedView: React.FC<{
   onQuote?: (post: XPost) => void;
   onQuoteHold?: (post: XPost) => void;
 }> = ({ onQuote, onQuoteHold }) => {
-  const { gameState, activeArtistData } = useGame();
+  const { gameState, activeArtistData, activeArtist } = useGame();
 
   // If playing as a member of a group, combine group and member posts
   let xPosts = [...(activeArtistData?.xPosts || [])];
@@ -892,7 +976,7 @@ const FeedView: React.FC<{
   };
 
   const findUser = (id: string) =>
-    xUsers.find((u) => u.id === id) || SYSTEM_USERS_FALLBACK[id];
+    resolveUser(id, xUsers, gameState, activeArtist);
 
   const [postsToShow, setPostsToShow] = useState(10);
 
@@ -973,7 +1057,7 @@ const ExploreView: React.FC<{
   onQuote?: (post: XPost) => void;
   onQuoteHold?: (post: XPost) => void;
 }> = ({ onQuote, onQuoteHold }) => {
-  const { gameState, activeArtistData, dispatch } = useGame();
+  const { gameState, activeArtistData, dispatch, activeArtist } = useGame();
 
   // If playing as a member of a group, combine group and member posts
   let xPosts = [...(activeArtistData?.xPosts || [])];
@@ -1063,7 +1147,7 @@ const ExploreView: React.FC<{
     },
   };
   const findUser = (id: string) =>
-    xUsers.find((u) => u.id === id) || SYSTEM_USERS_FALLBACK[id];
+    resolveUser(id, xUsers, gameState, activeArtist);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -1227,7 +1311,7 @@ const ExploreView: React.FC<{
 };
 
 const MessagesView: React.FC = () => {
-  const { dispatch, activeArtistData } = useGame();
+  const { dispatch, activeArtistData, gameState } = useGame();
   const { xChats } = activeArtistData!;
 
   const getLastMessage = (chat: XChat) => {
@@ -1284,7 +1368,7 @@ const MessagesView: React.FC = () => {
 };
 
 const AccountsView: React.FC = () => {
-  const { dispatch, activeArtistData } = useGame();
+  const { dispatch, activeArtistData, gameState } = useGame();
   if (!activeArtistData) return null;
   const { xUsers, selectedPlayerXUserId } = activeArtistData;
 
@@ -1539,7 +1623,7 @@ export const ComposeXPostModal: React.FC<{
   }) => void;
   quotePost?: XPost;
 }> = ({ user, onClose, onPost, quotePost }) => {
-  const { gameState, activeArtistData } = useGame();
+  const { gameState, activeArtistData, activeArtist } = useGame();
   const [content, setContent] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [isPollVisible, setIsPollVisible] = useState(false);
@@ -1742,26 +1826,24 @@ export const ComposeXPostModal: React.FC<{
                   </button>
                 </div>
               )}
-              {quotePost && (
-                <div className="mt-2 border border-zinc-700 rounded-xl p-3">
-                  <div className="flex items-center gap-1 text-sm mb-1">
-                    <span className="font-bold">
-                      {activeArtistData?.xUsers.find(
-                        (u) => u.id === quotePost.authorId,
-                      )?.name || "User"}
-                    </span>
-                    <span className="text-zinc-500">
-                      @
-                      {activeArtistData?.xUsers.find(
-                        (u) => u.id === quotePost.authorId,
-                      )?.username || "user"}
-                    </span>
+              {quotePost && (() => {
+                const qAuthor = resolveUser(quotePost.authorId, activeArtistData?.xUsers || [], gameState, activeArtist);
+                return (
+                  <div className="mt-2 border border-zinc-700 rounded-xl p-3">
+                    <div className="flex items-center gap-1 text-sm mb-1">
+                      <span className="font-bold">
+                        {qAuthor.name}
+                      </span>
+                      <span className="text-zinc-500">
+                        @{qAuthor.username}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white whitespace-pre-wrap line-clamp-3">
+                      {quotePost.content}
+                    </p>
                   </div>
-                  <p className="text-sm text-white whitespace-pre-wrap line-clamp-3">
-                    {quotePost.content}
-                  </p>
-                </div>
-              )}
+                );
+              })()}
               {isPollVisible && (
                 <div className="mt-2 border border-zinc-700 rounded-xl p-3 space-y-2">
                   {pollOptions.map((opt, index) => (
@@ -1978,7 +2060,7 @@ export const ComposeXPostModal: React.FC<{
 type XViewTab = "For you" | "Explore" | "Messages" | "Accounts";
 
 const XView: React.FC = () => {
-  const { dispatch, activeArtistData } = useGame();
+  const { dispatch, activeArtistData, gameState } = useGame();
   const [activeTab, setActiveTab] = useState<XViewTab>("For you");
   const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
   const [quotePostTarget, setQuotePostTarget] = useState<XPost | null>(null);
@@ -2045,7 +2127,7 @@ const XView: React.FC = () => {
               <Post
                 key={post.id}
                 post={post}
-                author={xUsers.find((u) => u.id === post.authorId)}
+                author={findUser(post.authorId)}
                 onQuote={handleQuote}
                 onQuoteHold={handleQuoteHold}
               />

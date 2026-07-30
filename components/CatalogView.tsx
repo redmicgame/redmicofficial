@@ -173,6 +173,7 @@ const ItunesVersionManager: React.FC<{ song: Song }> = ({ song }) => {
 };
 
 interface TrackItemProps {
+    onCoverChange: (songId: string, e: React.ChangeEvent<HTMLInputElement>) => void;
     song: Song;
     chartInfo: { peak: number | null; current: number | null };
     isExpanded: boolean;
@@ -184,12 +185,24 @@ interface TrackItemProps {
     isStreamingActive?: boolean;
 }
 
-const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack, isStreamingActive }) => {
+const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack, isStreamingActive, onCoverChange }) => {
 
     return (
         <div className={`bg-zinc-800/50 p-2 rounded-lg ${song.isTakenDown ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-3">
-                <img src={song.coverArt} alt={song.title} className="w-10 h-10 rounded-sm object-cover" />
+                <label htmlFor={`song-cover-upload-${song.id}`} className="cursor-pointer group relative flex-shrink-0">
+                    <img src={song.coverArt} alt={song.title} className="w-10 h-10 rounded-sm object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-sm">
+                        <span className="text-white text-[8px] font-bold">Edit</span>
+                    </div>
+                    <input
+                        type="file"
+                        id={`song-cover-upload-${song.id}`}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => onCoverChange(song.id, e)}
+                    />
+                </label>
                 <div className="flex-grow">
                     <div className="flex items-center gap-2">
                          <p className="font-semibold">{song.title}</p>
@@ -373,6 +386,19 @@ const CatalogView: React.FC = () => {
     const songsForArtist = useMemo(() => {
         return allSongs.filter(s => s.artistId === activeArtist.id || s.collaboration?.artistName === activeArtist.name || (s.features && s.features.includes(activeArtist.name)));
     }, [allSongs, activeArtist]);
+
+    
+    const handleSongCoverArtChange = (songId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newCoverArt = reader.result as string;
+                dispatch({ type: 'UPDATE_SONG_COVER_ART', payload: { songId, newCoverArt } });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleCoverArtChange = (e: React.ChangeEvent<HTMLInputElement>, releaseId: string) => {
         if (e.target.files && e.target.files[0]) {
@@ -586,7 +612,8 @@ const CatalogView: React.FC = () => {
                                                             const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
                                                             return (
                                                                 <TrackItem
-                                                                    key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
+                                                                onCoverChange={handleSongCoverArtChange}
+                                                                key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
                                                                     grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
                                                                     onBuyBack={() => {
     const totalRev = song.revenue || 0;
@@ -614,7 +641,8 @@ const CatalogView: React.FC = () => {
                                                             const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
                                                             return (
                                                                 <TrackItem
-                                                                    key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
+                                                                onCoverChange={handleSongCoverArtChange}
+                                                                key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
                                                                     grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
                                                                     onBuyBack={() => {
     const totalRev = song.revenue || 0;
@@ -645,7 +673,8 @@ const CatalogView: React.FC = () => {
                                                             const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
                                                             return (
                                                                 <TrackItem
-                                                                    key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
+                                                                onCoverChange={handleSongCoverArtChange}
+                                                                key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
                                                                     grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
                                                                     onBuyBack={() => {
     const totalRev = song.revenue || 0;

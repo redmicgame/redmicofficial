@@ -16,6 +16,8 @@ const ManagementView: React.FC = () => {
     
     // Playlist Buying State
     const [isBuyingPlaylist, setIsBuyingPlaylist] = useState(false);
+    const [hiatusMemberModal, setHiatusMemberModal] = useState<string | null>(null);
+    const confirmMemberHiatus = (reason: string) => { if (hiatusMemberModal) { dispatch({ type: 'START_MEMBER_HIATUS', payload: { memberId: hiatusMemberModal, reason } }); setHiatusMemberModal(null); } };
     const [hiatusResponseModal, setHiatusResponseModal] = useState<{isOpen: boolean, success: boolean, message: string}>({isOpen: false, success: false, message: ''});
     const [selectedSongId, setSelectedSongId] = useState<string>('');
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('');
@@ -121,6 +123,22 @@ const ManagementView: React.FC = () => {
                     confirmText="Fire Manager"
                 />
             )}
+            
+            {hiatusMemberModal && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-lg max-w-md w-full p-6 space-y-4">
+                        <h2 className="text-xl font-bold">Member Hiatus</h2>
+                        <p className="text-sm text-zinc-400">Why is this member going on hiatus?</p>
+                        <div className="space-y-2">
+                            <button onClick={() => confirmMemberHiatus('Health issues')} className="w-full bg-zinc-800 hover:bg-zinc-700 font-bold p-3 rounded-lg text-left">Health issues</button>
+                            <button onClick={() => confirmMemberHiatus('Military service')} className="w-full bg-zinc-800 hover:bg-zinc-700 font-bold p-3 rounded-lg text-left">Military service</button>
+                            <button onClick={() => confirmMemberHiatus('Personal reasons')} className="w-full bg-zinc-800 hover:bg-zinc-700 font-bold p-3 rounded-lg text-left">Personal reasons</button>
+                        </div>
+                        <button onClick={() => setHiatusMemberModal(null)} className="w-full bg-zinc-800 hover:bg-zinc-700 font-bold p-3 rounded-lg mt-4">Cancel</button>
+                    </div>
+                </div>
+            )}
+
             {isBuyingPlaylist && (
                 <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
                     <div className="bg-zinc-900 border border-zinc-700 rounded-lg max-w-md w-full p-6 space-y-4">
@@ -354,7 +372,32 @@ const ManagementView: React.FC = () => {
                         </div>
                     )}
 
-                    <div className="mt-8 pt-6 border-t border-zinc-800">
+                    
+                        {gameState.careerMode === 'group' && gameState.activeArtistId === gameState.group?.id && (
+                            <div className="mt-8 pt-6 border-t border-zinc-800">
+                                <h2 className="text-xl font-bold mb-3">Group Members</h2>
+                                <div className="space-y-3">
+                                    {gameState.group?.members.map(member => {
+                                        const memberData = gameState.artistsData[member.id];
+                                        return (
+                                            <div key={member.id} className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 flex justify-between items-center">
+                                                <div>
+                                                    <h3 className="font-bold">{member.name}</h3>
+                                                    <p className="text-sm text-zinc-400">{memberData?.isHiatus ? 'On Hiatus' : 'Active'}</p>
+                                                </div>
+                                                {!memberData?.isHiatus ? (
+                                                    <button onClick={() => setHiatusMemberModal(member.id)} className="bg-indigo-600 hover:bg-indigo-500 font-bold px-4 py-2 rounded-lg text-white text-sm">Start Hiatus</button>
+                                                ) : (
+                                                    <button onClick={() => dispatch({ type: 'END_MEMBER_HIATUS', payload: { memberId: member.id } })} className="bg-green-600 hover:bg-green-500 font-bold px-4 py-2 rounded-lg text-white text-sm">End Hiatus</button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-8 pt-6 border-t border-zinc-800">
                         <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
                             <h2 className="text-xl font-bold mb-2">Hiatus & Comeback</h2>
                             <p className="text-zinc-400 text-sm mb-4">

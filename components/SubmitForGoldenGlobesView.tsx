@@ -28,11 +28,14 @@ const SubmitForGoldenGlobesView: React.FC = () => {
         
     const eligibleActingRoles = useMemo(() => {
         return (activeArtistData.actingRoles || []).filter(g => 
-           (g.type === 'Movie' || g.type === 'TV Show') && g.status === 'Completed'
+           g.year === date.year - 1 && g.status === 'Released'
         ); // In this simplified model we'll assume gigs from recent time or just completed gigs.
     }, [activeArtistData.actingRoles]);
         
     const eligibleMovies = eligibleActingRoles.filter(r => r.type === 'Movie');
+    const eligibleLeading = eligibleActingRoles.filter(r => (!r.roleType || r.roleType === 'Leading Role') && r.type !== 'Voice Acting');
+    const eligibleSupporting = eligibleActingRoles.filter(r => r.roleType === 'Supporting Role' && r.type !== 'Voice Acting');
+    const eligibleVoice = eligibleActingRoles.filter(r => r.type === 'Voice Acting');
     const eligibleTVShows = eligibleActingRoles.filter(r => r.type === 'TV Show');
 
     const handleSelect = (category: CategoryName, itemId: string) => {
@@ -67,9 +70,9 @@ const SubmitForGoldenGlobesView: React.FC = () => {
     };
 
     const categories: { name: CategoryName; description: string; options: {id: string, name: string}[] }[] = [
-        { name: 'Best Actor/Actress', description: 'Submit a Movie or TV Show performance.', options: eligibleActingRoles.map(r => ({id: r.id, name: r.title})) },
-        { name: 'Best Supporting Actor/Actress', description: 'Submit a Movie or TV Show supporting performance.', options: eligibleActingRoles.map(r => ({id: r.id, name: r.title})) },
-        { name: 'Best Voice Acting', description: 'Submit an animated Movie or TV Show performance.', options: eligibleActingRoles.map(r => ({id: r.id, name: r.title})) },
+        { name: 'Best Actor/Actress', description: 'Submit a Movie or TV Show performance.', options: eligibleLeading.map(r => ({id: r.id, name: r.title})) },
+        { name: 'Best Supporting Actor/Actress', description: 'Submit a Movie or TV Show supporting performance.', options: eligibleSupporting.map(r => ({id: r.id, name: r.title})) },
+        { name: 'Best Voice Acting', description: 'Submit an animated Movie or TV Show performance.', options: eligibleVoice.map(r => ({id: r.id, name: r.title})) },
         { name: 'Best TV Show', description: 'Submit a TV Show you appeared in.', options: eligibleTVShows.map(r => ({id: r.id, name: r.title})) },
         { name: 'Best Movie', description: 'Submit a Movie you appeared in.', options: eligibleMovies.map(r => ({id: r.id, name: r.title})) },
         { name: 'Best Soundtrack', description: 'Submit a soundtrack album you released.', options: eligibleSoundtracks.map(r => ({id: r.id, name: r.title})) },

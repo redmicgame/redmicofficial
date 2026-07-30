@@ -2855,6 +2855,72 @@ The Red Mic Team`,
              }
         }
 
+        // Group members hiatus progression & fan demands / boycott tweets
+        if (state.group && state.group.members) {
+          const groupName = state.group.name;
+          const groupTag = groupName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+          state.group.members.forEach((member) => {
+            const mData = artistData.id === member.id ? artistData : state.artistsData[member.id];
+            if (mData && mData.isHiatus && mData.hiatusStartYear !== undefined && mData.hiatusStartWeek !== undefined) {
+              const hiatusStartAbs = mData.hiatusStartYear * 52 + mData.hiatusStartWeek;
+              const hiatusWeeks = currentAbsWeek - hiatusStartAbs;
+              const memberTag = member.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+              // Hiatus gets longer (2-29 weeks): Fans demand comeback
+              if (hiatusWeeks >= 2 && hiatusWeeks < 30) {
+                if (Math.random() < 0.35) {
+                  const comebackDemands = [
+                    `It's been ${hiatusWeeks} weeks without ${member.name}... WE NEED A COMEBACK 😭`,
+                    `I miss ${member.name} so much in ${groupName}, please come back soon!`,
+                    `When is ${member.name} returning from hiatus?? ${groupName} is not complete without them!`,
+                    `Day ${hiatusWeeks * 7} of waiting for ${member.name} to return to ${groupName} 💔`,
+                    `WE WANT ${member.name} BACK IN ${groupName}! #COMEBACK`,
+                    `Please ${groupName} management, give us an update on ${member.name}'s return! 🙏`
+                  ];
+                  const chosenText = comebackDemands[Math.floor(Math.random() * comebackDemands.length)];
+                  const fanUsers = artistData.xUsers?.filter(u => !u.isPlayer && !u.isVerified) || [];
+                  const authorId = fanUsers.length > 0 ? fanUsers[Math.floor(Math.random() * fanUsers.length)].id : `fan_cb_${hiatusWeeks}`;
+
+                  artistData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId,
+                    content: chosenText,
+                    likes: Math.floor(Math.random() * 40000) + 8000,
+                    retweets: Math.floor(Math.random() * 10000) + 2000,
+                    views: Math.floor(Math.random() * 500000) + 80000,
+                    date: newDate,
+                  });
+                }
+              }
+
+              // After 30 weeks: Fans boycott
+              if (hiatusWeeks >= 30) {
+                if (Math.random() < 0.45) {
+                  const boycottTweets = [
+                    `It's been ${hiatusWeeks} weeks since ${member.name} went on hiatus! WE WILL NOT STAY SILENT! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
+                    `No ${member.name} = NO SUPPORT! Bring ${member.name} back to ${groupName}! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
+                    `${hiatusWeeks} WEEKS OF HIATUS IS UNACCEPTABLE. WE DEMAND ANSWERS! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`
+                  ];
+                  const chosenText = boycottTweets[Math.floor(Math.random() * boycottTweets.length)];
+                  const fanUsers = artistData.xUsers?.filter(u => !u.isPlayer && !u.isVerified) || [];
+                  const authorId = fanUsers.length > 0 ? fanUsers[Math.floor(Math.random() * fanUsers.length)].id : `fan_bc_${hiatusWeeks}`;
+
+                  artistData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId,
+                    content: chosenText,
+                    likes: Math.floor(Math.random() * 80000) + 15000,
+                    retweets: Math.floor(Math.random() * 25000) + 5000,
+                    views: Math.floor(Math.random() * 900000) + 150000,
+                    date: newDate,
+                  });
+                }
+              }
+            }
+          });
+        }
+
         let newEmails: Email[] = [];
         const artistProfileForEmail = allPlayerArtistsAndGroups.find(
           (a) => a.id === artistId,
@@ -4801,6 +4867,21 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             ) {
               weeklyStreams = Math.floor(weeklyStreams * 1.1);
               newPromoBoostWeeks = song.promoBoostWeeks - 1;
+            }
+
+            // Check for member hiatus 30+ weeks boycott streaming loss (-30%)
+            let hasHiatusBoycott = false;
+            if (state.group && state.group.members) {
+              const currentAbs = newDate.year * 52 + newDate.week;
+              hasHiatusBoycott = state.group.members.some((m) => {
+                const mData = artistData.id === m.id ? artistData : state.artistsData[m.id];
+                if (!mData || !mData.isHiatus || mData.hiatusStartYear === undefined || mData.hiatusStartWeek === undefined) return false;
+                const startAbs = mData.hiatusStartYear * 52 + mData.hiatusStartWeek;
+                return (currentAbs - startAbs) >= 30;
+              });
+            }
+            if (hasHiatusBoycott) {
+              weeklyStreams = Math.floor(weeklyStreams * 0.70); // -30% streaming loss
             }
 
             // Generate daily streams for the week
@@ -8040,9 +8121,17 @@ It is now available on your Spotify profile.
               const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
               let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
               
+              // Apply peak and decay: peak around week 10-15
+              let decayFactor = 0;
+              if (s.weeksOnRadio > 10) {
+                  decayFactor = (s.weeksOnRadio - 10) * 800 * radioEraBoost;
+                  targetPlays -= decayFactor;
+              }
+              
               targetPlays += song.weeklyStreams * 0.0005 * traitRadioBoost; // stream impact also boosted
               
-              const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost * traitRadioBoost;
+              let maxBasePlays = 16000 + (Math.random() * 4000); // Peak around 16K-20K
+              const maxNaturalPlays = maxBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
               
               if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
                  targetPlays = 0;
@@ -10204,44 +10293,45 @@ The Academy`;
 
       // Week 10: Oscar Ceremony
       if (newDate.week === 10 && state.oscarCurrentYearNominations) {
-        const category = state.oscarCurrentYearNominations[0];
-        if (category.winner) {
-          const winner = category.winner;
-          const content = `The Oscar for Best Original Song goes to... "${winner.name}" by ${winner.artistName}! #Oscars`;
-          Object.values(updatedArtistsData).forEach((d) =>
-            d.xPosts.unshift({
-              id: crypto.randomUUID(),
-              authorId: "popbase",
-              content,
-              image: winner.coverArt,
-              likes: Math.floor(Math.random() * 100000) + 50000,
-              retweets: Math.floor(Math.random() * 20000) + 10000,
-              views: Math.floor(Math.random() * 5000000) + 2000000,
-              date: newDate,
-            }),
-          );
-        }
+        for (const category of state.oscarCurrentYearNominations) {
+          if (category.winner) {
+            const winner = category.winner;
+            const content = `The Oscar for ${category.name} goes to... "${winner.name}" by ${winner.artistName}! #Oscars`;
+            Object.values(updatedArtistsData).forEach((d) =>
+              d.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content,
+                image: winner.coverArt,
+                likes: Math.floor(Math.random() * 100000) + 50000,
+                retweets: Math.floor(Math.random() * 20000) + 10000,
+                views: Math.floor(Math.random() * 5000000) + 2000000,
+                date: newDate,
+              }),
+            );
+          }
 
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-          const nomination = category.nominees.find(
-            (n) => n.isPlayer && n.artistName === artistProfile?.name,
-          );
-          if (nomination) {
-            const isWinner = category.winner?.id === nomination.id;
-            if (isWinner)
-              artistData.popularity = Math.min(100, artistData.popularity + 10);
-            artistData.oscarHistory.push({
-              year: newDate.year,
-              category: "Best Original Song",
-              itemId: nomination.id,
-              itemName: nomination.name,
-              artistName: nomination.artistName,
-              isWinner,
-            });
+          for (const artistId in updatedArtistsData) {
+            const artistData = updatedArtistsData[artistId];
+            const artistProfile = allPlayerArtistsAndGroups.find(
+              (a) => a.id === artistId,
+            );
+            const nomination = category.nominees.find(
+              (n) => n.isPlayer && n.artistName === artistProfile?.name,
+            );
+            if (nomination) {
+              const isWinner = category.winner?.id === nomination.id;
+              if (isWinner)
+                artistData.popularity = Math.min(100, artistData.popularity + 10);
+              artistData.oscarHistory.push({
+                year: newDate.year,
+                category: category.name as any,
+                itemId: nomination.id,
+                itemName: nomination.name,
+                artistName: nomination.artistName,
+                isWinner,
+              });
+            }
           }
         }
         finalState.oscarSubmissions = [];
@@ -12739,6 +12829,77 @@ The Tonight Show Team`;
           ? { ...song, isReleased: true, releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id }
           : song,
       );
+
+      let releaseHiatusPosts: XPost[] = [];
+      if (state.group && state.group.members) {
+        const currentAbsWeek = state.date.year * 52 + state.date.week;
+        const groupName = state.group.name;
+        const groupTag = groupName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        let fanPool: string[] = [];
+        if (activeData.xUsers) {
+          fanPool.push(...activeData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
+        }
+        state.group.members.forEach((m) => {
+          const mData = state.artistsData[m.id];
+          if (mData?.xUsers) {
+            fanPool.push(...mData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
+          }
+          fanPool.push(`addiction_fan_${m.id}`);
+          fanPool.push(`charts_${m.id}`);
+          fanPool.push(`stats_${m.id}`);
+        });
+        fanPool = Array.from(new Set(fanPool));
+
+        state.group.members.forEach((member, idx) => {
+          const mData = state.artistsData[member.id];
+          if (mData && mData.isHiatus && mData.hiatusStartYear !== undefined && mData.hiatusStartWeek !== undefined) {
+            const startAbs = mData.hiatusStartYear * 52 + mData.hiatusStartWeek;
+            const hiatusWeeks = currentAbsWeek - startAbs;
+            const memberTag = member.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+            if (hiatusWeeks >= 30) {
+              const boycottMessages = [
+                `BOYCOTT THIS RELEASE! WE WANT ${member.name.toUpperCase()} BACK! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK 🛑`,
+                `DO NOT STREAM THIS UNTIL ${member.name} RETURNS TO ${groupName}! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
+                `Releasing new music after ${hiatusWeeks} weeks of ${member.name} being on hiatus?! ABSOLUTELY NOT. #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
+                `No ${member.name} = ZERO STREAMS FROM US! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`
+              ];
+              boycottMessages.forEach((msg, mIdx) => {
+                const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
+                releaseHiatusPosts.push({
+                  id: crypto.randomUUID(),
+                  authorId,
+                  content: msg,
+                  likes: Math.floor(Math.random() * 60000) + 12000,
+                  retweets: Math.floor(Math.random() * 18000) + 3500,
+                  views: Math.floor(Math.random() * 700000) + 100000,
+                  date: state.date,
+                });
+              });
+            } else {
+              const angryMessages = [
+                `How can you release new music while ${member.name} is still on hiatus?! 😡`,
+                `Dropping new stuff without ${member.name}?? This feels so wrong 😭`,
+                `No way you guys are releasing this while ${member.name} is absent! Unbelievable 😤`,
+                `Where is ${member.name}?! You guys are acting like nothing happened 😤`
+              ];
+              angryMessages.forEach((msg, mIdx) => {
+                const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
+                releaseHiatusPosts.push({
+                  id: crypto.randomUUID(),
+                  authorId,
+                  content: msg,
+                  likes: Math.floor(Math.random() * 40000) + 8000,
+                  retweets: Math.floor(Math.random() * 10000) + 2000,
+                  views: Math.floor(Math.random() * 450000) + 60000,
+                  date: state.date,
+                });
+              });
+            }
+          }
+        });
+      }
+
       return {
         ...state,
         artistsData: {
@@ -12752,7 +12913,7 @@ The Tonight Show Team`;
               activeData.hype + hypeIncrease,
             ),
             inbox: [...activeData.inbox, ...newEmails],
-            xPosts: [popBasePost, tmzPost, ...activeData.xPosts],
+            xPosts: [popBasePost, tmzPost, ...releaseHiatusPosts, ...activeData.xPosts],
           },
         },
       };
@@ -15023,10 +15184,17 @@ Watch: youtu.be/sIdlL8V83Cc`;
           }
 
           // Pop Base Tweet
+          let missingMembersStr = "";
+          if (state.group) {
+              const missingMembers = state.group.members.filter(m => state.artistsData[m.id]?.isHiatus).map(m => m.name);
+              if (missingMembers.length > 0) {
+                  missingMembersStr = ` (Note: ${missingMembers.join(', ')} will not participate in this release due to hiatus)`;
+              }
+          }
           const popBasePost: XPost = {
             id: crypto.randomUUID(),
             authorId: "popbase",
-            content: `${artistName} announces a new ${projectTypeStr} "${projectTitle}" out ${releaseDateStr}.`,
+            content: `${artistName} announces a new ${projectTypeStr} "${projectTitle}" out ${releaseDateStr}.${missingMembersStr}`,
             image: submission.release.coverArt,
             likes: Math.floor(Math.random() * 80000) + 30000,
             retweets: Math.floor(Math.random() * 20000) + 5000,
@@ -15085,38 +15253,115 @@ Watch: youtu.be/sIdlL8V83Cc`;
           };
           updatedPosts.unshift(tmzPost);
 
-          // Add Fan Excitement Quote
-          const fanContent1 = [
-            `we prayed for times like these 😭`,
-            `oh my god ${pronounNominative}'${isAre === "is" ? "s" : "re"} actually dropping!!`,
-            `${pronounNominative} ${isAre} finally coming to save pop music`,
-            `wait ${pronounNominative} ${isAre} dropping ${projectTypeStr === "Single" ? "a single" : "an album"}? IM SHAKING`,
-            `i literally just screamed. ${pronounPossessive} new era ${isAre} going to end everyone`,
-          ][Math.floor(Math.random() * 5)];
+          // Check if group members are on hiatus to generate angry/boycott tweets on new announcement
+          let hiatusAnnouncePosts: XPost[] = [];
+          if (state.group && state.group.members) {
+            const currentAbsWeek = state.date.year * 52 + state.date.week;
+            const groupName = state.group.name;
+            const groupTag = groupName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            let fanPool: string[] = [];
+            if (activeData.xUsers) {
+              fanPool.push(...activeData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
+            }
+            state.group.members.forEach((m) => {
+              const mData = state.artistsData[m.id];
+              if (mData?.xUsers) {
+                fanPool.push(...mData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
+              }
+              fanPool.push(`addiction_fan_${m.id}`);
+              fanPool.push(`charts_${m.id}`);
+              fanPool.push(`stats_${m.id}`);
+            });
+            fanPool = Array.from(new Set(fanPool));
 
-          const fanFanUser =
-            activeData.xUsers.find((u) => u.id.startsWith("addiction_fan_")) ||
-            activeData.xUsers.find(
-              (u) =>
-                !u.isPlayer &&
-                !u.isVerified &&
-                !["popbase", "tmz", "chartdata", "spotifysnapshot"].includes(
-                  u.id,
-                ),
-            );
+            state.group.members.forEach((member, idx) => {
+              const mData = state.artistsData[member.id];
+              if (mData && mData.isHiatus && mData.hiatusStartYear !== undefined && mData.hiatusStartWeek !== undefined) {
+                const startAbs = mData.hiatusStartYear * 52 + mData.hiatusStartWeek;
+                const hiatusWeeks = currentAbsWeek - startAbs;
+                const memberTag = member.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-          if (fanFanUser) {
-            const fanPost: XPost = {
-              id: crypto.randomUUID(),
-              authorId: fanFanUser.id,
-              quoteOf: popBasePost,
-              content: fanContent1,
-              likes: Math.floor(Math.random() * 50000) + 10000,
-              retweets: Math.floor(Math.random() * 10000) + 2000,
-              views: Math.floor(Math.random() * 500000) + 100000,
-              date: state.date,
-            };
-            updatedPosts.unshift(fanPost);
+                if (hiatusWeeks >= 30) {
+                  // Boycott tweets flooding X with exact hashtags!
+                  const boycottMessages = [
+                    `BOYCOTT THIS RELEASE! WE WANT ${member.name.toUpperCase()} BACK! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK 🛑`,
+                    `DO NOT STREAM THIS UNTIL ${member.name} RETURNS TO ${groupName}! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
+                    `Releasing new music after ${hiatusWeeks} weeks of ${member.name} being on hiatus?! ABSOLUTELY NOT. #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
+                    `No ${member.name} = ZERO STREAMS FROM US! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`
+                  ];
+                  boycottMessages.forEach((msg, mIdx) => {
+                    const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
+                    hiatusAnnouncePosts.push({
+                      id: crypto.randomUUID(),
+                      authorId,
+                      content: msg,
+                      likes: Math.floor(Math.random() * 60000) + 12000,
+                      retweets: Math.floor(Math.random() * 18000) + 3500,
+                      views: Math.floor(Math.random() * 700000) + 100000,
+                      date: state.date,
+                    });
+                  });
+                } else {
+                  // Angry fan tweets
+                  const angryMessages = [
+                    `How can you announce new music while ${member.name} is still on hiatus?! 😡`,
+                    `Promoting new stuff without ${member.name}?? This feels so wrong 😭`,
+                    `No way you guys are dropping this while ${member.name} is absent! Unbelievable 😤`,
+                    `Where is ${member.name}?! You guys are acting like nothing happened 😤`
+                  ];
+                  angryMessages.forEach((msg, mIdx) => {
+                    const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
+                    hiatusAnnouncePosts.push({
+                      id: crypto.randomUUID(),
+                      authorId,
+                      content: msg,
+                      likes: Math.floor(Math.random() * 40000) + 8000,
+                      retweets: Math.floor(Math.random() * 10000) + 2000,
+                      views: Math.floor(Math.random() * 450000) + 60000,
+                      date: state.date,
+                    });
+                  });
+                }
+              }
+            });
+          }
+
+          if (hiatusAnnouncePosts.length > 0) {
+            updatedPosts.unshift(...hiatusAnnouncePosts);
+          } else {
+            // Add Fan Excitement Quote when no members are on hiatus
+            const fanContent1 = [
+              `we prayed for times like these 😭`,
+              `oh my god ${pronounNominative}'${isAre === "is" ? "s" : "re"} actually dropping!!`,
+              `${pronounNominative} ${isAre} finally coming to save pop music`,
+              `wait ${pronounNominative} ${isAre} dropping ${projectTypeStr === "Single" ? "a single" : "an album"}? IM SHAKING`,
+              `i literally just screamed. ${pronounPossessive} new era ${isAre} going to end everyone`,
+            ][Math.floor(Math.random() * 5)];
+
+            const fanFanUser =
+              activeData.xUsers.find((u) => u.id.startsWith("addiction_fan_")) ||
+              activeData.xUsers.find(
+                (u) =>
+                  !u.isPlayer &&
+                  !u.isVerified &&
+                  !["popbase", "tmz", "chartdata", "spotifysnapshot"].includes(
+                    u.id,
+                  ),
+              );
+
+            if (fanFanUser) {
+              const fanPost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: fanFanUser.id,
+                quoteOf: popBasePost,
+                content: fanContent1,
+                likes: Math.floor(Math.random() * 50000) + 10000,
+                retweets: Math.floor(Math.random() * 10000) + 2000,
+                views: Math.floor(Math.random() * 500000) + 100000,
+                date: state.date,
+              };
+              updatedPosts.unshift(fanPost);
+            }
           }
         }
       }
@@ -16479,6 +16724,124 @@ Let us know if you accept.`,
         },
       };
     }
+    
+    case "START_MEMBER_HIATUS": {
+        const { memberId, reason } = action.payload;
+        const memberData = state.artistsData[memberId];
+        const member = state.group?.members.find(m => m.id === memberId);
+        if (!memberData || !member || !state.group) return state;
+
+        const groupName = state.group.name;
+        const memberName = member.name;
+
+        const popBasePost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `Pop Base confirms that ${memberName} of ${groupName} is officially going on hiatus due to ${reason}. We wish them the best! `,
+            likes: Math.floor(Math.random() * 200000) + 100000,
+            retweets: Math.floor(Math.random() * 50000) + 20000,
+            views: Math.floor(Math.random() * 5000000) + 1000000,
+            date: state.date,
+        };
+
+        const fanSadnessTexts = [
+            `I can't believe ${memberName} is going on hiatus due to ${reason}... I'm crying 😭 get well soon / we'll miss you!`,
+            `So sad to hear about ${memberName} taking a break... ${groupName} won't feel the same without them 💔`,
+            `We love you ${memberName}! Take all the time you need, your health and well-being comes first! ❤️`,
+            `no way ${memberName} is on hiatus due to ${reason}... sending so much love and support! 🙏`,
+            `devastated about ${memberName}'s hiatus 😭 hoping everything gets better soon!`,
+            `stay strong ${memberName}, we will all be waiting patiently for your return to ${groupName}! 🥺`
+        ];
+
+        const fanUsers = memberData.xUsers?.filter(u => !u.isPlayer && !u.isVerified) || [];
+        const fanPosts: XPost[] = fanSadnessTexts.map((text, i) => ({
+            id: crypto.randomUUID(),
+            authorId: fanUsers[i % Math.max(1, fanUsers.length)]?.id || `fan_sad_${i}`,
+            content: text,
+            likes: Math.floor(Math.random() * 40000) + 8000,
+            retweets: Math.floor(Math.random() * 10000) + 2000,
+            views: Math.floor(Math.random() * 400000) + 50000,
+            date: state.date,
+        }));
+
+        const newPosts = [popBasePost, ...fanPosts];
+
+        const updatedMemberData = {
+            ...memberData,
+            isHiatus: true,
+            hiatusStartWeek: state.date.week,
+            hiatusStartYear: state.date.year,
+            hiatusAnnounced: true,
+            xPosts: [
+                ...newPosts,
+                ...(memberData.xPosts || [])
+            ]
+        };
+
+        const updatedArtistsData: Record<string, ArtistData> = {
+            ...state.artistsData,
+            [memberId]: updatedMemberData
+        };
+
+        const groupId = state.group.id;
+        if (updatedArtistsData[groupId]) {
+            updatedArtistsData[groupId] = {
+                ...updatedArtistsData[groupId],
+                xPosts: [
+                    ...newPosts,
+                    ...(updatedArtistsData[groupId].xPosts || [])
+                ]
+            };
+        }
+
+        if (state.activeArtistId && updatedArtistsData[state.activeArtistId] && state.activeArtistId !== memberId && state.activeArtistId !== groupId) {
+            updatedArtistsData[state.activeArtistId] = {
+                ...updatedArtistsData[state.activeArtistId],
+                xPosts: [
+                    ...newPosts,
+                    ...(updatedArtistsData[state.activeArtistId].xPosts || [])
+                ]
+            };
+        }
+
+        return {
+            ...state,
+            artistsData: updatedArtistsData
+        };
+    }
+    case "END_MEMBER_HIATUS": {
+        const { memberId } = action.payload;
+        const memberData = state.artistsData[memberId];
+        const member = state.group?.members.find(m => m.id === memberId);
+        if (!memberData || !member || !state.group) return state;
+
+        return {
+            ...state,
+            artistsData: {
+                ...state.artistsData,
+                [memberId]: {
+                    ...memberData,
+                    isHiatus: false,
+                    hiatusStartWeek: undefined,
+                    hiatusStartYear: undefined,
+                    hiatusAnnounced: false,
+                    xPosts: [
+                        {
+                            id: crypto.randomUUID(),
+                            authorId: "popbase",
+                            content: `${member.name} has officially returned from hiatus and will resume activities with ${state.group.name}!`,
+                            likes: Math.floor(Math.random() * 200000) + 100000,
+                            retweets: Math.floor(Math.random() * 50000) + 20000,
+                            views: Math.floor(Math.random() * 5000000) + 1000000,
+                            date: state.date,
+                        },
+                        ...(memberData.xPosts || [])
+                    ]
+                }
+            }
+        };
+    }
+
     case "START_HIATUS": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -20307,6 +20670,11 @@ Let us know if you accept.`,
       return {
         ...state,
         disableLoadingScreens: !state.disableLoadingScreens,
+      };
+    case "TOGGLE_SPOTIFY_SNAPSHOT_STYLE":
+      return {
+        ...state,
+        spotifySnapshotStyle: action.payload,
       };
     case "SET_ACTIVE_TMZ_POST":
       return {
