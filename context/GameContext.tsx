@@ -15258,9 +15258,9 @@ Watch: youtu.be/sIdlL8V83Cc`;
           };
           updatedPosts.unshift(tmzPost);
 
-          // Check if group members are on hiatus to generate angry/boycott tweets on new announcement
+          // Check if group members are on hiatus to generate angry/boycott tweets on new announcement (Group releases only)
           let hiatusAnnouncePosts: XPost[] = [];
-          if (state.group && state.group.members) {
+          if (state.group && state.group.members && state.activeArtistId === state.group.id) {
             const currentAbsWeek = state.date.year * 52 + state.date.week;
             const groupName = state.group.name;
             const groupTag = groupName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -16896,7 +16896,13 @@ Let us know if you accept.`,
     case "END_HIATUS_COMEBACK": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
+      const allArtists = [
+        state.soloArtist,
+        ...(state.group?.members || []),
+        state.group,
+        ...(state.extraPlayableArtists || []),
+      ];
+      const activeArtist = allArtists.find((a) => a?.id === state.activeArtistId) || state.soloArtist || state.group;
       const newPosts = [...(activeData.xPosts || [])];
       
       const { isGood } = action.payload || { isGood: true };

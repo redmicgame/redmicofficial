@@ -117,8 +117,11 @@ const ReleaseView: React.FC = () => {
 
     const [showComebackConfirm, setShowComebackConfirm] = useState(false);
 
+    const isGroupMemberSoloRelease = gameState.careerMode === 'group' && activeArtist?.id !== gameState.group?.id;
+    const isHiatusComeback = activeArtistData.isHiatus && !isGroupMemberSoloRelease;
+
     const handleAction = () => {
-        if (activeArtistData.isHiatus && !showComebackConfirm) {
+        if (isHiatusComeback && !showComebackConfirm) {
              setShowComebackConfirm(true);
              return;
         }
@@ -217,7 +220,7 @@ const ReleaseView: React.FC = () => {
             dispatch({ type: 'RELEASE_PROJECT', payload: { release: newRelease } });
         }
         
-        if (activeArtistData.isHiatus) {
+        if (isHiatusComeback) {
              const avgQuality = Array.from(selectedSongIds).reduce((sum, id) => sum + (songs.find(s => s.id === id)?.quality || 0), 0) / (selectedSongIds.size || 1);
              dispatch({ type: 'END_HIATUS_COMEBACK', payload: { isGood: avgQuality > 70 } });
         }
