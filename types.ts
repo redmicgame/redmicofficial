@@ -1768,7 +1768,7 @@ export interface GameState {
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
   offlineMode?: boolean;
-  difficultyMode?: "easy" | "normal" | "hard" | "extreme";
+  difficultyMode?: "easy" | "original" | "normal" | "hard" | "extreme";
   careerMode: "solo" | "group" | null;
   soloArtist: Artist | null;
   group: Group | null;
@@ -2021,7 +2021,7 @@ export type GameAction =
       payload: {
         artist: Artist;
         startYear: number;
-        difficultyMode?: "easy" | "normal" | "hard" | "extreme";
+        difficultyMode?: "easy" | "original" | "normal" | "hard" | "extreme";
         timeMode?: "weekly" | "daily";
       };
     }
@@ -2030,7 +2030,7 @@ export type GameAction =
       payload: {
         group: Group;
         startYear: number;
-        difficultyMode?: "easy" | "normal" | "hard" | "extreme";
+        difficultyMode?: "easy" | "original" | "normal" | "hard" | "extreme";
         timeMode?: "weekly" | "daily";
       };
     }

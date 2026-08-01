@@ -4758,7 +4758,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklyStreams = Math.floor(weeklyStreams * 1.1); // 10% boost
             }
 
-            if (song.pitchforkBoost && state.difficultyMode === "easy") {
+            if (song.pitchforkBoost && (state.difficultyMode === "easy" || state.difficultyMode === "original")) {
               weeklyStreams = Math.floor(
                 weeklyStreams * (Math.random() * 2 + 2),
               );
@@ -5284,7 +5284,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             );
           }
 
-          if (song.pitchforkBoost && state.difficultyMode === "easy") {
+          if (song.pitchforkBoost && (state.difficultyMode === "easy" || state.difficultyMode === "original")) {
             weeklyViews = Math.floor(weeklyViews * (Math.random() * 2 + 2));
           }
           if (song.interviewBoost) {

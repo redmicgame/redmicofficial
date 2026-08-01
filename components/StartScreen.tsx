@@ -24,7 +24,7 @@ const StartScreen: React.FC = () => {
     const [soloFandomName, setSoloFandomName] = useState('');
     const [soloPronouns, setSoloPronouns] = useState<'he/him' | 'she/her' | 'they/them'>('they/them');
     const [startYear, setStartYear] = useState(new Date().getFullYear());
-    const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'extreme'>('normal');
+    const [difficulty, setDifficulty] = useState<'easy' | 'original' | 'normal' | 'hard' | 'extreme'>('normal');
     
     // Group state
     const [groupName, setGroupName] = useState('');
@@ -285,10 +285,11 @@ const StartScreen: React.FC = () => {
                         <div>
                              <label htmlFor="difficulty" className="block text-sm font-medium text-zinc-300">Difficulty</label>
                              <select id="difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value as any)} className="mt-1 block w-full bg-zinc-700 border-zinc-600 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm h-10 px-3">
-                                  <option value="easy">Easy (Easier streams & charts, no stream decay)</option>
-                                  <option value="normal">Normal (Classic experience)</option>
-                                  <option value="hard">Hard (Harder charting & streams)</option>
-                                  <option value="extreme">Extreme (Super hard)</option>
+                                  <option value="easy">Easy</option>
+                                  <option value="original">Original</option>
+                                  <option value="normal">Normal</option>
+                                  <option value="hard">Hard</option>
+                                  <option value="extreme">Extreme</option>
                              </select>
                         </div>
 
