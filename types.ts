@@ -983,6 +983,35 @@ export interface TikTokVideo {
   createdAt: GameDate;
 }
 
+export interface TikTokPromoteOrder {
+  id: string;
+  goal: 'likes' | 'views' | 'followers' | 'profile_views';
+  goalTypeCategory?: 'boost_account' | 'get_sales' | 'get_leads';
+  targetType: 'video' | 'account';
+  videoId?: string;
+  videoThumbnail?: string;
+  videoTitle?: string;
+  status: 'active' | 'completed' | 'under_review' | 'pending';
+  adCost: number;
+  currencySymbol: string;
+  originalCurrencyCost: number;
+  estimatedResultsMin: number;
+  estimatedResultsMax: number;
+  viewsGained: number;
+  likesGained: number;
+  commentsGained: number;
+  followersGained: number;
+  profileViewsGained: number;
+  targetViews: number;
+  targetLikes: number;
+  targetFollowers: number;
+  targetProfileViews: number;
+  durationDays: number;
+  remainingDays: number;
+  startDate: string;
+  createdAtDate: GameDate;
+}
+
 export interface InstagramPost {
   id: string;
   imageUrls: string[];
@@ -1608,6 +1637,7 @@ export interface ArtistData {
   hiatusAnnounced?: boolean;
   comebackAnticipation?: number;
   tiktokVideos: TikTokVideo[];
+  tiktokPromotes?: TikTokPromoteOrder[];
   instagramFollowers?: number;
   instagramBio?: string;
   instagramLink?: string;

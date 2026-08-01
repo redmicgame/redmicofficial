@@ -121,15 +121,17 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         return (
             <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={onBack}>
                 <div 
-                    className="w-full max-w-4xl bg-[#121212] border border-zinc-800 p-5 sm:p-8 text-white font-mono shadow-2xl rounded-md flex flex-col my-auto" 
+                    className="w-full max-w-4xl bg-[#0d0e0f] border border-zinc-800/80 p-5 sm:p-8 text-white font-mono shadow-2xl rounded-2xl flex flex-col my-auto" 
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Header Area */}
-                    <div className="flex gap-5 sm:gap-8 items-start mb-6 border-b border-zinc-700/50 pb-6 shrink-0">
+                    <div className="flex gap-5 sm:gap-8 items-start mb-6 border-b border-zinc-800/60 pb-6 shrink-0">
                         {/* Left: Cover Art & Artist Name */}
                         <div className="w-[28%] sm:w-[24%] flex flex-col items-center shrink-0">
-                            <img src={release.coverArt} className="w-full aspect-square object-cover shadow-[0_0_25px_rgba(0,0,0,0.85)] border border-zinc-800 rounded-sm" alt="Cover" />
-                            <div className="text-zinc-200 font-mono text-sm sm:text-base font-bold mt-3 uppercase tracking-widest text-center truncate w-full">
+                            <div className="relative w-full aspect-square shadow-[0_0_25px_rgba(0,0,0,0.9)] border border-zinc-800 rounded-sm overflow-hidden">
+                                <img src={release.coverArt} className="w-full h-full object-cover" alt="Cover" />
+                            </div>
+                            <div className="text-zinc-300 font-sans font-bold text-xs sm:text-sm mt-3 uppercase tracking-wider text-center truncate w-full">
                                 {activeArtist.name}
                             </div>
                         </div>
@@ -137,11 +139,11 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                         {/* Right: Album Title, Date, Large Stream Stat */}
                         <div className="w-[72%] sm:w-[76%] flex flex-col justify-between min-h-[150px] pl-2">
                             <div>
-                                <h1 className="text-3xl sm:text-5xl font-mono font-black text-white leading-none tracking-tight uppercase mb-2 truncate">
+                                <h1 className="text-3xl sm:text-5xl font-sans font-extrabold text-white leading-none tracking-tight uppercase mb-2 truncate">
                                     {release.title}
                                 </h1>
-                                <div className="text-zinc-400 text-sm sm:text-base flex items-center gap-2 uppercase font-mono tracking-wider mb-5">
-                                    <span className="text-base">📅</span> {monthName} {day}, {yearNum} | {weekdayName}
+                                <div className="text-zinc-400 text-xs sm:text-sm flex items-center gap-2 uppercase font-mono tracking-wider mb-5">
+                                    <span>📅</span> {monthName} {day}, {yearNum} | {weekdayName}
                                 </div>
                             </div>
 
@@ -151,16 +153,16 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                                 <div className="text-4xl sm:text-6xl font-mono font-black text-white tracking-tight">
                                     {totalWeeklyStreams.toLocaleString()}
                                 </div>
-                                <div className={`${isOverallPos ? 'bg-[#22c55e] text-black' : 'bg-[#ef4444] text-white'} text-base sm:text-2xl font-bold font-mono px-3.5 py-1.5 flex items-center gap-1.5 rounded-xs`}>
-                                    {isOverallPos ? '↑' : '↓'} {Math.abs(overallPct).toFixed(2)}%
+                                <div className={`${isOverallPos ? 'bg-[#16a34a]' : 'bg-[#dc2626]'} text-white text-xs sm:text-base font-extrabold font-mono px-3 py-1.5 rounded flex items-center gap-1`}>
+                                    {isOverallPos ? '↑ ' : '↓ '}{Math.abs(overallPct).toFixed(2)}%
                                 </div>
                             </div>
 
                             {/* Total Streams Bar */}
-                            <div className="flex items-center gap-2.5 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider border-t border-zinc-700/50 pt-2.5">
-                                <span className="text-base">📈</span>
-                                <span className="text-zinc-200 font-bold text-sm sm:text-base">{totalStreams.toLocaleString()}</span>
-                                <span className="opacity-60">| total streams</span>
+                            <div className="flex items-center gap-2 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider border-t border-zinc-800/40 pt-2.5">
+                                <span>☑</span>
+                                <span className="text-white font-bold">{totalStreams.toLocaleString()}</span>
+                                <span className="text-zinc-500 font-normal">| TOTAL STREAMS</span>
                             </div>
                         </div>
                     </div>
@@ -168,13 +170,12 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                     {/* Table Section */}
                     <div className="w-full flex flex-col flex-1 min-h-0">
                         {/* Header Row */}
-                        <div className="grid grid-cols-[2rem_1fr_6rem_5rem_4.5rem_6rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold text-[#22c55e] border-b border-zinc-700/50 font-mono uppercase tracking-wide shrink-0">
-                            <div></div>
-                            <div>track</div>
-                            <div className="text-right">daily streams</div>
-                            <div className="text-right">change</div>
-                            <div className="text-right">%change</div>
-                            <div className="text-right">total</div>
+                        <div className="grid grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider shrink-0">
+                            <div className="col-span-2">TRACK</div>
+                            <div className="text-right">DAILY STREAMS</div>
+                            <div className="text-right">CHANGE</div>
+                            <div className="text-right">%CHANGE</div>
+                            <div className="text-right">TOTAL</div>
                         </div>
 
                         {/* Track Rows */}
@@ -190,24 +191,26 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                                 return (
                                     <div 
                                         key={song.id} 
-                                        className="grid grid-cols-[2rem_1fr_6rem_5rem_4.5rem_6rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 px-2 py-2 text-xs sm:text-sm items-center hover:bg-zinc-800/50 transition-colors rounded-xs"
+                                        className="grid grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 px-2 py-2 text-xs sm:text-sm items-center hover:bg-zinc-800/40 transition-colors border-b border-zinc-900/40"
                                     >
-                                        <div className="text-xs sm:text-sm text-[#22c55e] font-mono font-bold text-left">
-                                            {i + 1}
+                                        <div className="flex items-center gap-2 col-span-2 min-w-0">
+                                            <span className="text-[#22c55e] font-mono font-bold text-xs sm:text-sm shrink-0 w-5">
+                                                {i + 1}
+                                            </span>
+                                            <span className="truncate font-sans font-medium text-white text-xs sm:text-sm">
+                                                {song.title}
+                                            </span>
                                         </div>
-                                        <div className="truncate font-sans font-semibold text-white tracking-wide text-xs sm:text-sm">
-                                            {song.title}
-                                        </div>
-                                        <div className="text-right text-zinc-100 font-mono text-xs sm:text-sm">
+                                        <div className="text-right text-white font-mono text-xs sm:text-sm">
                                             {streamCount.toLocaleString()}
                                         </div>
                                         <div className={`text-right font-mono text-xs sm:text-sm ${isPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
                                             {isPos ? '+' : ''}{rawChange.toLocaleString()}
                                         </div>
                                         <div className={`text-right font-mono text-xs sm:text-sm ${isPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                                            {isPos ? '↑' : '↓'} {Math.abs(pctChange).toFixed(2)}%
+                                            {isPos ? '↑ ' : '↓ '}{Math.abs(pctChange).toFixed(2)}%
                                         </div>
-                                        <div className="text-right text-zinc-100 font-mono text-xs sm:text-sm">
+                                        <div className="text-right text-white font-mono text-xs sm:text-sm">
                                             {(song.streams || 0).toLocaleString()}
                                         </div>
                                     </div>
@@ -216,23 +219,22 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                         </div>
 
                         {/* TOTAL Footer Row */}
-                        <div className="grid grid-cols-[2rem_1fr_6rem_5rem_4.5rem_6rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold items-center border-t border-zinc-700/50 mt-2 pt-3 font-mono shrink-0">
-                            <div className="bg-[#22c55e] text-black text-xs font-black px-1.5 text-center py-0.5 rounded-xs">
-                                TOTAL
+                        <div className="grid grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold items-center border-t border-zinc-800 mt-2 pt-3 font-mono shrink-0">
+                            <div className="col-span-2 flex items-center">
+                                <span className="bg-[#22c55e] text-black text-xs font-extrabold px-1.5 py-0.5 rounded-xs font-mono uppercase">
+                                    TOTAL
+                                </span>
                             </div>
-                            <div className="uppercase tracking-widest text-zinc-300 font-mono">
-                                
-                            </div>
-                            <div className="text-right text-zinc-100 font-mono">
+                            <div className="text-right text-white font-mono">
                                 {totalWeeklyStreams.toLocaleString()}
                             </div>
                             <div className={`text-right font-mono ${isOverallPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
                                 {isOverallPos ? '+' : ''}{overallNetChange.toLocaleString()}
                             </div>
                             <div className={`text-right font-mono ${isOverallPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                                {isOverallPos ? '+' : ''}{overallPct.toFixed(2)}%
+                                {overallPct.toFixed(2)}%
                             </div>
-                            <div className="text-right text-zinc-100 font-mono">
+                            <div className="text-right text-white font-mono">
                                 {totalStreams.toLocaleString()}
                             </div>
                         </div>

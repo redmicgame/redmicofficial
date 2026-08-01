@@ -7124,6 +7124,47 @@ Total — ${totalStreamsMillion} Million`;
           artistData.tiktokFollowers =
             (artistData.tiktokFollowers || 0) + tiktokPassiveGain;
 
+          // Process active TikTok Promote campaigns
+          if (artistData.tiktokPromotes && artistData.tiktokPromotes.length > 0) {
+            artistData.tiktokPromotes.forEach(order => {
+              if (order.status === 'active') {
+                const daysToSimulate = Math.min(7, order.remainingDays);
+                const fraction = daysToSimulate / Math.max(1, order.durationDays);
+
+                const addViews = Math.floor(order.targetViews * fraction * 0.75);
+                const addLikes = Math.floor(order.targetLikes * fraction * 0.75);
+                const addComments = Math.floor(addLikes * 0.08);
+                const addFollowers = Math.floor(order.targetFollowers * fraction * 0.75);
+                const addProfileViews = Math.floor(order.targetProfileViews * fraction * 0.75);
+
+                order.viewsGained += addViews;
+                order.likesGained += addLikes;
+                order.commentsGained += addComments;
+                order.followersGained += addFollowers;
+                order.profileViewsGained += addProfileViews;
+
+                if (addFollowers > 0) {
+                  artistData.tiktokFollowers = (artistData.tiktokFollowers || 0) + addFollowers;
+                }
+
+                if (order.videoId && artistData.tiktokVideos) {
+                  const targetVid = artistData.tiktokVideos.find(v => v.id === order.videoId);
+                  if (targetVid) {
+                    targetVid.views += addViews;
+                    targetVid.likes += addLikes;
+                    targetVid.comments += addComments;
+                  }
+                }
+
+                order.remainingDays -= daysToSimulate;
+                if (order.remainingDays <= 0) {
+                  order.remainingDays = 0;
+                  order.status = 'completed';
+                }
+              }
+            });
+          }
+
           // Grow Instagram followers passively
           const instagramPassiveGain =
             Math.floor((totalWeeklyStreams / 8000) * tikTokPopMult) +
@@ -9658,6 +9699,10 @@ HFPA`,
             }
             dailyStreams.push(Math.max(0, remain));
 
+            const songPrev = song.prevWeekStreams || 0;
+            const songDiff = actualSongStreams - songPrev;
+            const songPct = songPrev > 0 ? (songDiff / songPrev) * 100 : 0;
+
             const jsonStr = JSON.stringify({
               type: "song",
               songName: song.title,
@@ -9666,6 +9711,17 @@ HFPA`,
               streams: actualSongStreams,
               totalStreams: song.streams,
               dailyStreams: dailyStreams,
+              changeVal: songDiff,
+              changePct: songPct,
+              tracks: [{
+                title: song.title,
+                dailyStreams: actualSongStreams,
+                weekly: actualSongStreams,
+                streams: song.streams,
+                totalStreams: song.streams,
+                changeVal: songDiff,
+                changePct: songPct,
+              }],
               date: newDate,
             });
 
@@ -9718,11 +9774,22 @@ HFPA`,
             ) {
               if (actualWeeklyAlbumStreams === 0) return; // Hide snapshots for taken-down albums
 
-              const tracks = albumSongs.map((s) => ({
-                title: s.title,
-                totalStreams: s.streams,
-                dailyStreams: s.actualLastWeekStreams || 0, // Using weekly streams for daily display since snapshot chart uses daily, but mock here is fine
-              }));
+              const tracks = albumSongs.map((s) => {
+                const sPrev = s.prevWeekStreams || 0;
+                const sCurr = s.actualLastWeekStreams || s.lastWeekStreams || 0;
+                const diff = sCurr - sPrev;
+                let pct = 0;
+                if (sPrev > 0) pct = (diff / sPrev) * 100;
+                return {
+                  title: s.title,
+                  totalStreams: s.streams,
+                  streams: s.streams,
+                  dailyStreams: sCurr,
+                  weekly: sCurr,
+                  changeVal: diff,
+                  changePct: pct,
+                };
+              });
 
               const jsonStr = JSON.stringify({
                 type: "album",
@@ -14342,6 +14409,93 @@ We wish you the best in your future endeavors.
             tiktokVideos: [newTiktok, ...(activeData.tiktokVideos || [])],
             hype: Math.min(100, activeData.hype + hypeGained),
             tiktokFollowers: followers + Math.floor(views * 0.01),
+          },
+        },
+      };
+    }
+    case "PURCHASE_TIKTOK_PROMOTE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { 
+        goal, 
+        goalTypeCategory, 
+        targetType, 
+        videoId, 
+        adCost, 
+        currencySymbol, 
+        originalCurrencyCost, 
+        estimatedResultsMin, 
+        estimatedResultsMax, 
+        durationDays 
+      } = action.payload;
+
+      if ((activeData.money || 0) < adCost) return state;
+
+      const avgResult = Math.floor((estimatedResultsMin + estimatedResultsMax) / 2);
+      
+      const targetVideo = videoId ? (activeData.tiktokVideos || []).find((v: any) => v.id === videoId) : null;
+      const soloName = state.soloArtist?.name || state.group?.name || "Artist";
+
+      // Immediate boost (25% upfront)
+      const immediateRatio = 0.25;
+      const immediateViews = goal === 'views' ? Math.floor(avgResult * immediateRatio) : Math.floor(avgResult * 0.3);
+      const immediateLikes = goal === 'likes' ? Math.floor(avgResult * immediateRatio) : Math.floor(immediateViews * 0.08);
+      const immediateComments = Math.floor(immediateLikes * 0.08);
+      const immediateFollowers = goal === 'followers' ? Math.floor(avgResult * immediateRatio) : Math.floor(immediateViews * 0.005);
+      const immediateProfileViews = goal === 'profile_views' ? Math.floor(avgResult * immediateRatio) : Math.floor(immediateViews * 0.03);
+
+      const newOrder: any = {
+        id: `tiktok_promote_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        goal,
+        goalTypeCategory: goalTypeCategory || 'boost_account',
+        targetType: targetType || (videoId ? 'video' : 'account'),
+        videoId,
+        videoThumbnail: targetVideo?.thumbnail || state.soloArtist?.image || state.group?.image || "",
+        videoTitle: targetVideo ? targetVideo.content : soloName,
+        status: 'active',
+        adCost,
+        currencySymbol: currencySymbol || 'CA$',
+        originalCurrencyCost: originalCurrencyCost || adCost,
+        estimatedResultsMin,
+        estimatedResultsMax,
+        viewsGained: immediateViews,
+        likesGained: immediateLikes,
+        commentsGained: immediateComments,
+        followersGained: immediateFollowers,
+        profileViewsGained: immediateProfileViews,
+        targetViews: goal === 'views' ? avgResult : Math.floor(avgResult * 2),
+        targetLikes: goal === 'likes' ? avgResult : Math.floor(avgResult * 0.1),
+        targetFollowers: goal === 'followers' ? avgResult : Math.floor(avgResult * 0.02),
+        targetProfileViews: goal === 'profile_views' ? avgResult : Math.floor(avgResult * 0.05),
+        durationDays: durationDays || 7,
+        remainingDays: durationDays || 7,
+        startDate: new Date().toLocaleDateString('en-US'),
+        createdAtDate: state.date,
+      };
+
+      // Update target video if present
+      let updatedVideos = activeData.tiktokVideos || [];
+      if (videoId) {
+        updatedVideos = updatedVideos.map((v: any) => v.id === videoId ? {
+          ...v,
+          views: v.views + immediateViews,
+          likes: v.likes + immediateLikes,
+          comments: v.comments + immediateComments
+        } : v);
+      }
+
+      const updatedFollowers = (activeData.tiktokFollowers || 0) + immediateFollowers;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - adCost,
+            tiktokFollowers: updatedFollowers,
+            tiktokVideos: updatedVideos,
+            tiktokPromotes: [newOrder, ...(activeData.tiktokPromotes || [])],
           },
         },
       };

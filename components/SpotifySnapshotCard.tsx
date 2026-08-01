@@ -303,7 +303,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
           const overallChangeVal = displayTracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) || 0;
           const overallPrev = displayTracks.reduce((acc: number, t: any) => acc + ((t.weekly !== undefined ? t.weekly : (t.dailyStreams || 0)) - (t.changeVal || 0)), 0) || 0;
           const overallPct = overallPrev > 0 ? (overallChangeVal / overallPrev) * 100 : 0;
-          const pctStr = Math.abs(overallPct).toFixed(2) + "%";
+          const pctStr = (overallPct >= 0 ? "↑ " : "↓ ") + Math.abs(overallPct).toFixed(2) + "%";
           const isOverallPos = overallChangeVal >= 0;
           
           const yearNum = data.date?.year || gameState?.date?.year || 2026;
@@ -314,49 +314,51 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
           const day = dateObj.getDate();
           const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
 
-          const albumTitle = data.songName || data.albumName || data.title || "RELEASE";
-          const artistName = data.artistName || "ARTIST";
+          const albumTitle = (data.songName || data.albumName || data.title || "RELEASE").toUpperCase();
+          const artistName = (data.artistName || "ARTIST").toUpperCase();
           const totalStreams = data.totalStreams || data.streams || 0;
           const weeklyStreams = data.streams || 0;
 
           return (
-              <div className="mt-2 bg-[#121212] p-4 sm:p-6 text-white font-mono max-w-full shadow-2xl border border-zinc-800 rounded-sm">
+              <div className="mt-2 bg-[#0d0e0f] p-5 sm:p-7 text-white font-mono max-w-full shadow-2xl border border-zinc-800/80 rounded-2xl">
                 
                 {/* Header Section */}
-                <div className="flex gap-4 sm:gap-6 items-start mb-5 border-b border-zinc-700/50 pb-5">
+                <div className="flex gap-5 sm:gap-7 items-start mb-6 border-b border-zinc-800/60 pb-6">
                   {/* Left Column - Cover Art */}
-                  <div className="w-[32%] sm:w-[30%] flex flex-col items-center shrink-0">
-                    <img src={data.coverArt} className="w-full aspect-square object-cover shadow-[0_0_20px_rgba(0,0,0,0.8)] border border-zinc-800" alt="Cover" />
-                    <div className="text-zinc-300 font-mono text-xs sm:text-sm font-bold mt-2.5 uppercase tracking-widest text-center truncate w-full">
+                  <div className="w-[30%] sm:w-[26%] flex flex-col items-center shrink-0">
+                    <div className="relative w-full aspect-square shadow-[0_0_25px_rgba(0,0,0,0.9)] border border-zinc-800 rounded-sm overflow-hidden">
+                      <img src={data.coverArt} className="w-full h-full object-cover" alt="Cover" />
+                    </div>
+                    <div className="text-zinc-300 font-sans font-bold text-xs sm:text-sm mt-3 uppercase tracking-wider text-center truncate w-full">
                       {artistName}
                     </div>
                   </div>
 
                   {/* Right Column - Stats */}
-                  <div className="w-[68%] sm:w-[70%] flex flex-col justify-between min-h-[130px] pl-1">
+                  <div className="w-[70%] sm:w-[74%] flex flex-col justify-between min-h-[140px] pl-1">
                     <div>
-                      <h2 className="text-2xl sm:text-4xl font-mono font-black text-white leading-none tracking-tight uppercase mb-2 truncate">
+                      <h2 className="text-2xl sm:text-4xl font-sans font-extrabold text-white leading-tight tracking-tight uppercase mb-2 truncate">
                         {albumTitle}
                       </h2>
-                      <div className="text-zinc-400 text-xs sm:text-sm flex items-center gap-1.5 uppercase font-mono tracking-wider mb-4">
-                        <span className="text-sm">📅</span> {monthName} {day}, {yearNum} | {weekdayName}
+                      <div className="text-zinc-400 text-xs sm:text-sm flex items-center gap-2 uppercase font-mono tracking-wider mb-4">
+                        <span className="text-xs sm:text-sm">📅</span> {monthName} {day}, {yearNum} | {weekdayName}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3 sm:gap-4 mb-3 flex-wrap">
+                    <div className="flex items-center gap-3 sm:gap-4 my-2 flex-wrap">
                       <span className="text-zinc-400 text-xl font-bold font-mono">↗</span>
                       <div className="text-3xl sm:text-5xl font-mono font-black text-white tracking-tight">
                         {weeklyStreams.toLocaleString()}
                       </div>
-                      <div className={`${isOverallPos ? "bg-[#22c55e] text-black" : "bg-[#ef4444] text-white"} text-sm sm:text-xl font-bold font-mono px-3 py-1 flex items-center gap-1`}>
-                        {isOverallPos ? "↑ " : "↓ "}{pctStr}
+                      <div className={`${isOverallPos ? "bg-[#16a34a]" : "bg-[#dc2626]"} text-white text-xs sm:text-sm font-extrabold font-mono px-2.5 py-1 rounded flex items-center gap-1`}>
+                        {pctStr}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider border-t border-zinc-700/50 pt-2">
-                      <span className="text-sm">📈</span>
-                      <span className="text-zinc-300 font-bold">{totalStreams.toLocaleString()}</span>
-                      <span className="opacity-60">| total streams</span>
+                    <div className="flex items-center gap-2 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider pt-2 border-t border-zinc-800/40">
+                      <span className="text-xs sm:text-sm">☑</span>
+                      <span className="text-white font-bold">{totalStreams.toLocaleString()}</span>
+                      <span className="text-zinc-500 font-normal">| TOTAL STREAMS</span>
                     </div>
                   </div>
                 </div>
@@ -364,35 +366,36 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                 {/* Table Section */}
                 {displayTracks && displayTracks.length > 0 && (
                   <div className="w-full">
-                    <div className="grid grid-cols-[1.5rem_1fr_4.5rem_4rem_4rem_5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-1.5 p-1 text-[10px] sm:text-xs font-bold text-[#22c55e] border-b border-zinc-700/50 font-mono uppercase tracking-wide">
-                      <div></div>
-                      <div>track</div>
-                      <div className="text-right">daily streams</div>
-                      <div className="text-right">change</div>
-                      <div className="text-right">%change</div>
-                      <div className="text-right">total</div>
+                    <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.2rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 pb-2 text-[11px] sm:text-xs font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider">
+                      <div className="col-span-2">TRACK</div>
+                      <div className="text-right">DAILY STREAMS</div>
+                      <div className="text-right">CHANGE</div>
+                      <div className="text-right">%CHANGE</div>
+                      <div className="text-right">TOTAL</div>
                     </div>
                     
                     <div className="py-1">
                       {displayTracks.map((t: any, i: number) => {
-                         const cVal = t.changeVal || 0;
-                         const pct = t.changePct || 0;
-                         const streamCount = t.weekly !== undefined ? t.weekly : (t.dailyStreams || 0);
+                         const cVal = t.changeVal !== undefined ? t.changeVal : 0;
+                         const pct = t.changePct !== undefined ? t.changePct : 0;
+                         const streamCount = t.dailyStreams !== undefined ? t.dailyStreams : (t.weekly !== undefined ? t.weekly : 0);
                          const totalCount = t.streams !== undefined ? t.streams : (t.totalStreams || 0);
                          const isPos = cVal >= 0;
                          
                          return (
                         <div
                           key={i}
-                          className="grid grid-cols-[1.5rem_1fr_4.5rem_4rem_4rem_5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-1.5 px-1 py-1.5 text-[11px] sm:text-xs items-center hover:bg-zinc-800/40 transition-colors"
+                          className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.2rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 py-1.5 text-[11px] sm:text-xs items-center hover:bg-zinc-800/40 transition-colors border-b border-zinc-900/40"
                         >
-                          <div className="text-[10px] sm:text-xs text-[#22c55e] font-mono font-bold text-left">
-                            {i + 1}
+                          <div className="flex items-center gap-2 col-span-2 min-w-0">
+                            <span className="text-[#22c55e] font-mono font-bold text-xs shrink-0 w-4">
+                              {i + 1}
+                            </span>
+                            <span className="truncate font-sans font-medium text-white text-xs sm:text-sm">
+                              {t.title}
+                            </span>
                           </div>
-                          <div className="truncate font-sans font-medium text-white tracking-wide text-xs">
-                            {t.title}
-                          </div>
-                          <div className="text-right text-zinc-100 font-mono text-[11px] sm:text-xs">
+                          <div className="text-right text-white font-mono text-[11px] sm:text-xs">
                             {streamCount.toLocaleString()}
                           </div>
                           <div className={`text-right font-mono text-[11px] sm:text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
@@ -401,7 +404,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                           <div className={`text-right font-mono text-[11px] sm:text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
                             {isPos ? "↑ " : "↓ "}{Math.abs(pct).toFixed(2)}%
                           </div>
-                          <div className="text-right text-zinc-100 font-mono text-[11px] sm:text-xs">
+                          <div className="text-right text-white font-mono text-[11px] sm:text-xs">
                             {totalCount.toLocaleString()}
                           </div>
                         </div>
@@ -409,21 +412,22 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                     </div>
 
                     {/* Footer Section */}
-                    <div className="grid grid-cols-[1.5rem_1fr_4.5rem_4rem_4rem_5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-1.5 p-1 text-xs sm:text-sm font-bold items-center border-t border-zinc-700/50 mt-1 pt-3 font-mono">
-                      <div className="bg-[#22c55e] text-black text-[9px] sm:text-xs font-black px-1 text-center py-0.5">
-                        TOTAL
+                    <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.2rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 pt-3 border-t border-zinc-800 text-xs sm:text-sm font-bold items-center font-mono">
+                      <div className="col-span-2 flex items-center">
+                        <span className="bg-[#22c55e] text-black text-[10px] sm:text-xs font-black px-1.5 py-0.5 rounded-xs font-mono uppercase">
+                          TOTAL
+                        </span>
                       </div>
-                      <div></div>
-                      <div className="text-right text-zinc-100 font-mono">
+                      <div className="text-right text-white font-mono">
                         {weeklyStreams.toLocaleString()}
                       </div>
                       <div className={`text-right font-mono ${isOverallPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
                         {overallChangeVal > 0 ? "+" : ""}{overallChangeVal.toLocaleString()}
                       </div>
                       <div className={`text-right font-mono ${isOverallPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
-                        {isOverallPos ? "+" : ""}{overallPct.toFixed(2)}%
+                        {overallPct.toFixed(2)}%
                       </div>
-                      <div className="text-right text-zinc-100 font-mono">
+                      <div className="text-right text-white font-mono">
                         {totalStreams.toLocaleString()}
                       </div>
                     </div>
