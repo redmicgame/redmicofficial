@@ -4677,6 +4677,17 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklyStreams = Math.floor(weeklyStreams * 1.05); // +5% boost
             }
 
+            // Coachella Setlist Boost (+10% boost next week after / during performance)
+            const isCoachellaSetlistSong =
+              artistData.coachella &&
+              artistData.coachella.setlist &&
+              artistData.coachella.setlist.includes(song.id) &&
+              artistData.coachella.year === newDate.year &&
+              (newDate.week === 15 || newDate.week === 16);
+            if (isCoachellaSetlistSong) {
+              weeklyStreams = Math.floor(weeklyStreams * 1.10); // +10% boost
+            }
+
             // Kai Cenat Stream Boost
             if (artistData.twitchStreams) {
                 for (const stream of artistData.twitchStreams) {
@@ -7172,6 +7183,23 @@ Total — ${totalStreamsMillion} Million`;
           artistData.instagramFollowers =
             (artistData.instagramFollowers || 0) + instagramPassiveGain;
 
+          // Sync group members' Instagram follower gain with group account
+          if (
+            state.group &&
+            (artistId === state.group.id || state.group.members.some((m) => m.id === artistId))
+          ) {
+            state.group.members.forEach((m) => {
+              if (updatedArtistsData[m.id] && m.id !== artistId) {
+                updatedArtistsData[m.id].instagramFollowers =
+                  (updatedArtistsData[m.id].instagramFollowers || 0) + instagramPassiveGain;
+              }
+            });
+            if (artistId !== state.group.id && updatedArtistsData[state.group.id]) {
+              updatedArtistsData[state.group.id].instagramFollowers =
+                (updatedArtistsData[state.group.id].instagramFollowers || 0) + instagramPassiveGain;
+            }
+          }
+
           // Grow Spotify followers passively (boosted based on user request)
           const spotifyPassiveGain =
             Math.floor((totalWeeklyStreams / 2000) * tikTokPopMult) +
@@ -8369,6 +8397,15 @@ It is now available on your Spotify profile.
               foundArtistId = aId;
               const pushWeek = aData.lastPushToItunesWeek;
               const currentWeek = newDate.year * 52 + newDate.week;
+              if (
+                aData.coachella &&
+                aData.coachella.setlist &&
+                aData.coachella.setlist.includes(s.id) &&
+                aData.coachella.year === newDate.year &&
+                (newDate.week === 15 || newDate.week === 16)
+              ) {
+                boost *= 1.10;
+              }
               if (
                 aData.lastPushedSongId === song.songId &&
                 pushWeek &&
@@ -10529,39 +10566,59 @@ Please note: This is not a guarantee of placement, but a request for considerati
               payoutSize = Math.floor(Math.random() * (25000 - 5000)) + 5000;
             }
 
+            let stageName = "Sonora Tent";
+            if (status === "headliner") stageName = "T Mobile Stage";
+            else if (status === "mid") stageName = "Outdoor Theatre";
+            else if (status === "small") stageName = "The Yuma Tent";
+
             artistData.coachella.status = status;
             artistData.coachella.payoutSize = payoutSize;
             artistData.coachella.openingFor = openingFor;
+            artistData.coachella.stage = stageName;
+
+            let slotText = "OPENER (1 song)";
+            if (status === "headliner") slotText = "HEADLINER (10-20 songs)";
+            else if (status === "mid") slotText = "MID-TIER (8-10 songs)";
+            else if (status === "small") slotText = "SMALLER SLOT (3-5 songs)";
 
             let body = `Hi ${artistProfile?.name},
 
 We are thrilled to let you know that you have been selected to perform at Coachella ${newDate.year}!
 
-`;
-            if (status === "headliner")
-              body += `You have been selected as a HEADLINER! You will be paid $${formatNumber(payoutSize)} for your headlining set.`;
-            else if (status === "opener")
-              body += `You have been selected as an OPENER for ${openingFor}! You will be paid $${formatNumber(payoutSize)} for your performance.`;
-            else
-              body += `You got a ${status === "mid" ? "MID-TIER" : "SMALL"} slot! You will be paid $${formatNumber(payoutSize)} for your performance.`;
+Performance Details:
+• Slot: ${slotText}
+• Stage: ${stageName}
+• Payout: $${formatNumber(payoutSize)}
+${status === "opener" ? `• Opening For: ${openingFor}\n` : ""}
+Please select your setlist below. Selected setlist songs will receive a 10% boost in streams and sales after your performance!
 
+- Coachella Booking Team`;
+
+            const emailId = crypto.randomUUID();
             artistData.inbox.push({
-              id: crypto.randomUUID(),
+              id: emailId,
               sender:
                 status === "opener"
                   ? openingFor || "The Headliner"
                   : "Coachella",
               senderIcon: "coachella",
-              subject: `Coachella ${newDate.year} Status`,
+              subject: `Coachella ${newDate.year} Status - ${stageName}`,
               body,
               date: newDate,
               isRead: false,
+              offer: {
+                type: "coachellaSelection",
+                emailId,
+                slot: status,
+                stage: stageName,
+                isSetlistSelected: false,
+              },
             });
           }
         }
       }
 
-      // Week 15: Coachella Performance & Tweets
+      // Week 15: Coachella Performance & Tweets & YouTube Video
       if (newDate.week === 15) {
         for (const artistId in updatedArtistsData) {
           const artistData = updatedArtistsData[artistId];
@@ -10603,6 +10660,27 @@ We are thrilled to let you know that you have been selected to perform at Coache
               views: Math.floor(Math.random() * 2000000) + 500000,
               date: newDate,
             });
+
+            // Automatically post YouTube video after Week 15 Coachella
+            const stageName = artistData.coachella.stage || "The Yuma Tent";
+            const videoTitle = `${artistProfile?.name || 'Artist'} live @ ${stageName} Coachella ${newDate.year}`;
+            
+            const coachellaVideo = {
+              id: crypto.randomUUID(),
+              artistId: artistId,
+              title: videoTitle,
+              thumbnail: artistData.artistImages?.[0] || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+              type: "Live Performance",
+              views: Math.floor(Math.random() * 180000) + 40000,
+              likes: Math.floor(Math.random() * 15000) + 2500,
+              comments: [],
+              releaseDate: { ...newDate },
+              channelId: "coachella",
+              budget: 0,
+              quality: 90,
+            };
+
+            artistData.videos = [coachellaVideo, ...(artistData.videos || [])];
           }
         }
       }
@@ -14161,18 +14239,39 @@ We wish you the best in your future endeavors.
          date: state.date,
       };
 
+      const gainedFollowers = Math.floor(likes * 0.05);
+      const updatedArtistsData = { ...state.artistsData };
+      updatedArtistsData[state.activeArtistId] = {
+        ...activeData,
+        instagramPosts: [newPost, ...(activeData.instagramPosts || [])],
+        hype: Math.min(100, activeData.hype + hypeGained),
+        instagramFollowers: followers + gainedFollowers,
+      };
+
+      if (
+        state.group &&
+        (state.activeArtistId === state.group.id || state.group.members.some((m) => m.id === state.activeArtistId))
+      ) {
+        state.group.members.forEach((m) => {
+          if (updatedArtistsData[m.id] && m.id !== state.activeArtistId) {
+            updatedArtistsData[m.id] = {
+              ...updatedArtistsData[m.id],
+              instagramFollowers: (updatedArtistsData[m.id].instagramFollowers || 0) + gainedFollowers,
+            };
+          }
+        });
+        if (state.activeArtistId !== state.group.id && updatedArtistsData[state.group.id]) {
+          updatedArtistsData[state.group.id] = {
+            ...updatedArtistsData[state.group.id],
+            instagramFollowers: (updatedArtistsData[state.group.id].instagramFollowers || 0) + gainedFollowers,
+          };
+        }
+      }
+
       return {
         ...state,
         xPosts: [popBaseXPost, ...(state.xPosts || [])],
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            instagramPosts: [newPost, ...(activeData.instagramPosts || [])],
-            hype: Math.min(100, activeData.hype + hypeGained),
-            instagramFollowers: followers + Math.floor(likes * 0.05),
-          },
-        },
+        artistsData: updatedArtistsData,
       };
     }
     case "CREATE_INSTAGRAM_STORY": {
@@ -14219,18 +14318,38 @@ We wish you the best in your future endeavors.
       };
       
       const hypeGained = Math.floor((views / 100000) * 1.2);
-      
+      const gainedFollowers = Math.floor(views * 0.02);
+      const updatedArtistsData = { ...state.artistsData };
+      updatedArtistsData[state.activeArtistId] = {
+        ...activeData,
+        instagramReels: [newReel, ...(activeData.instagramReels || [])],
+        hype: Math.min(100, activeData.hype + hypeGained),
+        instagramFollowers: followers + gainedFollowers,
+      };
+
+      if (
+        state.group &&
+        (state.activeArtistId === state.group.id || state.group.members.some((m) => m.id === state.activeArtistId))
+      ) {
+        state.group.members.forEach((m) => {
+          if (updatedArtistsData[m.id] && m.id !== state.activeArtistId) {
+            updatedArtistsData[m.id] = {
+              ...updatedArtistsData[m.id],
+              instagramFollowers: (updatedArtistsData[m.id].instagramFollowers || 0) + gainedFollowers,
+            };
+          }
+        });
+        if (state.activeArtistId !== state.group.id && updatedArtistsData[state.group.id]) {
+          updatedArtistsData[state.group.id] = {
+            ...updatedArtistsData[state.group.id],
+            instagramFollowers: (updatedArtistsData[state.group.id].instagramFollowers || 0) + gainedFollowers,
+          };
+        }
+      }
+
       return {
         ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            instagramReels: [newReel, ...(activeData.instagramReels || [])],
-            hype: Math.min(100, activeData.hype + hypeGained),
-            instagramFollowers: followers + Math.floor(views * 0.02),
-          },
-        },
+        artistsData: updatedArtistsData,
       };
     }
     case "EDIT_INSTAGRAM_PROFILE": {
@@ -19239,6 +19358,38 @@ Let us know if you accept.`,
             coachella: activeData.coachella
               ? { ...activeData.coachella, status: "submitted" }
               : undefined,
+          },
+        },
+      };
+    }
+    case "SET_COACHELLA_SETLIST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { songIds, emailId } = action.payload;
+
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          emailId && email.id === emailId &&
+          email.offer?.type === "coachellaSelection"
+        ) {
+          return {
+            ...email,
+            offer: { ...email.offer, isSetlistSelected: true },
+          };
+        }
+        return email;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: updatedInbox,
+            coachella: activeData.coachella
+              ? { ...activeData.coachella, setlist: songIds }
+              : { year: state.date.year, status: "none", setlist: songIds },
           },
         },
       };

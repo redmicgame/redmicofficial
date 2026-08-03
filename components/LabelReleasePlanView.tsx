@@ -83,20 +83,8 @@ const LabelReleasePlanView: React.FC = () => {
                 setError('All singles must be released before the main project.'); return;
             }
         }
-        if (submission.release.type === 'Single') {
-            if (projectEraImages.filter(Boolean).length < 3) {
-                setError('You must upload 3 era images for the single.'); return;
-            }
-        }
         if(toTotalWeeks(projectDate) <= nowTotalWeeks) {
             setError('Project release date must be in the future.'); return;
-        }
-
-        
-        for (const [songId, data] of selectedSingles.entries()) {
-            if (!data.eraImages || data.eraImages.filter(Boolean).length < 3) {
-                setError('You must upload 3 era images for each single.'); return;
-            }
         }
         // Check for date clashes
         const allDates = [...singleDates, projectDate];
@@ -182,7 +170,7 @@ const LabelReleasePlanView: React.FC = () => {
                                             <option value="interlude">Interlude (-50% streams permanently)</option>
                                         </select>
                                         <div className="flex flex-col gap-1">
-                                            <label className="text-sm text-zinc-400">Era Images (Upload 3)</label>
+                                            <label className="text-sm text-zinc-400">Era Images (Optional)</label>
                                             <div className="flex gap-2">
                                                 {[0, 1, 2].map((idx) => (
                                                     <div key={idx} className="flex-1">
@@ -261,7 +249,7 @@ const LabelReleasePlanView: React.FC = () => {
                                 <option value="interlude">Interlude (-50% streams permanently)</option>
                             </select>
                             <div className="flex flex-col gap-1">
-                                <label className="text-sm text-zinc-400">Era Images (Upload 3)</label>
+                                <label className="text-sm text-zinc-400">Era Images (Optional)</label>
                                 <div className="flex gap-2">
                                     {[0, 1, 2].map((idx) => (
                                         <div key={idx} className="flex-1">

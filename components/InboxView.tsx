@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Email, GeniusOffer, FallonOffer, PopBaseOffer } from '../types';
+import CoachellaSetlistModal from './CoachellaSetlistModal';
 import MenuIcon from './icons/MenuIcon';
 import StarIcon from './icons/StarIcon';
 import SpotifyIcon from './icons/SpotifyIcon';
@@ -167,6 +168,7 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
     const [reply, setReply] = useState('');
     const [showSoundtrackConfirm, setShowSoundtrackConfirm] = useState(false);
     const [billionsClubPreviewUrl, setBillionsClubPreviewUrl] = useState<string | null>(null);
+    const [isCoachellaModalOpen, setIsCoachellaModalOpen] = useState(false);
 
     const formattedDate = useMemo(() => {
         if (!email.date) return 'Unknown Date';
@@ -267,6 +269,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 break;
             case 'coachellaOffer':
                 dispatch({ type: 'SUBMIT_COACHELLA', payload: { emailId: email.id } });
+                break;
+            case 'coachellaSelection':
+                setIsCoachellaModalOpen(true);
                 break;
         }
     };
@@ -663,6 +668,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 acceptedText = "Submission Sent";
                 isAccepted = email.offer.isSubmitted;
                 break;
+            case 'coachellaSelection':
+                buttonText = email.offer.isSetlistSelected ? "Update Setlist" : "Select Setlist";
+                buttonClass = "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-black shadow-orange-500/20";
+                acceptedText = "Setlist Confirmed";
+                isAccepted = false;
+                break;
         }
 
         if (!isActionable) return null;
@@ -715,6 +726,15 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                     {email.body || email.content}
                 </div>
                 {renderOffer()}
+                {email.offer?.type === 'coachellaSelection' && (
+                    <CoachellaSetlistModal
+                        isOpen={isCoachellaModalOpen}
+                        onClose={() => setIsCoachellaModalOpen(false)}
+                        slot={email.offer.slot}
+                        stage={email.offer.stage}
+                        emailId={email.id}
+                    />
+                )}
             </main>
         </div>
     );

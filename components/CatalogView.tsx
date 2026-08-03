@@ -525,19 +525,19 @@ const CatalogView: React.FC = () => {
                                     <div key={project.id} className={`bg-zinc-800 p-3 rounded-lg relative ${isTakenDown ? 'opacity-50' : ''}`}>
                                         {isTakenDown && <div className="absolute top-2 right-2 text-xs font-bold bg-red-900/80 text-red-400 px-2 py-1 rounded-full z-10">TAKEN DOWN</div>}
                                         <div className="flex items-center gap-4">
-                                            <label htmlFor={`cover-upload-${project.id}`} className="cursor-pointer group relative flex-shrink-0">
+                                            <div onClick={() => document.getElementById(`cover-upload-album-${project.id}`)?.click()} className="cursor-pointer group relative flex-shrink-0">
                                                 <img src={project.coverArt} alt={project.title} className="w-20 h-20 rounded-md object-cover"/>
                                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
                                                     <span className="text-white text-xs font-bold">Change</span>
                                                 </div>
                                                 <input
                                                     type="file"
-                                                    id={`cover-upload-${project.id}`}
+                                                    id={`cover-upload-album-${project.id}`}
                                                     className="hidden"
                                                     accept="image/*"
                                                     onChange={(e) => handleCoverArtChange(e, project.id)}
                                                 />
-                                            </label>
+                                            </div>
                                             <div className="flex-grow">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                     <p className="font-bold text-lg">{project.title} {(project as any).hasDeluxe ? '(Deluxe)' : ''}</p>
@@ -552,13 +552,16 @@ const CatalogView: React.FC = () => {
                                                     <StatPill label="Album Chart" value={albumChartInfo.current} />
                                                     <StatPill label="Peak" value={albumChartInfo.peak} />
                                                 </div>
-                                                {canTakeDown && !isTakenDown && (
-                                                    <div className="mt-3 flex items-center gap-2">
+                                                <div className="mt-3 flex items-center gap-2">
+                                                    <button onClick={() => document.getElementById(`cover-upload-album-${project.id}`)?.click()} className="bg-zinc-700 hover:bg-zinc-600 text-white px-3 py-1 rounded-md text-xs font-bold transition-colors">
+                                                        Edit Cover
+                                                    </button>
+                                                    {canTakeDown && !isTakenDown && (
                                                         <button onClick={() => setTakeDownTarget({ type: 'release', id: project.id, title: project.title })} className="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1 rounded-md text-xs font-bold transition-colors">
                                                             Take Down
                                                         </button>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                                 {isTakenDown && (
                                                     <div className="mt-3 flex items-center gap-2">
                                                         <button 
@@ -734,19 +737,25 @@ const CatalogView: React.FC = () => {
                                         {isTakenDown && <div className="absolute top-2 right-2 text-xs font-bold bg-red-900/80 text-red-400 px-2 py-1 rounded-full z-10">TAKEN DOWN</div>}
                                         <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-4">
-                                                <label htmlFor={`cover-upload-${song.releaseId}`} className="cursor-pointer group relative flex-shrink-0">
+                                                <div onClick={() => document.getElementById(`cover-upload-single-${song.id}`)?.click()} className="cursor-pointer group relative flex-shrink-0">
                                                     <img src={song.coverArt} alt={song.title} className="w-20 h-20 rounded-md object-cover"/>
                                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
                                                         <span className="text-white text-xs font-bold">Change</span>
                                                     </div>
                                                     <input
                                                         type="file"
-                                                        id={`cover-upload-${song.releaseId}`}
+                                                        id={`cover-upload-single-${song.id}`}
                                                         className="hidden"
                                                         accept="image/*"
-                                                        onChange={(e) => handleCoverArtChange(e, song.releaseId!)}
+                                                        onChange={(e) => {
+                                                            if (song.releaseId) {
+                                                                handleCoverArtChange(e, song.releaseId);
+                                                            } else {
+                                                                handleSongCoverArtChange(song.id, e);
+                                                            }
+                                                        }}
                                                     />
-                                                </label>
+                                                </div>
                                                 <div className="flex-grow">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2 mb-1">

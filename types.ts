@@ -530,6 +530,14 @@ export interface CoachellaOffer {
   isSubmitted: boolean;
 }
 
+export interface CoachellaSelectionOffer {
+  type: "coachellaSelection";
+  emailId: string;
+  slot: "headliner" | "mid" | "small" | "opener";
+  stage: string;
+  isSetlistSelected?: boolean;
+}
+
 export interface CheatingScandalEmail {
   type: "cheatingScandal";
   relationshipId: string;
@@ -643,6 +651,7 @@ export interface Email {
     | OscarsNominationOffer
     | OscarRedCarpetOffer
     | CoachellaOffer
+    | CoachellaSelectionOffer
     | AmaSubmissionOffer
     | AmaNominationOffer
     | AmaRedCarpetOffer
@@ -1682,6 +1691,8 @@ export interface ArtistData {
       | "opener";
     openingFor?: string;
     payoutSize?: number;
+    stage?: string;
+    setlist?: string[];
   };
   artistVideoThumbnails: any[]; // legacy string[], now XMedia[]
   paparazziPhotos: PaparazziPhoto[];
@@ -2072,6 +2083,7 @@ export type GameAction =
     }
   | { type: "CHANGE_VIEW"; payload: GameView }
   | { type: "SUBMIT_COACHELLA"; payload: { emailId: string } }
+  | { type: "SET_COACHELLA_SETLIST"; payload: { songIds: string[]; emailId?: string } }
   | { type: "CHANGE_TAB"; payload: Tab }
   | { type: "SWITCH_YOUTUBE_CHANNEL"; payload: "artist" | "label" }
   | { type: "APPLY_YOUTUBE_PARTNER" }
