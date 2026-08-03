@@ -932,8 +932,6 @@ export interface LabelSubmission {
     singleType?: 'lead' | 'standalone' | 'interlude';
     eraImages?: string[];
   }[];
-  projectSingleType?: 'lead' | 'standalone' | 'interlude';
-  projectEraImages?: string[];
   promoBudget?: number;
   promoBudgetSpent?: number;
   hasCountdownPage?: boolean;
@@ -1840,6 +1838,7 @@ export interface GameState {
   chartHistory: ChartHistory;
   videoChartHistory: ChartHistory;
   spotifyGlobal: ChartEntry[];
+  prevItunesChart?: { uniqueId: string; rank: number }[];
   spotifyGlobalMusicVideos: VideoChartEntry[];
   spotifyUS?: ChartEntry[];
   spotifyCanada?: ChartEntry[];

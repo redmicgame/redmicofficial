@@ -56,7 +56,7 @@ const ImdbView: React.FC = () => {
 
     const allCredits = [...roles, ...soundtracks, ...podcastRoles, ...guestPodcasts].sort((a, b) => b.year - a.year);
 
-    const releasedTrailers = roles.filter(r => r.status === 'Released' && r.trailerUrl);
+    const releasedTrailers = roles.filter(r => !!r.trailerUrl);
     const latestTrailer = releasedTrailers.length > 0 ? releasedTrailers[0] : null;
 
     const hasSoundtrack = soundtracks.length > 0;

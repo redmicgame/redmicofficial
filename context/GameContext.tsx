@@ -9316,6 +9316,132 @@ It is now available on your Spotify profile.
       // --- NPC Pop Base #1 Debut Posts ---
       let finalState: GameState = { ...state };
       const npcPopBasePosts: XPost[] = [];
+
+      // --- US ITUNES CHARTDATA POSTS ---
+      const currentItunesSongs = [...allContenders].map((song) => {
+        const hash = song.uniqueId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const divisor = 750 + (hash % 250);
+        let boost = 1;
+        if (song.isPlayerSong && song.songId) {
+          const aData = updatedArtistsData[state.activeArtistId];
+          if (aData && aData.lastPushedSongId === song.songId && aData.lastPushToItunesWeek) {
+            const currentWeek = newDate.year * 52 + newDate.week;
+            if (currentWeek - aData.lastPushToItunesWeek <= 1) {
+              boost = 5 + Math.random() * 5;
+            }
+          }
+        }
+        const sales = (song as any).isItunesVersion
+          ? (song as any).itunesSales
+          : Math.floor((song.weeklyStreams || 0) / divisor) * boost;
+        return { ...song, itunesSales: sales };
+      }).sort((a, b) => b.itunesSales - a.itunesSales).slice(0, 100);
+
+      const prevItunesMap = new Map((state.prevItunesChart || []).map((e) => [e.uniqueId, e.rank]));
+      const activeDataForBeef = updatedArtistsData[state.activeArtistId];
+      const isPlayerInBeef = activeDataForBeef?.fanWarStatus && activeDataForBeef.fanWarStatus.weeksRemaining > 0;
+
+      currentItunesSongs.forEach((song, idx) => {
+        if (!song.isPlayerSong) return;
+        const rank = idx + 1;
+        const lastWeekRank = prevItunesMap.get(song.uniqueId) ?? null;
+
+        const isSongArtistInBeef = isPlayerInBeef;
+        const beefSuffix = isSongArtistInBeef
+          ? `, following beef with ${activeDataForBeef.fanWarStatus!.targetArtistName}.`
+          : `.`;
+
+        if (rank === 1 && (lastWeekRank === null || lastWeekRank > 1)) {
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content: `${song.artist}'s "${song.title}" has reached #1 on US iTunes${beefSuffix}`,
+            image: song.coverArt,
+            likes: Math.floor(Math.random() * 60000) + 20000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 500000) + 100000,
+            date: newDate,
+          });
+        } else if (rank > 1 && rank <= 5 && (lastWeekRank === null || lastWeekRank > 5)) {
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content: `${song.artist}'s "${song.title}" has entered the top 5 on US iTunes${beefSuffix}`,
+            image: song.coverArt,
+            likes: Math.floor(Math.random() * 30000) + 10000,
+            retweets: Math.floor(Math.random() * 8000) + 2000,
+            views: Math.floor(Math.random() * 300000) + 50000,
+            date: newDate,
+          });
+        }
+      });
+      finalState.prevItunesChart = currentItunesSongs.map((s, i) => ({ uniqueId: s.uniqueId, rank: i + 1 }));
+
+      // --- GLOBAL SPOTIFY REPLACES AT #1 ---
+      const newSpotifyNo1 = newSpotifyGlobal[0];
+      const prevSpotifyNo1 = state.spotifyGlobal && state.spotifyGlobal[0] ? state.spotifyGlobal[0] : null;
+
+      if (
+        newSpotifyNo1 &&
+        prevSpotifyNo1 &&
+        newSpotifyNo1.isPlayerSong &&
+        newSpotifyNo1.uniqueId !== prevSpotifyNo1.uniqueId &&
+        newSpotifyNo1.artist === prevSpotifyNo1.artist
+      ) {
+        let pronoun = "herself";
+        const artistProfile = state.soloArtist || state.group?.members.find((m) => m.id === state.activeArtistId);
+        if (artistProfile && (artistProfile as any).pronouns) {
+          const p = (artistProfile as any).pronouns;
+          if (p === "he/him") pronoun = "himself";
+          else if (p === "they/them") pronoun = "themselves";
+        }
+
+        npcPopBasePosts.push({
+          id: crypto.randomUUID(),
+          authorId: "chartdata",
+          content: `${newSpotifyNo1.artist} replaces ${pronoun} at #1 on the global Spotify chart.\n\n"${newSpotifyNo1.title}" replaces "${prevSpotifyNo1.title}".`,
+          image: newSpotifyNo1.coverArt,
+          image2: prevSpotifyNo1.coverArt,
+          likes: Math.floor(Math.random() * 80000) + 30000,
+          retweets: Math.floor(Math.random() * 20000) + 5000,
+          views: Math.floor(Math.random() * 1000000) + 300000,
+          date: newDate,
+        });
+      }
+
+      // --- GLOBAL SPOTIFY NEW PEAK ---
+      const activeArtistProfile = state.soloArtist || state.group?.members.find((m) => m.id === state.activeArtistId) || state.group;
+      const artistPic = activeArtistProfile?.image || (activeArtistProfile as any)?.imageUrl || "";
+
+      newSpotifyGlobal.forEach((song) => {
+        if (!song.isPlayerSong) return;
+        const prevPeak = state.chartHistory?.[song.uniqueId]?.peak ?? 999;
+        if (song.rank < prevPeak) {
+          const rawStreams = song.weeklyStreams || 0;
+          let streamText = "";
+          if (rawStreams >= 1000000) {
+            const mVal = (rawStreams / 1000000).toLocaleString("en-US", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 3,
+            });
+            streamText = `${mVal} million`;
+          } else {
+            streamText = `${(rawStreams / 1000).toFixed(1)} thousand`;
+          }
+
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content: `${song.artist}'s "${song.title}" reaches a new peak of #${song.rank} on the global Spotify chart with ${streamText} streams.`,
+            image: song.coverArt,
+            image2: artistPic || undefined,
+            likes: Math.floor(Math.random() * 40000) + 10000,
+            retweets: Math.floor(Math.random() * 12000) + 2000,
+            views: Math.floor(Math.random() * 400000) + 80000,
+            date: newDate,
+          });
+        }
+      });
       const hot100One = newBillboardHot100[0];
       const topAlbumsOne = newBillboardTopAlbums[0];
 
@@ -21406,12 +21532,13 @@ Let us know if you accept.`,
       if (!role) return state;
       
       const newEmails = [...activeData.inbox];
-      if (role.coverUrl) { // if cover is already set, trigger premiere
+      const hasPremiere = newEmails.some(e => e.offer?.type === 'actingPremiere' && e.offer.roleId === role.id);
+      if (!hasPremiere) {
           newEmails.push({
               id: crypto.randomUUID(),
               sender: "Production Team",
               subject: `Premiere Invitation: ${role.title}`,
-              body: `The trailer and cover are live and the production is ready! You are cordially invited to the premiere of "${role.title}".`,
+              body: `The trailer is live and the production is ready! You are cordially invited to the premiere of "${role.title}".`,
               date: state.date,
               isRead: false,
               senderIcon: "imdb",
@@ -21443,12 +21570,13 @@ Let us know if you accept.`,
       if (!role) return state;
       
       const newEmails = [...activeData.inbox];
-      if (role.trailerUrl) { // if trailer is already set, trigger premiere
+      const hasPremiere = newEmails.some(e => e.offer?.type === 'actingPremiere' && e.offer.roleId === role.id);
+      if (!hasPremiere) {
           newEmails.push({
               id: crypto.randomUUID(),
               sender: "Production Team",
               subject: `Premiere Invitation: ${role.title}`,
-              body: `The trailer and cover are live and the production is ready! You are cordially invited to the premiere of "${role.title}".`,
+              body: `The production cover is live and ready! You are cordially invited to the premiere of "${role.title}".`,
               date: state.date,
               isRead: false,
               senderIcon: "imdb",
