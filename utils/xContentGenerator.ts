@@ -611,6 +611,37 @@ export const generateWeeklyXContent = (
       views: Math.floor(Math.random() * 4000000) + 1000000,
       date,
     });
+
+    // If unfollowed due to shady tweets (beef), option for GQ / Variety interview article quote
+    if (isBeef) {
+      const outlet = pickRandom(["GQ", "Variety"]);
+      const feudingQuotes = [
+        "I don't know them, we have no connection to each other. There's no backstory... I don't know where it came from.",
+        "I wish them the best, honestly. Social media brings out weird energy in people sometimes, but I'm focused on my music.",
+        "It's just disappointing because I used to respect their work, but tweeting shady things for attention is pretty childish.",
+        "I don't really pay attention to the noise online. Everyone is allowed to have an opinion, even if it's passive aggressive.",
+        "Honestly? I think they're insecure. When you're winning, you don't need to throw sub-tweets at other artists.",
+        "We're in completely different lanes. Whatever they're trying to start, I'm not giving it any of my energy.",
+        "I actually thought we were cool, so seeing those tweets was strange. But it is what it is.",
+        "I don't have time for internet drama. If you have an issue with me, say it to my face or put it in a song.",
+        "Some people feel the need to tear others down to lift themselves up. I'm just sending them love and light.",
+        "I was told about the tweets by my team. I just muted them and moved on. Life's too short for fake feuds.",
+      ];
+      const selectedQuote = pickRandom(feudingQuotes);
+      const slug = chosenNpc.toLowerCase().replace(/[^a-z0-9]/g, "-");
+
+      newPosts.push({
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `${chosenNpc} talks to ${outlet} about feuding with ${artistName} earlier this year:\n\n“${selectedQuote}”\n\n(${outlet.toLowerCase()}.com/story/${slug}-${outlet.toLowerCase()}-cover)`,
+        image: npcImg,
+        image2: userImg,
+        likes: Math.floor(Math.random() * 350000) + 120000,
+        retweets: Math.floor(Math.random() * 60000) + 15000,
+        views: Math.floor(Math.random() * 5000000) + 1500000,
+        date,
+      });
+    }
   }
 
   // PopBase Brand Ambassador Deal Post
