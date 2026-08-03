@@ -10,7 +10,7 @@ import {
   XMessage,
 } from "../types";
 import { formatNumber } from "../context/GameContext";
-import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES } from "../constants";
+import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES, getArtistImage, NPC_ERAS } from "../constants";
 import { ARTIST_GIFS } from "../data/artistGifs";
 
 type PlayerSongWithChart = Song & { chartRank?: number };
@@ -539,6 +539,80 @@ export const generateWeeklyXContent = (
     delete artistData.streamsRemovedThisWeek;
   }
 
+  // --- CELEBRITY INSTAGRAM FOLLOW EVENT ---
+  const currentIGFollowers = artistData.instagramFollowers || 0;
+  const currentPopularity = artistData.popularity || 0;
+  const currentHype = artistData.hype || 0;
+  
+  if (currentPopularity >= 10 || currentHype >= 10 || currentIGFollowers >= 20000) {
+    const existingNpcFollowers = artistData.instagramNpcFollowers || [];
+    const currentYear = date.year;
+    
+    const availableNpcs = NPC_ARTIST_NAMES.filter((name) => {
+      if (existingNpcFollowers.includes(name)) return false;
+      const era = NPC_ERAS[name];
+      if (era && (currentYear < era.start || currentYear > era.end)) return false;
+      return true;
+    });
+
+    const followChance = Math.min(0.7, 0.25 + (currentPopularity / 200) + (currentHype / 300));
+    
+    if (availableNpcs.length > 0 && Math.random() < followChance) {
+      const chosenNpc = pickRandom(availableNpcs);
+      artistData.instagramNpcFollowers = [...existingNpcFollowers, chosenNpc];
+
+      const userImg = (artistProfile as any)?.image || (artistProfile as any)?.avatar || artistImages[0] || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470";
+      const npcImg = getArtistImage(chosenNpc);
+
+      const userIsFollowingBack = (artistData.instagramFollowing || []).includes(chosenNpc);
+      const postText = userIsFollowingBack
+        ? `${chosenNpc} has followed ${artistName} back on Instagram.`
+        : `${chosenNpc} has followed ${artistName} on Instagram.`;
+
+      newPosts.push({
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: postText,
+        image: npcImg,
+        image2: userImg,
+        likes: Math.floor(Math.random() * 200000) + 60000,
+        retweets: Math.floor(Math.random() * 30000) + 8000,
+        views: Math.floor(Math.random() * 3500000) + 800000,
+        date,
+      });
+
+      const bonusIG = Math.floor(Math.random() * 20000) + 5000;
+      artistData.instagramFollowers = (artistData.instagramFollowers || 0) + bonusIG;
+    }
+  }
+
+  // --- CELEBRITY INSTAGRAM UNFOLLOW EVENT ---
+  const currentNpcFollowers = Array.isArray(artistData.instagramNpcFollowers) ? artistData.instagramNpcFollowers : [];
+  if (currentNpcFollowers.length > 0 && Math.random() < 0.2) {
+    const chosenNpc = pickRandom(currentNpcFollowers);
+    artistData.instagramNpcFollowers = currentNpcFollowers.filter((n) => n !== chosenNpc);
+
+    const userImg = (artistProfile as any)?.image || (artistProfile as any)?.avatar || artistImages[0] || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470";
+    const npcImg = getArtistImage(chosenNpc);
+
+    const isBeef = Math.random() < 0.5;
+    const postText = isBeef
+      ? `${chosenNpc} has unfollowed ${artistName}, because of ${artistName}'s shady tweets.`
+      : `${chosenNpc} has unfollowed ${artistName} on Instagram.`;
+
+    newPosts.push({
+      id: crypto.randomUUID(),
+      authorId: "popbase",
+      content: postText,
+      image: npcImg,
+      image2: userImg,
+      likes: Math.floor(Math.random() * 250000) + 80000,
+      retweets: Math.floor(Math.random() * 40000) + 10000,
+      views: Math.floor(Math.random() * 4000000) + 1000000,
+      date,
+    });
+  }
+
   // PopBase Brand Ambassador Deal Post
   if (artistData.activeBrandDeals && artistData.activeBrandDeals.length > 0) {
       // Find a deal that hasn't been announced yet? Or just announce randomly? Let's assume we announce deals signed this week.
@@ -635,10 +709,12 @@ export const generateWeeklyXContent = (
          id: "spotify_snapshot",
          username: "SpotifySnapshot",
          name: "Spotify Snapshot",
+         displayName: "Spotify Snapshot",
          isPlayer: false,
          isVerified: true,
-         followers: 5400000,
-         avatarUrl: "https://api.dicebear.com/7.x/identicon/svg?seed=spotify"
+         followersCount: 5400000,
+         followingCount: 120,
+         avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=spotify"
       });
     }
   }
@@ -740,7 +816,7 @@ export const generateWeeklyXContent = (
         content: `${artistName}'s '${sub.release.title}' aiming for #${expectedPos} debut on the Billboard 200 with ${unitsText} units first week (via @HITSDD).${biggestText}`,
         image: sub.release.coverArt,
         image2:
-          artistProfile?.imageUrl ||
+          (artistProfile as any)?.image || (artistProfile as any)?.imageUrl ||
           "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470",
         likes: Math.floor(Math.random() * 20000) + 10000,
         retweets: Math.floor(Math.random() * 5000) + 1000,
@@ -1716,7 +1792,7 @@ export const generateWeeklyXContent = (
       authorId: "chartdata",
       content: `${artistName} has now surpassed 1 billion streams worldwide.`,
       image:
-        artistProfile?.imageUrl ||
+        (artistProfile as any)?.image || (artistProfile as any)?.imageUrl ||
         "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470",
       likes: Math.floor(Math.random() * 80000) + 30000,
       retweets: Math.floor(Math.random() * 20000) + 5000,

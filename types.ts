@@ -1654,6 +1654,9 @@ export interface ArtistData {
   instagramStories?: InstagramStory[];
   instagramReels?: InstagramReel[];
   instagramVerified?: boolean;
+  instagramNpcFollowers?: string[];
+  instagramFollowing?: string[];
+  instagramFollowedBackEvents?: string[];
   spotifyFollowers?: number;
   videos: Video[];
   youtubeStoreUnlocked: boolean;
@@ -2478,6 +2481,8 @@ export type GameAction =
       type: "CREATE_INSTAGRAM_COMMUNITY";
       payload: { name: string };
     }
+  | { type: "FOLLOW_INSTAGRAM_NPC"; payload: { npcName: string } }
+  | { type: "UNFOLLOW_INSTAGRAM_NPC"; payload: { npcName: string } }
   | { type: "CREATE_ONLYFANS_POST"; payload: { post: OnlyFansPost } }
   | {
       type: "ACCEPT_ONLYFANS_REQUEST";

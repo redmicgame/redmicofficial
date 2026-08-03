@@ -7,6 +7,7 @@ import HeartIcon from './icons/HeartIcon';
 import CommentIcon from './icons/CommentIcon';
 import HomeIcon from './icons/HomeIcon';
 import { InstagramPost, InstagramReel, InstagramStory } from '../types';
+import { NPC_ARTIST_NAMES, getArtistImage } from '../constants';
 
 const VerifiedBadge = () => (
     <svg aria-label="Verified" className="ml-1" fill="#0095F6" height="12" viewBox="0 0 40 40" width="12"><title>Verified</title><path d="M19.998 3.094 14.638 0l-2.972 5.15H5.432v6.354L0 14.64 3.094 20 0 25.359l5.432 3.137v5.905h5.975L14.638 40l5.36-3.094L25.358 40l3.232-5.6h6.162v-6.01L40 25.359 36.905 20 40 14.641l-5.248-3.03v-6.46h-6.419L25.358 0l-5.36 3.094Zm7.415 11.225 2.254 2.287-11.43 11.5-6.835-6.93 2.244-2.258 4.587 4.581 9.18-9.18Z" fillRule="evenodd"></path></svg>
@@ -108,8 +109,9 @@ const InstagramReelPost: React.FC<{ reel: InstagramReel, username: string, userA
 
 const InstagramView: React.FC = () => {
     const { activeArtist, activeArtistData, dispatch } = useGame();
-    const [currentTab, setCurrentTab] = useState<'home' | 'profile' | 'create' | 'reels'>('profile');
+    const [currentTab, setCurrentTab] = useState<'home' | 'profile' | 'create' | 'reels' | 'discover' | 'followers' | 'following'>('profile');
     const [profileTab, setProfileTab] = useState<'grid' | 'reels'>('grid');
+    const [searchQuery, setSearchQuery] = useState('');
     
     // Create state
     const [createType, setCreateType] = useState<'post' | 'story' | 'reel'>('post');
@@ -249,6 +251,9 @@ const InstagramView: React.FC = () => {
                     {currentTab === 'create' && <span>New post</span>}
                     {currentTab === 'home' && <span className="font-serif italic font-bold text-xl tracking-tight">Instagram</span>}
                     {currentTab === 'reels' && <span>Reels</span>}
+                    {currentTab === 'discover' && <span>Explore Celebrities</span>}
+                    {currentTab === 'followers' && <span>Followers</span>}
+                    {currentTab === 'following' && <span>Following</span>}
                 </div>
                 <div className="w-6 h-6"></div>
             </div>
@@ -376,12 +381,12 @@ const InstagramView: React.FC = () => {
                                         <span className="font-bold text-base">{formatNumber(myPosts.length)}</span>
                                         <span className="text-[13px] text-zinc-300">posts</span>
                                     </div>
-                                    <div className="flex flex-col items-center">
+                                    <div onClick={() => setCurrentTab('followers')} className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
                                         <span className="font-bold text-base">{formatNumber(activeArtistData.instagramFollowers || 0)}</span>
                                         <span className="text-[13px] text-zinc-300">followers</span>
                                     </div>
-                                    <div className="flex flex-col items-center">
-                                        <span className="font-bold text-base">0</span>
+                                    <div onClick={() => setCurrentTab('following')} className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
+                                        <span className="font-bold text-base">{formatNumber((activeArtistData.instagramFollowing || []).length)}</span>
                                         <span className="text-[13px] text-zinc-300">following</span>
                                     </div>
                                 </div>
@@ -535,6 +540,132 @@ const InstagramView: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {(currentTab === 'discover' || currentTab === 'followers' || currentTab === 'following') && (
+                    <div className="p-4 w-full h-full flex flex-col bg-black">
+                        {/* Subtabs for navigation */}
+                        <div className="flex border-b border-zinc-800 mb-3 text-xs sm:text-sm font-semibold">
+                            <button
+                                onClick={() => setCurrentTab('discover')}
+                                className={`flex-1 py-2 text-center border-b-2 ${currentTab === 'discover' ? 'border-white text-white' : 'border-transparent text-zinc-500'}`}
+                            >
+                                Celebrities
+                            </button>
+                            <button
+                                onClick={() => setCurrentTab('followers')}
+                                className={`flex-1 py-2 text-center border-b-2 ${currentTab === 'followers' ? 'border-white text-white' : 'border-transparent text-zinc-500'}`}
+                            >
+                                Followers ({ formatNumber(activeArtistData.instagramFollowers || 0) })
+                            </button>
+                            <button
+                                onClick={() => setCurrentTab('following')}
+                                className={`flex-1 py-2 text-center border-b-2 ${currentTab === 'following' ? 'border-white text-white' : 'border-transparent text-zinc-500'}`}
+                            >
+                                Following ({ formatNumber((activeArtistData.instagramFollowing || []).length) })
+                            </button>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="mb-3 relative">
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search celebrities..."
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 px-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                            />
+                        </div>
+
+                        {currentTab === 'followers' && (
+                            <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg p-2.5 mb-2 text-xs text-zinc-300 flex items-center justify-between shrink-0">
+                                <span><strong className="text-white">{formatNumber(activeArtistData.instagramFollowers || 0)}</strong> Total Followers</span>
+                                <span className="text-zinc-400 text-[11px]">{(activeArtistData.instagramNpcFollowers || []).length} Verified Stars</span>
+                            </div>
+                        )}
+
+                        {/* Celebrity list */}
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 hide-scrollbar">
+                            {(() => {
+                                const npcFollowersList = activeArtistData.instagramNpcFollowers || [];
+                                const userFollowingList = activeArtistData.instagramFollowing || [];
+                                
+                                let targetList: string[] = [];
+                                if (currentTab === 'followers') {
+                                    targetList = npcFollowersList;
+                                } else if (currentTab === 'following') {
+                                    targetList = userFollowingList;
+                                } else {
+                                    targetList = NPC_ARTIST_NAMES;
+                                }
+
+                                if (searchQuery.trim()) {
+                                    targetList = targetList.filter(name => name.toLowerCase().includes(searchQuery.toLowerCase()));
+                                }
+
+                                if (targetList.length === 0) {
+                                    return (
+                                        <div className="text-center py-10 text-zinc-500 text-xs sm:text-sm px-4">
+                                            {currentTab === 'followers'
+                                                ? `You have ${formatNumber(activeArtistData.instagramFollowers || 0)} total followers (fans). No celebrities are following you yet — gain hype and popularity to attract star followers!`
+                                                : currentTab === 'following'
+                                                ? "You aren't following any celebrities yet."
+                                                : "No artists found."}
+                                        </div>
+                                    );
+                                }
+
+                                return targetList.map((npcName) => {
+                                    const isFollowedByNpc = npcFollowersList.includes(npcName);
+                                    const isFollowingNpc = userFollowingList.includes(npcName);
+                                    const img = getArtistImage(npcName);
+                                    const handle = `@${npcName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+                                    return (
+                                        <div key={npcName} className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80">
+                                            <div className="flex items-center gap-3">
+                                                <img src={img} alt={npcName} className="w-10 h-10 rounded-full object-cover border border-zinc-700" />
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-xs sm:text-sm text-white flex items-center gap-0.5">
+                                                        {npcName} <VerifiedBadge />
+                                                    </span>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <span className="text-[11px] text-zinc-400">{handle}</span>
+                                                        {isFollowedByNpc && (
+                                                            <span className="text-[9px] text-zinc-300 bg-zinc-800 px-1.5 py-0.5 rounded font-medium">Follows you</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {isFollowingNpc ? (
+                                                <button
+                                                    onClick={() => dispatch({ type: 'UNFOLLOW_INSTAGRAM_NPC', payload: { npcName } })}
+                                                    className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs transition-colors shrink-0"
+                                                >
+                                                    Following
+                                                </button>
+                                            ) : isFollowedByNpc ? (
+                                                <button
+                                                    onClick={() => dispatch({ type: 'FOLLOW_INSTAGRAM_NPC', payload: { npcName } })}
+                                                    className="px-3 py-1.5 rounded-lg bg-[#0095F6] hover:bg-blue-600 text-white font-bold text-xs transition-colors shadow-sm shrink-0"
+                                                >
+                                                    Follow Back
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => dispatch({ type: 'FOLLOW_INSTAGRAM_NPC', payload: { npcName } })}
+                                                    className="px-3 py-1.5 rounded-lg bg-[#0095F6] hover:bg-blue-600 text-white font-bold text-xs transition-colors shrink-0"
+                                                >
+                                                    Follow
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Bottom Nav */}
@@ -542,7 +673,7 @@ const InstagramView: React.FC = () => {
                 <button onClick={() => setCurrentTab('home')} className={`hover:text-zinc-300 transition-colors ${currentTab === 'home' ? 'text-white' : 'text-zinc-400'}`}>
                     <HomeIcon className="w-7 h-7" />
                 </button>
-                <button className="hover:text-zinc-300 transition-colors text-zinc-400">
+                <button onClick={() => setCurrentTab('discover')} className={`hover:text-zinc-300 transition-colors ${currentTab === 'discover' || currentTab === 'followers' || currentTab === 'following' ? 'text-white' : 'text-zinc-400'}`}>
                     <svg aria-label="Search" fill="currentColor" height="24" viewBox="0 0 24 24" width="24"><path d="M19 10.5A8.5 8.5 0 1 1 10.5 2a8.5 8.5 0 0 1 8.5 8.5Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path><line fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" x1="16.511" x2="22" y1="16.511" y2="22"></line></svg>                
                 </button>
                 <button onClick={() => setCurrentTab('create')} className={`hover:text-zinc-300 transition-colors ${currentTab === 'create' ? 'text-white' : 'text-zinc-400'}`}>

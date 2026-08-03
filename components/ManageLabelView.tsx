@@ -1,4 +1,4 @@
-import { NPC_ARTIST_IMAGES } from "../constants";
+import { NPC_ARTIST_IMAGES, getArtistImage } from "../constants";
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -113,7 +113,7 @@ const ManageLabelView: React.FC = () => {
                                         {isExpired && <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">Contract Expired</div>}
                                         
                                         <div className="flex flex-row items-center gap-3">
-                                            <img src={npcProfile?.coverArt || NPC_ARTIST_IMAGES[npc.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(npc.name)}&background=random&color=fff&size=250`} className="w-12 h-12 rounded-full object-cover" alt={npc.name} />
+                                            <img src={npcProfile?.coverArt || getArtistImage(npc.name)} className="w-12 h-12 rounded-full object-cover" alt={npc.name} />
                                             <div>
                                                 <h3 className="font-bold text-lg leading-tight">{npc.name}</h3>
                                                 <p className="text-sm text-zinc-400">Generated: <span className="text-green-400 font-mono">${formatNumber(Math.floor(npc.revenueGenerated))}</span></p>
@@ -143,7 +143,7 @@ const ManageLabelView: React.FC = () => {
                         {uniqueAvailableNpcs.map(npc => (
                             <div key={npc.uniqueId} className="bg-zinc-800 p-3 rounded-xl flex items-center justify-between border border-zinc-700">
                                 <div className="flex items-center gap-3 w-[60%]">
-                                    <img src={npc.coverArt || NPC_ARTIST_IMAGES[npc.artist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(npc.artist)}&background=random&color=fff&size=250`} className="w-12 h-12 rounded-full object-cover" alt={npc.artist} />
+                                    <img src={getArtistImage(npc.artist, npc.coverArt)} className="w-12 h-12 rounded-full object-cover" alt={npc.artist} />
                                     <div className="truncate shrink">
                                         <h3 className="font-bold truncate">{npc.artist}</h3>
                                         <p className="text-xs text-zinc-400 truncate">Top pop: {formatNumber(npc.basePopularity)}</p>

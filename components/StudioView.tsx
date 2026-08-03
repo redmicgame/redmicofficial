@@ -131,8 +131,8 @@ const StudioView: React.FC = () => {
     const potentialCollaborators = useMemo(() => {
         const currentYear = gameState.date.year;
         const npcs = NPC_ARTIST_NAMES.filter(name => {
-            if (!NPC_ERAS[name]) return true;
             const era = NPC_ERAS[name];
+            if (!era) return false;
             return currentYear >= era.start && currentYear <= era.end;
         }).sort();
         const otherPlayerArtists = allPlayerArtists
@@ -141,7 +141,7 @@ const StudioView: React.FC = () => {
             .sort();
         const customCollabs = (gameState.customFeatures || []).map(f => f.name);
         return Array.from(new Set([...customCollabs, ...otherPlayerArtists, ...npcs]));
-    }, [allPlayerArtists, activeArtist, gameState.customFeatures]);
+    }, [allPlayerArtists, activeArtist, gameState.customFeatures, gameState.date.year]);
 
     const potentialProducers = useMemo(() => {
         return ["Metro Boomin", "Mike Dean", "Rick Rubin", "Pharrell Williams", "Max Martin", "Timbaland", "Benny Blanco", "Mustard", "London on da Track", "Murda Beatz", "Jack Antonoff", "Wheezy", "Boi-1da", "Tay Keith", "Southside", "Dr. Luke", "Kanye West", "Sean Combs", "Phil Spector"].sort();

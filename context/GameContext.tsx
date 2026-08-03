@@ -59,6 +59,7 @@ import {
   NPC_SONG_ADJECTIVES,
   NPC_SONG_NOUNS,
   NPC_ARTIST_IMAGES,
+  getArtistImage,
   LABELS,
   PLAYLIST_PITCH_COST,
   PLAYLIST_PITCH_SUCCESS_RATE,
@@ -543,15 +544,14 @@ const getRandomNpcName = (excludedNames: (string | undefined)[] = [], currentYea
   // Filter available artists by era if currentYear is provided
   let availableArtists = NPC_ARTIST_NAMES;
   if (currentYear) {
-    // We can also use NPC_ERAS if available, or just fallback to some default mapping
     const eraArtists = Object.keys(NPC_ERAS).filter(artist => {
       const era = NPC_ERAS[artist];
-      return currentYear >= era.start && currentYear <= era.end;
+      return era && currentYear >= era.start && currentYear <= era.end;
     });
     
-    // Add existing ones from NPC_ARTIST_NAMES that might not be in NPC_ERAS
-    const legacyArtists = NPC_ARTIST_NAMES.filter(a => !NPC_ERAS[a]);
-    availableArtists = [...eraArtists, ...legacyArtists];
+    if (eraArtists.length > 0) {
+      availableArtists = eraArtists;
+    }
   }
 
   do {
@@ -14506,6 +14506,82 @@ We wish you the best in your future endeavors.
         },
       };
     }
+    case "FOLLOW_INSTAGRAM_NPC": {
+      if (!state.activeArtistId) return state;
+      const npcName = action.payload.npcName;
+      const activeData = { ...state.artistsData[state.activeArtistId] };
+      const instagramFollowing = Array.isArray(activeData.instagramFollowing) ? activeData.instagramFollowing : [];
+      if (instagramFollowing.includes(npcName)) return state;
+
+      const newFollowing = [...instagramFollowing, npcName];
+      activeData.instagramFollowing = newFollowing;
+
+      const npcFollowers = Array.isArray(activeData.instagramNpcFollowers) ? activeData.instagramNpcFollowers : [];
+      const followedBackEvents = Array.isArray(activeData.instagramFollowedBackEvents) ? activeData.instagramFollowedBackEvents : [];
+
+      let newXPosts = Array.isArray(state.xPosts) ? [...state.xPosts] : [];
+      let newArtistXPosts = Array.isArray(activeData.xPosts) ? [...activeData.xPosts] : [];
+
+      if (npcFollowers.includes(npcName) && !followedBackEvents.includes(npcName)) {
+        activeData.instagramFollowedBackEvents = [...followedBackEvents, npcName];
+        
+        let artistName = "";
+        if (state.soloArtist?.id === state.activeArtistId) {
+          artistName = state.soloArtist.name;
+        } else if (state.group?.id === state.activeArtistId) {
+          artistName = state.group.name;
+        } else if (state.group?.members.some(m => m.id === state.activeArtistId)) {
+          artistName = state.group.members.find(m => m.id === state.activeArtistId)?.name || "Artist";
+        } else {
+          artistName = state.soloArtist?.name || "Artist";
+        }
+
+        const userImg = state.soloArtist?.image || activeData.avatar || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470";
+        const npcImg = getArtistImage(npcName);
+
+        const popBaseTweet: XPost = {
+          id: crypto.randomUUID(),
+          authorId: "popbase",
+          content: `${artistName} has followed ${npcName} back on Instagram.`,
+          image: npcImg,
+          image2: userImg,
+          likes: Math.floor(Math.random() * 250000) + 80000,
+          retweets: Math.floor(Math.random() * 40000) + 12000,
+          views: Math.floor(Math.random() * 4000000) + 1000000,
+          date: state.date,
+        };
+
+        newXPosts = [popBaseTweet, ...newXPosts];
+        newArtistXPosts = [popBaseTweet, ...newArtistXPosts];
+        activeData.hype = (activeData.hype || 0) + 3;
+        activeData.instagramFollowers = (activeData.instagramFollowers || 0) + Math.floor(Math.random() * 15000) + 5000;
+      }
+
+      activeData.xPosts = newArtistXPosts;
+
+      return {
+        ...state,
+        xPosts: newXPosts,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: activeData,
+        },
+      };
+    }
+    case "UNFOLLOW_INSTAGRAM_NPC": {
+      if (!state.activeArtistId) return state;
+      const npcName = action.payload.npcName;
+      const activeData = { ...state.artistsData[state.activeArtistId] };
+      const instagramFollowing = Array.isArray(activeData.instagramFollowing) ? activeData.instagramFollowing : [];
+      activeData.instagramFollowing = instagramFollowing.filter(n => n !== npcName);
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: activeData,
+        },
+      };
+    }
     case "UPLOAD_CANVAS": {
       if (!state.activeArtistId) return state;
       const updatedArtistsData = { ...state.artistsData };
@@ -17481,16 +17557,16 @@ Let us know if you accept.`,
             }
             trackCounts[baseArtist] = count + 1;
           }
-          if (NPC_ARTIST_IMAGES[baseArtist]) {
-            npc.coverArt = NPC_ARTIST_IMAGES[baseArtist];
+          if (getArtistImage(baseArtist)) {
+            npc.coverArt = getArtistImage(baseArtist);
           }
         });
       }
       if (newState.npcAlbums) {
         newState.npcAlbums.forEach((album) => {
-          const baseArtist = album.artist.split(',')[0].trim();
-          if (NPC_ARTIST_IMAGES[baseArtist]) {
-            album.coverArt = NPC_ARTIST_IMAGES[baseArtist];
+          const baseArtist = album.artist.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
+          if (getArtistImage(baseArtist)) {
+            album.coverArt = getArtistImage(baseArtist);
           }
         });
       }
@@ -22113,27 +22189,28 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
         data.songs.length > 0 &&
         Math.random() < 0.4 // Only 40% chance per week to not spam
       ) {
-        // Find best performing song based on current weekly streams
+        const getSongWeeklyStreams = (s: any) => s.weeklyStreams || Math.max(0, s.streams - (s.lastWeekStreams || s.prevWeekStreams || 0)) || s.streams;
         const bestSong = [...data.songs]
-          .filter(s => s.isReleased && s.weeklyStreams > 500000)
-          .sort((a, b) => b.weeklyStreams - a.weeklyStreams)[0];
+          .filter(s => s.isReleased && getSongWeeklyStreams(s) > 500000)
+          .sort((a, b) => getSongWeeklyStreams(b) - getSongWeeklyStreams(a))[0];
 
         if (bestSong) {
-          const mStreams = (bestSong.weeklyStreams / 1000000).toFixed(1);
+          const weeklyStr = getSongWeeklyStreams(bestSong);
+          const mStreams = (weeklyStr / 1000000).toFixed(1);
           const mRadio = ((bestSong.radioPlays || 0) * 5000 / 1000000).toFixed(1);
-          const eSales = Math.floor(bestSong.weeklyStreams / 800) + 1500;
+          const eSales = Math.floor(weeklyStr / 800) + 1500;
           
           let rankPredNum = 95;
-          if (bestSong.weeklyStreams > 25000000) rankPredNum = Math.floor(Math.random() * 5) + 1; // 1-5
-          else if (bestSong.weeklyStreams > 15000000) rankPredNum = Math.floor(Math.random() * 5) + 6; // 6-10
-          else if (bestSong.weeklyStreams > 10000000) rankPredNum = Math.floor(Math.random() * 10) + 11; // 11-20
-          else if (bestSong.weeklyStreams > 5000000) rankPredNum = Math.floor(Math.random() * 20) + 21; // 21-40
+          if (weeklyStr > 25000000) rankPredNum = Math.floor(Math.random() * 5) + 1; // 1-5
+          else if (weeklyStr > 15000000) rankPredNum = Math.floor(Math.random() * 5) + 6; // 6-10
+          else if (weeklyStr > 10000000) rankPredNum = Math.floor(Math.random() * 10) + 11; // 11-20
+          else if (weeklyStr > 5000000) rankPredNum = Math.floor(Math.random() * 20) + 21; // 21-40
           else rankPredNum = Math.floor(Math.random() * 40) + 50; // 50-90
 
           let artistHandle = data.xUsers.find((u) => u.name === (state.soloArtist?.name || state.group?.name))?.username || "artist";
 
-          let isReEntry = bestSong.lastWeekStreams === 0 && bestSong.streams > bestSong.weeklyStreams; 
-          let isDebut = bestSong.lastWeekStreams === 0 && bestSong.streams <= bestSong.weeklyStreams;
+          let isReEntry = bestSong.lastWeekStreams === 0 && bestSong.streams > weeklyStr; 
+          let isDebut = bestSong.lastWeekStreams === 0 && bestSong.streams <= weeklyStr;
           
           let content = "";
           
@@ -22142,7 +22219,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             content = `"${bestSong.title}" by ${state.soloArtist?.name || state.group?.name || "Artist"} is challenging to re-enter the top ${rankBucket} on the next Billboard Hot 100.`;
           } else {
             let actionWord = isDebut ? "debut" : "rise";
-            if (!isDebut && bestSong.weeklyStreams < bestSong.lastWeekStreams) {
+            if (!isDebut && weeklyStr < (bestSong.lastWeekStreams || 0)) {
                actionWord = "drop";
             }
             content = `"${bestSong.title}" by @${artistHandle} is predicted to ${actionWord} at #${rankPredNum} on the Hot 100 with ${mStreams}M streams, ${eSales.toLocaleString()} sales, and ${mRadio}M radio.`;
