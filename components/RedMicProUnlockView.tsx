@@ -13,41 +13,52 @@ const RedMicProUnlockView: React.FC = () => {
     
     if (!activeArtistData) return null;
     
+    const EXPIRED_CODES = [
+        "RMP-554C-98CD-7ED7",
+        "RMP-E5AF-B575-E609",
+        "RMP-9603-2A95-4A7A",
+        "RMP-5A64-DA5E-A6FC"
+    ];
+
+    const TRIAL_ENDED_CODES = [
+        "RMP-BBB4-6F53-34B7"
+    ];
+
     const VALID_CODES = [
-    "RMP-554C-98CD-7ED7",
-    "RMP-E5AF-B575-E609",
-    "RMP-9603-2A95-4A7A",
-    "RMP-BBB4-6F53-34B7",
-    "RMP-5A64-DA5E-A6FC",
-    "RMP-7F40-3939-C355",
-    "RMP-80DC-ED70-D7D2",
-    "RMP-FB26-5332-21DD",
-    "RMP-7E5C-D767-F318",
-    "RMP-E89C-65E0-CCDA",
-    "RMP-086A-B5C7-FB24",
-    "RMP-FBAC-AB6F-CCF3",
-    "RMP-393A-E85D-FECF",
-    "RMP-BB61-245E-5717",
-    "RMP-6204-2FC0-7FDA",
-    "RMP-BFBA-A4EC-5AE4",
-    "RMP-3AB9-C919-C833",
-    "RMP-7CE2-D094-2766",
-    "RMP-0C5E-0522-AAFD",
-    "RMP-CEBB-192E-82BE",
-    "RMP-F91B-8EDC-E5AA",
-    "RMP-A414-1E2D-A408",
-    "RMP-2943-AAD5-E434",
-    "RMP-B2BF-E81D-7095",
-    "RMP-BCB4-9AC2-F945",
-    "RMP-39CA-B352-7572",
-    "RMP-9CB0-26B5-026C",
-    "RMP-F741-5C3C-1423",
-    "RMP-7A2B-9D60-D79D"
-];
+        "RMP-7F40-3939-C355",
+        "RMP-80DC-ED70-D7D2",
+        "RMP-FB26-5332-21DD",
+        "RMP-7E5C-D767-F318",
+        "RMP-E89C-65E0-CCDA",
+        "RMP-086A-B5C7-FB24",
+        "RMP-FBAC-AB6F-CCF3",
+        "RMP-393A-E85D-FECF",
+        "RMP-BB61-245E-5717",
+        "RMP-6204-2FC0-7FDA",
+        "RMP-BFBA-A4EC-5AE4",
+        "RMP-3AB9-C919-C833",
+        "RMP-7CE2-D094-2766",
+        "RMP-0C5E-0522-AAFD",
+        "RMP-CEBB-192E-82BE",
+        "RMP-F91B-8EDC-E5AA",
+        "RMP-A414-1E2D-A408",
+        "RMP-2943-AAD5-E434",
+        "RMP-B2BF-E81D-7095",
+        "RMP-BCB4-9AC2-F945",
+        "RMP-39CA-B352-7572",
+        "RMP-9CB0-26B5-026C",
+        "RMP-F741-5C3C-1423",
+        "RMP-7A2B-9D60-D79D"
+    ];
 
     const handleCodeUnlock = () => {
         setError('');
-        if (VALID_CODES.includes(code.trim().toUpperCase())) {
+        const formattedCode = code.trim().toUpperCase();
+        if (EXPIRED_CODES.includes(formattedCode)) {
+            setError('Code Expired');
+        } else if (TRIAL_ENDED_CODES.includes(formattedCode)) {
+            setError('Free Trial for this coded has ended.');
+        } else if (VALID_CODES.includes(formattedCode)) {
             setShowConfirmation(true);
         } else {
             setError('Invalid secret code.');
