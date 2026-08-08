@@ -4760,6 +4760,17 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklyStreams = Math.floor(weeklyStreams * 1.1); // 10% boost
             }
 
+            // Stream Milestone Permanent Boost (Original & Normal mode only)
+            const currentDifficulty = state.difficultyMode || "normal";
+            if (currentDifficulty === "normal" || currentDifficulty === "original") {
+              const currentTotalStreams = song.streams || 0;
+              if (currentTotalStreams >= 1_000_000_000) {
+                weeklyStreams = Math.floor(weeklyStreams * 2.0); // 2x stream boost for 1B+ streams
+              } else if (currentTotalStreams >= 100_000_000) {
+                weeklyStreams = Math.floor(weeklyStreams * 1.3); // 1.3x stream boost for 100M+ streams
+              }
+            }
+
             if (song.pitchforkBoost && (state.difficultyMode === "easy" || state.difficultyMode === "original")) {
               weeklyStreams = Math.floor(
                 weeklyStreams * (Math.random() * 2 + 2),
