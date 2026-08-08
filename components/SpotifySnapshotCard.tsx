@@ -1,6 +1,49 @@
 import React from "react";
 import { useGame } from "../context/GameContext";
 
+const ScaledCardWrapper: React.FC<{ children: React.ReactNode; targetWidth?: number }> = ({ children, targetWidth = 560 }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(1);
+  const [scaledHeight, setScaledHeight] = React.useState<number | undefined>(undefined);
+
+  React.useLayoutEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current && contentRef.current) {
+        const parentWidth = containerRef.current.parentElement?.clientWidth || containerRef.current.clientWidth;
+        const currentScale = parentWidth > 0 && parentWidth < targetWidth ? parentWidth / targetWidth : 1;
+        setScale(currentScale);
+        setScaledHeight(contentRef.current.offsetHeight * currentScale);
+      }
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    if (containerRef.current) observer.observe(containerRef.current);
+    if (contentRef.current) observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [targetWidth]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full overflow-hidden flex justify-center my-1"
+      style={{ height: scaledHeight !== undefined ? `${scaledHeight}px` : 'auto' }}
+    >
+      <div
+        ref={contentRef}
+        style={{
+          width: `${targetWidth}px`,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+        }}
+        className="shrink-0"
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const formatNumber = (num: number) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
   if (num >= 1000) return (num / 1000).toFixed(1) + "K";
@@ -320,43 +363,44 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
           const weeklyStreams = data.streams || 0;
 
           return (
-              <div className="mt-2 bg-[#0d0e0f] p-5 sm:p-7 text-white font-mono max-w-full shadow-2xl border border-zinc-800/80 rounded-2xl">
+            <ScaledCardWrapper targetWidth={560}>
+              <div className="bg-[#0d0e0f] p-5 text-white font-mono shadow-2xl border border-zinc-800/80 rounded-2xl overflow-hidden text-xs">
                 
                 {/* Header Section */}
-                <div className="flex gap-5 sm:gap-7 items-start mb-6 border-b border-zinc-800/60 pb-6">
+                <div className="flex gap-5 items-start mb-5 border-b border-zinc-800/60 pb-5">
                   {/* Left Column - Cover Art */}
-                  <div className="w-[30%] sm:w-[26%] flex flex-col items-center shrink-0">
-                    <div className="relative w-full aspect-square shadow-[0_0_25px_rgba(0,0,0,0.9)] border border-zinc-800 rounded-sm overflow-hidden">
+                  <div className="w-24 flex flex-col items-center shrink-0">
+                    <div className="relative w-full aspect-square shadow-[0_0_20px_rgba(0,0,0,0.9)] border border-zinc-800 rounded-sm overflow-hidden">
                       <img src={data.coverArt} className="w-full h-full object-cover" alt="Cover" />
                     </div>
-                    <div className="text-zinc-300 font-sans font-bold text-xs sm:text-sm mt-3 uppercase tracking-wider text-center truncate w-full">
+                    <div className="text-zinc-300 font-sans font-bold text-xs mt-2 uppercase tracking-wider text-center truncate w-full">
                       {artistName}
                     </div>
                   </div>
 
                   {/* Right Column - Stats */}
-                  <div className="w-[70%] sm:w-[74%] flex flex-col justify-between min-h-[140px] pl-1">
+                  <div className="flex-1 min-w-0 flex flex-col justify-between min-h-[120px]">
                     <div>
-                      <h2 className="text-2xl sm:text-4xl font-sans font-extrabold text-white leading-tight tracking-tight uppercase mb-2 truncate">
+                      <h2 className="text-2xl font-sans font-extrabold text-white leading-tight tracking-tight uppercase mb-1 truncate">
                         {albumTitle}
                       </h2>
-                      <div className="text-zinc-400 text-xs sm:text-sm flex items-center gap-2 uppercase font-mono tracking-wider mb-4">
-                        <span className="text-xs sm:text-sm">📅</span> {monthName} {day}, {yearNum} | {weekdayName}
+                      <div className="text-zinc-400 text-xs flex items-center gap-1.5 uppercase font-mono tracking-wider mb-2 flex-wrap">
+                        <span>📅</span> {monthName} {day}, {yearNum} | {weekdayName}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3 sm:gap-4 my-2 flex-wrap">
+                    <div className="flex items-center gap-3 my-1 flex-wrap">
                       <span className="text-zinc-400 text-xl font-bold font-mono">↗</span>
-                      <div className="text-3xl sm:text-5xl font-mono font-black text-white tracking-tight">
+                      <div className="text-3xl font-mono font-black text-white tracking-tight">
                         {weeklyStreams.toLocaleString()}
                       </div>
-                      <div className={`${isOverallPos ? "bg-[#16a34a]" : "bg-[#dc2626]"} text-white text-xs sm:text-sm font-extrabold font-mono px-2.5 py-1 rounded flex items-center gap-1`}>
+                      <div className={`${isOverallPos ? "bg-[#16a34a]" : "bg-[#dc2626]"} text-white text-xs font-extrabold font-mono px-2 py-0.5 rounded flex items-center gap-1`}>
                         {pctStr}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-zinc-400 text-xs sm:text-sm font-mono uppercase tracking-wider pt-2 border-t border-zinc-800/40">
-                      <span className="text-xs sm:text-sm">☑</span>
+                    <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-mono uppercase tracking-wider pt-1.5 border-t border-zinc-800/40 flex-wrap">
+                      <span>☑</span>
                       <span className="text-white font-bold">{totalStreams.toLocaleString()}</span>
                       <span className="text-zinc-500 font-normal">| TOTAL STREAMS</span>
                     </div>
@@ -366,7 +410,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                 {/* Table Section */}
                 {displayTracks && displayTracks.length > 0 && (
                   <div className="w-full">
-                    <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.2rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 pb-2 text-[11px] sm:text-xs font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider">
+                    <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-2 pb-2 text-xs font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider">
                       <div className="col-span-2">TRACK</div>
                       <div className="text-right">DAILY STREAMS</div>
                       <div className="text-right">CHANGE</div>
@@ -385,26 +429,26 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                          return (
                         <div
                           key={i}
-                          className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.2rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 py-1.5 text-[11px] sm:text-xs items-center hover:bg-zinc-800/40 transition-colors border-b border-zinc-900/40"
+                          className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-2 py-1.5 text-xs items-center hover:bg-zinc-800/40 transition-colors border-b border-zinc-900/40"
                         >
                           <div className="flex items-center gap-2 col-span-2 min-w-0">
                             <span className="text-[#22c55e] font-mono font-bold text-xs shrink-0 w-4">
                               {i + 1}
                             </span>
-                            <span className="truncate font-sans font-medium text-white text-xs sm:text-sm">
+                            <span className="truncate font-sans font-medium text-white text-xs">
                               {t.title}
                             </span>
                           </div>
-                          <div className="text-right text-white font-mono text-[11px] sm:text-xs">
+                          <div className="text-right text-white font-mono text-xs">
                             {streamCount.toLocaleString()}
                           </div>
-                          <div className={`text-right font-mono text-[11px] sm:text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                          <div className={`text-right font-mono text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
                             {cVal > 0 ? "+" : ""}{cVal.toLocaleString()}
                           </div>
-                          <div className={`text-right font-mono text-[11px] sm:text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                          <div className={`text-right font-mono text-xs ${isPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
                             {isPos ? "↑ " : "↓ "}{Math.abs(pct).toFixed(2)}%
                           </div>
-                          <div className="text-right text-white font-mono text-[11px] sm:text-xs">
+                          <div className="text-right text-white font-mono text-xs">
                             {totalCount.toLocaleString()}
                           </div>
                         </div>
@@ -412,9 +456,9 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                     </div>
 
                     {/* Footer Section */}
-                    <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.2rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 pt-3 border-t border-zinc-800 text-xs sm:text-sm font-bold items-center font-mono">
+                    <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-2 pt-2.5 border-t border-zinc-800 text-xs font-bold items-center font-mono">
                       <div className="col-span-2 flex items-center">
-                        <span className="bg-[#22c55e] text-black text-[10px] sm:text-xs font-black px-1.5 py-0.5 rounded-xs font-mono uppercase">
+                        <span className="bg-[#22c55e] text-black text-xs font-black px-1.5 py-0.5 rounded-xs font-mono uppercase">
                           TOTAL
                         </span>
                       </div>
@@ -434,6 +478,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                   </div>
                 )}
               </div>
+            </ScaledCardWrapper>
           );
       }
 
@@ -507,7 +552,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
               <div className="text-center text-zinc-400 text-xs uppercase tracking-widest mb-4 font-sans font-bold">
                 Total Streams: {data.totalStreams.toLocaleString()}
               </div>
-              <div className="w-[calc(100%+2rem)] -ml-4 border-t border-zinc-700/50">
+              <div className="w-[calc(100%+2rem)] -ml-4 border-t border-zinc-700/50 overflow-x-auto scrollbar-thin">
                 <div className="grid grid-cols-[1rem_1fr_4rem_4rem_3rem_4.5rem] gap-2 p-2 text-[10px] font-bold text-zinc-500 border-b border-zinc-700/50">
                   <div></div>
                   <div>Track</div>

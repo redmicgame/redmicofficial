@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Email, GeniusOffer, FallonOffer, PopBaseOffer } from '../types';
 import CoachellaSetlistModal from './CoachellaSetlistModal';
+import CoachellaLiveAlbumModal from './CoachellaLiveAlbumModal';
 import MenuIcon from './icons/MenuIcon';
 import StarIcon from './icons/StarIcon';
 import SpotifyIcon from './icons/SpotifyIcon';
@@ -169,6 +170,7 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
     const [showSoundtrackConfirm, setShowSoundtrackConfirm] = useState(false);
     const [billionsClubPreviewUrl, setBillionsClubPreviewUrl] = useState<string | null>(null);
     const [isCoachellaModalOpen, setIsCoachellaModalOpen] = useState(false);
+    const [isCoachellaLiveAlbumModalOpen, setIsCoachellaLiveAlbumModalOpen] = useState(false);
 
     const formattedDate = useMemo(() => {
         if (!email.date) return 'Unknown Date';
@@ -272,6 +274,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 break;
             case 'coachellaSelection':
                 setIsCoachellaModalOpen(true);
+                break;
+            case 'coachellaLiveAlbumOffer':
+                setIsCoachellaLiveAlbumModalOpen(true);
                 break;
         }
     };
@@ -674,6 +679,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 acceptedText = "Setlist Confirmed";
                 isAccepted = false;
                 break;
+            case 'coachellaLiveAlbumOffer':
+                buttonText = email.offer.isReleased ? "View Album" : "Record Live Coachella Album";
+                buttonClass = "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-black font-bold shadow-orange-500/20";
+                acceptedText = "Album Released!";
+                isAccepted = !!email.offer.isReleased;
+                break;
         }
 
         if (!isActionable) return null;
@@ -733,6 +744,14 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                         slot={email.offer.slot}
                         stage={email.offer.stage}
                         emailId={email.id}
+                    />
+                )}
+                {email.offer?.type === 'coachellaLiveAlbumOffer' && (
+                    <CoachellaLiveAlbumModal
+                        isOpen={isCoachellaLiveAlbumModalOpen}
+                        onClose={() => setIsCoachellaLiveAlbumModalOpen(false)}
+                        emailId={email.id}
+                        year={email.offer?.year}
                     />
                 )}
             </main>

@@ -255,7 +255,16 @@ const ManagementView: React.FC = () => {
                                     <p className="text-xs text-zinc-400 mt-2 text-center mb-6">Your manager is looking for opportunities. Check your inbox next week.</p>
                                 )}
 
-                                <h3 className="font-bold mb-3 mt-6">Acting & Hollywood</h3>
+                                <h3 className="font-bold mb-3 mt-6 flex items-center justify-between">
+                                    <span>Acting & Hollywood</span>
+                                    <span className="text-xs text-[#f5c518] font-semibold">Skill: {activeArtistData.actingSkillLevel || 10}/100</span>
+                                </h3>
+                                <button
+                                    onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'actingCareer'})}
+                                    className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-extrabold p-3 text-sm rounded-lg hover:from-yellow-400 hover:to-amber-500 shadow-md mb-3 flex items-center justify-center gap-2"
+                                >
+                                    <span>🎬</span> Open Hollywood Acting Hub & Auditions
+                                </button>
                                 <button
                                     onClick={() => dispatch({type: 'REQUEST_ACTING_GIG', payload: { type: 'Voice Acting' }})}
                                     disabled={!!activeArtistData.activeActingOffer || !!activeArtistData.filmingGig}

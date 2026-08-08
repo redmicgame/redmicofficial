@@ -644,10 +644,7 @@ const generateNpcs = (
         NPC_ARTIST_GENRES[baseArtist] ||
         GENRES[Math.floor(Math.random() * GENRES.length)],
       basePopularity,
-      coverArt:
-        NPC_ARTIST_IMAGES?.[baseArtist] ||
-        npcImages?.[baseArtist] ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(baseArtist)}&background=random&color=fff&size=250`,
+      coverArt: getArtistImage(baseArtist, npcImages?.[baseArtist]),
     });
   }
   return npcs;
@@ -731,10 +728,7 @@ const generateNewHits = (
         NPC_ARTIST_GENRES[baseArtist] ||
         GENRES[Math.floor(Math.random() * GENRES.length)],
       basePopularity,
-      coverArt:
-        NPC_ARTIST_IMAGES?.[baseArtist] ||
-        npcImages?.[baseArtist] ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(baseArtist)}&background=random&color=fff&size=250`,
+      coverArt: getArtistImage(baseArtist, npcImages?.[baseArtist]),
     });
   }
   return hits;
@@ -821,10 +815,7 @@ const generateNpcAlbums = (
       title,
       artist: mainArtist,
       label: labels[Math.floor(Math.random() * labels.length)],
-      coverArt:
-        NPC_ARTIST_IMAGES?.[mainArtist] ||
-        npcImages?.[mainArtist] ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(mainArtist)}&background=random&color=fff&size=250`,
+      coverArt: getArtistImage(mainArtist, npcImages?.[mainArtist]),
       songIds: albumSongs.map((s) => s.uniqueId),
       salesPotential,
     });
@@ -7643,18 +7634,189 @@ Total — ${totalStreamsMillion} Million`;
           artistData.filmingGig.remainingWeeks -= 1;
           if (artistData.filmingGig.remainingWeeks <= 0) {
             const gig = artistData.filmingGig;
+            const currentSkill = artistData.actingSkillLevel || 10;
+            const rtScore = Math.min(99, Math.max(35, Math.floor(currentSkill * 0.5 + Math.random() * 40 + 20)));
+            const metacritic = Math.min(100, Math.max(30, Math.floor(rtScore * 0.9 + Math.random() * 10 - 5)));
+            const imdbRating = Math.min(10, Math.max(4, Math.floor(rtScore / 10 * 10) / 10));
+            
+            const baseBoxOffice = gig.type === 'Movie' ? (Math.floor(artistData.popularity * 3000000) + Math.floor(Math.random() * 100000000) + 20000000) : 0;
+            const domBoxOffice = Math.floor(baseBoxOffice * 0.45);
+            const wwBoxOffice = baseBoxOffice;
+
             const newRole: ActingRole = {
               id: gig.id,
               title: gig.title,
               type: gig.type,
               roleName: gig.roleName,
+              roleType: gig.roleType,
               year: newDate.year,
               status: "Completed",
-              rating: Math.floor(Math.random() * 50 + 50) / 10,
+              rating: imdbRating,
+              studio: (gig as any).studio || 'Warner Bros',
+              genre: (gig as any).genre || 'Drama',
+              rottenTomatoes: rtScore,
+              metacritic: metacritic,
+              imdbRating: imdbRating,
+              boxOfficeDomestic: domBoxOffice,
+              boxOfficeWorldwide: wwBoxOffice,
+              soundtrackSongId: (gig as any).soundtrackSongId,
               trailerUrl: undefined,
             };
+
             artistData.actingRoles = [...(artistData.actingRoles || []), newRole];
+            artistData.actingSkillLevel = Math.min(100, currentSkill + 4);
             artistData.filmingGig = null;
+
+            // Soundtrack Compilation Release
+            if ((gig as any).soundtrackSongId) {
+              const soundtrackSong = artistData.songs.find(s => s.id === (gig as any).soundtrackSongId);
+              if (soundtrackSong) {
+                const ostTitle = `${gig.title} (Original Motion Picture Soundtrack)`;
+                const ostCover = (gig as any).soundtrackCover || soundtrackSong.coverArt || artistProfileForEmail?.image || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800";
+                
+                const ostRelease = {
+                  id: crypto.randomUUID(),
+                  title: ostTitle,
+                  type: "Album" as const,
+                  coverArt: ostCover,
+                  songIds: [soundtrackSong.id],
+                  releaseDate: newDate,
+                  artistId: artistId,
+                };
+
+                if (!artistData.releases) artistData.releases = [];
+                artistData.releases.unshift(ostRelease);
+
+                artistData.songs = artistData.songs.map(s => s.id === soundtrackSong.id ? {
+                  ...s,
+                  isReleased: true,
+                  releaseId: ostRelease.id,
+                  coverArt: ostCover,
+                } : s);
+
+                newEmails.push({
+                  id: crypto.randomUUID(),
+                  sender: "Hollywood Records",
+                  subject: `🎵 SOUNDTRACK COMPILATION RELEASED: ${ostTitle}`,
+                  body: `The official motion picture soundtrack for "${gig.title}" featuring your single "${soundtrackSong.title}" is now available worldwide on streaming services!`,
+                  date: newDate,
+                  isRead: false,
+                  senderIcon: "music"
+                });
+              }
+            }
+
+            // Generate PopBase post
+            const rtText = rtScore >= 75 ? `Certified Fresh at ${rtScore}% on Rotten Tomatoes 🍅` : `${rtScore}% on Rotten Tomatoes 🍏`;
+            const boxOfficeText = gig.type === 'Movie' ? `and grossed $${(wwBoxOffice / 1000000).toFixed(1)}M worldwide at the Box Office!` : 'and received massive streaming viewership!';
+            const actName = artistProfileForEmail?.name || artistData.artistName || "The Lead Actor";
+
+            artistData.xPosts = [
+              {
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content: `"${gig.title}" starring ${actName} is officially out! It debuted with a ${rtText} ${boxOfficeText}`,
+                image: artistProfileForEmail?.image,
+                likes: Math.floor(Math.random() * 95000) + 35000,
+                retweets: Math.floor(Math.random() * 25000) + 8000,
+                views: Math.floor(Math.random() * 2500000) + 900000,
+                date: newDate,
+              },
+              ...(artistData.xPosts || [])
+            ];
+
+            // TV Show Renewal / Cancellation / Fired system
+            if (gig.type === 'TV Show') {
+              if (currentSkill < 15) {
+                // FIRED / RECAST
+                newEmails.push({
+                  id: crypto.randomUUID(),
+                  sender: (gig as any).studio || 'Network Execs',
+                  subject: `FIRED & RECAST: ${gig.title}`,
+                  body: `Due to performance concerns on set (Acting Skill: ${currentSkill}/100), the network producers have decided to recast your role for future seasons. Take acting classes to improve your craft.`,
+                  date: newDate,
+                  isRead: false,
+                  senderIcon: "manager"
+                });
+
+                artistData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "popbase",
+                  content: `RUMOR: Industry insiders report ${actName} has been FIRED and recast in "${gig.title}" due to onset acting performance issues. 🚨`,
+                  image: artistProfileForEmail?.image,
+                  likes: Math.floor(Math.random() * 120000) + 50000,
+                  retweets: Math.floor(Math.random() * 35000) + 12000,
+                  views: Math.floor(Math.random() * 3500000) + 1000000,
+                  date: newDate,
+                });
+              } else if (rtScore >= 60) {
+                // RENEWED!
+                const currentPay = gig.pay || 2000000;
+                const renewedPay = Math.floor(currentPay * 1.35);
+                const nextSeasonTitle = gig.title.includes('Season') 
+                  ? gig.title.replace(/Season \d+/, (m) => `Season ${parseInt(m.split(' ')[1]) + 1}`)
+                  : `${gig.title}: Season 2`;
+
+                const renewalOffer: ActingOffer = {
+                  id: crypto.randomUUID(),
+                  title: nextSeasonTitle,
+                  type: 'TV Show',
+                  roleName: gig.roleName,
+                  roleType: gig.roleType,
+                  pay: renewedPay,
+                  durationWeeks: 8,
+                  status: 'Pending',
+                  studio: (gig as any).studio || 'HBO',
+                  genre: (gig as any).genre || 'Drama'
+                };
+
+                artistData.activeActingOffer = renewalOffer;
+
+                newEmails.push({
+                  id: crypto.randomUUID(),
+                  sender: (gig as any).studio || 'Network Execs',
+                  subject: `RENEWED! ${nextSeasonTitle} Season Contract`,
+                  body: `🎉 Fantastic news! Thanks to the glowing ${rtScore}% Rotten Tomatoes score, the network has officially renewed "${gig.title}"! We are offering you a renewed contract for ${nextSeasonTitle} at $${renewedPay.toLocaleString()}!`,
+                  date: newDate,
+                  isRead: false,
+                  senderIcon: "manager"
+                });
+
+                artistData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "popbase",
+                  content: `OFFICIAL: Following high ratings (${rtScore}% RT), "${gig.title}" starring ${actName} has been RENEWED for a new season! 📺✨`,
+                  image: artistProfileForEmail?.image,
+                  likes: Math.floor(Math.random() * 85000) + 30000,
+                  retweets: Math.floor(Math.random() * 20000) + 6000,
+                  views: Math.floor(Math.random() * 2000000) + 700000,
+                  date: newDate,
+                });
+              } else {
+                // CANCELLED
+                newEmails.push({
+                  id: crypto.randomUUID(),
+                  sender: (gig as any).studio || 'Network Execs',
+                  subject: `CANCELLED: ${gig.title}`,
+                  body: `Regrettably, due to mixed reviews (${rtScore}% Rotten Tomatoes) and low viewership, the network has officially cancelled "${gig.title}".`,
+                  date: newDate,
+                  isRead: false,
+                  senderIcon: "manager"
+                });
+
+                artistData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "popbase",
+                  content: `CANCELLED: Network has officially cancelled "${gig.title}" starring ${actName} after 1 season following poor review scores (${rtScore}% RT). ❌`,
+                  image: artistProfileForEmail?.image,
+                  likes: Math.floor(Math.random() * 70000) + 20000,
+                  retweets: Math.floor(Math.random() * 15000) + 4000,
+                  views: Math.floor(Math.random() * 1800000) + 500000,
+                  date: newDate,
+                });
+              }
+            }
+
             newEmails.push({
               id: crypto.randomUUID(),
               sender: "Production Team",
@@ -8030,9 +8192,7 @@ It is now available on your Spotify profile.
           weeklyStreams,
           regionalStreams: regStreams,
           isPlayerSong: false,
-          coverArt:
-            npc.coverArt ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(npc.artist)}&background=random&color=fff&size=250`,
+          coverArt: getArtistImage(npc.artist, npc.coverArt),
           songId: undefined,
           genre: npc.genre,
         };
@@ -8469,7 +8629,11 @@ It is now available on your Spotify profile.
           ? eraConfigTemp.marketShare.streaming
           : 0;
 
-        const streamPoints = song.weeklyStreams * effectiveStreamingShare * 0.5;
+        // Billboard Hot 100 did NOT count streams until 2016
+        const streamPoints =
+          state.date.year >= 2016
+            ? song.weeklyStreams * effectiveStreamingShare * 0.5
+            : 0;
         const digitalPoints =
           sales * eraConfigTemp.marketShare.digital * 150 * 0.2;
         const physicalPoints =
@@ -10744,7 +10908,7 @@ Please select your setlist below. Selected setlist songs will receive a 10% boos
         }
       }
 
-      // Week 15: Coachella Performance & Tweets & YouTube Video
+      // Week 15: Coachella Performance & Tweets & YouTube Video & Live Album Offer
       if (newDate.week === 15) {
         for (const artistId in updatedArtistsData) {
           const artistData = updatedArtistsData[artistId];
@@ -10752,13 +10916,38 @@ Please select your setlist below. Selected setlist songs will receive a 10% boos
             (a) => a.id === artistId,
           );
 
-          if (
+          const didPerformAtCoachella =
             artistData.coachella &&
             artistData.coachella.year === newDate.year &&
             ["headliner", "mid", "small", "opener"].includes(
-              artistData.coachella.status,
-            )
-          ) {
+              artistData.coachella.status
+            );
+
+          // Only offer Live Coachella Album email in Week 15 if the artist performed at Coachella
+          if (didPerformAtCoachella) {
+            const hasLiveAlbumOffer = (artistData.inbox || []).some(
+              (e: any) => e.offer?.type === "coachellaLiveAlbumOffer" && e.offer.year === newDate.year
+            );
+            if (!hasLiveAlbumOffer) {
+              const liveAlbumEmail = {
+                id: crypto.randomUUID(),
+                sender: "Coachella Music Festival",
+                senderIcon: "coachella",
+                subject: `Live From Coachella ${newDate.year} Album Proposal`,
+                body: `Coachella ${newDate.year} was an absolute triumph!\n\nWe would love to invite you to record and release an official Live From Coachella album.\n\nYou can select your album title, upload custom cover artwork, and tracks to include. Every song on the project will feature the official "(Live From Coachella)" title suffix.\n\nWould you like to record & release your live album now?`,
+                date: { ...newDate },
+                read: false,
+                offer: {
+                  type: "coachellaLiveAlbumOffer",
+                  year: newDate.year,
+                  isReleased: false,
+                },
+              };
+              artistData.inbox = [liveAlbumEmail, ...(artistData.inbox || [])];
+            }
+          }
+
+          if (didPerformAtCoachella) {
             // Pay the artist
             if (artistData.coachella.payoutSize) {
               artistData.money += artistData.coachella.payoutSize;
@@ -12815,6 +13004,107 @@ Keep up the great work!
                   releases: [...activeData.releases, newRelease]
               }
           }
+      };
+    }
+    case "CREATE_COACHELLA_LIVE_ALBUM": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { emailId, title, coverArt, selectedSongIds } = action.payload;
+      if (!selectedSongIds || selectedSongIds.length === 0) return state;
+
+      const newSongs: any[] = [];
+      const newSongIds: string[] = [];
+      const releaseId = crypto.randomUUID();
+
+      for (const songId of selectedSongIds) {
+        const originalSong = activeData.songs.find(s => s.id === songId);
+        if (originalSong) {
+          const liveSongId = crypto.randomUUID();
+          const cleanTitle = originalSong.title.replace(/\s*\(Live From Coachella\)$/i, '');
+          const liveTitle = `${cleanTitle} (Live From Coachella)`;
+
+          const initialStreams = Math.floor(Math.random() * 30000) + 15000;
+          newSongs.push({
+            ...originalSong,
+            id: liveSongId,
+            title: liveTitle,
+            streams: initialStreams,
+            lastWeekStreams: initialStreams,
+            prevWeekStreams: 0,
+            isReleased: true,
+            releaseId: releaseId,
+            sales: Math.floor(Math.random() * 600) + 200,
+            isAvailableOnStreaming: true,
+            coverArt: coverArt || originalSong.coverArt || activeData.artistImages?.[0] || getArtistImage(activeData.name),
+            isLive: true,
+            releaseDate: { ...state.date }
+          });
+          newSongIds.push(liveSongId);
+        }
+      }
+
+      const activeProfile = state.soloArtist || state.groupArtist;
+      const artistName = activeProfile?.name || "Artist";
+
+      const finalAlbumTitle = title?.trim() || `${artistName} - Live From Coachella ${state.date.year}`;
+      const finalCoverArt = coverArt || activeData.artistImages?.[0] || getArtistImage(artistName);
+
+      const newRelease = {
+        id: releaseId,
+        title: finalAlbumTitle,
+        type: "Album",
+        coverArt: finalCoverArt,
+        songIds: newSongIds,
+        releaseDate: { ...state.date },
+        artistId: state.activeArtistId,
+        firstWeekStreams: 0,
+        firstWeekSales: 0,
+        weeksOnChart: 0,
+        peakPosition: 0,
+        isAvailableOnStreaming: true,
+        isLive: true
+      };
+
+      const updatedInbox = (activeData.inbox || []).map(e => {
+        if (e.id === emailId) {
+          return {
+            ...e,
+            read: true,
+            offer: {
+              ...e.offer,
+              isReleased: true,
+              albumId: releaseId
+            }
+          };
+        }
+        return e;
+      });
+
+      const popBasePost: any = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `${artistName} has officially released their live album "${finalAlbumTitle}" recorded at Coachella ${state.date.year}!`,
+        image: finalCoverArt,
+        likes: Math.floor(Math.random() * 120000) + 40000,
+        retweets: Math.floor(Math.random() * 20000) + 5000,
+        views: Math.floor(Math.random() * 1200000) + 300000,
+        date: { ...state.date }
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: [...activeData.songs, ...newSongs],
+            releases: [...activeData.releases, newRelease],
+            inbox: updatedInbox,
+            xPosts: [popBasePost, ...(activeData.xPosts || [])],
+            hype: Math.min(100, (activeData.hype || 0) + 15),
+            popularity: Math.min(100, (activeData.popularity || 0) + 5)
+          }
+        }
       };
     }
     case "RELEASE_PROJECT": {
@@ -17463,12 +17753,9 @@ Let us know if you accept.`,
       };
             if (newState.npcs) {
         newState.npcs = newState.npcs.map((npc: any) => {
-           if (npc.coverArt && npc.coverArt.includes("ui-avatars.com")) {
-               const baseArtist = npc.artist.split(',')[0].trim();
-               const newImage = NPC_ARTIST_IMAGES[baseArtist] || newState.npcImages?.[baseArtist];
-               if (newImage) {
-                   return { ...npc, coverArt: newImage };
-               }
+           if (!npc.coverArt || npc.coverArt.includes("ui-avatars.com")) {
+               const baseArtist = npc.artist.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
+               return { ...npc, coverArt: getArtistImage(baseArtist, newState.npcImages?.[baseArtist]) };
            }
            return npc;
         });
@@ -17476,12 +17763,9 @@ Let us know if you accept.`,
       
       if (newState.npcAlbums) {
         newState.npcAlbums = newState.npcAlbums.map((album: any) => {
-           if (album.coverArt && album.coverArt.includes("ui-avatars.com")) {
-               const baseArtist = album.artist.split(',')[0].trim();
-               const newImage = NPC_ARTIST_IMAGES[baseArtist] || newState.npcImages?.[baseArtist];
-               if (newImage) {
-                   return { ...album, coverArt: newImage };
-               }
+           if (!album.coverArt || album.coverArt.includes("ui-avatars.com")) {
+               const baseArtist = album.artist.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
+               return { ...album, coverArt: getArtistImage(baseArtist, newState.npcImages?.[baseArtist]) };
            }
            return album;
         });
@@ -17836,6 +18120,44 @@ Let us know if you accept.`,
       const updatedReleases = activeData.releases.map((r) =>
         r.id === releaseId ? { ...r, wikipediaSummary: summary } : r,
       );
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            releases: updatedReleases,
+          },
+        },
+      };
+    }
+    case "UPDATE_RELEASE_WIKIPEDIA": {
+      if (!state.activeArtistId) return state;
+      const {
+        releaseId,
+        summary,
+        wikipediaSections,
+        title,
+        originalCoverArt,
+        coverArt,
+        coverArtHistory,
+        wikipediaCustomData,
+      } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const updatedReleases = activeData.releases.map((r) => {
+        if (r.id !== releaseId) return r;
+        const updated: typeof r = { ...r };
+        if (summary !== undefined) updated.wikipediaSummary = summary;
+        if (wikipediaSections !== undefined) updated.wikipediaSections = wikipediaSections;
+        if (title !== undefined) updated.title = title;
+        if (originalCoverArt !== undefined) updated.originalCoverArt = originalCoverArt;
+        if (coverArt !== undefined) updated.coverArt = coverArt;
+        if (coverArtHistory !== undefined) updated.coverArtHistory = coverArtHistory;
+        if (wikipediaCustomData !== undefined) updated.wikipediaCustomData = wikipediaCustomData;
+        return updated;
+      });
 
       return {
         ...state,
@@ -21522,10 +21844,62 @@ Let us know if you accept.`,
     case "ACCEPT_ACTING_OFFER": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.activeActingOffer || activeData.activeActingOffer.id !== action.payload.offerId) return state;
-
-      const offer = activeData.activeActingOffer;
       
+      let offer = action.payload.offer || activeData.activeActingOffer;
+      if (!offer && activeData.actingAuditions) {
+        const foundAudition = activeData.actingAuditions.find(a => a.id === action.payload.offerId);
+        if (foundAudition) {
+          offer = {
+            id: foundAudition.id,
+            title: foundAudition.title,
+            type: foundAudition.type,
+            roleName: foundAudition.roleName,
+            roleType: foundAudition.roleType,
+            pay: foundAudition.pay,
+            durationWeeks: foundAudition.durationWeeks,
+            status: 'Accepted',
+            studio: foundAudition.studio,
+            genre: foundAudition.genre
+          };
+        }
+      }
+
+      if (!offer && action.payload.offerId) {
+        // Fallback offer creation if ID came from default audition list
+        const fallbackTitles = [
+          'Dune: Part Three', 'The Batman - Part II', 'Oppenheimer II: Manhattan Project',
+          'Spider-Man 4', 'Knives Out 3: Wake Up Dead Man', 'Avatar 3: Fire and Ash',
+          'Wicked: Part Two', 'Deadpool & Wolverine 2', 'Gladiator III', 'The White Lotus: Season 4',
+          'Euphoria: Season 3', 'Stranger Things: Season 5', 'The Bear: Season 4', 'Severance: Season 2',
+          'The Last of Us: Season 2', 'House of the Dragon: Season 3', 'Grand Theft Auto VI',
+          'Spider-Man: Beyond the Spider-Verse', 'Inside Out 3', 'Cyberpunk 2077 Sequel'
+        ];
+        const randomTitle = fallbackTitles[Math.floor(Math.random() * fallbackTitles.length)];
+
+        offer = {
+          id: action.payload.offerId,
+          title: randomTitle,
+          type: randomTitle.includes('Season') ? 'TV Show' : randomTitle.includes('Grand Theft Auto') || randomTitle.includes('Inside Out') ? 'Voice Acting' : 'Movie',
+          roleName: 'Lead Role',
+          roleType: 'Leading Role',
+          pay: 2500000,
+          durationWeeks: randomTitle.includes('Season') ? 8 : 10,
+          status: 'Accepted',
+          studio: 'Warner Bros',
+          genre: 'Drama'
+        };
+      }
+
+      if (!offer) return state;
+
+      let finalPay = offer.pay;
+      if (activeData.talentAgencyId) {
+          const agency = TALENT_AGENCIES.find(t => t.id === activeData.talentAgencyId);
+          if (agency) {
+              finalPay = Math.floor(offer.pay * (1 - (agency.feePercent / 100)));
+          }
+      }
+
       const filmingGig = {
           id: offer.id,
           title: offer.title,
@@ -21534,16 +21908,12 @@ Let us know if you accept.`,
           roleType: offer.roleType,
           year: state.date.year,
           status: 'Filming' as const,
-          remainingWeeks: offer.durationWeeks
+          remainingWeeks: offer.durationWeeks,
+          totalDurationWeeks: offer.durationWeeks,
+          pay: finalPay,
+          studio: offer.studio || 'Warner Bros',
+          genre: offer.genre || 'Drama'
       };
-      
-      let finalPay = offer.pay;
-      if (activeData.talentAgencyId) {
-          const agency = TALENT_AGENCIES.find(t => t.id === activeData.talentAgencyId);
-          if (agency) {
-              finalPay = Math.floor(offer.pay * (1 - (agency.feePercent / 100)));
-          }
-      }
       
       const artistProfile = [
         state.soloArtist,
@@ -21556,20 +21926,17 @@ Let us know if you accept.`,
       
       const newPosts = [...(activeData.xPosts || [])];
       
-      if (!hasActedBefore) {
-          const actingTypeLabel = offer.type === 'Movie' ? 'an actor/actress' : offer.type === 'TV Show' ? 'an actor/actress' : 'a voice actor';
-          const popBasePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `Famous Artist ${artistProfile?.name} will debut in a ${offer.type} soon as ${actingTypeLabel}.`,
-            image: artistProfile?.image,
-            likes: Math.floor(Math.random() * 80000) + 30000,
-            retweets: Math.floor(Math.random() * 20000) + 5000,
-            views: Math.floor(Math.random() * 1500000) + 500000,
-            date: state.date,
-          };
-          newPosts.unshift(popBasePost);
-      }
+      const popBasePost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `Famous Artist ${artistProfile?.name} has officially signed on to star in "${offer.title}" as ${offer.roleName}!`,
+        image: artistProfile?.image,
+        likes: Math.floor(Math.random() * 80000) + 30000,
+        retweets: Math.floor(Math.random() * 20000) + 5000,
+        views: Math.floor(Math.random() * 1500000) + 500000,
+        date: state.date,
+      };
+      newPosts.unshift(popBasePost);
 
       return {
           ...state,
@@ -21583,6 +21950,187 @@ Let us know if you accept.`,
                   xPosts: newPosts
               }
           }
+      };
+    }
+    case "ATTEND_ACTING_CLASS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const tier = action.payload.tier;
+      const cost = tier === 'basic' ? 1000 : 5000;
+      const skillGain = tier === 'basic' ? 5 : 12;
+
+      if (activeData.money < cost) return state;
+
+      const currentSkill = activeData.actingSkillLevel || 10;
+      const newSkill = Math.min(100, currentSkill + skillGain);
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - cost,
+            actingSkillLevel: newSkill,
+            actingClassesTaken: (activeData.actingClassesTaken || 0) + 1
+          }
+        }
+      };
+    }
+    case "HOST_PRESS_JUNKET": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { roleId, outlet, answerChoice } = action.payload;
+
+      const role = activeData.actingRoles?.find(r => r.id === roleId);
+      const roleTitle = role ? role.title : 'Hollywood Project';
+
+      const artistProfile = [
+        state.soloArtist,
+        ...(state.group?.members || []),
+        state.group,
+        ...(state.extraPlayableArtists || []),
+      ].find((a) => a?.id === state.activeArtistId);
+
+      const junketPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `In a new cover feature with ${outlet}, ${artistProfile?.name} opens up about starring in "${roleTitle}": "${answerChoice}"`,
+        image: artistProfile?.image,
+        likes: Math.floor(Math.random() * 90000) + 40000,
+        retweets: Math.floor(Math.random() * 25000) + 8000,
+        views: Math.floor(Math.random() * 2000000) + 800000,
+        date: state.date,
+      };
+
+      const updatedRoles = (activeData.actingRoles || []).map(r => r.id === roleId ? { ...r, pressJunketDone: true } : r);
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            actingRoles: updatedRoles,
+            popularity: Math.min(100, activeData.popularity + 2),
+            xPosts: [junketPost, ...(activeData.xPosts || [])]
+          }
+        }
+      };
+    }
+    case "RECORD_MOVIE_SOUNDTRACK": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { roleId, songId, soundtrackCover } = action.payload;
+
+      if (activeData.filmingGig && activeData.filmingGig.id === roleId) {
+        return {
+          ...state,
+          artistsData: {
+            ...state.artistsData,
+            [state.activeArtistId]: {
+              ...activeData,
+              filmingGig: {
+                ...activeData.filmingGig,
+                soundtrackSongId: songId,
+                soundtrackCover: soundtrackCover || (activeData.filmingGig as any).soundtrackCover
+              }
+            }
+          }
+        };
+      }
+
+      const updatedRoles = (activeData.actingRoles || []).map(r => r.id === roleId ? { ...r, soundtrackSongId: songId, soundtrackCover: soundtrackCover || (r as any).soundtrackCover } : r);
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            actingRoles: updatedRoles
+          }
+        }
+      };
+    }
+    case "QUIT_FILMING_GIG": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.filmingGig) return state;
+
+      const gig = activeData.filmingGig;
+      const reason = action.payload.reason || "conflicting schedules";
+
+      const totalPay = gig.pay || 2000000;
+      const penaltyFee = Math.floor(totalPay * 0.10);
+      const totalClawback = totalPay + penaltyFee;
+
+      const artistProfile = [
+        state.soloArtist,
+        ...(state.group?.members || []),
+        state.group,
+        ...(state.extraPlayableArtists || []),
+      ].find((a) => a?.id === state.activeArtistId);
+
+      const artistName = artistProfile?.name || "The artist";
+
+      let tmzText = "";
+      let popChange = 0;
+      let hypeChange = 0;
+
+      if (reason === "conflicting schedules") {
+        tmzText = `🚨 BREAKING TMZ: ${artistName} has officially QUIT filming "${gig.title}" citing intense conflicting schedules! ${gig.studio || 'The studio'} reclaimed the $${(totalPay/1000000).toFixed(2)}M pay plus a 10% contract penalty ($${(penaltyFee/1000000).toFixed(2)}M).`;
+      } else if (reason === "political beliefs") {
+        tmzText = `🚨 BREAKING TMZ: ${artistName} walked off the set of "${gig.title}" citing fundamental political differences with studio brass! Studio ${gig.studio || 'Warner Bros'} enforced a full salary clawback + 10% breach fee.`;
+        popChange = -2;
+      } else if (reason === "personal reasons") {
+        tmzText = `🚨 BREAKING TMZ: ${artistName} has abruptly departed production on "${gig.title}" effective immediately for personal reasons. Studio confirmed contract cancellation and refund.`;
+      } else {
+        // no comment
+        tmzText = `🚨 BACKLASH: ${artistName} WALKED OFF the set of "${gig.title}" and issued "NO COMMENT" when cornered by paparazzi! Industry insiders and fans are furious over the sudden production halt!`;
+        popChange = -5;
+        hypeChange = -10;
+      }
+
+      const tmzPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "tmz",
+        content: tmzText,
+        likes: Math.floor(Math.random() * 300000) + 100000,
+        retweets: Math.floor(Math.random() * 80000) + 20000,
+        views: Math.floor(Math.random() * 5000000) + 1500000,
+        date: state.date,
+      };
+
+      const terminationEmail: Email = {
+        id: crypto.randomUUID(),
+        sender: gig.studio || "Studio Business Affairs",
+        subject: `CONTRACT TERMINATION NOTICE: "${gig.title}"`,
+        body: `Notice of Contract Rescission:
+
+Following your formal resignation from "${gig.title}", ${gig.studio || 'the studio'} has initiated full recovery of your $${totalPay.toLocaleString()} advance salary plus the standard 10% contract breach penalty ($${penaltyFee.toLocaleString()}).
+
+Total Amount Recaptured: $${totalClawback.toLocaleString()}
+
+Statement Given: "${reason.toUpperCase()}"`,
+        date: state.date,
+        isRead: false,
+        senderIcon: "manager"
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            filmingGig: null,
+            money: activeData.money - totalClawback,
+            popularity: Math.max(0, Math.min(100, activeData.popularity + popChange)),
+            hype: Math.max(0, activeData.hype + hypeChange),
+            xPosts: [tmzPost, ...(activeData.xPosts || [])],
+            inbox: [terminationEmail, ...(activeData.inbox || [])]
+          }
+        }
       };
     }
     case "DECLINE_ACTING_OFFER": {

@@ -174,6 +174,12 @@ const ImdbView: React.FC = () => {
                 <div className="mt-2 p-4 pt-0">
                     <div className="flex items-center justify-between mb-4 border-l-4 border-[#f5c518] pl-2">
                         <h2 className="text-xl font-bold">Credits</h2>
+                        <button
+                            onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'actingCareer' })}
+                            className="text-xs bg-[#f5c518] text-black font-bold px-2.5 py-1 rounded hover:bg-yellow-400"
+                        >
+                            Hollywood Hub
+                        </button>
                     </div>
 
                     <div className="space-y-6">
@@ -211,6 +217,12 @@ const ImdbView: React.FC = () => {
                                     <h3 className="font-bold text-[15px]">{credit.title}</h3>
                                     <p className="text-sm text-zinc-400">{credit.roleName}</p>
                                     <p className="text-xs text-zinc-500 mt-1">{credit.year} • {credit.type}</p>
+                                    {(credit as any).rottenTomatoes && (
+                                        <p className="text-[11px] text-zinc-400 mt-1">
+                                            🍅 <span className="font-bold text-red-400">{(credit as any).rottenTomatoes}%</span> Rotten Tomatoes
+                                            {(credit as any).boxOfficeWorldwide ? ` • $${formatNumber((credit as any).boxOfficeWorldwide)} Box Office` : ''}
+                                        </p>
+                                    )}
                                 </div>
                                 {(credit as any).rating && (
                                     <div className="flex items-center gap-1 shrink-0 text-sm">
@@ -221,7 +233,7 @@ const ImdbView: React.FC = () => {
                             </div>
                         )) : (
                             <div className="text-center text-zinc-500 py-8">
-                                No credits yet. Request acting gigs from your manager.
+                                No credits yet. Audition for movies in the Hollywood Acting Hub or request acting gigs from your manager.
                             </div>
                         )}
                     </div>

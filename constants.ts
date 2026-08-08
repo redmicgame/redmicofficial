@@ -121,7 +121,7 @@ export const PLAYLIST_BOOST_WEEKS = 2;
 
 // Chart Constants
 export const NPC_ARTIST_NAMES = [
-    'Taylor Swift', 'Ariana Grande', 'Billie Eilish', 'The Weeknd', 'Drake', 
+    'Zara Larsson', 'Taylor Swift', 'Ariana Grande', 'Billie Eilish', 'The Weeknd', 'Drake', 
     'Justin Bieber', 'Ed Sheeran', 'Beyoncé', 'Rihanna', 'Adele', 
     'Post Malone', 'Dua Lipa', 'Olivia Rodrigo', 'Harry Styles', 'Bad Bunny',
     'Kendrick Lamar', 'J. Cole', 'Travis Scott', 'Doja Cat', 'SZA',
@@ -155,7 +155,7 @@ export const NPC_ARTIST_NAMES = [
 ];
 
 export const NPC_ARTIST_GENRES: Record<string, string> = {
-    'Taylor Swift': 'Pop', 'Ariana Grande': 'Pop', 'Billie Eilish': 'Pop', 'The Weeknd': 'Pop', 'Drake': 'Hip Hop', 
+    'Zara Larsson': 'Pop', 'Taylor Swift': 'Pop', 'Ariana Grande': 'Pop', 'Billie Eilish': 'Pop', 'The Weeknd': 'Pop', 'Drake': 'Hip Hop', 
     'Justin Bieber': 'Pop', 'Ed Sheeran': 'Pop', 'Beyoncé': 'R&B', 'Rihanna': 'Pop', 'Adele': 'Pop', 
     'Post Malone': 'Hip Hop', 'Dua Lipa': 'Pop', 'Olivia Rodrigo': 'Pop', 'Harry Styles': 'Pop', 'Bad Bunny': 'Latin',
     'Kendrick Lamar': 'Hip Hop', 'J. Cole': 'Hip Hop', 'Travis Scott': 'Hip Hop', 'Doja Cat': 'Hip Hop', 'SZA': 'R&B',
@@ -648,9 +648,10 @@ export const GIGS = [
 ];
 
 export const TALENT_AGENCIES: TalentAgency[] = [
-    { id: 'ta1', name: 'Creative Artists Agency (CAA)', feePercent: 10, minPopularity: 80, perks: ['Top tier Movie/TV roles', 'High payouts'] },
-    { id: 'ta2', name: 'William Morris Endeavor (WME)', feePercent: 15, minPopularity: 60, perks: ['Great brand deals', 'Solid TV roles'] },
-    { id: 'ta3', name: 'United Talent Agency (UTA)', feePercent: 20, minPopularity: 40, perks: ['Entry level Voice Acting', 'Indie Movies'] }
+    { id: 'ta_boutique', name: 'Boutique Talent Agency', feePercent: 25, minPopularity: 0, minSkill: 0, perks: ['Entry-level auditions', 'Voice acting & indie projects'] },
+    { id: 'ta3', name: 'United Talent Agency (UTA)', feePercent: 20, minPopularity: 30, minSkill: 20, perks: ['Indie movies', 'TV guest star roles', 'Cable drama auditions'] },
+    { id: 'ta2', name: 'William Morris Endeavor (WME)', feePercent: 15, minPopularity: 55, minSkill: 40, perks: ['Major TV Series', 'Studio comedies & dramas', 'Press junket placement'] },
+    { id: 'ta1', name: 'Creative Artists Agency (CAA)', feePercent: 10, minPopularity: 80, minSkill: 65, perks: ['A-List Blockbusters', 'Oscar-bait lead roles', 'Top pay & negotiations'] }
 ];
 
 export const NPC_ARTIST_IMAGES: Record<string, string> = {
@@ -753,6 +754,7 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Juice WRLD": "https://cdn-images.dzcdn.net/images/artist/bd126b89de9363065b21be3e4d9b6264/250x250-000000-80-0-0.jpg",
   "Gunna": "https://cdn-images.dzcdn.net/images/artist/e1b6f6f9479b03f0b2f7902d131ec5e9/250x250-000000-80-0-0.jpg",
   "Lil Baby": "https://cdn-images.dzcdn.net/images/artist/488d01115de62a742880099516639c00/250x250-000000-80-0-0.jpg",
+  "Zara Larsson": "https://cdn-images.dzcdn.net/images/artist/f1917f16bf6a066635c6f140fb0aa2bb/250x250-000000-80-0-0.jpg",
   "Taylor Swift": "https://cdn-images.dzcdn.net/images/artist/e528e270424103b527f8a27ac625563b/250x250-000000-80-0-0.jpg",
   "Ariana Grande": "https://cdn-images.dzcdn.net/images/artist/3504ffe2519090026bc359b689d22e20/250x250-000000-80-0-0.jpg",
   "Billie Eilish": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/250x250-000000-80-0-0.jpg",
@@ -775,7 +777,6 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "SZA": "https://cdn-images.dzcdn.net/images/artist/8ced041da2bed70d5715f0860956169b/250x250-000000-80-0-0.jpg",
   "Lana Del Rey": "https://cdn-images.dzcdn.net/images/artist/8994d3be1a59a72f887f1f8afd2d4c6c/250x250-000000-80-0-0.jpg",
   "Frank Ocean": "https://cdn-images.dzcdn.net/images/artist/882155c08dc31d6464d6d580083c968c/250x250-000000-80-0-0.jpg",
-  "Tyler, the Creator": "https://cdn-images.dzcdn.net/images/artist/5eceecd683beab6dd901a7931294a121/250x250-000000-80-0-0.jpg",
   "Lil Nas X": "https://cdn-images.dzcdn.net/images/artist/0f5f0e176c544db5f89b5cd837e279aa/250x250-000000-80-0-0.jpg",
   "Cardi B": "https://cdn-images.dzcdn.net/images/artist/af776cd99efbc010c3782030df0e7e1e/250x250-000000-80-0-0.jpg",
   "Nicki Minaj": "https://cdn-images.dzcdn.net/images/artist/cf30ba4b709168aee196dcf16f259f22/250x250-000000-80-0-0.jpg",
@@ -843,10 +844,6 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Young Miko": "https://cdn-images.dzcdn.net/images/artist/5912325ca89e72e925de22d05001ed4a/250x250-000000-80-0-0.jpg",
   "Ozuna": "https://cdn-images.dzcdn.net/images/artist/df2030b9e796f55f58d2c4b68aecb18f/250x250-000000-80-0-0.jpg",
   "Bizarrap": "https://cdn-images.dzcdn.net/images/artist/e121c1ef9b1135e6a5b71c1e65ab10b4/250x250-000000-80-0-0.jpg",
-  "TRIM": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-  "Huda Mustafa": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-  "Sunshine Benzi": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
-  "Stunna Sandy": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60",
   "Calvin Harris": "https://cdn-images.dzcdn.net/images/artist/a53031d02dc2f8a8eb15d117c015d5eb/250x250-000000-80-0-0.jpg",
   "David Guetta": "https://cdn-images.dzcdn.net/images/artist/2d527fa03e106ed82a28f161694278d3/250x250-000000-80-0-0.jpg",
   "Skrillex": "https://cdn-images.dzcdn.net/images/artist/0075f053766d7d0e12e4a7be22b85e6a/250x250-000000-80-0-0.jpg",
@@ -1093,12 +1090,6 @@ export const NPC_ERAS: Record<string, { start: number, end: number, genre: strin
     "end": 2050,
     "genre": "R&B",
     "image": "https://cdn-images.dzcdn.net/images/artist/3c14c53ef8ddc5f6e3cceb6a67dae4ff/250x250-000000-80-0-0.jpg"
-  },
-  "Tyler, the Creator": {
-    "start": 2011,
-    "end": 2050,
-    "genre": "Hip Hop",
-    "image": "https://cdn-images.dzcdn.net/images/artist/11cbe28cb52c4ca7d5c907a4b0058b4b/250x250-000000-80-0-0.jpg"
   },
   "Lil Nas X": {
     "start": 2019,
@@ -2335,17 +2326,50 @@ Object.entries(NPC_ERAS).forEach(([name, data]) => {
   }
 });
 
+export const MUSIC_COVER_FALLBACKS = [
+  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1493225457124-a1a2a5fa51cc?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1526478806334-5fd488fcaabc?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500&h=500&fit=crop",
+  "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop"
+];
+
 export function getArtistImage(artistName?: string, coverArtFallback?: string): string {
-  if (!artistName) return coverArtFallback || "https://ui-avatars.com/api/?name=Artist&background=random&color=fff&size=250";
+  if (coverArtFallback && !coverArtFallback.includes("ui-avatars.com") && coverArtFallback.trim() !== "") {
+    return coverArtFallback;
+  }
+  if (!artistName) {
+    return MUSIC_COVER_FALLBACKS[0];
+  }
   const name = artistName.trim();
   if (NPC_ARTIST_IMAGES[name]) return NPC_ARTIST_IMAGES[name];
   if (NPC_ERAS[name]?.image) return NPC_ERAS[name].image;
 
-  let clean = name.split(/ feat\.? | featuring | & | x | X /i)[0].trim();
+  let clean = name.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
   if (NPC_ARTIST_IMAGES[clean]) return NPC_ARTIST_IMAGES[clean];
   if (NPC_ERAS[clean]?.image) return NPC_ERAS[clean].image;
 
-  if (coverArtFallback) return coverArtFallback;
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(clean)}&background=random&color=fff&size=250`;
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    hash = (hash << 5) - hash + clean.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % MUSIC_COVER_FALLBACKS.length;
+  return MUSIC_COVER_FALLBACKS[index];
 }
 

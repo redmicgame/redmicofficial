@@ -35,7 +35,10 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
         }
     }
 
-    const totalDuration = playlist.tracks.length * 3.5; // placeholder duration
+    const totalMinutes = Math.round(playlist.tracks.length * 3.2);
+    const durationHours = Math.floor(totalMinutes / 60);
+    const durationMins = totalMinutes % 60;
+    const durationStr = durationHours > 0 ? `${durationHours}h ${durationMins}m` : `${durationMins}m`;
 
     return (
         <div className="bg-[#121212] text-white h-full overflow-y-auto mb-16 pb-[100px]">
@@ -43,7 +46,7 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
             <div className="relative w-full aspect-[4/5] sm:aspect-square md:aspect-[21/9] bg-[#121212]">
                 <button 
                     onClick={onBack} 
-                    className="absolute top-8 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors z-20"
+                    className="absolute top-6 left-4 bg-black/60 backdrop-blur-md rounded-full p-2.5 hover:bg-black/80 transition-all z-30 shadow-lg text-white"
                     aria-label="Go back"
                 >
                     <ChevronLeftIcon className="w-6 h-6" />
@@ -54,39 +57,45 @@ const SpotifyPlaylistDetailView: React.FC<{ playlistId: string; onBack: () => vo
                         name={playlist.name} 
                         imageUrl={playlistCover} 
                         artistName={featuredArtistName} 
+                        playlistId={playlist.id}
                         size="large" 
                     />
                 </div>
             </div>
 
             {/* Description & Meta */}
-            <div className="px-4 mt-4 space-y-4">
+            <div className="px-4 mt-4 space-y-3">
                 <p className="text-zinc-300 text-sm font-medium">
-                    {playlist.description}. Cover: {featuredArtistName}
+                    {playlist.description || `The hottest tracks.`} Cover: <span className="font-bold text-white">{featuredArtistName}</span>
                 </p>
                 <div className="flex items-center gap-2">
                     <SpotifyIcon className="w-6 h-6 text-[#1ed760]" />
                     <span className="text-white font-bold text-sm">Spotify</span>
                 </div>
-                <div className="text-sm font-medium text-zinc-400">
-                    {formatNumber(playlist.followers)} saves • 2h 41m
+                <div className="text-xs sm:text-sm font-medium text-zinc-400">
+                    {formatNumber(playlist.followers)} saves • {durationStr}
                 </div>
 
                 {/* Actions Row */}
-                <div className="flex items-center justify-between mt-2 py-2">
-                    <div className="flex items-center gap-6">
-                        <div className="w-9 h-9 bg-black border border-zinc-500 rounded-sm flex items-center justify-center p-1 text-[8px] text-center font-black uppercase leading-tight overflow-hidden">
-                            {playlist.name}
+                <div className="flex items-center justify-between pt-2 pb-3 border-b border-zinc-800/80">
+                    <div className="flex items-center gap-4 sm:gap-6">
+                        <div className="w-10 h-10 rounded-md overflow-hidden border border-zinc-700 shrink-0 shadow-md">
+                            <SpotifyPlaylistCover 
+                                name={playlist.name} 
+                                imageUrl={playlistCover} 
+                                playlistId={playlist.id} 
+                                size="small" 
+                            />
                         </div>
-                        <PlusCircleIcon className="w-8 h-8 text-zinc-400 font-light" />
-                        <div className="w-8 h-8 text-zinc-400 border-2 border-zinc-400 rounded-full flex items-center justify-center">
-                            <span className="text-lg leading-none font-bold pb-1 text-center items-center justify-center -ml-[1px]">↓</span>
+                        <PlusCircleIcon className="w-7 h-7 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+                        <div className="w-7 h-7 text-zinc-400 border-2 border-zinc-400 hover:border-white hover:text-white rounded-full flex items-center justify-center transition-colors cursor-pointer">
+                            <span className="text-sm leading-none font-bold pb-0.5">↓</span>
                         </div>
-                        <DotsHorizontalIcon className="w-8 h-8 text-zinc-400" />
+                        <DotsHorizontalIcon className="w-7 h-7 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
                     </div>
-                    <div className="flex items-center gap-6">
-                        <span className="text-[#1ed760] font-bold text-xl leading-none">🔀</span>
-                        <button className="w-14 h-14 bg-[#1ed760] rounded-full flex items-center justify-center hover:bg-[#1fdf64] hover:scale-105 transition-all text-black shadow-lg">
+                    <div className="flex items-center gap-5">
+                        <span className="text-[#1ed760] font-bold text-2xl leading-none cursor-pointer hover:scale-110 transition-transform">🔀</span>
+                        <button className="w-13 h-13 sm:w-14 sm:h-14 bg-[#1ed760] rounded-full flex items-center justify-center hover:bg-[#1fdf64] hover:scale-105 transition-all text-black shadow-xl">
                             <TrianglePlayIcon className="w-7 h-7 ml-1" />
                         </button>
                     </div>

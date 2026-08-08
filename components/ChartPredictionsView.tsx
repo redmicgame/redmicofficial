@@ -243,7 +243,8 @@ export const ChartPredictionsView: React.FC = () => {
             const hasStreamingRights = true; // simplifying prediction
             const effectiveStreamingShare = hasStreamingRights ? eraConfigTemp.marketShare.streaming : 0;
             
-            const streamPoints = (song.weeklyStreams * effectiveStreamingShare) * 0.5;
+            // Billboard Hot 100 did NOT count streams until 2016
+            const streamPoints = gameState.date.year >= 2016 ? (song.weeklyStreams * effectiveStreamingShare) * 0.5 : 0;
             const digitalPoints = (sales * eraConfigTemp.marketShare.digital) * 150 * 0.2;
             const physicalPoints = (sales * eraConfigTemp.marketShare.physical + additionalPhysicalSales) * 150 * 0.2;
             

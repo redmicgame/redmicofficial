@@ -10,6 +10,36 @@ export interface ActingRole {
   coverUrl?: string;
   rating?: number;
   season?: number;
+  studio?: string;
+  genre?: 'Drama' | 'Comedy' | 'Action' | 'Sci-Fi' | 'Horror' | 'Romance' | 'Thriller';
+  budget?: number;
+  boxOfficeDomestic?: number;
+  boxOfficeWorldwide?: number;
+  streamingViewers?: number;
+  rottenTomatoes?: number;
+  metacritic?: number;
+  imdbRating?: number;
+  methodActingUsed?: boolean;
+  soundtrackSongId?: string;
+  pressJunketDone?: boolean;
+  premiereOutfit?: string;
+  coStars?: string[];
+  directorName?: string;
+}
+
+export interface ActingAudition {
+  id: string;
+  title: string;
+  type: 'Movie' | 'TV Show' | 'Voice Acting' | 'Tour Documentary';
+  roleName: string;
+  roleType: 'Leading Role' | 'Supporting Role' | 'Extra';
+  genre: 'Drama' | 'Comedy' | 'Action' | 'Sci-Fi' | 'Horror' | 'Romance' | 'Thriller';
+  requiredSkill: number;
+  minPopularity: number;
+  studio: string;
+  pay: number;
+  durationWeeks: number;
+  scriptSnippet: string;
 }
 
 export interface TalentAgency {
@@ -17,7 +47,9 @@ export interface TalentAgency {
   name: string;
   feePercent: number;
   minPopularity: number;
+  minSkill?: number;
   perks: string[];
+  logo?: string;
 }
 
 export interface ActingOffer {
@@ -29,6 +61,10 @@ export interface ActingOffer {
   pay: number;
   durationWeeks: number;
   status: 'Pending' | 'Accepted' | 'Declined';
+  studio?: string;
+  genre?: 'Drama' | 'Comedy' | 'Action' | 'Sci-Fi' | 'Horror' | 'Romance' | 'Thriller';
+  coStars?: string[];
+  directorName?: string;
 }
 
 export interface ImdbProfile {
@@ -240,6 +276,16 @@ export interface Release {
   firstWeekStreams?: number;
   firstWeekSales?: number;
   wikipediaSummary?: string;
+  originalCoverArt?: string;
+  coverArtHistory?: { url: string; year: number; caption?: string }[];
+  wikipediaSections?: Record<string, string>;
+  wikipediaCustomData?: {
+    title?: string;
+    recordedYears?: string;
+    recordedStudios?: string;
+    producers?: string;
+    label?: string;
+  };
   soundtrackInfo?: { albumTitle: string };
   isFeatureToNpc?: boolean;
   features?: string[];
@@ -1265,6 +1311,7 @@ export interface OscarCategory {
 }
 
 export type GameView =
+  | "actingCareer"
   | "crypto"
   | "imdb"
   | "spotifyPodcasts"
@@ -1785,13 +1832,16 @@ export interface ArtistData {
   kids?: Kid[];
   pregnancy?: Pregnancy | null;
   // Acting & IMDb
+  actingSkillLevel?: number;
+  actingClassesTaken?: number;
   talentAgencyId?: string;
   imdbProfile?: ImdbProfile;
   actingRoles?: ActingRole[];
+  actingAuditions?: ActingAudition[];
   yearlyIncomeForTax?: number;
   taxPaidYear?: number;
   activeActingOffer?: ActingOffer | null;
-  filmingGig?: (ActingRole & { remainingWeeks: number }) | null;
+  filmingGig?: (ActingRole & { remainingWeeks: number; weeklyEvents?: string[] }) | null;
 }
 
 export interface RedCarpetLook {
@@ -2135,6 +2185,12 @@ export type GameAction =
   | { type: "ACCEPT_MOVIE_PREMIERE_RED_CARPET"; payload: { emailId: string, lookUrl: string, location?: string } }
   | { type: "SIGN_TALENT_AGENCY"; payload: { agencyId: string } }
   | { type: "LEAVE_TALENT_AGENCY" }
+  | { type: "ATTEND_ACTING_CLASS"; payload: { tier: 'basic' | 'masterclass' } }
+  | { type: "AUDITION_FOR_ROLE"; payload: { auditionId: string; choice: 'comedy' | 'drama' | 'action' | 'method' } }
+  | { type: "START_FILMING_WEEK_EVENT"; payload: { roleId: string; choice: string } }
+  | { type: "HOST_PRESS_JUNKET"; payload: { roleId: string; outlet: 'GQ' | 'Variety' | 'Hollywood Reporter'; answerChoice: string } }
+  | { type: "RECORD_MOVIE_SOUNDTRACK"; payload: { roleId: string; songId: string } }
+  | { type: "REFRESH_ACTING_AUDITIONS" }
   | {
       type: "TOGGLE_APPLE_MUSIC_EXPANDED_COVER";
       payload: { releaseId: string; enabled: boolean };
@@ -2404,6 +2460,25 @@ export type GameAction =
   | {
       type: "UPDATE_WIKIPEDIA_SUMMARY";
       payload: { releaseId: string; summary: string };
+    }
+  | {
+      type: "UPDATE_RELEASE_WIKIPEDIA";
+      payload: {
+        releaseId: string;
+        summary?: string;
+        wikipediaSections?: Record<string, string>;
+        title?: string;
+        originalCoverArt?: string;
+        coverArt?: string;
+        coverArtHistory?: { url: string; year: number; caption?: string }[];
+        wikipediaCustomData?: {
+          title?: string;
+          recordedYears?: string;
+          recordedStudios?: string;
+          producers?: string;
+          label?: string;
+        };
+      };
     }
   | { type: "TOGGLE_OFFLINE_MODE" }
   | { type: "CHANGE_LOCATION"; payload: { location: "US" | "Canada" | "UK" | "Asia" | "Latin America" } }

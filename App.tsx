@@ -125,6 +125,7 @@ import CryptoView from './components/CryptoView';
 import { ChartPredictionsView } from './components/ChartPredictionsView';
 import KalshiView from './components/KalshiView';
 import ImdbView from './components/ImdbView';
+import ActingCareerView from './components/ActingCareerView';
 import AlbumPredictionsView from './components/AlbumPredictionsView';
 import { getEraConfiguration } from './utils/eraUtils';
 import UKChartView from './components/UKChartView';
@@ -348,6 +349,8 @@ const AppContent: React.FC = () => {
                 return <AppleMusicView />;
             case 'imdb':
                 return <ImdbView />;
+            case 'actingCareer':
+                return <ActingCareerView />;
             case 'onlyfansSetup':
                 return <OnlyFansSetupView />;
             case 'onlyfans':

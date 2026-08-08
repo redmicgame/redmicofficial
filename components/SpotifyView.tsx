@@ -11,7 +11,7 @@ import SpotifyIcon from './icons/SpotifyIcon';
 import UserIcon from './icons/UserIcon';
 import VerifiedBadgeIcon from './icons/VerifiedBadgeIcon';
 import type { Song, Release, GameDate } from '../types';
-import { NPC_ARTIST_IMAGES } from '../constants';
+import { NPC_ARTIST_IMAGES, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, getArtistImage } from '../constants';
 import SpotifyDiscographyView from './SpotifyDiscographyView';
 import SpotifyReleaseDetailView from './SpotifyReleaseDetailView';
 import SpotifyPlaylistDetailView from './SpotifyPlaylistDetailView';
@@ -231,6 +231,44 @@ const AboutModal: React.FC<{ isOpen: boolean; onClose: () => void; artistData: A
     );
 };
 
+const SimilarArtistModal: React.FC<{
+    artist: { name: string; genre: string; image: string } | null;
+    onClose: () => void;
+    playerGenre: string;
+}> = ({ artist, onClose, playerGenre }) => {
+    if (!artist) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-[#181818] border border-zinc-800 w-full max-w-xs sm:max-w-sm rounded-2xl overflow-hidden shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black/80 rounded-full text-white z-10 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div className="relative aspect-square w-full bg-zinc-900">
+                    <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
+                </div>
+                <div className="p-5 -mt-6 relative z-10 text-center">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+                        <VerifiedBadgeIcon className="w-3.5 h-3.5 text-green-400" />
+                        Verified {artist.genre} Artist
+                    </div>
+                    <h3 className="text-2xl font-black text-white">{artist.name}</h3>
+                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                        Fans of your music also listen to {artist.name} because both of you represent the top tier of {playerGenre}.
+                    </p>
+                    <button onClick={onClose} className="mt-5 w-full py-2.5 bg-[#1ed760] hover:bg-[#1fdf64] text-black font-bold rounded-full transition-transform active:scale-95 text-sm">
+                        Follow
+                    </button>
+                </div>
+            </div>
+            <div className="absolute inset-0 z-[-1]" onClick={onClose}></div>
+        </div>
+    );
+};
+
 const SpotifyView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData, allPlayerArtists } = useGame();
     const [view, setView] = useState<'profile' | 'discography' | 'releaseDetail' | 'playlistDetail'>('profile');
@@ -240,6 +278,7 @@ const SpotifyView: React.FC = () => {
     const [isPopularExpanded, setIsPopularExpanded] = useState(false);
     const [showVerifiedModal, setShowVerifiedModal] = useState(false);
     const [showAboutModal, setShowAboutModal] = useState(false);
+    const [selectedSimilarArtist, setSelectedSimilarArtist] = useState<{ name: string; genre: string; image: string } | null>(null);
     const [nowPlayingSongIndex, setNowPlayingSongIndex] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -391,6 +430,53 @@ const SpotifyView: React.FC = () => {
         }
         return pastVenues;
     }, [activeArtistData.tours]);
+
+    const totalCareerStreams = useMemo(() => {
+        if (!songs) return 0;
+        return songs.reduce((sum, s) => sum + (s.streams || 0), 0);
+    }, [songs]);
+
+    const isFansAlsoLikeUnlocked = totalCareerStreams >= 1_000_000_000;
+
+    const primaryGenre = useMemo(() => {
+        if (!songs || songs.length === 0) return 'Pop';
+        const genreStreams: Record<string, number> = {};
+        songs.forEach(song => {
+            const g = song.genre || 'Pop';
+            genreStreams[g] = (genreStreams[g] || 0) + (song.streams || 1);
+        });
+        let topGenre = 'Pop';
+        let maxStreams = -1;
+        Object.entries(genreStreams).forEach(([g, count]) => {
+            if (count > maxStreams) {
+                maxStreams = count;
+                topGenre = g;
+            }
+        });
+        return topGenre;
+    }, [songs]);
+
+    const similarArtists = useMemo(() => {
+        const activeName = (activeArtist?.name || '').toLowerCase();
+        // Filter NPC artists whose genre matches primaryGenre
+        const matchingNpcs = NPC_ARTIST_NAMES.filter(name => {
+            if (name.toLowerCase() === activeName) return false;
+            const g = NPC_ARTIST_GENRES[name] || 'Pop';
+            return g.toLowerCase() === primaryGenre.toLowerCase();
+        });
+
+        // Fallback NPC artists if there are fewer matching ones
+        const fallbackNpcs = NPC_ARTIST_NAMES.filter(name => name.toLowerCase() !== activeName && !matchingNpcs.includes(name));
+        const combined = [...matchingNpcs, ...fallbackNpcs];
+
+        return combined.slice(0, 10).map(artistName => {
+            return {
+                name: artistName,
+                genre: NPC_ARTIST_GENRES[artistName] || primaryGenre,
+                image: getArtistImage(artistName)
+            };
+        });
+    }, [primaryGenre, activeArtist?.name]);
 
     const navigateTo = (newView: 'profile' | 'discography' | 'releaseDetail' | 'playlistDetail') => {
         if (newView !== view) {
@@ -623,7 +709,7 @@ const SpotifyView: React.FC = () => {
                 {appearsOnPlaylists.length > 0 && (
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold">Appears on</h2>
-                        <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
+                        <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
                             {appearsOnPlaylists.map(playlist => {
                                 let playlistCover = playlist.coverArt;
                                 if (playlist.tracks && playlist.tracks.length > 0) {
@@ -635,19 +721,64 @@ const SpotifyView: React.FC = () => {
                                         playlistCover = NPC_ARTIST_IMAGES?.[topTrack.artistName] || topTrack.coverArt || playlist.coverArt;
                                     }
                                 }
+
+                                const featuredArtists = Array.from(new Set(playlist.tracks.map(t => t.artistName).filter(Boolean))).slice(0, 4).join(', ');
+
                                 return (
-                                <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[140px] max-w-[140px] flex-shrink-0 snap-start bg-zinc-800/40 p-3 rounded-md hover:bg-zinc-800 transition-colors cursor-pointer group">
-                                    <div className="relative w-full aspect-square bg-[#282828] rounded-md mb-3 shadow-lg overflow-hidden">
+                                <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[150px] max-w-[150px] sm:min-w-[170px] sm:max-w-[170px] flex-shrink-0 snap-start bg-zinc-800/30 p-3 rounded-xl hover:bg-zinc-800/70 transition-all cursor-pointer group">
+                                    <div className="relative w-full aspect-square rounded-xl mb-3 shadow-lg overflow-hidden">
                                         <SpotifyPlaylistCover 
                                             name={playlist.name} 
                                             imageUrl={playlistCover} 
+                                            playlistId={playlist.id}
                                             size="small" 
                                         />
                                     </div>
-                                    <h3 className="font-bold text-sm truncate">{playlist.name}</h3>
-                                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-tight flex flex-col gap-1">
-                                        <span>Position: #{playlist.artistPosition}</span>
-                                        <span>{formatNumber(playlist.followers)} likes</span>
+                                    <h3 className="font-bold text-sm text-white truncate group-hover:text-[#1ed760] transition-colors">{playlist.name}</h3>
+                                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-snug font-medium">
+                                        {featuredArtists || `${formatNumber(playlist.followers)} saves`}
+                                    </p>
+                                </div>
+                            )})}
+                        </div>
+                    </div>
+                )}
+                
+                {/* Spotify Editorial Playlists */}
+                {gameState.spotifyPlaylists && gameState.spotifyPlaylists.length > 0 && (
+                    <div className="space-y-4 pt-2">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold">Editorial Playlists</h2>
+                            <span className="text-xs text-zinc-400 font-medium">{gameState.spotifyPlaylists.length} playlists</span>
+                        </div>
+                        <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
+                            {gameState.spotifyPlaylists.map(playlist => {
+                                let playlistCover = playlist.coverArt;
+                                if (playlist.tracks && playlist.tracks.length > 0) {
+                                    const topTrack = playlist.tracks[0];
+                                    if (topTrack.artistId !== 'unknown') {
+                                        const topPlayerArtist = allPlayerArtists.find(a => a.id === topTrack.artistId);
+                                        if (topPlayerArtist) playlistCover = topPlayerArtist.image;
+                                    } else {
+                                        playlistCover = NPC_ARTIST_IMAGES?.[topTrack.artistName] || topTrack.coverArt || playlist.coverArt;
+                                    }
+                                }
+
+                                const featuredArtists = Array.from(new Set(playlist.tracks.map(t => t.artistName).filter(Boolean))).slice(0, 4).join(', ');
+
+                                return (
+                                <div key={playlist.id} onClick={() => handleShowPlaylistDetail(playlist.id)} className="min-w-[150px] max-w-[150px] sm:min-w-[170px] sm:max-w-[170px] flex-shrink-0 snap-start bg-zinc-800/30 p-3 rounded-xl hover:bg-zinc-800/70 transition-all cursor-pointer group">
+                                    <div className="relative w-full aspect-square rounded-xl mb-3 shadow-lg overflow-hidden">
+                                        <SpotifyPlaylistCover 
+                                            name={playlist.name} 
+                                            imageUrl={playlistCover} 
+                                            playlistId={playlist.id}
+                                            size="small" 
+                                        />
+                                    </div>
+                                    <h3 className="font-bold text-sm text-white truncate group-hover:text-[#1ed760] transition-colors">{playlist.name}</h3>
+                                    <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-snug font-medium">
+                                        {featuredArtists || `${formatNumber(playlist.followers)} saves`}
                                     </p>
                                 </div>
                             )})}
@@ -746,6 +877,71 @@ const SpotifyView: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Fans Also Like Section */}
+                <div className="space-y-4 pt-6 border-t border-zinc-800/60 mt-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold tracking-tight text-white">Fans Also Like</h2>
+                        {isFansAlsoLikeUnlocked && (
+                            <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5 bg-zinc-800/60 px-2.5 py-1 rounded-full border border-zinc-700/50">
+                                <span className="w-2 h-2 rounded-full bg-[#1ed760]"></span>
+                                Genre: <span className="text-white font-semibold">{primaryGenre}</span>
+                            </span>
+                        )}
+                    </div>
+
+                    {isFansAlsoLikeUnlocked ? (
+                        <div className="flex overflow-x-auto gap-6 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar snap-x">
+                            {similarArtists.map((artist, idx) => (
+                                <div 
+                                    key={idx} 
+                                    onClick={() => setSelectedSimilarArtist(artist)}
+                                    className="flex flex-col items-center group cursor-pointer shrink-0 w-28 sm:w-36 snap-start"
+                                >
+                                    <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border border-zinc-800/80 shadow-2xl group-hover:scale-105 transition-all duration-300">
+                                        <img src={artist.image} alt={artist.name} className="w-full h-full object-cover group-hover:brightness-110 transition-all" />
+                                    </div>
+                                    <p className="font-bold text-sm sm:text-base text-white text-center truncate w-full mt-3 group-hover:text-[#1ed760] transition-colors">
+                                        {artist.name}
+                                    </p>
+                                    <p className="text-xs text-zinc-400 text-center truncate w-full mt-0.5 font-medium">
+                                        Artist
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-gradient-to-r from-zinc-900/90 via-zinc-900 to-zinc-800/40 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="space-y-1 text-center sm:text-left">
+                                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                                        <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                        </svg>
+                                        <p className="font-bold text-white text-sm sm:text-base">Unlocks at 1B Career Streams</p>
+                                    </div>
+                                    <p className="text-xs text-zinc-400 max-w-md">
+                                        Reach <span className="text-[#1ed760] font-semibold">1,000,000,000 career streams</span> across your catalog to unlock your "Fans Also Like" artist recommendations based on your primary genre (<span className="text-white font-semibold">{primaryGenre}</span>).
+                                    </p>
+                                </div>
+                                <div className="flex flex-col items-center sm:items-end w-full sm:w-auto shrink-0">
+                                    <div className="text-xs sm:text-sm font-bold text-white font-mono">
+                                        {formatNumber(totalCareerStreams)} / 1.0B
+                                    </div>
+                                    <div className="w-full sm:w-44 bg-zinc-800 h-2 rounded-full overflow-hidden mt-1.5 border border-zinc-700/50">
+                                        <div 
+                                            className="bg-gradient-to-r from-green-500 to-emerald-400 h-full rounded-full transition-all duration-500" 
+                                            style={{ width: `${Math.min(100, (totalCareerStreams / 1_000_000_000) * 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500 mt-1 font-mono">
+                                        {((totalCareerStreams / 1_000_000_000) * 100).toFixed(1)}% Unlocked
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
             </div>
 
             <AboutModal 
@@ -753,6 +949,12 @@ const SpotifyView: React.FC = () => {
                 onClose={() => setShowAboutModal(false)}
                 artistData={activeArtistData}
                 artist={activeArtist}
+            />
+
+            <SimilarArtistModal
+                artist={selectedSimilarArtist}
+                onClose={() => setSelectedSimilarArtist(null)}
+                playerGenre={primaryGenre}
             />
         </div>
     );
