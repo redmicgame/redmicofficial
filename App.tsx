@@ -5,6 +5,7 @@ import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 
 
 import React from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { GameProvider, useGame } from './context/GameContext';
 import StartScreen from './components/StartScreen';
 import GameUI from './components/GameUI';
@@ -397,6 +398,7 @@ const App: React.FC = () => {
     return (
         <GameProvider>
             <AppContent />
+            <Analytics />
         </GameProvider>
     );
 };
