@@ -171,15 +171,24 @@ const RedMicProDashboardView: React.FC = () => {
     const { dispatch, activeArtistData, gameState } = useGame();
     if (!activeArtistData) return null;
     
-    const { money, songs, isGoldTheme, salesBoost, contract, hype, redMicPro, popularity } = activeArtistData;
+    const { money, songs, isGoldTheme, salesBoost, contract, hype, redMicPro, popularity, tiktokFollowers, instagramFollowers, youtubeSubscribers } = activeArtistData;
 
     const [newMoney, setNewMoney] = useState(money);
     const [newBoost, setNewBoost] = useState(salesBoost);
     const [newHype, setNewHype] = useState(hype);
     const [newPopularity, setNewPopularity] = useState(popularity);
+    const [newTikTokFollowers, setNewTikTokFollowers] = useState(tiktokFollowers || 0);
+    const [newInstagramFollowers, setNewInstagramFollowers] = useState(instagramFollowers || 0);
+    const [newYouTubeSubscribers, setNewYouTubeSubscribers] = useState(youtubeSubscribers || 0);
     const [adminCode, setAdminCode] = useState('');
     const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
     const hypeMode = redMicPro.hypeMode || 'locked';
+
+    useEffect(() => {
+        setNewTikTokFollowers(tiktokFollowers || 0);
+        setNewInstagramFollowers(instagramFollowers || 0);
+        setNewYouTubeSubscribers(youtubeSubscribers || 0);
+    }, [tiktokFollowers, instagramFollowers, youtubeSubscribers]);
 
     const unreleasedSongs = songs.filter(s => !s.isReleased);
     
@@ -286,6 +295,76 @@ const RedMicProDashboardView: React.FC = () => {
                     <div className="flex gap-2">
                         <input type="number" value={newMoney || ''} onChange={e => setNewMoney(parseInt(e.target.value) || 0)} className="w-full bg-zinc-700 p-2 rounded-md" />
                         <button onClick={() => dispatch({ type: 'SET_MONEY', payload: { newAmount: newMoney }})} className="bg-zinc-600 font-bold px-4 rounded-md">Set</button>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-4">
+                    <h2 className="text-lg font-bold">Edit Social Followers & Subscribers</h2>
+                    
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+                            <span>TikTok Followers</span>
+                            <span className="text-xs text-zinc-500">({formatNumber(tiktokFollowers || 0)})</span>
+                        </label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="number" 
+                                value={newTikTokFollowers || ''} 
+                                onChange={e => setNewTikTokFollowers(parseInt(e.target.value) || 0)} 
+                                min="0" 
+                                className="w-full bg-zinc-700 p-2 rounded-md" 
+                            />
+                            <button 
+                                onClick={() => dispatch({ type: 'SET_TIKTOK_FOLLOWERS', payload: { newAmount: newTikTokFollowers }})} 
+                                className="bg-zinc-600 hover:bg-zinc-500 font-bold px-4 rounded-md text-sm"
+                            >
+                                Set
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-zinc-700/50">
+                        <label className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+                            <span>Instagram Followers</span>
+                            <span className="text-xs text-zinc-500">({formatNumber(instagramFollowers || 0)})</span>
+                        </label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="number" 
+                                value={newInstagramFollowers || ''} 
+                                onChange={e => setNewInstagramFollowers(parseInt(e.target.value) || 0)} 
+                                min="0" 
+                                className="w-full bg-zinc-700 p-2 rounded-md" 
+                            />
+                            <button 
+                                onClick={() => dispatch({ type: 'SET_INSTAGRAM_FOLLOWERS', payload: { newAmount: newInstagramFollowers }})} 
+                                className="bg-zinc-600 hover:bg-zinc-500 font-bold px-4 rounded-md text-sm"
+                            >
+                                Set
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-zinc-700/50">
+                        <label className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+                            <span>YouTube Subscribers</span>
+                            <span className="text-xs text-zinc-500">({formatNumber(youtubeSubscribers || 0)})</span>
+                        </label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="number" 
+                                value={newYouTubeSubscribers || ''} 
+                                onChange={e => setNewYouTubeSubscribers(parseInt(e.target.value) || 0)} 
+                                min="0" 
+                                className="w-full bg-zinc-700 p-2 rounded-md" 
+                            />
+                            <button 
+                                onClick={() => dispatch({ type: 'SET_YOUTUBE_SUBSCRIBERS', payload: { newAmount: newYouTubeSubscribers }})} 
+                                className="bg-zinc-600 hover:bg-zinc-500 font-bold px-4 rounded-md text-sm"
+                            >
+                                Set
+                            </button>
+                        </div>
                     </div>
                 </div>
 

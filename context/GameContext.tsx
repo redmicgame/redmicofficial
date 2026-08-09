@@ -18029,6 +18029,42 @@ Let us know if you accept.`,
         },
       };
     }
+    case "SET_TIKTOK_FOLLOWERS": {
+      if (!state.activeArtistId) return state;
+      const { newAmount } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, tiktokFollowers: Math.max(0, newAmount) },
+        },
+      };
+    }
+    case "SET_INSTAGRAM_FOLLOWERS": {
+      if (!state.activeArtistId) return state;
+      const { newAmount } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, instagramFollowers: Math.max(0, newAmount) },
+        },
+      };
+    }
+    case "SET_YOUTUBE_SUBSCRIBERS": {
+      if (!state.activeArtistId) return state;
+      const { newAmount } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, youtubeSubscribers: Math.max(0, newAmount) },
+        },
+      };
+    }
     case "TOGGLE_GOLD_THEME": {
       if (!state.activeArtistId) return state;
       const { enabled } = action.payload;
