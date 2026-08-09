@@ -2,6 +2,7 @@ import GoldenGlobesView from './components/GoldenGlobesView';
 import SubmitForGoldenGlobesView from './components/SubmitForGoldenGlobesView';
 import KaiStreamSetupView from "./components/KaiStreamSetupView";
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
+import { Analytics } from '@vercel/analytics/react';
 
 
 import React from 'react';
@@ -397,6 +398,7 @@ const App: React.FC = () => {
     return (
         <GameProvider>
             <AppContent />
+            <Analytics />
         </GameProvider>
     );
 };
