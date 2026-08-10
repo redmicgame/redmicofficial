@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { MANAGERS, TALENT_AGENCIES } from '../constants';
-import { Manager } from '../types';
+import { BRANDS, MEDIA_REQUESTS_PRESETS } from '../constants/brandMediaData';
+import { Manager, Brand, SongMediaRequest } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -22,6 +23,28 @@ const ManagementView: React.FC = () => {
     const [selectedSongId, setSelectedSongId] = useState<string>('');
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('');
     const [selectedPosition, setSelectedPosition] = useState<number>(50); // 50 is bottom (entry), 1 is top
+
+    // Brand Ambassador & Song Media Requests State
+    const [selectedBrandModal, setSelectedBrandModal] = useState<Brand | null>(null);
+    const [selectedMediaModal, setSelectedMediaModal] = useState<(SongMediaRequest & { targetSong?: any }) | null>(null);
+
+    const getOnePostPayout = (brand: Brand, popularity: number, hype: number) => {
+        const popBonus = (popularity || 0) * 8000;
+        const hypeBonus = Math.min(200000, (hype || 0) * 200);
+        const brandTierMultiplier = 0.8 + ((brand.minPopularity || 20) / 100) * 0.5;
+        const rawPayout = (1000 + popBonus + hypeBonus) * brandTierMultiplier;
+        return Math.min(1000000, Math.max(1000, Math.round(rawPayout / 500) * 500));
+    };
+
+    const getRequestedSongForMedia = (mediaId: string, songsList: any[]) => {
+        const released = (songsList || []).filter(s => s.isReleased);
+        if (!released || released.length === 0) return null;
+        const sorted = [...released].sort((a, b) => (b.streams || 0) - (a.streams || 0));
+        if (mediaId === 'gta_6_trailer' || mediaId === 'spiderman_promo') return sorted[0];
+        if (mediaId === 'squid_game' || mediaId === 'mrbeast_games') return sorted[1] || sorted[0];
+        if (mediaId === 'fenty_promo' || mediaId === 'huda_beauty_promo') return sorted[2] || sorted[0];
+        return sorted[3] || sorted[0];
+    };
 
     if (!activeArtistData) return null;
     const { money, manager, songs } = activeArtistData;
@@ -302,6 +325,153 @@ const ManagementView: React.FC = () => {
                                     </div>
                                 )}
 
+                                {/* BRAND AMBASSADOR & CAMPAIGNS SECTION */}
+                                <div className="mt-8 pt-6 border-t border-zinc-700">
+                                    <h3 className="font-bold text-lg mb-2 flex items-center justify-between">
+                                        <span>🏷️ Brand Deals & Ambassador Campaigns</span>
+                                        <span className="text-xs text-purple-400 font-semibold">1-Post or Ambassador Contracts</span>
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mb-4">
+                                        Partner with world-renowned fashion, luxury, tech, and automotive brands. Do quick social campaigns or sign long-term brand ambassador contracts. Pop Base tweets will be published featuring dual images (your profile & company logo).
+                                    </p>
+
+                                    {activeArtistData.activeBrandAmbassadorContract && (
+                                        <div className="bg-gradient-to-r from-purple-900/60 to-indigo-900/60 p-4 rounded-xl border border-purple-500/50 mb-6 shadow-lg">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <img src={activeArtistData.activeBrandAmbassadorContract.brandLogo} alt={activeArtistData.activeBrandAmbassadorContract.brandName} className="w-10 h-10 rounded-full object-contain bg-black/40 p-1 border border-purple-400" />
+                                                <div>
+                                                    <span className="text-xs uppercase tracking-wider text-purple-300 font-bold">Active Global Ambassador</span>
+                                                    <h4 className="font-bold text-lg text-white">{activeArtistData.activeBrandAmbassadorContract.brandName}</h4>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-200 mt-2 bg-black/30 p-3 rounded-lg border border-purple-500/30">
+                                                <div><span className="text-zinc-400">Weekly Retainer:</span> <span className="text-green-400 font-bold">${formatNumber(activeArtistData.activeBrandAmbassadorContract.weeklyPayout)}</span></div>
+                                                <div><span className="text-zinc-400">Remaining:</span> <span className="text-purple-300 font-bold">{activeArtistData.activeBrandAmbassadorContract.remainingWeeks} weeks</span></div>
+                                                <div><span className="text-zinc-400">Total Contract Earned:</span> <span className="text-green-400 font-bold">${formatNumber(activeArtistData.activeBrandAmbassadorContract.totalEarned)}</span></div>
+                                                <div><span className="text-zinc-400">Boosts:</span> <span className="text-yellow-400 font-bold">+1 Pop, +2 Hype/wk</span></div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                                        {BRANDS.map((brand) => {
+                                            const meetsPop = activeArtistData.popularity >= brand.minPopularity;
+                                            const isAmbassador = activeArtistData.activeBrandAmbassadorContract?.brandId === brand.id;
+                                            const onePostPayout = getOnePostPayout(brand, activeArtistData.popularity || 0, activeArtistData.hype || 0);
+
+                                            return (
+                                                <div key={brand.id} className="bg-zinc-800/80 p-3.5 rounded-xl border border-zinc-700/80 hover:border-purple-500/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={brand.logoUrl} alt={brand.name} className="w-12 h-12 rounded-lg object-contain bg-zinc-900 p-1.5 border border-zinc-700 flex-shrink-0" />
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="font-bold text-sm text-white">{brand.name}</h4>
+                                                                <span className="text-[10px] bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded-full font-medium">{brand.category}</span>
+                                                            </div>
+                                                            <p className="text-xs text-zinc-400 mt-0.5">{brand.description}</p>
+                                                            <div className="flex items-center gap-3 mt-1 text-xs">
+                                                                <span className="text-zinc-400">Req: <span className={meetsPop ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>{brand.minPopularity} Pop</span></span>
+                                                                <span className="text-zinc-400">1-Post: <span className="text-green-400 font-bold">${formatNumber(onePostPayout)}</span></span>
+                                                                <span className="text-zinc-400">Ambassador: <span className="text-purple-300 font-semibold">${formatNumber(brand.ambassadorWeeklyPayout)}/wk</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-2 sm:flex-col sm:w-44 flex-shrink-0">
+                                                        <button
+                                                            onClick={() => dispatch({
+                                                                type: 'DO_BRAND_CAMPAIGN',
+                                                                payload: { brandName: brand.name, payout: onePostPayout, logoUrl: brand.logoUrl }
+                                                            })}
+                                                            disabled={!meetsPop}
+                                                            className="flex-1 bg-zinc-700 hover:bg-purple-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs p-2 rounded-lg transition-colors border border-zinc-600 disabled:border-zinc-800"
+                                                        >
+                                                            {meetsPop ? `1-Post ($${formatNumber(onePostPayout)})` : `Req ${brand.minPopularity} Pop`}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setSelectedBrandModal(brand)}
+                                                            disabled={!meetsPop || !!activeArtistData.activeBrandAmbassadorContract}
+                                                            className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs p-2 rounded-lg transition-colors shadow-sm"
+                                                        >
+                                                            {isAmbassador ? 'Current Ambassador' : activeArtistData.activeBrandAmbassadorContract ? 'Contract Active' : 'Sign Ambassador'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* SONG MEDIA REQUESTS SECTION */}
+                                <div className="mt-8 pt-6 border-t border-zinc-700">
+                                    <h3 className="font-bold text-lg mb-2 flex items-center justify-between">
+                                        <span>📺 Song Media Requests</span>
+                                        <span className="text-xs text-blue-400 font-semibold">TV Shows, Movies & Trailers</span>
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mb-4">
+                                        Major TV networks, Hollywood movie studios, and viral franchises want to license your songs for their ads, shows, or trailers. Earn upfront payouts and massive streaming boosts!
+                                    </p>
+
+                                    {activeArtistData.activeSyncLicenses && activeArtistData.activeSyncLicenses.length > 0 && (
+                                        <div className="mb-4 space-y-2">
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-400">Active Sync Licenses</h4>
+                                            {activeArtistData.activeSyncLicenses.map((sync) => (
+                                                <div key={sync.id} className="bg-blue-950/40 p-3 rounded-lg border border-blue-500/30 flex items-center justify-between text-xs">
+                                                    <div>
+                                                        <span className="font-bold text-white">"{sync.songTitle}"</span> in <span className="text-blue-300 font-semibold">{sync.mediaTitle}</span>
+                                                        <div className="text-zinc-400 text-[11px] mt-0.5">+{sync.streamBoostPercent || 15}% streams/wk boost</div>
+                                                    </div>
+                                                    <span className="bg-blue-600/30 text-blue-300 border border-blue-400/40 px-2 py-1 rounded font-bold">{sync.remainingWeeks}w remaining</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                                        {MEDIA_REQUESTS_PRESETS.map((request) => {
+                                            const meetsPop = activeArtistData.popularity >= request.minPopularity;
+                                            const targetSong = getRequestedSongForMedia(request.id, activeArtistData.songs);
+
+                                            return (
+                                                <div key={request.id} className="bg-zinc-800/80 p-3.5 rounded-xl border border-zinc-700/80 hover:border-blue-500/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={request.imageUrl || request.logoUrl} alt={request.mediaTitle} className="w-12 h-12 rounded-lg object-cover bg-zinc-900 border border-zinc-700 flex-shrink-0" />
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="font-bold text-sm text-white">{request.mediaTitle}</h4>
+                                                                <span className="text-[10px] bg-blue-900/60 text-blue-300 border border-blue-700 px-2 py-0.5 rounded-full font-medium">{request.type}</span>
+                                                            </div>
+                                                            <p className="text-xs text-zinc-400 mt-0.5">{request.description}</p>
+                                                            <div className="flex items-center gap-3 mt-1 text-xs">
+                                                                <span className="text-zinc-400">Upfront: <span className="text-green-400 font-bold">${formatNumber(request.upfrontPayout)}</span></span>
+                                                                <span className="text-zinc-400">Boost: <span className="text-blue-300 font-bold">+{request.streamBoostPercent}%/wk</span></span>
+                                                                <span className="text-zinc-400">Term: <span className="text-zinc-200 font-semibold">{request.durationWeeks} Wks</span></span>
+                                                            </div>
+                                                            <div className="mt-1">
+                                                                {targetSong ? (
+                                                                    <span className="text-[11px] text-blue-300 font-medium">Requested Song: <strong className="text-white">"{targetSong.title}"</strong></span>
+                                                                ) : (
+                                                                    <span className="text-[11px] text-red-400">No released songs available to license</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedMediaModal({ ...request, targetSong });
+                                                        }}
+                                                        disabled={!meetsPop || !targetSong}
+                                                        className="sm:w-40 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs p-2.5 rounded-lg transition-colors shadow-sm flex-shrink-0"
+                                                    >
+                                                        {!meetsPop ? `Req ${request.minPopularity} Pop` : !targetSong ? 'No Song Released' : 'Sign Sync Contract'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
                                 <h3 className="font-bold mb-3 mt-6">Automation Settings</h3>
                                 <div className="space-y-3">
                                     <label className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg cursor-pointer hover:bg-zinc-700">
@@ -543,6 +713,155 @@ const ManagementView: React.FC = () => {
                 onClose={() => setHiatusResponseModal({isOpen: false, success: false, message: ''})}
                 confirmText={hiatusResponseModal.success ? "Start Hiatus" : "Okay"}
             />
+
+            {/* BRAND AMBASSADOR CONTRACT MODAL */}
+            {selectedBrandModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-zinc-900 border border-purple-500 p-6 rounded-2xl max-w-lg w-full space-y-4 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                            <div className="flex items-center gap-3">
+                                <img src={selectedBrandModal.logoUrl} alt={selectedBrandModal.name} className="w-10 h-10 rounded-full bg-zinc-800 p-1 object-contain border border-purple-400" />
+                                <div>
+                                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wide">Brand Ambassador Agreement</span>
+                                    <h3 className="text-xl font-bold text-white">{selectedBrandModal.name}</h3>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedBrandModal(null)} className="text-zinc-400 hover:text-white font-bold text-lg">✕</button>
+                        </div>
+
+                        <div className="bg-zinc-800/80 p-4 rounded-xl border border-zinc-700 space-y-3 text-xs">
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2">
+                                <span className="text-zinc-400">Contract Duration:</span>
+                                <span className="text-white font-bold">{selectedBrandModal.contractDurationWeeks} Weeks</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2">
+                                <span className="text-zinc-400">Weekly Retainer Payout:</span>
+                                <span className="text-green-400 font-bold">${formatNumber(selectedBrandModal.ambassadorWeeklyPayout)}/week</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2">
+                                <span className="text-zinc-400">Total Contract Value:</span>
+                                <span className="text-green-400 font-bold">${formatNumber(selectedBrandModal.ambassadorWeeklyPayout * selectedBrandModal.contractDurationWeeks)}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2">
+                                <span className="text-zinc-400">Weekly Benefits:</span>
+                                <span className="text-purple-300 font-semibold">+1 Popularity & +2 Hype every week</span>
+                            </div>
+                            <div className="text-zinc-300 leading-relaxed pt-1">
+                                <p className="font-semibold text-zinc-200 mb-1">Contractual Obligations & Media:</p>
+                                <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                                    <li>Official announcement posted by Pop Base with dual image badge (Profile + Brand Logo).</li>
+                                    <li>Exclusively represent {selectedBrandModal.name} across social media and public appearances.</li>
+                                    <li>Weekly retainer deposited automatically into your account every Monday.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button onClick={() => setSelectedBrandModal(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2.5 rounded-xl text-sm">Cancel</button>
+                            <button
+                                onClick={() => {
+                                    dispatch({
+                                        type: 'SIGN_BRAND_AMBASSADOR',
+                                        payload: {
+                                            brandId: selectedBrandModal.id,
+                                            brandName: selectedBrandModal.name,
+                                            logoUrl: selectedBrandModal.logoUrl,
+                                            weeklyPayout: selectedBrandModal.ambassadorWeeklyPayout,
+                                            durationWeeks: selectedBrandModal.contractDurationWeeks,
+                                        }
+                                    });
+                                    setSelectedBrandModal(null);
+                                }}
+                                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl text-sm shadow-lg shadow-purple-600/30"
+                            >
+                                Sign Ambassador Contract
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SONG SYNC CONTRACT MODAL */}
+            {selectedMediaModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-zinc-900 border border-blue-500 p-6 rounded-2xl max-w-lg w-full space-y-4 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                            <div className="flex items-center gap-3">
+                                <img src={selectedMediaModal.imageUrl || selectedMediaModal.logoUrl} alt={selectedMediaModal.mediaTitle} className="w-10 h-10 rounded-lg object-cover bg-zinc-800 border border-blue-400" />
+                                <div>
+                                    <span className="text-xs font-bold text-blue-400 uppercase tracking-wide">Sync Licensing Agreement</span>
+                                    <h3 className="text-xl font-bold text-white">{selectedMediaModal.mediaTitle}</h3>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedMediaModal(null)} className="text-zinc-400 hover:text-white font-bold text-lg">✕</button>
+                        </div>
+
+                        <div className="bg-zinc-800/80 p-4 rounded-xl border border-zinc-700 space-y-3 text-xs">
+                            <div>
+                                <label className="block text-zinc-300 font-bold mb-1.5">Requested Song (Chosen by Requester):</label>
+                                {selectedMediaModal.targetSong ? (
+                                    <div className="bg-zinc-900 border border-zinc-700 p-3 rounded-lg flex items-center gap-3">
+                                        {selectedMediaModal.targetSong.coverArt && (
+                                            <img src={selectedMediaModal.targetSong.coverArt} alt={selectedMediaModal.targetSong.title} className="w-10 h-10 rounded object-cover border border-zinc-800" />
+                                        )}
+                                        <div>
+                                            <h4 className="font-bold text-white text-sm">"{selectedMediaModal.targetSong.title}"</h4>
+                                            <p className="text-zinc-400 text-xs">{formatNumber(selectedMediaModal.targetSong.streams || 0)} total streams</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-red-400 font-semibold">You must have at least one released song to sign a sync deal!</p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2 pt-2">
+                                <span className="text-zinc-400">Upfront Sync Payout:</span>
+                                <span className="text-green-400 font-bold">${formatNumber(selectedMediaModal.upfrontPayout)}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2">
+                                <span className="text-zinc-400">Weekly Streaming Boost:</span>
+                                <span className="text-blue-300 font-bold">+{selectedMediaModal.streamBoostPercent}% streams/wk</span>
+                            </div>
+                            <div className="flex justify-between border-b border-zinc-700/60 pb-2">
+                                <span className="text-zinc-400">Licensing Term:</span>
+                                <span className="text-white font-bold">{selectedMediaModal.durationWeeks} Weeks</span>
+                            </div>
+
+                            <div className="text-zinc-300 leading-relaxed pt-1">
+                                <p className="font-semibold text-zinc-200 mb-1">Terms & Exposure:</p>
+                                <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                                    <li>Non-exclusive master and publishing sync license granted for {selectedMediaModal.mediaTitle}.</li>
+                                    <li>An official news announcement will be published upon contract execution.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button onClick={() => setSelectedMediaModal(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2.5 rounded-xl text-sm">Cancel</button>
+                            <button
+                                disabled={!selectedMediaModal.targetSong}
+                                onClick={() => {
+                                    dispatch({
+                                        type: 'SIGN_SONG_SYNC_LICENSE',
+                                        payload: {
+                                            songId: selectedMediaModal.targetSong.id,
+                                            mediaTitle: selectedMediaModal.mediaTitle,
+                                            mediaType: selectedMediaModal.type,
+                                            upfrontPayout: selectedMediaModal.upfrontPayout,
+                                            streamBoostPercent: selectedMediaModal.streamBoostPercent,
+                                            durationWeeks: selectedMediaModal.durationWeeks,
+                                        }
+                                    });
+                                    setSelectedMediaModal(null);
+                                }}
+                                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold py-2.5 rounded-xl text-sm shadow-lg shadow-blue-600/30"
+                            >
+                                Sign Sync License
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

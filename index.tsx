@@ -3,6 +3,7 @@ patchFileReaderForImageCompression();
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Analytics } from '@vercel/analytics/react';
 import App from './App';
 import { FirebaseProvider } from './context/FirebaseContext';
 
@@ -16,6 +17,7 @@ root.render(
   <React.StrictMode>
     <FirebaseProvider>
       <App />
+      <Analytics />
     </FirebaseProvider>
   </React.StrictMode>
 );

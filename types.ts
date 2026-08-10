@@ -1539,6 +1539,56 @@ export interface Tour {
   openerId?: string;
   guestIds?: string[];
   bookingCostsPaid?: number;
+  showsPerWeek?: number;
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  category: string;
+  minPopularity: number;
+  oneOffPayout: number;
+  ambassadorWeeklyPayout: number;
+  contractDurationWeeks: number;
+  logoUrl: string;
+  description: string;
+}
+
+export interface BrandAmbassadorContract {
+  id: string;
+  brandId: string;
+  brandName: string;
+  brandLogo: string;
+  durationWeeks: number;
+  remainingWeeks: number;
+  weeklyPayout: number;
+  totalEarned: number;
+  signedWeek: number;
+  signedYear: number;
+}
+
+export interface SongMediaRequest {
+  id: string;
+  mediaTitle: string;
+  type: 'TV Show' | 'Trailer' | 'Promotional Campaign' | 'Web/Game';
+  upfrontPayout: number;
+  streamBoostPercent: number;
+  durationWeeks: number;
+  logoUrl?: string;
+  imageUrl?: string;
+  minPopularity: number;
+  description?: string;
+}
+
+export interface ActiveSyncLicense {
+  id: string;
+  songId: string;
+  songTitle: string;
+  mediaTitle: string;
+  mediaType: string;
+  upfrontPayout: number;
+  streamBoostPercent: number;
+  remainingWeeks: number;
 }
 
 export interface Manager {
@@ -1829,6 +1879,9 @@ export interface ArtistData {
   signedBrandDeals?: string[];
   activeBrandDeals?: { id: string; name: string; hashtag: string; brandImage: string; lastPostedWeek?: number }[];
   brandDealViolations?: number;
+  activeBrandAmbassadorContract?: BrandAmbassadorContract | null;
+  activeSyncLicenses?: ActiveSyncLicense[];
+  availableMediaRequests?: SongMediaRequest[];
   signedVideoGames?: string[];
   kids?: Kid[];
   pregnancy?: Pregnancy | null;
@@ -2735,6 +2788,31 @@ export type GameAction =
   | {
       type: "PROMOTE_RADIO";
       payload: { songId: string; format: string; amount: number; source: "personal" | "label" };
+    }
+  | {
+      type: "DO_BRAND_CAMPAIGN";
+      payload: { brandName: string; payout: number; logoUrl: string };
+    }
+  | {
+      type: "SIGN_BRAND_AMBASSADOR";
+      payload: {
+        brandId: string;
+        brandName: string;
+        weeklyPayout: number;
+        contractDurationWeeks: number;
+        logoUrl: string;
+      };
+    }
+  | {
+      type: "SIGN_SONG_SYNC_LICENSE";
+      payload: {
+        songId: string;
+        mediaTitle: string;
+        mediaType: string;
+        upfrontPayout: number;
+        streamBoostPercent: number;
+        durationWeeks: number;
+      };
     };
 export interface PodcastEpisode {
   id: string;

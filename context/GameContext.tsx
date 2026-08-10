@@ -3384,244 +3384,301 @@ Live Nation`,
                 });
               }
             }
-            tour.presaleCollectionQueue = newQueue;
           }
 
           if (tour.status === "active") {
-            if (tour.currentVenueIndex < tour.venues.length) {
-              const venue = tour.venues[tour.currentVenueIndex];
+            const showsToPerform = Math.min(
+              tour.showsPerWeek || 1,
+              tour.venues.length - tour.currentVenueIndex
+            );
 
-              // Calculate sales
-              // Base demand based on popularity (0-100) and hype (0-1000)
-              // e.g. Pop 50, Hype 100 -> 40000 + 5000 = 45000 base interest
-              let baseDemand =
-                artistData.popularity * 800 + artistData.hype * 50;
-                
-              let supportDemand = 0;
-              if (tour.openerId) {
-                 const op = state.npcs?.find(n => n.uniqueId === tour.openerId);
-                 if (op) supportDemand += op.basePopularity / 2000; // top opener = ~37k extra tickets
-              }
-              if (tour.guestIds) {
-                 tour.guestIds.forEach(gid => {
-                    const gu = state.npcs?.find(n => n.uniqueId === gid);
-                    if (gu) supportDemand += gu.basePopularity / 4000; // top guest = ~18k extra tickets
-                 });
-              }
-              baseDemand += supportDemand;
+            if (showsToPerform > 0) {
+              const newVenues = [...tour.venues];
+              let totalWeeklyTicketsSold = 0;
+              let totalWeeklyRevenue = 0;
+              let currentIdx = tour.currentVenueIndex;
 
-              // Price sensitivity: Suggestion is around $25-$120.
-              // If price is high, demand drops.
-              let priceSensitivity = 1.2 - venue.ticketPrice / 200; // Simple linear drop
-              let demand = baseDemand * Math.max(0.1, priceSensitivity);
+              for (let showCount = 0; showCount < showsToPerform; showCount++) {
+                const venueIdx = currentIdx + showCount;
+                if (venueIdx >= tour.venues.length) break;
+                const venue = tour.venues[venueIdx];
 
-              // Random flux
-              demand = demand * (0.8 + Math.random() * 0.4);
+                // Calculate sales
+                let baseDemand =
+                  artistData.popularity * 800 + artistData.hype * 50;
 
-              if (tour.isSetlistMissingHits) {
-                demand = demand * 0.5; // -50% penalty
-              }
+                let supportDemand = 0;
+                if (tour.openerId) {
+                  const op = state.npcs?.find((n) => n.uniqueId === tour.openerId);
+                  if (op) supportDemand += op.basePopularity / 2000;
+                }
+                if (tour.guestIds) {
+                  tour.guestIds.forEach((gid) => {
+                    const gu = state.npcs?.find((n) => n.uniqueId === gid);
+                    if (gu) supportDemand += gu.basePopularity / 4000;
+                  });
+                }
+                baseDemand += supportDemand;
 
-              let newTicketsSold = Math.floor(
-                Math.min(venue.capacity - (venue.ticketsSold || 0), demand),
-              );
+                let priceSensitivity = 1.2 - venue.ticketPrice / 200;
+                let demand = baseDemand * Math.max(0.1, priceSensitivity);
+                demand = demand * (0.8 + Math.random() * 0.4);
 
-              let actualTicketPrice = venue.ticketPrice;
-              if (tour.useDynamicPricing) {
-                actualTicketPrice = venue.ticketPrice * (Math.random() * 2 + 2);
-                // Dynamic pricing pisses people off, lose hype/popularity but gain cash
-                artistData.publicImage = Math.max(
-                  0,
-                  artistData.publicImage - 1,
+                if (tour.isSetlistMissingHits) {
+                  demand = demand * 0.5;
+                }
+
+                let newTicketsSold = Math.floor(
+                  Math.min(venue.capacity - (venue.ticketsSold || 0), demand)
                 );
 
-                // 5% chance per week of a federal investigation encounter if using dynamic pricing
-                if (Math.random() < 0.05 && !tourDynamicPricingEncounter) {
-                  tourDynamicPricingEncounter = {
-                    id: `ticketmaster-${tour.id}-${newDate.year}-${newDate.week}`,
-                    text: `BREAKING: The Department of Justice has opened an antitrust investigation into your tour's use of Dynamic Pricing after fans complained about paying $4,000 for nosebleeds. You are facing a massive PR disaster.`,
-                    requiresImage: false,
-                    choices: [
-                      {
-                        label:
-                          "Apologize and refund the scalped fees (Huge PR win, lose money)",
-                        publicImageEffect: 30,
-                        hypeEffect: 10,
-                        popularityEffect: 5,
-                        moneyEffect: -(
-                          newTicketsSold *
-                          actualTicketPrice *
-                          0.5
-                        ),
-                        tweetTemplate:
-                          "{artist} apologizes for the crazy dynamic pricing and refunds fans. Huge respect!",
-                        authorName: "Music Daily",
-                        isTMZ: true,
-                      },
-                      {
-                        label:
-                          "Blame Ticketmaster and move on. (PR hit, keep the cash)",
-                        publicImageEffect: -20,
-                        hypeEffect: -5,
-                        popularityEffect: -5,
-                        moneyEffect: 0,
-                        tweetTemplate:
-                          "Fans furious as {artist} blames Ticketmaster for the ridiculous dynamic pricing...",
-                        authorName: "TMZ",
-                        isTMZ: true,
-                      },
-                    ],
-                  };
-                }
-              }
-
-              // Arrest check
-              if (
-                !tourArrestEncounter &&
-                (venue.region === "Middle East" ||
-                  venue.region === "Asia" ||
-                  venue.region === "Africa")
-              ) {
-                if (Math.random() < 0.05) {
-                  // 5% chance
-                  const bailAmount = Math.floor(
-                    100000 + Math.random() * 900000,
+                let actualTicketPrice = venue.ticketPrice;
+                if (tour.useDynamicPricing) {
+                  actualTicketPrice = venue.ticketPrice * (Math.random() * 2 + 2);
+                  artistData.publicImage = Math.max(
+                    0,
+                    artistData.publicImage - 1
                   );
-                  tourArrestEncounter = {
-                    id: `arrest-${tour.id}-${newDate.year}-${newDate.week}`,
-                    text: `BREAKING: You were arrested in ${venue.city} (${venue.region}) for allegedly breaking strict conduct/dress code policies! You are detained, and TMZ has already dropped the article. You can pay a heavy bond to get released or cancel the tour leg.`,
-                    requiresImage: false,
-                    choices: [
-                      {
-                        label: `Pay the bond ($${formatNumber(bailAmount)}) and continue the tour. (Money lost, PR mixed)`,
-                        publicImageEffect: -10,
-                        hypeEffect: 20, // Infamous
-                        popularityEffect: 0,
-                        moneyEffect: -bailAmount,
-                        tweetTemplate: `TMZ EXCLUSIVE: {artist} ARRESTED in ${venue.city}! Bail set at $${formatNumber(bailAmount)}... #Free{artist}`,
-                        authorName: "TMZ",
-                        isTMZ: true,
-                      },
-                      {
-                        label:
-                          "Refuse to pay, spend the night in jail, and CANCEL the rest of the tour. (Massive PR hit, huge hype drop)",
-                        publicImageEffect: -30,
-                        hypeEffect: -25,
-                        popularityEffect: -10,
-                        moneyEffect: 0,
-                        tourAction: { action: "CANCEL", tourId: tour.id },
-                        tweetTemplate: `TMZ EXCLUSIVE: {artist} stays in jail in ${venue.city} and cancels the remaining tour dates. Fans are furious.`,
-                        authorName: "TMZ",
-                        isTMZ: true,
-                      },
-                    ],
-                  };
+
+                  if (Math.random() < 0.05 && !tourDynamicPricingEncounter) {
+                    tourDynamicPricingEncounter = {
+                      id: `ticketmaster-${tour.id}-${newDate.year}-${newDate.week}`,
+                      text: `BREAKING: The Department of Justice has opened an antitrust investigation into your tour's use of Dynamic Pricing after fans complained about paying $4,000 for nosebleeds. You are facing a massive PR disaster.`,
+                      requiresImage: false,
+                      choices: [
+                        {
+                          label:
+                            "Apologize and refund the scalped fees (Huge PR win, lose money)",
+                          publicImageEffect: 30,
+                          hypeEffect: 10,
+                          popularityEffect: 5,
+                          moneyEffect: -(
+                            newTicketsSold *
+                            actualTicketPrice *
+                            0.5
+                          ),
+                          tweetTemplate:
+                            "{artist} apologizes for the crazy dynamic pricing and refunds fans. Huge respect!",
+                          authorName: "Music Daily",
+                          isTMZ: true,
+                        },
+                        {
+                          label:
+                            "Blame Ticketmaster and move on. (PR hit, keep the cash)",
+                          publicImageEffect: -20,
+                          hypeEffect: -5,
+                          popularityEffect: -5,
+                          moneyEffect: 0,
+                          tweetTemplate:
+                            "Fans furious as {artist} blames Ticketmaster for the ridiculous dynamic pricing...",
+                          authorName: "TMZ",
+                          isTMZ: true,
+                        },
+                      ],
+                    };
+                  }
                 }
-              }
 
-              let revenue = newTicketsSold * actualTicketPrice;
+                if (
+                  !tourArrestEncounter &&
+                  (venue.region === "Middle East" ||
+                    venue.region === "Asia" ||
+                    venue.region === "Africa")
+                ) {
+                  if (Math.random() < 0.05) {
+                    const bailAmount = Math.floor(
+                      100000 + Math.random() * 900000
+                    );
+                    tourArrestEncounter = {
+                      id: `arrest-${tour.id}-${newDate.year}-${newDate.week}`,
+                      text: `BREAKING: You were arrested in ${venue.city} (${venue.region}) for allegedly breaking strict conduct/dress code policies! You are detained, and TMZ has already dropped the article. You can pay a heavy bond to get released or cancel the tour leg.`,
+                      requiresImage: false,
+                      choices: [
+                        {
+                          label: `Pay the bond ($${formatNumber(bailAmount)}) and continue the tour. (Money lost, PR mixed)`,
+                          publicImageEffect: -10,
+                          hypeEffect: 20,
+                          popularityEffect: 0,
+                          moneyEffect: -bailAmount,
+                          tweetTemplate: `TMZ EXCLUSIVE: {artist} ARRESTED in ${venue.city}! Bail set at $${formatNumber(bailAmount)}... #Free{artist}`,
+                          authorName: "TMZ",
+                          isTMZ: true,
+                        },
+                        {
+                          label:
+                            "Refuse to pay, spend the night in jail, and CANCEL the rest of the tour. (Massive PR hit, huge hype drop)",
+                          publicImageEffect: -30,
+                          hypeEffect: -25,
+                          popularityEffect: -10,
+                          moneyEffect: 0,
+                          tourAction: { action: "CANCEL", tourId: tour.id },
+                          tweetTemplate: `TMZ EXCLUSIVE: {artist} stays in jail in ${venue.city} and cancels the remaining tour dates. Fans are furious.`,
+                          authorName: "TMZ",
+                          isTMZ: true,
+                        },
+                      ],
+                    };
+                  }
+                }
 
-              if (tour.useVipPackages) {
-                const vipTickets = Math.floor(newTicketsSold * 0.05); // 5% buy VIP
-                revenue += vipTickets * (actualTicketPrice * 4); // VIP is an extra 4x
-              }
-              
-              let merchRevenue = 0;
-              if (tour.merchItems && tour.merchItems.length > 0) {
-                 artistData.merch = artistData.merch.map(item => {
-                    const isTourMerch = tour.merchItems?.find(m => m.id === item.id);
+                let revenue = newTicketsSold * actualTicketPrice;
+
+                if (tour.useVipPackages) {
+                  const vipTickets = Math.floor(newTicketsSold * 0.05);
+                  revenue += vipTickets * (actualTicketPrice * 4);
+                }
+
+                let merchRevenue = 0;
+                if (tour.merchItems && tour.merchItems.length > 0) {
+                  artistData.merch = artistData.merch.map((item) => {
+                    const isTourMerch = tour.merchItems?.find(
+                      (m) => m.id === item.id
+                    );
                     if (isTourMerch && item.stock > 0) {
-                       const price = item.price;
-                       const safePrice = Math.max(0.01, price);
-                       // Tour attendees are very likely to buy merch (10-30% base, scaled by price)
-                       let buyerRate = (0.1 + Math.random() * 0.2) * Math.min(1, 20 / safePrice);
-                       buyerRate = Math.min(buyerRate, 0.4); // max 40%
-                       let buyers = Math.floor(newTicketsSold * buyerRate);
-                       buyers = Math.min(buyers, item.stock);
-                       const itemRev = buyers * price;
-                       merchRevenue += itemRev;
-                       return { ...item, stock: item.stock - buyers, unitsSold: (item.unitsSold || 0) + buyers, _actualWeeklySales: (item._actualWeeklySales || 0) + buyers };
+                      const price = item.price;
+                      const safePrice = Math.max(0.01, price);
+                      let buyerRate =
+                        (0.1 + Math.random() * 0.2) *
+                        Math.min(1, 20 / safePrice);
+                      buyerRate = Math.min(buyerRate, 0.4);
+                      let buyers = Math.floor(newTicketsSold * buyerRate);
+                      buyers = Math.min(buyers, item.stock);
+                      const itemRev = buyers * price;
+                      merchRevenue += itemRev;
+                      return {
+                        ...item,
+                        stock: item.stock - buyers,
+                        unitsSold: (item.unitsSold || 0) + buyers,
+                        _actualWeeklySales:
+                          (item._actualWeeklySales || 0) + buyers,
+                      };
                     }
                     return item;
-                 });
-                 revenue += merchRevenue;
-              }
+                  });
+                  revenue += merchRevenue;
+                }
 
-              const updatedVenue = {
-                ...venue,
-                ticketsSold: (venue.ticketsSold || 0) + newTicketsSold,
-                revenue: (venue.revenue || 0) + revenue,
-                soldOut:
-                  (venue.ticketsSold || 0) + newTicketsSold >= venue.capacity,
-              };
+                const updatedVenue = {
+                  ...venue,
+                  ticketsSold: (venue.ticketsSold || 0) + newTicketsSold,
+                  revenue: (venue.revenue || 0) + revenue,
+                  soldOut:
+                    (venue.ticketsSold || 0) + newTicketsSold >= venue.capacity,
+                };
 
-              const newVenues = [...tour.venues];
-              newVenues[tour.currentVenueIndex] = updatedVenue;
+                newVenues[venueIdx] = updatedVenue;
+                totalWeeklyTicketsSold += newTicketsSold;
+                totalWeeklyRevenue += revenue;
 
-              const nextIndex = tour.currentVenueIndex + 1;
-              const isFinished = nextIndex >= tour.venues.length;
+                artistData.money += revenue;
 
-              // Add income to artist
-              artistData.money += revenue;
-
-              // Boost regional popularity
-              if (!artistData.regionalPopularity) {
+                if (!artistData.regionalPopularity) {
                   artistData.regionalPopularity = {
-                      "US": artistData.popularity || 0,
-                      "Canada": 0,
-                      "UK": 0,
-                      "Latin America": 0,
-                      "Asia": 0,
-                      "Africa": 0
+                    US: artistData.popularity || 0,
+                    Canada: 0,
+                    UK: 0,
+                    "Latin America": 0,
+                    Asia: 0,
+                    Africa: 0,
                   };
-              }
-              const vReg = venue.region || "North America";
-              let gameReg = "US";
-              if (vReg === "Europe") gameReg = "UK";
-              else if (vReg === "South America" || venue.city === "Mexico City") gameReg = "Latin America";
-              else if (vReg === "Asia" || vReg === "Middle East" || vReg === "Oceania") gameReg = "Asia";
-              else if (vReg === "Africa") gameReg = "Africa";
-              else if (venue.city === "Toronto" || venue.city === "Montreal" || venue.city === "Vancouver") gameReg = "Canada";
-              
-              artistData.regionalPopularity[gameReg] = Math.min(100, (artistData.regionalPopularity[gameReg] || 0) + 1);
+                }
+                const vReg = venue.region || "North America";
+                let gameReg = "US";
+                if (vReg === "Europe") gameReg = "UK";
+                else if (
+                  vReg === "South America" ||
+                  venue.city === "Mexico City"
+                )
+                  gameReg = "Latin America";
+                else if (
+                  vReg === "Asia" ||
+                  vReg === "Middle East" ||
+                  vReg === "Oceania"
+                )
+                  gameReg = "Asia";
+                else if (vReg === "Africa") gameReg = "Africa";
+                else if (
+                  venue.city === "Toronto" ||
+                  venue.city === "Montreal" ||
+                  venue.city === "Vancouver"
+                )
+                  gameReg = "Canada";
 
-              // Add hype for successful shows
-              if (updatedVenue.soldOut) {
-                artistData.hype = Math.min(
-                  getHypeCap(artistData),
-                  artistData.hype + 5,
+                artistData.regionalPopularity[gameReg] = Math.min(
+                  100,
+                  (artistData.regionalPopularity[gameReg] || 0) + 1
                 );
+
+                if (updatedVenue.soldOut) {
+                  artistData.hype = Math.min(
+                    getHypeCap(artistData),
+                    artistData.hype + 5
+                  );
+                }
+
+                if (artistProfileForEmail && updatedVenue.soldOut && showCount === 0) {
+                  const postContent = `Sold out show in ${venue.city} tonight! Thank you all for coming out! ❤️ #TourLife`;
+                  artistData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId: artistProfileForEmail.id,
+                    content: postContent,
+                    likes: Math.floor(newTicketsSold * 0.5),
+                    retweets: Math.floor(newTicketsSold * 0.1),
+                    views: Math.floor(newTicketsSold * 10),
+                    date: newDate,
+                  });
+                }
               }
 
-              // Notifications/Posts about the tour
-              if (artistProfileForEmail && updatedVenue.soldOut) {
-                const postContent = `Sold out show in ${venue.city} tonight! Thank you all for coming out! ❤️ #TourLife`;
-                artistData.xPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: artistProfileForEmail.id,
-                  content: postContent,
-                  likes: Math.floor(newTicketsSold * 0.5),
-                  retweets: Math.floor(newTicketsSold * 0.1),
-                  views: Math.floor(newTicketsSold * 10),
-                  date: newDate,
-                });
-              }
+              const nextIndex = currentIdx + showsToPerform;
+              const isFinished = nextIndex >= tour.venues.length;
 
               return {
                 ...tour,
                 venues: newVenues,
                 currentVenueIndex: nextIndex,
-                ticketsSold: tour.ticketsSold + newTicketsSold,
-                totalRevenue: tour.totalRevenue + revenue,
+                ticketsSold: tour.ticketsSold + totalWeeklyTicketsSold,
+                totalRevenue: tour.totalRevenue + totalWeeklyRevenue,
                 status: isFinished ? "finished" : "active",
               };
             } else {
-              // Should have been marked finished, but just in case
               return { ...tour, status: "finished" };
             }
           }
           return tour;
         });
+
+        // --- BRAND AMBASSADOR CONTRACT WEEKLY TICK ---
+        if (artistData.activeBrandAmbassadorContract) {
+          const contract = artistData.activeBrandAmbassadorContract;
+          contract.remainingWeeks -= 1;
+          artistData.money += contract.weeklyPayout;
+          contract.totalEarned += contract.weeklyPayout;
+          artistData.popularity = Math.min(100, (artistData.popularity || 0) + 1);
+          artistData.hype = Math.min(getHypeCap(artistData), (artistData.hype || 0) + 2);
+
+          if (contract.remainingWeeks <= 0) {
+            if (artistProfileForEmail) {
+              newEmails.push({
+                id: crypto.randomUUID(),
+                sender: contract.brandName,
+                senderIcon: "default",
+                subject: `Brand Ambassador Contract Completed - ${contract.brandName}`,
+                body: `Congratulations ${artistProfileForEmail.name}! Your ${contract.durationWeeks}-week brand ambassador partnership with ${contract.brandName} has successfully concluded. Total earnings: $${formatNumber(contract.totalEarned)}. Thank you for representing our brand!`,
+                date: newDate,
+                isRead: false
+              });
+            }
+            artistData.activeBrandAmbassadorContract = null;
+          }
+        }
+
+        // --- SONG MEDIA SYNC LICENSES WEEKLY TICK ---
+        if (artistData.activeSyncLicenses && artistData.activeSyncLicenses.length > 0) {
+          artistData.activeSyncLicenses = artistData.activeSyncLicenses
+            .map((sync) => ({ ...sync, remainingWeeks: sync.remainingWeeks - 1 }))
+            .filter((sync) => sync.remainingWeeks > 0);
+        }
 
         // --- SOUNDTRACK OFFER LOGIC ---
         if (artistData.weeksUntilNextSoundtrackOffer === undefined) {
@@ -4880,6 +4937,15 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             ) {
               weeklyStreams = Math.floor(weeklyStreams * 1.1);
               newPromoBoostWeeks = song.promoBoostWeeks - 1;
+            }
+
+            // Active Song Media Sync License percentage boost
+            const activeSync = artistData.activeSyncLicenses?.find(
+              (s) => s.songId === song.id && s.remainingWeeks > 0
+            );
+            if (activeSync) {
+              const boostPct = (activeSync.streamBoostPercent ?? 15) / 100;
+              weeklyStreams = Math.floor(weeklyStreams * (1 + boostPct));
             }
 
             // Check for member hiatus 30+ weeks boycott streaming loss (-30%)
@@ -20161,6 +20227,135 @@ Let us know if you accept.`,
         ...state,
         selectedSoundtrackId: action.payload,
         currentView: "spotifySoundtrackDetail",
+      };
+    }
+    case "DO_BRAND_CAMPAIGN": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const artistProfile = state.soloArtist || state.group;
+      if (!artistProfile) return state;
+
+      const { brandName, payout, logoUrl } = action.payload;
+      const artistAvatar = artistProfile.image || activeData.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400';
+
+      const popBasePost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `${artistProfile.name} has officially partnered with ${brandName} for a new social campaign! 📸✨`,
+        image: artistAvatar,
+        image2: logoUrl,
+        likes: Math.floor(Math.random() * 80000) + 20000,
+        retweets: Math.floor(Math.random() * 15000) + 5000,
+        views: Math.floor(Math.random() * 3000000) + 800000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money + payout,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 5),
+            xPosts: [popBasePost, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "SIGN_BRAND_AMBASSADOR": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const artistProfile = state.soloArtist || state.group;
+      if (!artistProfile) return state;
+
+      const { brandId, brandName, logoUrl, weeklyPayout, durationWeeks } = action.payload;
+      const artistAvatar = artistProfile.image || activeData.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400';
+
+      const contract: BrandAmbassadorContract = {
+        id: crypto.randomUUID(),
+        brandId,
+        brandName,
+        brandLogo: logoUrl,
+        durationWeeks,
+        remainingWeeks: durationWeeks,
+        weeklyPayout,
+        totalEarned: 0,
+        signedWeek: state.date.week,
+        signedYear: state.date.year,
+      };
+
+      const popBasePost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `BREAKING: ${artistProfile.name} has officially been named the global brand ambassador for ${brandName}! 💎🔥`,
+        image: artistAvatar,
+        image2: logoUrl,
+        likes: Math.floor(Math.random() * 120000) + 40000,
+        retweets: Math.floor(Math.random() * 25000) + 10000,
+        views: Math.floor(Math.random() * 5000000) + 1500000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            activeBrandAmbassadorContract: contract,
+            popularity: Math.min(100, activeData.popularity + 2),
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 10),
+            xPosts: [popBasePost, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "SIGN_SONG_SYNC_LICENSE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const artistProfile = state.soloArtist || state.group;
+      if (!artistProfile) return state;
+
+      const { songId, mediaTitle, mediaType, upfrontPayout, streamBoostPercent, weeklyStreamsBoost, durationWeeks } = action.payload;
+      const targetSong = activeData.songs.find(s => s.id === songId);
+      const songTitle = targetSong ? targetSong.title : "their song";
+
+      const newSync: ActiveSyncLicense = {
+        id: crypto.randomUUID(),
+        songId,
+        songTitle,
+        mediaTitle,
+        mediaType,
+        upfrontPayout,
+        streamBoostPercent: streamBoostPercent || 15,
+        remainingWeeks: durationWeeks,
+      };
+
+      const popBasePost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `'${songTitle}' by ${artistProfile.name} will be featured in ${mediaTitle}! 🎬🎶`,
+        image: targetSong?.coverArt || artistProfile.image,
+        likes: Math.floor(Math.random() * 60000) + 15000,
+        retweets: Math.floor(Math.random() * 12000) + 3000,
+        views: Math.floor(Math.random() * 2500000) + 500000,
+        date: state.date,
+      };
+
+      const existingSyncs = activeData.activeSyncLicenses || [];
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money + upfrontPayout,
+            activeSyncLicenses: [...existingSyncs, newSync],
+            xPosts: [popBasePost, ...(activeData.xPosts || [])],
+          },
+        },
       };
     }
     case "CREATE_TOUR": {

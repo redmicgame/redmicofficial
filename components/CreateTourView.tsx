@@ -21,6 +21,7 @@ const CreateTourView: React.FC = () => {
     const [chosenMerchIds, setChosenMerchIds] = useState<Set<string>>(new Set());
 
     const [ticketPrice, setTicketPrice] = useState(0);
+    const [showsPerWeek, setShowsPerWeek] = useState(3);
     const [useDynamicPricing, setUseDynamicPricing] = useState(false);
     const [useVipPackages, setUseVipPackages] = useState(false);
     
@@ -156,7 +157,8 @@ const CreateTourView: React.FC = () => {
             merchItems: selectedMerchItems,
             openerId: openerId || undefined,
             guestIds: guestIds.size > 0 ? Array.from(guestIds) : undefined,
-            bookingCostsPaid: totalUpfrontCost
+            bookingCostsPaid: totalUpfrontCost,
+            showsPerWeek
         };
 
         
@@ -199,6 +201,28 @@ const CreateTourView: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-zinc-300">Ticket Price</label>
                             <input type="number" value={ticketPrice} onChange={e => setTicketPrice(Number(e.target.value))} className="mt-1 w-full bg-zinc-700 p-2 rounded-md focus:outline-none" />
+                        </div>
+                        <div className="bg-zinc-800 p-3 rounded-lg space-y-2 border border-zinc-700">
+                            <label className="block text-sm font-bold text-zinc-200">Shows per Week (Maximum 7)</label>
+                            <div className="grid grid-cols-7 gap-1">
+                                {[1, 2, 3, 4, 5, 6, 7].map(num => (
+                                    <button
+                                        key={num}
+                                        type="button"
+                                        onClick={() => setShowsPerWeek(num)}
+                                        className={`py-2 rounded-lg font-bold text-sm transition-all ${
+                                            showsPerWeek === num 
+                                                ? 'bg-red-600 text-white shadow-md scale-105' 
+                                                : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                                        }`}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-zinc-400">
+                                Performing <strong className="text-white">{showsPerWeek} show{showsPerWeek > 1 ? 's' : ''}</strong> per week. Total tour pace: ~{Math.ceil((chosenVenueIds.size || 1) / showsPerWeek)} week{Math.ceil((chosenVenueIds.size || 1) / showsPerWeek) > 1 ? 's' : ''}.
+                            </p>
                         </div>
                         {isModernEra && (
                             <div className="space-y-2 p-3 bg-zinc-800 rounded-lg">
