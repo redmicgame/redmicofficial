@@ -5338,6 +5338,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           return {
             ...video,
             views: video.views + weeklyViews,
+            lastWeekViews: weeklyViews,
             ...firstWeekViewsData,
             ...spotifyViewsData,
           };

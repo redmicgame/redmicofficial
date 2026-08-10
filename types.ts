@@ -320,6 +320,7 @@ export interface Video {
   artistId: string;
   channelId: string; // The active youtube channel
   firstWeekViews?: number;
+  lastWeekViews?: number;
   description?: string;
   mentionedNpcs?: string[];
   isOnSpotify?: boolean;
