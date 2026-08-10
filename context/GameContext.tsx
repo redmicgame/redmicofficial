@@ -49,6 +49,7 @@ import type {
   VoguePhotoshoot,
   FeatureOffer,
 } from "../types";
+import { formatMarriageDuration } from "../utils/relationshipUtils";
 import {
   INITIAL_MONEY,
   STREAM_INCOME_MULTIPLIER,
@@ -75,6 +76,67 @@ import { generateWeeklyXContent } from "../utils/xContentGenerator";
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
+
+function createGovernmentDivorceEmail(
+  artistName: string,
+  partnerName: string,
+  relationshipId: string,
+  settlement: {
+    custody: "player" | "joint" | "partner";
+    alimonyPayor: "player" | "partner" | "none";
+    alimonyAmount: number;
+    childSupportPayor: "player" | "partner" | "none";
+    childSupportAmount: number;
+  },
+  hasKidsWithPartner: boolean,
+  date: { week: number; year: number }
+): Email {
+  const custodyText = !hasKidsWithPartner
+    ? "N/A (No Minor Children)"
+    : settlement.custody === "player"
+    ? `Full Custody awarded to ${artistName}`
+    : settlement.custody === "partner"
+    ? `Full Custody awarded to ${partnerName}`
+    : "Joint Custody (50/50 Equal Division)";
+
+  const alimonyText =
+    settlement.alimonyPayor === "none" || !settlement.alimonyAmount
+      ? "None ($0/month)"
+      : settlement.alimonyPayor === "player"
+      ? `$${settlement.alimonyAmount.toLocaleString()}/month paid by ${artistName} to ${partnerName}`
+      : `$${settlement.alimonyAmount.toLocaleString()}/month paid by ${partnerName} to ${artistName}`;
+
+  const childSupportText =
+    settlement.childSupportPayor === "none" || !settlement.childSupportAmount
+      ? "None ($0/month)"
+      : settlement.childSupportPayor === "player"
+      ? `$${settlement.childSupportAmount.toLocaleString()}/month paid by ${artistName} to ${partnerName}`
+      : `$${settlement.childSupportAmount.toLocaleString()}/month paid by ${partnerName} to ${artistName}`;
+
+  return {
+    id: crypto.randomUUID(),
+    sender: "Department of Family Law (Government)",
+    senderIcon: "business",
+    subject: `OFFICIAL NOTICE: Final Divorce Decree - ${artistName} & ${partnerName}`,
+    body: `SUPERIOR COURT OF CALIFORNIA - FAMILY LAW DIVISION
+OFFICIAL DECREE OF DISSOLUTION OF MARRIAGE
+
+Case Reference: DIV-${relationshipId.slice(0, 8).toUpperCase()}
+Petitioner / Spouse A: ${artistName}
+Respondent / Spouse B: ${partnerName}
+
+This official government notice certifies that the marriage between ${artistName} and ${partnerName} has been legally dissolved and finalized by court order.
+
+FINAL JUDGMENT & SETTLEMENT TERMS:
+• Child Custody: ${custodyText}
+• Spousal Support (Alimony): ${alimonyText}
+• Child Support: ${childSupportText}
+
+This decree is final, legally binding, and registered in state domestic records.`,
+    date: date,
+    isRead: false,
+  };
+}
 
 export const getPossibleEncounters = (
   artist: Artist | Group,
@@ -12602,6 +12664,279 @@ Keep up the great work!
       }
       // --- END TMZ LOGIC ---
 
+      // --- WEEKLY DIVORCE PROGRESSION & LEAKS LOGIC ---
+      for (const artistId in updatedArtistsData) {
+        const aData = updatedArtistsData[artistId];
+        const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+        if (!aProfile) continue;
+
+        if (aData.relationships && aData.relationships.length > 0) {
+          const updatedRels = aData.relationships.map((rel) => {
+            // 1. Ongoing Divorce Legal Battle
+            if (rel.status === "divorcing" && rel.divorceCase && !rel.divorceCase.isFinalized) {
+              let updatedCase = { ...rel.divorceCase };
+              updatedCase.weeksInBattle = (updatedCase.weeksInBattle || 1) + 1;
+
+              // Fan Support on X if Public Image >= 75
+              if ((aData.publicImage ?? 80) >= 75 && Math.random() < 0.70) {
+                const fanSupportOptions = [
+                  `We stand with @${aProfile.name} through this tough divorce! Stay strong 👑❤️`,
+                  `Sending so much love to @${aProfile.name} during this legal battle 🙏✨`,
+                  `Hoping for a fair court ruling for @${aProfile.name}! We love you so much 💖`,
+                  `The media needs to leave @${aProfile.name} alone while they navigate this divorce ✊`
+                ];
+                const fanTweet = {
+                  id: crypto.randomUUID(),
+                  authorId: "fan_support_" + crypto.randomUUID().substring(0, 4),
+                  content: fanSupportOptions[Math.floor(Math.random() * fanSupportOptions.length)],
+                  likes: Math.floor(Math.random() * 20000) + 3000,
+                  retweets: Math.floor(Math.random() * 4000) + 600,
+                  views: Math.floor(Math.random() * 150000) + 30000,
+                  date: newDate,
+                };
+                aData.xPosts.unshift(fanTweet);
+              }
+
+              // Evaluate pending proposal or create partner proposal
+              if (updatedCase.currentProposal && updatedCase.currentProposal.status === "pending_judge") {
+                const prop = updatedCase.currentProposal;
+                const judgeAccepted = Math.random() < 0.5; // 50% chance
+
+                if (!judgeAccepted) {
+                  const declinedProp: DivorceProposal = {
+                    ...prop,
+                    status: "declined",
+                    declinedReason: "Judge Marcus ruled that the requested settlement terms do not satisfy state equitable distribution standards.",
+                  };
+                  updatedCase.currentProposal = declinedProp;
+                  updatedCase.history = [declinedProp, ...updatedCase.history];
+
+                  aData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId: "tmz",
+                    content: `⚖️ COURT UPDATE: Judge Marcus has rejected the proposed divorce settlement between ${aProfile.name} and ${rel.partnerName}.`,
+                    likes: Math.floor(Math.random() * 40000) + 10000,
+                    retweets: Math.floor(Math.random() * 8000) + 2000,
+                    views: Math.floor(Math.random() * 800000) + 150000,
+                    date: newDate,
+                  });
+                } else {
+                  // Finalized!
+                  const acceptedProp: DivorceProposal = {
+                    ...prop,
+                    status: "accepted",
+                  };
+                  const settlement = {
+                    custody: prop.custody,
+                    alimonyPayor: prop.alimonyPayor,
+                    alimonyAmount: prop.alimonyAmount,
+                    childSupportPayor: prop.childSupportPayor,
+                    childSupportAmount: prop.childSupportAmount,
+                  };
+                  updatedCase.currentProposal = acceptedProp;
+                  updatedCase.history = [acceptedProp, ...updatedCase.history];
+                  updatedCase.isFinalized = true;
+                  updatedCase.finalizedDate = newDate;
+                  updatedCase.agreedSettlement = settlement;
+
+                  if (!aData.inbox) aData.inbox = [];
+                  const hasKids = (aData.kids || []).some((k) => k.parentName === rel.partnerName);
+                  aData.inbox.unshift(
+                    createGovernmentDivorceEmail(
+                      aProfile.name,
+                      rel.partnerName,
+                      rel.id,
+                      settlement,
+                      hasKids,
+                      newDate
+                    )
+                  );
+
+                  if (prop.alimonyPayor === "player" && prop.alimonyAmount > 0) {
+                    if (!aData.recurringExpenses) aData.recurringExpenses = [];
+                    aData.recurringExpenses.push({
+                      id: `alimony_${rel.id}`,
+                      name: `Alimony (${rel.partnerName})`,
+                      cost: prop.alimonyAmount,
+                      type: "monthly",
+                    });
+                  }
+                  if (prop.childSupportPayor === "player" && prop.childSupportAmount > 0) {
+                    if (!aData.recurringExpenses) aData.recurringExpenses = [];
+                    aData.recurringExpenses.push({
+                      id: `child_support_${rel.id}`,
+                      name: `Child Support (${rel.partnerName})`,
+                      cost: prop.childSupportAmount,
+                      type: "monthly",
+                    });
+                  }
+
+                  aData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId: "tmz",
+                    content: `⚖️ OFFICIAL: ${aProfile.name} is officially divorced from ${rel.partnerName}.`,
+                    likes: Math.floor(Math.random() * 400000) + 150000,
+                    retweets: Math.floor(Math.random() * 100000) + 25000,
+                    views: Math.floor(Math.random() * 6000000) + 2000000,
+                    date: newDate,
+                  });
+
+                  return {
+                    ...rel,
+                    status: "ex" as const,
+                    endYear: newDate.year,
+                    endWeek: newDate.week,
+                    divorceCase: updatedCase,
+                  };
+                }
+              } else if (
+                (!updatedCase.currentProposal || updatedCase.currentProposal.status === "declined") &&
+                updatedCase.weeksInBattle < 52 &&
+                Math.random() < 0.40
+              ) {
+                // Partner submits a counter-proposal to judge
+                const partnerCustodyOptions: ("player" | "joint" | "partner")[] = ["joint", "partner", "player"];
+                const partnerCustody = partnerCustodyOptions[Math.floor(Math.random() * partnerCustodyOptions.length)];
+                const partnerAlimonyAmt = [2500, 5000, 10000, 25000][Math.floor(Math.random() * 4)];
+                const hasKids = (aData.kids || []).some((k) => k.parentName === rel.partnerName);
+                const partnerChildSupportAmt = hasKids ? [1500, 3000, 5000, 10000][Math.floor(Math.random() * 4)] : 0;
+
+                const partnerProposal: DivorceProposal = {
+                  id: crypto.randomUUID(),
+                  proposedBy: "partner",
+                  custody: partnerCustody,
+                  alimonyPayor: "player",
+                  alimonyAmount: partnerAlimonyAmt,
+                  childSupportPayor: hasKids ? "player" : "none",
+                  childSupportAmount: partnerChildSupportAmt,
+                  status: "pending_judge",
+                  dateProposed: newDate,
+                };
+                updatedCase.currentProposal = partnerProposal;
+
+                aData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "tmz",
+                  content: `⚖️ COURT UPDATE: ${rel.partnerName} has submitted a counter-settlement demand to the judge in their divorce with ${aProfile.name}.`,
+                  likes: Math.floor(Math.random() * 30000) + 8000,
+                  retweets: Math.floor(Math.random() * 6000) + 1500,
+                  views: Math.floor(Math.random() * 500000) + 100000,
+                  date: newDate,
+                });
+              } else if (updatedCase.weeksInBattle >= 52) {
+                // 1 Year Max Battle Reached -> Judge issues final forced decree!
+                const forcedSettlement = {
+                  custody: "joint" as const,
+                  alimonyPayor: "player" as const,
+                  alimonyAmount: 5000,
+                  childSupportPayor: (aData.kids || []).some((k) => k.parentName === rel.partnerName) ? ("player" as const) : ("none" as const),
+                  childSupportAmount: (aData.kids || []).some((k) => k.parentName === rel.partnerName) ? 2500 : 0,
+                };
+                updatedCase.isFinalized = true;
+                updatedCase.finalizedDate = newDate;
+                updatedCase.agreedSettlement = forcedSettlement;
+
+                if (!aData.inbox) aData.inbox = [];
+                const hasKidsForced = (aData.kids || []).some((k) => k.parentName === rel.partnerName);
+                aData.inbox.unshift(
+                  createGovernmentDivorceEmail(
+                    aProfile.name,
+                    rel.partnerName,
+                    rel.id,
+                    forcedSettlement,
+                    hasKidsForced,
+                    newDate
+                  )
+                );
+
+                if (!aData.recurringExpenses) aData.recurringExpenses = [];
+                aData.recurringExpenses.push({
+                  id: `alimony_${rel.id}`,
+                  name: `Alimony (${rel.partnerName})`,
+                  cost: 5000,
+                  type: "monthly",
+                });
+                if (forcedSettlement.childSupportAmount > 0) {
+                  aData.recurringExpenses.push({
+                    id: `child_support_${rel.id}`,
+                    name: `Child Support (${rel.partnerName})`,
+                    cost: forcedSettlement.childSupportAmount,
+                    type: "monthly",
+                  });
+                }
+
+                aData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "tmz",
+                  content: `⚖️ OFFICIAL: After a 1-year legal battle, Judge Marcus has issued a final divorce decree for ${aProfile.name} and ${rel.partnerName}.`,
+                  likes: Math.floor(Math.random() * 500000) + 200000,
+                  retweets: Math.floor(Math.random() * 120000) + 30000,
+                  views: Math.floor(Math.random() * 8000000) + 3000000,
+                  date: newDate,
+                });
+
+                return {
+                  ...rel,
+                  status: "ex" as const,
+                  endYear: newDate.year,
+                  endWeek: newDate.week,
+                  divorceCase: updatedCase,
+                };
+              }
+
+              return {
+                ...rel,
+                divorceCase: updatedCase,
+              };
+            }
+
+            // 2. Leaking Divorce Agreement 1 Week Later (75% chance)
+            if (
+              rel.divorceCase &&
+              rel.divorceCase.isFinalized &&
+              !rel.divorceCase.isLeaked &&
+              rel.divorceCase.finalizedDate
+            ) {
+              const absFinal = rel.divorceCase.finalizedDate.year * 52 + rel.divorceCase.finalizedDate.week;
+              const absCurrent = newDate.year * 52 + newDate.week;
+              if (absCurrent - absFinal === 1) {
+                if (Math.random() < 0.75) {
+                  const updatedCase = {
+                    ...rel.divorceCase,
+                    isLeaked: true,
+                    leakedDate: newDate,
+                  };
+                  const setl = rel.divorceCase.agreedSettlement;
+                  const custodyStr = setl?.custody === "player" ? "Full (Artist)" : setl?.custody === "partner" ? "Full (Ex)" : "Joint (50/50)";
+                  const alimonyStr = setl?.alimonyAmount ? `$${setl.alimonyAmount.toLocaleString()}/mo` : "$0";
+                  const childStr = setl?.childSupportAmount ? `$${setl.childSupportAmount.toLocaleString()}/mo` : "$0";
+
+                  const leakContent = `🚨 LEAKED COURT DOCUMENTS: Details of ${aProfile.name}'s divorce agreement with ${rel.partnerName} have leaked online! Custody: ${custodyStr} | Alimony: ${alimonyStr} | Child Support: ${childStr}.`;
+                  aData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId: "tmz",
+                    content: leakContent,
+                    likes: Math.floor(Math.random() * 600000) + 200000,
+                    retweets: Math.floor(Math.random() * 150000) + 40000,
+                    views: Math.floor(Math.random() * 9000000) + 3000000,
+                    date: newDate,
+                  });
+
+                  return {
+                    ...rel,
+                    divorceCase: updatedCase,
+                  };
+                }
+              }
+            }
+
+            return rel;
+          });
+
+          aData.relationships = updatedRels;
+        }
+      }
+
       // --- DYNAMIC GENERAL TWEETS ---
       for (const artistId in updatedArtistsData) {
         const aData = updatedArtistsData[artistId];
@@ -21475,11 +21810,19 @@ Let us know if you accept.`,
       const activeArtist = state.soloArtist || state.group;
       if (!activeArtist) return state;
 
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId
-          ? { ...r, status: action.payload.newStatus }
-          : r,
-      );
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId) {
+          const isMarriage = action.payload.newStatus === "married";
+          return {
+            ...r,
+            status: action.payload.newStatus,
+            marriedStartYear: isMarriage ? (r.marriedStartYear || state.date.year) : r.marriedStartYear,
+            marriedStartWeek: isMarriage ? (r.marriedStartWeek || state.date.week) : r.marriedStartWeek,
+            prenup: action.payload.prenup || r.prenup,
+          };
+        }
+        return r;
+      });
 
       const rel = updatedRelationships.find(
         (r) => r.id === action.payload.relationshipId,
@@ -21573,6 +21916,292 @@ Let us know if you accept.`,
           },
         },
       };
+    }
+    case "FILE_FOR_DIVORCE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const targetRel = (activeData.relationships || []).find(
+        (r) => r.id === action.payload.relationshipId,
+      );
+      if (!targetRel) return state;
+
+      const sYear = targetRel.marriedStartYear || targetRel.startYear;
+      const sWeek = targetRel.marriedStartWeek || targetRel.startWeek || 1;
+      const durationStr = formatMarriageDuration(sYear, sWeek, state.date.year, state.date.week);
+
+      const initialProposal: DivorceProposal = {
+        id: crypto.randomUUID(),
+        proposedBy: "player",
+        custody: "joint",
+        alimonyPayor: "none",
+        alimonyAmount: 0,
+        childSupportPayor: "none",
+        childSupportAmount: 0,
+        status: "pending_judge",
+        dateProposed: state.date,
+      };
+
+      const newDivorceCase: DivorceCase = {
+        id: crypto.randomUUID(),
+        relationshipId: targetRel.id,
+        partnerName: targetRel.partnerName,
+        startYear: state.date.year,
+        startWeek: state.date.week,
+        weeksInBattle: 1,
+        currentProposal: initialProposal,
+        history: [],
+        isFinalized: false,
+      };
+
+      const updatedRelationships = (activeData.relationships || []).map((r) =>
+        r.id === action.payload.relationshipId
+          ? {
+              ...r,
+              status: "divorcing" as const,
+              divorceCase: newDivorceCase,
+            }
+          : r,
+      );
+
+      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+
+      const tmzPostContent = `💔 TMZ EXCLUSIVE: ${activeArtist.name} has filed for divorce from ${targetRel.partnerName} after ${durationStr} of marriage.`;
+      const tmzPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "tmz",
+        content: tmzPostContent,
+        image: activeArtist.image,
+        likes: Math.floor(Math.random() * 300000) + 100000,
+        retweets: Math.floor(Math.random() * 80000) + 20000,
+        views: Math.floor(Math.random() * 5000000) + 1500000,
+        date: state.date,
+      };
+      newPosts = [tmzPost, ...newPosts];
+
+      if ((activeData.publicImage ?? 80) >= 75) {
+        const fanMessages = [
+          `We stand with @${activeArtist.name} through this tough divorce! Stay strong 👑❤️`,
+          `Sending so much love to @${activeArtist.name} during this legal battle 🙏✨`,
+          `The media needs to leave @${activeArtist.name} alone during this divorce process ✊`
+        ];
+        const fanPost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: "fan_support_" + crypto.randomUUID().substring(0, 4),
+          content: fanMessages[Math.floor(Math.random() * fanMessages.length)],
+          likes: Math.floor(Math.random() * 15000) + 2000,
+          retweets: Math.floor(Math.random() * 3000) + 500,
+          views: Math.floor(Math.random() * 100000) + 20000,
+          date: state.date,
+        };
+        newPosts = [fanPost, ...newPosts];
+      }
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            relationships: updatedRelationships,
+            hype: Math.min(1000, activeData.hype + 100),
+            xPosts: newPosts,
+          },
+        },
+      };
+    }
+    case "SUBMIT_DIVORCE_PROPOSAL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const newProposal: DivorceProposal = {
+        id: crypto.randomUUID(),
+        proposedBy: action.payload.proposedBy,
+        custody: action.payload.custody,
+        alimonyPayor: action.payload.alimonyPayor,
+        alimonyAmount: action.payload.alimonyAmount,
+        childSupportPayor: action.payload.childSupportPayor,
+        childSupportAmount: action.payload.childSupportAmount,
+        status: "pending_judge",
+        dateProposed: state.date,
+      };
+
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId && r.divorceCase) {
+          return {
+            ...r,
+            divorceCase: {
+              ...r.divorceCase,
+              currentProposal: newProposal,
+            },
+          };
+        }
+        return r;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            relationships: updatedRelationships,
+          },
+        },
+      };
+    }
+    case "EVALUATE_DIVORCE_PROPOSAL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const targetRel = (activeData.relationships || []).find(
+        (r) => r.id === action.payload.relationshipId,
+      );
+      if (!targetRel || !targetRel.divorceCase || !targetRel.divorceCase.currentProposal) {
+        return state;
+      }
+
+      const prop = targetRel.divorceCase.currentProposal;
+      const judgeAccepted = Math.random() < 0.5;
+
+      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+      let updatedExpenses = activeData.recurringExpenses ? [...activeData.recurringExpenses] : [];
+
+      if (!judgeAccepted) {
+        const declinedProp: DivorceProposal = {
+          ...prop,
+          status: "declined",
+          declinedReason: "Judge Marcus ruled that the requested settlement terms do not satisfy state equitable distribution standards.",
+        };
+
+        const updatedRel = {
+          ...targetRel,
+          divorceCase: {
+            ...targetRel.divorceCase,
+            currentProposal: declinedProp,
+            history: [declinedProp, ...targetRel.divorceCase.history],
+          },
+        };
+
+        const postContent = `⚖️ COURT UPDATE: Judge Marcus declined the requested divorce settlement terms between ${activeArtist.name} and ${targetRel.partnerName}.`;
+        const newsPost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: "tmz",
+          content: postContent,
+          likes: Math.floor(Math.random() * 50000) + 10000,
+          retweets: Math.floor(Math.random() * 10000) + 2000,
+          views: Math.floor(Math.random() * 1000000) + 200000,
+          date: state.date,
+        };
+        newPosts = [newsPost, ...newPosts];
+
+        return {
+          ...state,
+          artistsData: {
+            ...state.artistsData,
+            [state.activeArtistId]: {
+              ...activeData,
+              relationships: (activeData.relationships || []).map((r) =>
+                r.id === targetRel.id ? updatedRel : r,
+              ),
+              xPosts: newPosts,
+            },
+          },
+        };
+      } else {
+        // Judge Accepted! Divorce is finalized!
+        const acceptedProp: DivorceProposal = {
+          ...prop,
+          status: "accepted",
+        };
+
+        const settlement = {
+          custody: prop.custody,
+          alimonyPayor: prop.alimonyPayor,
+          alimonyAmount: prop.alimonyAmount,
+          childSupportPayor: prop.childSupportPayor,
+          childSupportAmount: prop.childSupportAmount,
+        };
+
+        const updatedRel: Relationship = {
+          ...targetRel,
+          status: "ex",
+          endYear: state.date.year,
+          endWeek: state.date.week,
+          divorceCase: {
+            ...targetRel.divorceCase,
+            currentProposal: acceptedProp,
+            history: [acceptedProp, ...targetRel.divorceCase.history],
+            isFinalized: true,
+            finalizedDate: state.date,
+            agreedSettlement: settlement,
+          },
+        };
+
+        // If player pays alimony or child support, add to recurringExpenses
+        if (prop.alimonyPayor === "player" && prop.alimonyAmount > 0) {
+          updatedExpenses.push({
+            id: `alimony_${targetRel.id}`,
+            name: `Alimony (${targetRel.partnerName})`,
+            cost: prop.alimonyAmount,
+            type: "monthly",
+          });
+        }
+        if (prop.childSupportPayor === "player" && prop.childSupportAmount > 0) {
+          updatedExpenses.push({
+            id: `child_support_${targetRel.id}`,
+            name: `Child Support (${targetRel.partnerName})`,
+            cost: prop.childSupportAmount,
+            type: "monthly",
+          });
+        }
+
+        const finalTmzContent = `⚖️ OFFICIAL: ${activeArtist.name} is officially divorced from ${targetRel.partnerName}.`;
+        const finalPost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: "tmz",
+          content: finalTmzContent,
+          image: activeArtist.image,
+          likes: Math.floor(Math.random() * 400000) + 150000,
+          retweets: Math.floor(Math.random() * 100000) + 25000,
+          views: Math.floor(Math.random() * 6000000) + 2000000,
+          date: state.date,
+        };
+        newPosts = [finalPost, ...newPosts];
+
+        const hasKidsWithPartner = (activeData.kids || []).some(
+          (k) => k.parentName === targetRel.partnerName
+        );
+        const govEmail = createGovernmentDivorceEmail(
+          activeArtist.name,
+          targetRel.partnerName,
+          targetRel.id,
+          settlement,
+          hasKidsWithPartner,
+          state.date
+        );
+        const updatedInbox = activeData.inbox ? [govEmail, ...activeData.inbox] : [govEmail];
+
+        return {
+          ...state,
+          artistsData: {
+            ...state.artistsData,
+            [state.activeArtistId]: {
+              ...activeData,
+              relationships: (activeData.relationships || []).map((r) =>
+                r.id === targetRel.id ? updatedRel : r,
+              ),
+              recurringExpenses: updatedExpenses,
+              xPosts: newPosts,
+              inbox: updatedInbox,
+            },
+          },
+        };
+      }
     }
     case "UPDATE_RELATIONSHIP_IMAGE": {
       if (!state.activeArtistId) return state;

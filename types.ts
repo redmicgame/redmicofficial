@@ -1618,18 +1618,69 @@ export interface VoguePhotoshoot {
   date: GameDate;
 }
 
+export interface DivorceProposal {
+  id: string;
+  proposedBy: "player" | "partner";
+  custody: "player" | "joint" | "partner";
+  alimonyPayor: "player" | "partner" | "none";
+  alimonyAmount: number;
+  childSupportPayor: "player" | "partner" | "none";
+  childSupportAmount: number;
+  status: "pending_judge" | "declined" | "accepted";
+  declinedReason?: string;
+  dateProposed: GameDate;
+}
+
+export interface DivorceCase {
+  id: string;
+  relationshipId: string;
+  partnerName: string;
+  startYear: number;
+  startWeek: number;
+  weeksInBattle: number;
+  currentProposal: DivorceProposal | null;
+  history: DivorceProposal[];
+  isFinalized: boolean;
+  finalizedDate?: GameDate;
+  agreedSettlement?: {
+    custody: "player" | "joint" | "partner";
+    alimonyPayor: "player" | "partner" | "none";
+    alimonyAmount: number;
+    childSupportPayor: "player" | "partner" | "none";
+    childSupportAmount: number;
+  };
+  isLeaked?: boolean;
+  leakedDate?: GameDate;
+}
+
+export interface PrenupAgreement {
+  id: string;
+  partnerName: string;
+  signedDate: GameDate;
+  assetProtection: "standard_50_50" | "full_player_protection" | "partner_favored";
+  alimonyClause: "waived" | "capped_5k" | "generous_25k";
+  infidelityPenalty: number; // e.g. 0, 500000, 1000000
+  status: "draft" | "signed" | "rejected";
+}
+
 export interface Relationship {
   id: string;
   partnerName: string;
   partnerType: "npc" | "custom";
   startYear: number;
   startWeek?: number;
+  marriedStartYear?: number;
+  marriedStartWeek?: number;
   endYear: number | null;
   endWeek?: number;
-  status: "dating" | "engaged" | "married" | "ex";
+  status: "dating" | "engaged" | "married" | "divorcing" | "ex";
   isPublic: boolean;
   image?: string;
+  divorceCase?: DivorceCase;
+  prenup?: PrenupAgreement;
 }
+
+export { formatMarriageDuration } from "./utils/relationshipUtils";
 
 export interface Kid {
   id: string;
@@ -2744,6 +2795,23 @@ export type GameAction =
       payload: { relationshipId: string; newStatus: "engaged" | "married" };
     }
   | { type: "BREAK_UP"; payload: { relationshipId: string } }
+  | { type: "FILE_FOR_DIVORCE"; payload: { relationshipId: string } }
+  | {
+      type: "SUBMIT_DIVORCE_PROPOSAL";
+      payload: {
+        relationshipId: string;
+        proposedBy: "player" | "partner";
+        custody: "player" | "joint" | "partner";
+        alimonyPayor: "player" | "partner" | "none";
+        alimonyAmount: number;
+        childSupportPayor: "player" | "partner" | "none";
+        childSupportAmount: number;
+      };
+    }
+  | {
+      type: "EVALUATE_DIVORCE_PROPOSAL";
+      payload: { relationshipId: string; proposalId: string };
+    }
   | { type: "GET_BACK_WITH_EX"; payload: { relationshipId: string } }
   | {
       type: "UPDATE_RELATIONSHIP_IMAGE";
