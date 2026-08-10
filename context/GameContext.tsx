@@ -1390,6 +1390,8 @@ const initialState: GameState = {
   spotifyGlobalMusicVideos: [],
   ukSinglesChart: [],
   ukSinglesChartHistory: {},
+  ukAlbumsChart: [],
+  ukAlbumsChartHistory: {},
   spotifyUS: [],
   spotifyCanada: [],
   spotifyUK: [],
@@ -5459,6 +5461,13 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             if (artistData.redMicPro.unlocked && artistData.salesBoost > 0) {
               weeklySales = Math.floor(
                 weeklySales * (1 + artistData.salesBoost / 100),
+              );
+            }
+
+            const ukPop = artistData.regionalPopularity?.["UK"] || 0;
+            if (ukPop > 0) {
+              weeklySales = Math.floor(
+                weeklySales * (1 + (ukPop / 100) * 0.8),
               );
             }
 
@@ -9555,6 +9564,194 @@ It is now available on your Spotify profile.
         });
       });
 
+      // --- UK OFFICIAL ALBUMS CHART (TOP 100) ---
+      const UK_NATIVE_ARTISTS = new Set([
+        'Ed Sheeran', 'Adele', 'Dua Lipa', 'Harry Styles', 'Coldplay', 'Arctic Monkeys', 'Dave', 'Central Cee',
+        'Charli xcx', 'Stormzy', 'Sienna Spiro', 'Olivia Dean', 'Lewis Capaldi', 'Sam Smith', 'Oasis',
+        'PinkPantheress', 'Gorillaz', 'Florence + The Machine', 'The Beatles', 'Queen', 'Radiohead',
+        'Little Mix', 'One Direction', 'Calvin Harris', 'Elton John', 'David Bowie', 'Amy Winehouse',
+        'George Michael', 'The Rolling Stones', 'Fleetwood Mac', 'The 1975', 'Rita Ora', 'Ellie Goulding',
+        'Jess Glynne', 'Jorja Smith', 'Raye', 'Headie One', 'J Hus', 'Fred again..', 'MNEK',
+        'Bring Me The Horizon', 'Biffy Clyro', 'Muse', 'Kasabian', 'Blur', 'Robbie Williams', 'Take That',
+        'Westlife', 'Spice Girls', 'Sam Fender', 'Slowthai', 'Skepta'
+      ]);
+      const UK_POPULAR_MEGASTARS = new Set([
+        'Taylor Swift', 'Drake', 'Beyoncé', 'Rihanna', 'Ariana Grande', 'Olivia Rodrigo', 'Billie Eilish',
+        'Sabrina Carpenter', 'The Weeknd', 'Post Malone', 'Katy Perry', 'Justin Bieber', 'Michael Jackson',
+        'Eminem', 'Lana Del Rey', 'Kendrick Lamar', 'Travis Scott', 'Lady Gaga', 'SZA', 'Chappell Roan'
+      ]);
+
+      const ukPlayerAlbumContenders = allPlayerReleases
+        .filter(
+          (r) =>
+            (r.type === "Album" || r.type === "EP" || r.type === "Compilation") &&
+            !r.soundtrackInfo &&
+            !r.standardEditionId,
+        )
+        .map((release) => {
+          const artistData = updatedArtistsData[release.artistId];
+          const artistObj = allPlayerArtistsAndGroups.find(
+            (a) => a.id === release.artistId,
+          );
+          const deluxeVersion = deluxeMap.get(release.id);
+          const songsToCount = deluxeVersion
+            ? deluxeVersion.songIds
+            : release.songIds;
+
+          const totalUkWeeklyStreams = songsToCount.reduce((sum, songId) => {
+            const song = artistData?.songs?.find((s) => s.id === songId);
+            let regUk = song?.lastWeekRegionalStreams?.["UK"] || song?.regionalStreams?.["UK"] || 0;
+
+            if (song) {
+              const remixes = artistData?.songs?.filter(
+                (s) => s.isReleased && s.remixOfSongId === song.id,
+              ) || [];
+              remixes.forEach((remix) => {
+                regUk += remix.lastWeekRegionalStreams?.["UK"] || remix.regionalStreams?.["UK"] || 0;
+              });
+            }
+
+            return sum + regUk;
+          }, 0);
+
+          const ukSES = Math.floor(totalUkWeeklyStreams / 1000);
+
+          const ukPop = artistData?.regionalPopularity?.["UK"] || 0;
+          const regMap = artistData?.regionalPopularity || { US: artistData?.popularity || 0, UK: 0 };
+          const regSum = Object.values(regMap).reduce((a: number, b: number) => a + b, 0) || 100;
+          const ukShare = Math.max(0.04, ukPop / Math.max(1, regSum));
+
+          const albumMerch = (artistData?.merch || []).filter(
+            (m) => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id),
+          );
+          const totalMerchSales = albumMerch.reduce(
+            (sum, item) => sum + (item._actualWeeklySales || 0),
+            0,
+          );
+
+          const ukMerchSales = Math.floor(totalMerchSales * ukShare * (1 + ukPop / 30));
+          const ukDigitalPhysicalSales = Math.floor(
+            (totalUkWeeklyStreams / 1000) * 0.2 * (1 + ukPop / 25),
+          );
+
+          const ukPureSales = ukMerchSales + ukDigitalPhysicalSales;
+          const ukWeeklyActivity = ukPureSales + ukSES;
+
+          const labelName = release.releasingLabel ? release.releasingLabel.name : "Independent";
+
+          return {
+            uniqueId: release.id,
+            title: deluxeVersion ? deluxeVersion.title : release.title,
+            artist: artistObj?.name || artistData?.name || "Unknown",
+            label: labelName,
+            coverArt: deluxeVersion ? deluxeVersion.coverArt : release.coverArt,
+            isPlayerAlbum: true,
+            albumId: release.id,
+            weeklyActivity: ukWeeklyActivity,
+            weeklySales: ukPureSales,
+            weeklySES: ukSES,
+            weeklyPureSales: ukPureSales,
+          };
+        });
+
+      const ukNpcAlbumContenders = newNpcAlbums.map((album) => {
+        const isUkNative = UK_NATIVE_ARTISTS.has(album.artist);
+        const isUkMegastar = UK_POPULAR_MEGASTARS.has(album.artist);
+
+        let ukMultiplier = 0.35 + (Math.random() * 0.2);
+        if (isUkNative) {
+          ukMultiplier = 2.8 + (Math.random() * 1.5);
+        } else if (isUkMegastar) {
+          ukMultiplier = 1.8 + (Math.random() * 0.8);
+        } else if (album.genre && ["Britpop", "Indie", "Electronic", "Dance", "Rock", "Grime", "UK Drill"].includes(album.genre)) {
+          ukMultiplier = 1.4 + (Math.random() * 0.6);
+        }
+
+        const albumSongs = album.songIds
+          .map((id) => newNpcsWithReleases.find((s) => s.uniqueId === id))
+          .filter(Boolean);
+
+        const totalWeeklyStreams = albumSongs.reduce((sum, song) => {
+          if (!song) return sum;
+          return sum + Math.floor(song.basePopularity * (Math.random() * 0.4 + 0.8));
+        }, 0);
+
+        const ukSES = Math.floor((totalWeeklyStreams / 1200) * ukMultiplier * 0.7);
+        const ukPureSales = Math.floor((album.salesPotential || 1000) * ukMultiplier * 0.45 * (0.85 + Math.random() * 0.3));
+        const ukWeeklyActivity = ukPureSales + ukSES;
+
+        return {
+          uniqueId: album.uniqueId,
+          title: album.title,
+          artist: album.artist,
+          label: album.label,
+          coverArt: album.coverArt,
+          isPlayerAlbum: false,
+          albumId: album.uniqueId,
+          weeklyActivity: ukWeeklyActivity,
+          weeklySales: ukPureSales,
+          weeklySES: ukSES,
+          weeklyPureSales: ukPureSales,
+        };
+      });
+
+      const allUkAlbumContenders = [
+        ...ukPlayerAlbumContenders,
+        ...ukNpcAlbumContenders,
+      ].sort((a, b) => b.weeklyActivity - a.weeklyActivity);
+
+      const top100UkAlbums = allUkAlbumContenders.slice(0, 100);
+      const newUkAlbumsChartHistory: ChartHistory = { ...(state.ukAlbumsChartHistory || {}) };
+      const newUkAlbumsChart: AlbumChartEntry[] = [];
+      const prevUkAlbumsMap = new Map((state.ukAlbumsChart || []).map((entry) => [entry.uniqueId, entry]));
+
+      top100UkAlbums.forEach((album, index) => {
+        const rank = index + 1;
+        const history = newUkAlbumsChartHistory[album.uniqueId];
+        const prevChartEntry = prevUkAlbumsMap.get(album.uniqueId);
+
+        if (history) {
+          history.weeksOnChart += 1;
+          history.lastRank = rank;
+          if (rank < history.peak) history.peak = rank;
+          if (rank === 1) {
+            history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
+          }
+          if (history.chartRun) {
+            history.chartRun.push(rank);
+          } else {
+            history.chartRun = [rank];
+          }
+        } else {
+          newUkAlbumsChartHistory[album.uniqueId] = {
+            weeksOnChart: 1,
+            peak: rank,
+            lastRank: rank,
+            weeksAtNo1: rank === 1 ? 1 : 0,
+            chartRun: [rank],
+            firstEntered: { year: newDate.year, week: newDate.week },
+          };
+        }
+
+        newUkAlbumsChart.push({
+          rank,
+          lastWeek: prevChartEntry?.rank ?? null,
+          peak: newUkAlbumsChartHistory[album.uniqueId].peak,
+          weeksOnChart: newUkAlbumsChartHistory[album.uniqueId].weeksOnChart,
+          title: album.title,
+          artist: album.artist,
+          label: album.label,
+          coverArt: album.coverArt,
+          isPlayerAlbum: album.isPlayerAlbum,
+          albumId: album.albumId,
+          uniqueId: album.uniqueId,
+          weeklyActivity: album.weeklyActivity,
+          weeklySales: album.weeklySales,
+          weeklySES: album.weeklySES,
+          weeklyPureSales: album.weeklyPureSales,
+        });
+      });
+
       // --- NPC Pop Base #1 Debut Posts ---
       let finalState: GameState = { ...state };
       const npcPopBasePosts: XPost[] = [];
@@ -12301,6 +12498,8 @@ Keep up the great work!
           spotifyAfrica: newSpotifyAfrica,
           ukSinglesChart: newUkSinglesChart,
           ukSinglesChartHistory: newUkSinglesChartHistory,
+          ukAlbumsChart: newUkAlbumsChart,
+          ukAlbumsChartHistory: newUkAlbumsChartHistory,
           radioOverallChart,
           radioUrbanChart,
           radioPopChart,
@@ -12778,6 +12977,8 @@ Keep up the great work!
         spotifyAfrica: newSpotifyAfrica,
         ukSinglesChart: newUkSinglesChart,
         ukSinglesChartHistory: newUkSinglesChartHistory,
+        ukAlbumsChart: newUkAlbumsChart,
+        ukAlbumsChartHistory: newUkAlbumsChartHistory,
         radioOverallChart,
         radioUrbanChart,
         radioPopChart,

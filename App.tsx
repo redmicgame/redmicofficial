@@ -219,6 +219,7 @@ const AppContent: React.FC = () => {
                 case 'spotifyVideoChart':
                     return <SpotifyVideoChartView />;
             case 'ukChart':
+            case 'ukAlbumsChart':
                 return <UKChartView />;
             case 'hotPopSongs':
                 return <HotPopSongsView />;

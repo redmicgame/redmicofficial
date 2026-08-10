@@ -1422,7 +1422,8 @@ export type GameView =
   | "limewire"
   | "ascap"
   | "kalshi"
-  | "ukChart";
+  | "ukChart"
+  | "ukAlbumsChart";
 
 export type Tab = "Home" | "Apps" | "Charts" | "Misc" | "Business";
 
@@ -1979,6 +1980,8 @@ export interface GameState {
   radioChristmasChart?: ChartEntry[];
   ukSinglesChart?: ChartEntry[];
   ukSinglesChartHistory?: ChartHistory;
+  ukAlbumsChart?: AlbumChartEntry[];
+  ukAlbumsChartHistory?: ChartHistory;
   spotifyNewEntries: number;
   podcastCharts?: Podcast[];
   selectedVideoId: string | null;
