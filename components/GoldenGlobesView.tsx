@@ -61,6 +61,10 @@ const GoldenGlobesView: React.FC = () => {
     };
 
 
+    const handleBannerClick = () => {
+        fileInputRef.current?.click();
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -137,9 +141,9 @@ const GoldenGlobesView: React.FC = () => {
                         </>
                     ) : (
                         <div className="flex-grow flex flex-col items-center justify-center text-center text-zinc-500">
-                             <GrammyAwardIcon className="w-16 h-16 mb-4" />
-                            <p className="font-bold">No Oscar History Yet</p>
-                            <p className="text-sm">Contribute to movie soundtracks to be eligible for nominations!</p>
+                             <GrammyAwardIcon className="w-16 h-16 mb-4 text-amber-500" />
+                            <p className="font-bold text-amber-400 text-lg">No Golden Globe History Yet</p>
+                            <p className="text-sm max-w-xs mt-1">Act in Movies & TV shows or contribute to movie soundtracks to earn Golden Globe nominations!</p>
                         </div>
                     )}
                 </div>

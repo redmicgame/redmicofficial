@@ -22965,6 +22965,9 @@ Let us know if you accept.`,
 
       if (!offer) return state;
 
+      const effectiveRoleName = action.payload.roleName || action.payload.offer?.roleName || offer.roleName || 'Lead Role';
+      offer = { ...offer, roleName: effectiveRoleName };
+
       let finalPay = offer.pay;
       if (activeData.talentAgencyId) {
           const agency = TALENT_AGENCIES.find(t => t.id === activeData.talentAgencyId);

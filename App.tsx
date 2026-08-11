@@ -1,5 +1,6 @@
 import GoldenGlobesView from './components/GoldenGlobesView';
 import SubmitForGoldenGlobesView from './components/SubmitForGoldenGlobesView';
+import GoldenGlobeRedCarpetView from './components/GoldenGlobeRedCarpetView';
 import KaiStreamSetupView from "./components/KaiStreamSetupView";
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 import { Analytics } from '@vercel/analytics/react';
@@ -323,8 +324,14 @@ const AppContent: React.FC = () => {
                 return <OscarsView />;
             case 'submitForOscars':
                 return <SubmitForOscarsView />;
+            case 'goldenGlobes':
+            case 'golden_globes':
+                return <GoldenGlobesView />;
+            case 'submitForGoldenGlobes':
             case 'submit_for_golden_globes':
                 return <SubmitForGoldenGlobesView />;
+            case 'goldenGlobeRedCarpet':
+                return <GoldenGlobeRedCarpetView />;
             case 'kaiStreamSetup':
                 return <KaiStreamSetupView />;
             case 'createOscarPerformance':

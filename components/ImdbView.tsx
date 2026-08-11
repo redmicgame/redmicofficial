@@ -56,8 +56,10 @@ const ImdbView: React.FC = () => {
 
     const allCredits = [...roles, ...soundtracks, ...podcastRoles, ...guestPodcasts].sort((a, b) => b.year - a.year);
 
-    const releasedTrailers = roles.filter(r => !!r.trailerUrl);
-    const latestTrailer = releasedTrailers.length > 0 ? releasedTrailers[0] : null;
+    const [showTrailerModal, setShowTrailerModal] = useState(false);
+
+    const releasedTrailers = [...roles].filter(r => !!r.trailerUrl).sort((a, b) => (b.year || 0) - (a.year || 0));
+    const latestTrailer = releasedTrailers.length > 0 ? releasedTrailers[0] : (roles.find(r => !!r.coverUrl) || null);
 
     const hasSoundtrack = soundtracks.length > 0;
 
@@ -106,24 +108,61 @@ const ImdbView: React.FC = () => {
                 {/* Main Media/Trailer */}
                 <div className="w-full relative mt-4 aspect-video bg-zinc-900 border-y border-zinc-800">
                     {latestTrailer ? (
-                        <>
-                            <img src={latestTrailer.trailerUrl} alt="Trailer" className="w-full h-full object-cover opacity-80" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-16 h-16 rounded-full bg-black/60 border-2 border-white flex items-center justify-center pl-1 cursor-pointer hover:bg-black/80">
-                                    <svg fill="white" viewBox="0 0 24 24" width="32" height="32"><path d="M8 5v14l11-7z"></path></svg>
+                        <div 
+                            onClick={() => setShowTrailerModal(true)} 
+                            className="w-full h-full relative cursor-pointer group overflow-hidden"
+                        >
+                            <img src={latestTrailer.trailerUrl || latestTrailer.coverUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800'} alt="Trailer" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                                <div className="w-16 h-16 rounded-full bg-black/70 border-2 border-[#f5c518] text-[#f5c518] flex items-center justify-center pl-1 shadow-xl group-hover:scale-110 transition-transform">
+                                    <svg fill="currentColor" viewBox="0 0 24 24" width="32" height="32"><path d="M8 5v14l11-7z"></path></svg>
                                 </div>
                             </div>
-                            <div className="absolute bottom-2 left-4 text-white drop-shadow-md">
-                                <p className="font-bold">Play trailer 1:02</p>
-                                <p className="text-sm">{latestTrailer.title} ({latestTrailer.year})</p>
+                            <div className="absolute bottom-3 left-4 right-4 text-white drop-shadow-lg">
+                                <p className="font-extrabold text-sm text-[#f5c518]">Official Teaser Trailer • 1:45</p>
+                                <p className="text-base font-bold text-white flex items-center justify-between">
+                                    <span>{latestTrailer.title} ({latestTrailer.year})</span>
+                                    <span className="text-xs font-semibold bg-zinc-800/80 px-2 py-0.5 rounded text-zinc-300 border border-zinc-700">{latestTrailer.roleName || 'Lead Role'}</span>
+                                </p>
                             </div>
-                        </>
+                        </div>
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-600 font-medium">
-                            No Trailers Available
+                        <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 font-medium p-4 text-center">
+                            <span className="text-3xl mb-2">🎬</span>
+                            <p className="text-sm">No Trailers Released Yet</p>
+                            <p className="text-xs text-zinc-500 mt-1">Accept movie & TV roles to premiere official trailers on IMDb!</p>
                         </div>
                     )}
                 </div>
+
+                {/* TRAILER PLAY MODAL */}
+                {showTrailerModal && latestTrailer && (
+                    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 p-4 text-white relative">
+                            <button 
+                                onClick={() => setShowTrailerModal(false)}
+                                className="absolute top-3 right-3 text-zinc-400 hover:text-white bg-zinc-800 rounded-full w-8 h-8 flex items-center justify-center font-bold z-10"
+                            >
+                                ✕
+                            </button>
+                            <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
+                                <span className="text-xs bg-[#f5c518] text-black font-black px-2 py-0.5 rounded">IMDb EXCLUSIVE</span>
+                                <h3 className="font-bold text-base text-white">{latestTrailer.title} ({latestTrailer.year})</h3>
+                            </div>
+                            <div className="aspect-video bg-black rounded-lg overflow-hidden relative flex items-center justify-center">
+                                <img src={latestTrailer.trailerUrl || latestTrailer.coverUrl} alt="Trailer preview" className="w-full h-full object-cover opacity-90" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent flex flex-col justify-end p-4">
+                                    <p className="text-sm font-bold text-[#f5c518]">Starring as {latestTrailer.roleName || 'Lead Character'}</p>
+                                    <p className="text-xs text-zinc-300">Produced by {latestTrailer.studio || 'Hollywood Studios'}</p>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-zinc-400 pt-1">
+                                <span>Views: 4.2M • Ratings: 98% Anticipation</span>
+                                <button onClick={() => setShowTrailerModal(false)} className="bg-[#f5c518] text-black font-bold px-4 py-2 rounded-lg text-xs">Close Player</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Profile Card */}
                 <div className="p-4 flex gap-4">

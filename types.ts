@@ -2279,12 +2279,13 @@ export type GameAction =
   | { type: "UPDATE_SNAPSHOT_BANNER"; payload: { releaseId: string; bannerUrl: string } }
   | { type: "UPDATE_GRAMMY_BANNER"; payload: string }
   | { type: "UPDATE_OSCAR_BANNER"; payload: string }
+  | { type: "UPDATE_GOLDEN_GLOBE_BANNER"; payload: string }
   | { type: "MARK_INBOX_READ" }
   | { type: "TAKE_DOWN_SONG"; payload: { songId: string } }
   | { type: "TAKE_DOWN_RELEASE"; payload: { releaseId: string } }
   | { type: "UPDATE_IMDB_PROFILE"; payload: { bio: string; birthDate: string } }
   | { type: "REQUEST_ACTING_GIG"; payload: { type: "Movie" | "TV Show" | "Voice Acting" } }
-  | { type: "ACCEPT_ACTING_OFFER"; payload: { offerId: string } }
+  | { type: "ACCEPT_ACTING_OFFER"; payload: { offerId: string; offer?: any; roleName?: string } }
   | { type: "DECLINE_ACTING_OFFER"; payload: { offerId: string } }
   | { type: "SET_ACTING_TRAILER_URL"; payload: { roleId: string; trailerUrl: string } }
   | { type: "SET_ACTING_COVER_URL"; payload: { roleId: string; coverUrl: string } }

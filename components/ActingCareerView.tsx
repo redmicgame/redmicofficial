@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { TALENT_AGENCIES } from '../constants';
 import { ActingAudition, ActingRole } from '../types';
@@ -130,7 +130,16 @@ const ActingCareerView: React.FC = () => {
 
   // Contract Modal state
   const [contractSigningOffer, setContractSigningOffer] = useState<any | null>(null);
+  const [customCharacterName, setCustomCharacterName] = useState<string>('');
   const [hasUserSigned, setHasUserSigned] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (activeArtistData?.activeActingOffer && !contractSigningOffer) {
+      setContractSigningOffer(activeArtistData.activeActingOffer);
+      setCustomCharacterName(activeArtistData.activeActingOffer.roleName || '');
+      setHasUserSigned(false);
+    }
+  }, [activeArtistData?.activeActingOffer]);
 
   // Press junket modal state
   const [selectedPrRole, setSelectedPrRole] = useState<ActingRole | null>(null);
@@ -272,17 +281,26 @@ const ActingCareerView: React.FC = () => {
     setSelectedAudition(null);
     setAuditionResult(null);
     setContractSigningOffer(offer);
+    setCustomCharacterName(offer?.roleName || '');
     setHasUserSigned(false);
   };
 
   const handleConfirmContract = () => {
     if (!contractSigningOffer) return;
 
+    const finalRoleName = customCharacterName.trim() || contractSigningOffer.roleName || 'Lead Role';
+
+    const updatedOffer = {
+      ...contractSigningOffer,
+      roleName: finalRoleName
+    };
+
     dispatch({
       type: 'ACCEPT_ACTING_OFFER',
       payload: {
-        offerId: contractSigningOffer.id,
-        offer: contractSigningOffer
+        offerId: updatedOffer.id,
+        offer: updatedOffer,
+        roleName: finalRoleName
       }
     });
 
@@ -900,20 +918,36 @@ const ActingCareerView: React.FC = () => {
             </div>
 
             {/* Section 1: Parties & Role */}
-            <div className="space-y-1 bg-[#f7f2e7] p-2.5 rounded border border-amber-800/30 font-sans">
-              <div className="flex justify-between text-[11px]">
+            <div className="space-y-2 bg-[#f7f2e7] p-3 rounded border border-amber-800/30 font-sans">
+              <div className="flex justify-between items-center text-[11px]">
                 <span className="font-bold text-amber-950">Project Title:</span>
                 <span className="font-extrabold text-stone-900">{contractSigningOffer.title}</span>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between items-center text-[11px]">
                 <span className="font-bold text-amber-950">Media Format:</span>
                 <span className="font-medium text-stone-800">{contractSigningOffer.type}</span>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="font-bold text-amber-950">Assigned Role:</span>
-                <span className="font-semibold text-amber-900">{contractSigningOffer.roleName} ({contractSigningOffer.roleType})</span>
+
+              {/* Editable Character Name Input */}
+              <div className="flex flex-col gap-1 text-[11px] pt-1.5 border-t border-amber-800/20">
+                <div className="flex justify-between items-center">
+                  <label className="font-bold text-amber-950">Character Name / Role Title:</label>
+                  <span className="text-[10px] text-amber-800 font-semibold italic">✏️ Type your character name</span>
+                </div>
+                <input
+                  type="text"
+                  value={customCharacterName}
+                  onChange={(e) => setCustomCharacterName(e.target.value)}
+                  placeholder="e.g. Tony Stark, Arthur Fleck, Voice of Hero..."
+                  className="w-full bg-white border border-amber-800/40 rounded px-2.5 py-1.5 text-xs text-stone-900 font-bold focus:outline-none focus:ring-1 focus:ring-amber-700 shadow-inner"
+                />
               </div>
-              <div className="flex justify-between text-[11px]">
+
+              <div className="flex justify-between items-center text-[11px] pt-1">
+                <span className="font-bold text-amber-950">Role Level:</span>
+                <span className="font-semibold text-amber-900">{contractSigningOffer.roleType || 'Leading Role'}</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
                 <span className="font-bold text-amber-950">Filming Schedule:</span>
                 <span className="font-medium text-stone-800">{contractSigningOffer.durationWeeks} Weeks On Set</span>
               </div>

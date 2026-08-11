@@ -312,7 +312,7 @@ const ManagementView: React.FC = () => {
                                         <p className="text-sm text-green-400 font-bold mb-3">Pay: ${formatNumber(activeArtistData.activeActingOffer.pay)} ({activeArtistData.activeActingOffer.durationWeeks} Weeks Filming)</p>
                                         <div className="flex gap-2">
                                             <button onClick={() => dispatch({type: 'DECLINE_ACTING_OFFER', payload: {offerId: activeArtistData.activeActingOffer!.id}})} className="flex-1 bg-zinc-600 hover:bg-zinc-500 font-bold p-2 rounded-lg text-sm">Decline</button>
-                                            <button onClick={() => dispatch({type: 'ACCEPT_ACTING_OFFER', payload: {offerId: activeArtistData.activeActingOffer!.id}})} className="flex-1 bg-[#f5c518] text-black hover:bg-[#e3b516] font-bold p-2 rounded-lg text-sm">Accept</button>
+                                            <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'actingCareer'})} className="flex-1 bg-[#f5c518] text-black hover:bg-[#e3b516] font-bold p-2 rounded-lg text-sm flex items-center justify-center gap-1">✍️ Review & Sign Contract</button>
                                         </div>
                                     </div>
                                 )}
