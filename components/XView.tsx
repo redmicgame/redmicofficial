@@ -38,6 +38,27 @@ const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, acti
   let found = xUsersList.find((u) => u.id === id);
   if (found) return found;
 
+  if (id === "popcrave") {
+    return {
+      id: "popcrave",
+      name: "Pop Crave",
+      username: "PopCrave",
+      avatar: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjMkIzRUREIi8+PHBhdGggZD0iTTI0IDIwaDE2djI0SDI0VjIweiIgZmlsbD0iI0ZGRiIvPjwvc3ZnPg==",
+      isVerified: true,
+      bio: "Pop culture news & music updates.",
+    };
+  }
+  if (id === "popbase") {
+    return {
+      id: "popbase",
+      name: "Pop Base",
+      username: "PopBase",
+      avatar: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjMTFEQUY1Ii8+PHBhdGggZD0iTTI0IDIwaDE2djI0SDI0VjIweiIgZmlsbD0iI0ZGRiIvPjwvc3ZnPg==",
+      isVerified: true,
+      bio: "Pop culture news, media & stats.",
+    };
+  }
+
   if (gameState?.artistsData) {
     for (const aData of Object.values(gameState.artistsData) as any[]) {
       if (aData?.xUsers) {

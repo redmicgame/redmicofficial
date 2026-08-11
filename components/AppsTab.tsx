@@ -176,7 +176,7 @@ const AppsTab: React.FC = () => {
         if (appName === 'Piracy') return gameState.date.year >= 1999 && gameState.date.year <= 2008;
         if (appName === 'ASCAP') return gameState.date.year >= 2008;
         if (appName === 'Merch Store' && gameState.date.year >= 2005) {
-            return (activeArtistData?.youtubeSubscribers || 0) >= 100;
+            return true;
         }
         return true;
     };

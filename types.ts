@@ -343,6 +343,9 @@ export interface MerchProduct {
   isPreorder?: boolean;
   image: string;
   artistId: string;
+  regionExclusive?: "Global" | "US" | "UK";
+  bonusSongIds?: string[];
+  bonusSongTitles?: string[];
 }
 
 export interface GeniusOffer {

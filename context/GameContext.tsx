@@ -5491,10 +5491,10 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
         const viewIncome = totalWeeklyViews * VIEW_INCOME_MULTIPLIER;
 
         let merchIncome = 0;
-        if (artistData.youtubeStoreUnlocked) {
+        if (artistData.youtubeStoreUnlocked || newDate.year >= 2005) {
           artistData.merch = artistData.merch.map((item) => {
             let weeklySales = Math.floor(
-              (artistData.youtubeSubscribers / 50000) *
+              (Math.max(100, artistData.youtubeSubscribers || 1000) / 50000) *
                 popularityMultiplier *
                 (Math.random() * 5 + 1),
             );
@@ -5527,10 +5527,17 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             }
 
             const ukPop = artistData.regionalPopularity?.["UK"] || 0;
-            if (ukPop > 0) {
+            if (item.regionExclusive === 'UK') {
+              weeklySales = Math.floor(weeklySales * (0.5 + (ukPop / 100) * 1.5));
+            } else if (ukPop > 0) {
               weeklySales = Math.floor(
                 weeklySales * (1 + (ukPop / 100) * 0.8),
               );
+            }
+
+            // Bonus tracks sell 25% better
+            if (item.bonusSongTitles && item.bonusSongTitles.length > 0) {
+              weeklySales = Math.floor(weeklySales * 1.25);
             }
 
             // Cap sales to available stock
@@ -9431,10 +9438,10 @@ It is now available on your Spotify profile.
               m.releaseId === release.id ||
               (deluxeVersion && m.releaseId === deluxeVersion.id),
           );
-          let totalWeeklySales = albumMerch.reduce(
-            (sum, item) => sum + (item._actualWeeklySales || 0),
-            0,
-          );
+          let totalWeeklySales = albumMerch.reduce((sum, item) => {
+            if (item.regionExclusive === 'UK') return sum;
+            return sum + (item._actualWeeklySales || 0);
+          }, 0);
 
           totalWeeklySales += digitalAlbumSales + generalPhysicalSales;
 
@@ -9686,12 +9693,12 @@ It is now available on your Spotify profile.
           const albumMerch = (artistData?.merch || []).filter(
             (m) => m.releaseId === release.id || (deluxeVersion && m.releaseId === deluxeVersion.id),
           );
-          const totalMerchSales = albumMerch.reduce(
-            (sum, item) => sum + (item._actualWeeklySales || 0),
-            0,
-          );
-
-          const ukMerchSales = Math.floor(totalMerchSales * ukShare * (1 + ukPop / 30));
+          const ukMerchSales = albumMerch.reduce((sum, item) => {
+            if (item.regionExclusive === 'US') return sum;
+            const sales = item._actualWeeklySales || 0;
+            if (item.regionExclusive === 'UK') return sum + sales;
+            return sum + Math.floor(sales * ukShare * (1 + ukPop / 30));
+          }, 0);
           const ukDigitalPhysicalSales = Math.floor(
             (totalUkWeeklyStreams / 1000) * 0.2 * (1 + ukPop / 25),
           );
@@ -14184,6 +14191,47 @@ The Tonight Show Team`;
     case "ADD_MERCH": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      const item = action.payload.item;
+
+      let newPosts: XPost[] = [];
+      if (item.bonusSongTitles && item.bonusSongTitles.length > 0) {
+        const release = activeData.releases.find(r => r.id === item.releaseId);
+        const releaseTitle = release?.title || item.name;
+        const regionTag = item.regionExclusive && item.regionExclusive !== 'Global' ? `${item.regionExclusive} ` : '';
+        const bonusList = item.bonusSongTitles.map(t => `"${t}"`).join(', ');
+
+        const authorChoice = Math.random() < 0.5 ? "popcrave" : "popbase";
+        const popPost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: authorChoice,
+          content: `${activeData.name}'s '${releaseTitle}' ${regionTag}exclusive ${item.type.toLowerCase()} variant will feature bonus track${item.bonusSongTitles.length > 1 ? 's' : ''}, ${bonusList}.`,
+          image: activeData.profilePicture || item.image,
+          image2: item.image || release?.coverArt,
+          likes: Math.floor(Math.random() * 45000) + 15000,
+          retweets: Math.floor(Math.random() * 12000) + 3000,
+          views: Math.floor(Math.random() * 1800000) + 500000,
+          date: state.date,
+        };
+        newPosts.push(popPost);
+      } else if (item.regionExclusive && item.regionExclusive !== 'Global' && (item.type === 'Vinyl' || item.type === 'CD' || item.type === 'Cassette')) {
+        const release = activeData.releases.find(r => r.id === item.releaseId);
+        const releaseTitle = release?.title || item.name;
+
+        const authorChoice = Math.random() < 0.5 ? "popcrave" : "popbase";
+        const popPost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: authorChoice,
+          content: `${activeData.name} announces a ${item.regionExclusive} exclusive ${item.type.toLowerCase()} edition for '${releaseTitle}'.`,
+          image: activeData.profilePicture || item.image,
+          image2: item.image || release?.coverArt,
+          likes: Math.floor(Math.random() * 35000) + 10000,
+          retweets: Math.floor(Math.random() * 9000) + 2000,
+          views: Math.floor(Math.random() * 1200000) + 300000,
+          date: state.date,
+        };
+        newPosts.push(popPost);
+      }
+
       return {
         ...state,
         artistsData: {
@@ -14191,7 +14239,8 @@ The Tonight Show Team`;
           [state.activeArtistId]: {
             ...activeData,
             money: activeData.money - (action.payload.cost || 0),
-            merch: [...activeData.merch, action.payload.item],
+            merch: [...activeData.merch, item],
+            xPosts: [...newPosts, ...(activeData.xPosts || [])],
           },
         },
       };

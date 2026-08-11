@@ -23,6 +23,8 @@ const AddMerchModal: React.FC<{
     const [stockQty, setStockQty] = useState(1000);
     const [image, setImage] = useState<string | null>(null);
     const [color, setColor] = useState('#000000');
+    const [regionExclusive, setRegionExclusive] = useState<'Global' | 'US' | 'UK'>('Global');
+    const [selectedBonusSongIds, setSelectedBonusSongIds] = useState<string[]>([]);
     const [error, setError] = useState('');
 
     const isRingtoneEra = gameState.date.year >= 2006 && gameState.date.year <= 2010;
@@ -31,7 +33,11 @@ const AddMerchModal: React.FC<{
     const totalCost = merchType === 'Ringtone' ? 0 : stockQty * unitCost;
 
     if (!activeArtistData || !activeArtist) return null;
-    const { merch, releases, money } = activeArtistData;
+    const { merch, releases, money, songs } = activeArtistData;
+
+    const unreleasedSongs = useMemo(() => {
+        return (songs || []).filter(s => !s.isReleased && !s.isVaulted);
+    }, [songs]);
 
     const availableReleases = useMemo(() => {
         const released = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album' || r.type === 'Single');
@@ -81,6 +87,9 @@ const AddMerchModal: React.FC<{
 
         const isScheduled = !releases.some(r => r.id === selectedRelease.id);
 
+        const selectedBonusSongs = unreleasedSongs.filter(s => selectedBonusSongIds.includes(s.id));
+        const bonusSongTitles = selectedBonusSongs.map(s => s.title);
+
         const newItem: MerchProduct = {
             id: crypto.randomUUID(),
             releaseId: selectedRelease.id,
@@ -93,6 +102,9 @@ const AddMerchModal: React.FC<{
             image: image || selectedRelease.coverArt,
             artistId: activeArtist.id,
             isPreorder: isScheduled, // Automatically set based on release status
+            regionExclusive,
+            bonusSongIds: selectedBonusSongIds.length > 0 ? selectedBonusSongIds : undefined,
+            bonusSongTitles: bonusSongTitles.length > 0 ? bonusSongTitles : undefined,
         };
         dispatch({ type: 'ADD_MERCH', payload: { item: newItem, cost: totalCost } });
         onClose();
@@ -117,6 +129,55 @@ const AddMerchModal: React.FC<{
                         <button onClick={() => handleMerchTypeChange('Ringtone')} className={`py-2 rounded ${merchType === 'Ringtone' ? 'bg-red-500' : 'bg-zinc-700'}`}>Ringtone</button>
                     )}
                 </div>
+
+                <div className="space-y-1">
+                    <label className="text-xs font-semibold text-zinc-400">Territory Exclusivity</label>
+                    <div className="grid grid-cols-3 gap-2">
+                        <button type="button" onClick={() => setRegionExclusive('Global')} className={`py-1.5 text-xs font-bold rounded ${regionExclusive === 'Global' ? 'bg-indigo-600 text-white' : 'bg-zinc-700 text-zinc-300'}`}>Global</button>
+                        <button type="button" onClick={() => setRegionExclusive('US')} className={`py-1.5 text-xs font-bold rounded ${regionExclusive === 'US' ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-300'}`}>🇺🇸 US Excl.</button>
+                        <button type="button" onClick={() => setRegionExclusive('UK')} className={`py-1.5 text-xs font-bold rounded ${regionExclusive === 'UK' ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-300'}`}>🇬🇧 UK Excl.</button>
+                    </div>
+                </div>
+
+                {(merchType === 'Vinyl' || merchType === 'CD' || merchType === 'Cassette') && (
+                    <div className="space-y-2 bg-zinc-900/80 p-3 rounded-lg border border-zinc-700">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-yellow-400 flex items-center gap-1">
+                                <span>⭐️ Physical Bonus Tracks</span>
+                                <span className="text-[10px] text-zinc-400 font-normal">(Max 3)</span>
+                            </label>
+                            <span className="text-[10px] text-green-400 font-semibold bg-green-950/80 px-1.5 py-0.5 rounded border border-green-800/50">+25% Sales Boost</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400">Select unreleased songs as bonus tracks for this physical release.</p>
+                        {unreleasedSongs.length > 0 ? (
+                            <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+                                {unreleasedSongs.map(song => {
+                                    const isChecked = selectedBonusSongIds.includes(song.id);
+                                    return (
+                                        <label key={song.id} className={`flex items-center justify-between p-2 rounded cursor-pointer text-xs border ${isChecked ? 'bg-yellow-500/20 border-yellow-500/60 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700/50'}`}>
+                                            <span className="font-medium truncate mr-2">{song.title}</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => {
+                                                    if (isChecked) {
+                                                        setSelectedBonusSongIds(prev => prev.filter(id => id !== song.id));
+                                                    } else if (selectedBonusSongIds.length < 3) {
+                                                        setSelectedBonusSongIds(prev => [...prev, song.id]);
+                                                    }
+                                                }}
+                                                disabled={!isChecked && selectedBonusSongIds.length >= 3}
+                                                className="rounded border-zinc-600 accent-yellow-500"
+                                            />
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-zinc-500 italic">No unreleased songs available. Write/record new songs first.</p>
+                        )}
+                    </div>
+                )}
 
                 {merchType === 'Vinyl' && (
                     <div className="space-y-1">
@@ -252,21 +313,6 @@ const MerchStoreView: React.FC = () => {
         }
     };
     
-    if (gameState.date.year >= 2005 && (activeArtistData.youtubeSubscribers || 0) < 100) {
-        return (
-            <div className="h-full w-full bg-zinc-900 flex flex-col items-center justify-center text-center p-4">
-                 <ShoppingBagIcon className="w-16 h-16 text-zinc-500 mb-4" />
-                <h1 className="text-2xl font-bold text-white">Merch Store Locked</h1>
-                <p className="text-zinc-400 mt-2">
-                    Your merch store unlocks when you reach 100 subscribers on YouTube.
-                </p>
-                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="mt-6 bg-red-600 text-white font-bold py-2 px-6 rounded-lg">
-                    Back to Game
-                </button>
-            </div>
-        );
-    }
-
     return (
         <>
             {showAddModal && <AddMerchModal onClose={() => setShowAddModal(false)} />}
@@ -356,7 +402,19 @@ const MerchStoreView: React.FC = () => {
                                         </div>
 
                                         {(item.isPreorder && !releases.some(r => r.id === item.releaseId)) && (
-                                            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded z-20">PRE-ORDER</div>
+                                            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded z-20">PRE-ORDER</div>
+                                        )}
+
+                                        {item.regionExclusive && item.regionExclusive !== 'Global' && (
+                                            <div className={`absolute top-2 left-2 text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded shadow z-20 text-white ${item.regionExclusive === 'US' ? 'bg-blue-600' : 'bg-red-600'}`}>
+                                                {item.regionExclusive === 'US' ? '🇺🇸 US Excl.' : '🇬🇧 UK Excl.'}
+                                            </div>
+                                        )}
+
+                                        {item.bonusSongTitles && item.bonusSongTitles.length > 0 && (
+                                            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow z-20 flex items-center gap-1">
+                                                ⭐️ +{item.bonusSongTitles.length} Bonus
+                                            </div>
                                         )}
                                     </div>
                                     {item.stock <= 0 && (
@@ -365,6 +423,11 @@ const MerchStoreView: React.FC = () => {
                                     <div className="mt-2 text-center md:text-left px-2 mb-2">
                                         <p className="font-semibold line-clamp-1">{item.name}</p>
                                         <p className="text-zinc-600">${item.price.toFixed(2)} USD</p>
+                                        {item.bonusSongTitles && item.bonusSongTitles.length > 0 && (
+                                            <p className="text-[11px] text-yellow-700 font-semibold line-clamp-1 mt-0.5">
+                                                Bonus: {item.bonusSongTitles.join(', ')}
+                                            </p>
+                                        )}
                                         <div className="flex justify-between items-center mt-1 text-xs text-zinc-500">
                                             <span>Stock: {formatNumber(item.stock)}</span>
                                             <span>Sold: {formatNumber(item.unitsSold || 0)}</span>
