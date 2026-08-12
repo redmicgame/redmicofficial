@@ -14565,25 +14565,40 @@ The Tonight Show Team`;
     case "MARK_APPLE_MUSIC_ESSENTIAL": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      const { releaseId, reviewText, isEssential } = action.payload;
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
-            releases: activeData.releases.map((r) =>
-              r.id === action.payload.releaseId
-                ? {
-                    ...r,
-                    isAppleMusicEssential: true,
-                    appleMusicEssentialReview: action.payload.reviewText,
-                  }
-                : {
-                    ...r,
-                    isAppleMusicEssential: false,
-                    appleMusicEssentialReview: undefined,
-                  },
-            ),
+            releases: activeData.releases.map((r) => {
+              if (r.id === releaseId) {
+                const settingEssential = isEssential !== undefined ? isEssential : (reviewText !== "");
+                return {
+                  ...r,
+                  isAppleMusicEssential: settingEssential,
+                  appleMusicEssentialReview: settingEssential ? (reviewText || r.appleMusicEssentialReview || `${r.title} is a standout album for ${activeData.songs.find(s => s.releaseId === r.id)?.title ? 'the artist' : 'the catalog'}.`) : undefined,
+                };
+              }
+              return r;
+            }),
+          },
+        },
+      };
+    }
+    case "UPDATE_APPLE_MUSIC_ARTIST_SETTINGS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            appleMusicBgColor: action.payload.bgColor !== undefined ? action.payload.bgColor : activeData.appleMusicBgColor,
+            appleMusicNameFont: action.payload.nameFont !== undefined ? action.payload.nameFont : activeData.appleMusicNameFont,
+            appleMusicProfileVideoUrl: action.payload.profileVideoUrl !== undefined ? action.payload.profileVideoUrl : activeData.appleMusicProfileVideoUrl,
           },
         },
       };

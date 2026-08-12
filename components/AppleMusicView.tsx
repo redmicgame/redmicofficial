@@ -1,13 +1,12 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
-import { LABELS } from '../constants';
+import { LABELS, getArtistImage } from '../constants';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import StarIcon from './icons/StarIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import PlayRedCircleIcon from './icons/PlayRedCircleIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
-import { Song, Release, Video, GameDate } from '../types';
+import { Song, Release, Video, GameDate, Tour } from '../types';
 import PlusIcon from './icons/PlusIcon';
 import LosslessIcon from './icons/LosslessIcon';
 import AppleMusicBrowseView from './AppleMusicBrowseView';
@@ -70,7 +69,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
 
     let distroString = "";
     if (release.releasingLabel) {
-        const customLabel = activeArtistData.customLabels.find(l => l.id === release.releasingLabel!.id);
+        const customLabel = activeArtistData.customLabels?.find(l => l.id === release.releasingLabel!.id);
         if (customLabel) {
              if (customLabel.exclusiveLicenseId) {
                   const major = LABELS.find(l => l.id === customLabel.exclusiveLicenseId);
@@ -81,6 +80,8 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
              }
         }
     }
+
+    const pageBgColor = activeArtistData.appleMusicBgColor || '#000000';
 
     return (
         <>
@@ -107,7 +108,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                 </div>
             )}
 
-            <div className="bg-black text-white h-full overflow-y-auto pb-24">
+            <div style={{ backgroundColor: pageBgColor }} className="text-white h-full overflow-y-auto pb-24 transition-colors">
                 {(release.isAppleMusicExpandedCover && !isSingle) ? (
                     <div className="relative w-full aspect-square md:aspect-[4/3] group">
                         <img src={release.coverArt} alt={releaseTitle} className="absolute inset-0 w-full h-full object-cover" />
@@ -156,9 +157,9 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                     </div>
                 ) : (
                     <>
-                        <header className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 mt-8 flex justify-between items-center">
+                        <header className="sticky top-0 bg-black/60 backdrop-blur-md z-10 p-4 pt-8 flex justify-between items-center">
                             <button onClick={onBack}><ChevronLeftIcon className="w-7 h-7" /></button>
-                            <h1 className="font-bold text-center truncate">{releaseTitle}</h1>
+                            <h1 className="font-bold text-center truncate px-2">{releaseTitle}</h1>
                             <div className="flex items-center gap-4">
                                 <button><PlusIcon className="w-6 h-6" /></button>
                                 <button><DotsHorizontalIcon className="w-6 h-6" /></button>
@@ -166,7 +167,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                         </header>
                         <section className="text-center p-4">
                             {distroString && <p className="text-[10px] font-bold uppercase tracking-widest text-[#d60017] mb-3">{distroString}</p>}
-                            <img src={release.coverArt} className="w-56 h-56 rounded-lg object-cover mx-auto shadow-2xl shadow-black" />
+                            <img src={release.coverArt} className="w-56 h-56 rounded-xl object-cover mx-auto shadow-2xl" />
                             <h2 className="text-2xl font-bold mt-4">{releaseTitle}</h2>
                             <p className="text-xl text-rose-400 font-semibold">{artistDisplay}</p>
                             <p className="text-sm text-zinc-400 uppercase mt-1 flex items-center justify-center gap-2">
@@ -198,7 +199,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
 
                 <main className="p-4 space-y-8">
                     {(release.review || release.wikipediaSummary) && (
-                        <section>
+                        <section className="bg-zinc-900/60 backdrop-blur-sm p-4 rounded-xl border border-zinc-800/50">
                             <p className="text-zinc-300 leading-snug line-clamp-3">
                                 {release.review ? release.review.text : release.wikipediaSummary}
                                 <button onClick={() => release.review ? setIsReviewExpanded(true) : setIsDescriptionExpanded(true)} className="font-bold text-white ml-1">MORE</button>
@@ -207,7 +208,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                         </section>
                     )}
 
-                    <section>
+                    <section className="divide-y divide-zinc-800/60 border-t border-b border-zinc-800/60 py-1">
                         {releaseSongs.map((song, index) => {
                             const isRevealed = release.isTracklistRevealed || (isUpcoming && labelSubmissions.find(s => s.release.id === releaseId)?.singlesToRelease?.some(s => s.songId === song.id));
                             const songTitle = isUpcoming && !isRevealed ? `Track ${index + 1}` : song.title.replace(/\s*\(feat\..*\)/i, '');
@@ -216,18 +217,18 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                                 : null);
 
                             return (
-                                <div key={song.id} className="flex items-start gap-3 py-3 border-b border-zinc-800">
-                                    <span className="w-6 text-zinc-400 text-center pt-1">{index + 1}</span>
+                                <div key={song.id} className="flex items-center gap-3 py-3 px-1">
+                                    <span className="w-5 text-zinc-400 font-medium text-base shrink-0">{index + 1}</span>
                                     <div className="flex-grow min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-semibold truncate text-white">{songTitle}</p>
-                                            {song.explicit && <span className="text-xs w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="font-semibold truncate text-white text-base">{songTitle}</p>
+                                            {song.explicit && <span className="text-[10px] w-4 h-4 bg-zinc-300 text-black font-bold rounded-[2px] flex items-center justify-center shrink-0">E</span>}
                                         </div>
                                         {artistForSong && (
-                                            <p className="text-sm text-zinc-400 truncate">{artistForSong}</p>
+                                            <p className="text-xs text-zinc-400 truncate mt-0.5">{artistForSong}</p>
                                         )}
                                     </div>
-                                    <button className="flex-shrink-0 pt-1"><DotsHorizontalIcon className="w-5 h-5 text-zinc-400" /></button>
+                                    <button className="flex-shrink-0 p-1"><DotsHorizontalIcon className="w-5 h-5 text-zinc-400" /></button>
                                 </div>
                             );
                         })}
@@ -261,29 +262,35 @@ const HorizontalSection: React.FC<{title: string, items: (Release | Video)[], on
 
     return (
          <section>
-            <div className="flex justify-between items-center mb-2">
-                <h2 className="text-2xl font-bold">{title}</h2>
-                <button className="text-zinc-400"><ChevronRightIcon className="w-6 h-6" /></button>
+            <div className="flex justify-between items-center mb-3">
+                <h2 className="text-2xl font-bold flex items-center gap-1">
+                    <span>{title}</span>
+                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
+                </h2>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                 {items.map(item => {
-                    const containerWidth = isVideos ? 'w-64' : 'w-40';
-                    const imageClass = isVideos ? 'w-full aspect-video rounded-lg object-cover' : 'w-40 h-40 rounded-lg object-cover';
+                    const containerWidth = isVideos ? 'w-64' : 'w-36 sm:w-40';
+                    const imageClass = isVideos ? 'w-full aspect-video rounded-xl object-cover shadow-lg' : 'w-36 h-36 sm:w-40 sm:h-40 rounded-xl object-cover shadow-lg';
                     
                     let isExplicit = false;
                     if (isVideos && 'songId' in item && activeArtistData) {
                         const song = activeArtistData.songs.find(s => s.id === (item as Video).songId);
                         isExplicit = song?.explicit ?? false;
+                    } else if ('songIds' in item && activeArtistData) {
+                        isExplicit = (item as Release).songIds.some(id => activeArtistData.songs.find(s => s.id === id)?.explicit);
                     }
                     
                     return (
-                        <button key={item.id} onClick={() => 'type' in item && onSelect(item.id)} className={`${containerWidth} flex-shrink-0 text-left`}>
-                            <img src={'coverArt' in item ? item.coverArt : item.thumbnail} className={imageClass} />
-                            <div className="font-semibold truncate mt-1 flex items-center">
-                                <span className="truncate">{item.title}</span>
-                                {isExplicit && <span className="ml-2 text-xs w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
+                        <button key={item.id} onClick={() => 'type' in item && onSelect(item.id)} className={`${containerWidth} flex-shrink-0 text-left group`}>
+                            <div className="relative overflow-hidden rounded-xl">
+                                <img src={'coverArt' in item ? item.coverArt : item.thumbnail} className={`${imageClass} group-hover:scale-105 transition-transform duration-300`} alt={item.title} />
                             </div>
-                            <p className="text-sm text-zinc-400">{isVideos ? artistName : ('releaseDate' in item && item.releaseDate.year)}</p>
+                            <div className="font-semibold truncate mt-2 flex items-center gap-1.5">
+                                <span className="truncate">{item.title}</span>
+                                {isExplicit && <span className="text-[10px] w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center shrink-0">E</span>}
+                            </div>
+                            <p className="text-xs text-zinc-400 mt-0.5">{isVideos ? artistName : ('releaseDate' in item && item.releaseDate.year)}</p>
                         </button>
                     );
                 })}
@@ -294,19 +301,27 @@ const HorizontalSection: React.FC<{title: string, items: (Release | Video)[], on
 
 const AppleMusicView: React.FC = () => {
     const { dispatch, activeArtist, activeArtistData, gameState } = useGame();
-    const [tab, setTab] = useState<'artist' | 'browse'>('browse');
+    const [tab, setTab] = useState<'artist' | 'browse'>('artist');
     const [view, setView] = useState<'artistProfile' | 'releaseDetail'>('artistProfile');
     const [browseView, setBrowseView] = useState<'home' | 'topPlaylists' | 'topSongs' | 'topAlbums' | 'bestNewSongs' | 'topPreAdds' | 'playlistDetail'>('home');
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
     const [selectedBrowsePlaylist, setSelectedBrowsePlaylist] = useState<string | null>(null);
 
+    const concertsRef = useRef<HTMLDivElement>(null);
+
     if (!activeArtist || !activeArtistData) {
         return (
             <div className="bg-black text-white h-full overflow-y-auto flex items-center justify-center pb-24">
-                <p>Loading...</p>
+                <p>Loading Apple Music...</p>
             </div>
         );
     }
+
+    const scrollToConcerts = () => {
+        if (concertsRef.current) {
+            concertsRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
     
     const handleSelectRelease = (id: string) => {
         setTab('artist');
@@ -318,7 +333,116 @@ const AppleMusicView: React.FC = () => {
         setSelectedReleaseId(null);
         setView('artistProfile');
     };
-    
+
+    const pageBgColor = activeArtistData.appleMusicBgColor || '#000000';
+    const profileFont = activeArtistData.appleMusicNameFont || 'ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif';
+    const profileVideoUrl = activeArtistData.appleMusicProfileVideoUrl || '';
+
+    // Active tours or tour concerts
+    const activeTours = activeArtistData.tours ? activeArtistData.tours.filter((t: Tour) => t.status === 'active' || t.status === 'presale' || t.status === 'planning') : [];
+    const isArtistOnTour = activeTours.length > 0;
+
+    // Build concerts list
+    const upcomingConcerts = useMemo(() => {
+        const concertsList: { city: string; venueName: string; day: string; month: string; time: string }[] = [];
+        if (activeTours.length > 0) {
+            activeTours.forEach(tour => {
+                tour.venues.slice(0, 4).forEach((v, idx) => {
+                    concertsList.push({
+                        city: v.city || 'Los Angeles, CA',
+                        venueName: v.name || 'SoFi Stadium',
+                        day: String(12 + idx * 3),
+                        month: 'AUG',
+                        time: 'Sat • 7:00 PM'
+                    });
+                });
+            });
+        } else if (isArtistOnTour) {
+            concertsList.push(
+                { city: 'London, United Kingdom', venueName: 'The O2', day: '15', month: 'AUG', time: 'Sat • 7:00 PM' },
+                { city: 'Paris, France', venueName: 'Accor Arena', day: '18', month: 'AUG', time: 'Tue • 8:00 PM' },
+                { city: 'New York, NY', venueName: 'Madison Square Garden', day: '24', month: 'AUG', time: 'Mon • 7:30 PM' }
+            );
+        }
+        return concertsList;
+    }, [activeTours, isArtistOnTour]);
+
+    // Similar artists data mapped from actual NPC artists in game world
+    const similarArtists = useMemo(() => {
+        const artistMap = new Map<string, { id: string; name: string; image: string }>();
+        
+        if (gameState?.npcs) {
+            gameState.npcs.forEach(npc => {
+                if (!npc.artist || npc.artist === activeArtist.name || artistMap.has(npc.artist)) return;
+                const image = getArtistImage(npc.artist, npc.coverArt);
+                artistMap.set(npc.artist, {
+                    id: npc.id || npc.artist,
+                    name: npc.artist,
+                    image
+                });
+            });
+        }
+
+        if (gameState?.npcAlbums) {
+            gameState.npcAlbums.forEach(album => {
+                if (!album.artist || album.artist === activeArtist.name || artistMap.has(album.artist)) return;
+                const image = getArtistImage(album.artist, album.coverArt);
+                artistMap.set(album.artist, {
+                    id: album.id || album.artist,
+                    name: album.artist,
+                    image
+                });
+            });
+        }
+
+        return Array.from(artistMap.values()).slice(0, 10);
+    }, [gameState, activeArtist.name]);
+
+    // More To See / Watch More (Distributed Vevo & Other Non-Music-Video Clips)
+    const watchMoreClips = useMemo(() => {
+        const videos = activeArtistData.videos || [];
+        const otherVideos = videos.filter(v => v.type !== 'Music Video');
+        return otherVideos.map(v => ({
+            id: v.id,
+            title: v.title,
+            type: v.type,
+            thumbnail: v.thumbnail || activeArtist.image
+        }));
+    }, [activeArtistData.videos, activeArtist.image]);
+
+    // Appears On tracks (ONLY songs where our artist is featured on someone else's song)
+    const appearsOnTracks = useMemo(() => {
+        const list: { id: string; title: string; coverArt: string; artistName: string }[] = [];
+        
+        // 1. Player songs that were created as features on NPC projects
+        activeArtistData.songs.forEach(s => {
+            if (s.isFeatureToNpc) {
+                list.push({
+                    id: s.id,
+                    title: s.title,
+                    coverArt: s.coverArt,
+                    artistName: s.npcArtistName || s.primaryArtist || 'NPC Artist'
+                });
+            }
+        });
+
+        // 2. NPC tracks where active artist is a featured guest
+        if (gameState?.npcs) {
+            gameState.npcs.forEach(npc => {
+                if (npc.features?.includes(activeArtist.name) || npc.collaboration?.artistName === activeArtist.name) {
+                    list.push({
+                        id: npc.id,
+                        title: npc.title,
+                        coverArt: npc.coverArt || getArtistImage(npc.artist),
+                        artistName: npc.artist
+                    });
+                }
+            });
+        }
+
+        return list;
+    }, [activeArtistData.songs, gameState?.npcs, activeArtist.name]);
+
     const renderArtistView = () => {
         if (view === 'releaseDetail' && selectedReleaseId) {
             return <AppleMusicReleaseDetailView releaseId={selectedReleaseId} onBack={handleBackToProfile} onSelectRelease={handleSelectRelease} />;
@@ -340,54 +464,121 @@ const AppleMusicView: React.FC = () => {
         const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
         const compilations = availableReleases.filter(r => r.type === 'Compilation').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
         const liveAlbums = availableReleases.filter(r => r.type === 'Live Album').sort((a,b) => b.releaseDate.year - a.releaseDate.year);
-        const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.hasCountdownPage).map(s => s.release);
         const musicVideos = videos.filter(v => v.type === 'Music Video').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
         const singlesAndEps = availableReleases.filter(r => r.type === 'Single' || r.type === 'EP').sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
-        const essentialAlbums = albums.filter(r => r.isAppleMusicEssential);
+        
+        // Up to 3 essential albums sorted newest at top
+        const essentialAlbums = availableReleases
+            .filter(r => r.isAppleMusicEssential)
+            .sort((a,b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))
+            .slice(0, 3);
 
         return (
-            <div className="pb-24">
-                <div className="relative h-[45vh] min-h-[340px]">
-                    <img src={activeArtist.image} className="absolute w-full h-full object-cover" alt={activeArtist.name} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
+            <div className="pb-28">
+                {/* HERO PROFILE HEADER */}
+                <div className="relative h-[48vh] min-h-[380px] overflow-hidden">
+                    {profileVideoUrl ? (
+                        <video 
+                            src={profileVideoUrl} 
+                            autoPlay 
+                            loop 
+                            muted 
+                            playsInline 
+                            className="absolute w-full h-full object-cover"
+                        />
+                    ) : (
+                        <img src={activeArtist.image} className="absolute w-full h-full object-cover" alt={activeArtist.name} />
+                    )}
                     
-                    <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
+                    {/* Deep Gradient Fade into background color */}
+                    <div 
+                        className="absolute inset-0 bg-gradient-to-t via-black/40 to-black/30"
+                        style={{
+                            backgroundImage: `linear-gradient(to top, ${pageBgColor} 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.3) 100%)`
+                        }} 
+                    />
+                    
                     <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 mt-8">
-                        <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })}><ChevronLeftIcon className="w-7 h-7 bg-black/40 rounded-full p-0.5" /></button>
-                        <h1 className="font-bold opacity-0 transition-opacity">{activeArtist.name}</h1>
-                        <div className="flex items-center gap-4">
-                            <button><StarIcon className="w-6 h-6 drop-shadow-md" /></button>
-                            <button><DotsHorizontalIcon className="w-6 h-6 drop-shadow-md" /></button>
+                        <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="bg-black/40 backdrop-blur-md p-1.5 rounded-full hover:bg-black/60 transition-colors">
+                            <ChevronLeftIcon className="w-6 h-6 text-white" />
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <button className="bg-black/40 backdrop-blur-md p-2 rounded-full hover:bg-black/60 transition-colors">
+                                <StarIcon className="w-5 h-5 text-white" />
+                            </button>
+                            <button className="bg-black/40 backdrop-blur-md p-2 rounded-full hover:bg-black/60 transition-colors">
+                                <DotsHorizontalIcon className="w-5 h-5 text-white" />
+                            </button>
                         </div>
                     </header>
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <div className="flex justify-between items-end">
-                            <h1 className="text-6xl font-black">{activeArtist.name}</h1>
-                            <PlayRedCircleIcon className="w-16 h-16 flex-shrink-0" />
+
+                    {/* Artist Name & Controls Banner */}
+                    <div className="absolute bottom-0 left-0 right-0 p-5 space-y-3">
+                        {/* Upcoming Concerts Pill */}
+                        {(isArtistOnTour || upcomingConcerts.length > 0) && (
+                            <button 
+                                onClick={scrollToConcerts}
+                                className="inline-flex items-center gap-2 bg-zinc-900/80 backdrop-blur-md hover:bg-zinc-800 text-white px-3.5 py-1.5 rounded-full text-xs font-bold border border-zinc-700/60 shadow-lg transition-transform active:scale-95"
+                            >
+                                <span className="text-base">🎟️</span>
+                                <span>Upcoming Concerts</span>
+                            </button>
+                        )}
+
+                        <div className="flex justify-between items-end gap-4">
+                            <h1 style={{ fontFamily: profileFont }} className="text-5xl md:text-6xl font-black tracking-tight drop-shadow-2xl text-white">
+                                {activeArtist.name}
+                            </h1>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                                <button className="w-11 h-11 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full flex items-center justify-center text-white hover:bg-zinc-800 font-serif font-bold text-lg">
+                                    i
+                                </button>
+                                <button className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-105 transition-transform active:scale-95">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-black translate-x-0.5"><path d="M7 6v12l10-6z" /></svg>
+                                </button>
+                                <button className="w-11 h-11 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full flex items-center justify-center text-yellow-400 hover:bg-zinc-800">
+                                    <StarIcon className="w-5 h-5 fill-yellow-400" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <main className="p-4 space-y-8">
+                <main className="p-4 space-y-9">
+                    {/* LATEST RELEASE FLOAT BANNER */}
                     {latestRelease && (
-                        <section>
-                            <button onClick={() => handleSelectRelease(latestRelease.id)} className="flex items-center gap-4 w-full text-left">
-                                <img src={latestRelease.coverArt} className="w-32 h-32 rounded-lg object-cover" alt={latestRelease.title} />
-                                <div className="flex-grow">
-                                    <p className="text-xs uppercase text-zinc-400">{formatDateApple(latestRelease.releaseDate)}</p>
-                                    <h2 className="text-xl font-bold">{latestRelease.title}</h2>
-                                    <p className="text-zinc-400">{latestRelease.songIds.length} songs</p>
+                        <section className="-mt-3">
+                            <button 
+                                onClick={() => handleSelectRelease(latestRelease.id)} 
+                                className="w-full text-left bg-zinc-900/80 backdrop-blur-md border border-zinc-800/80 p-3.5 rounded-2xl flex items-center gap-4 shadow-xl hover:bg-zinc-800/80 transition-colors group"
+                            >
+                                <img src={latestRelease.coverArt} className="w-20 h-20 rounded-xl object-cover shrink-0 shadow-md group-hover:scale-105 transition-transform" alt={latestRelease.title} />
+                                <div className="flex-grow min-w-0">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{formatDateApple(latestRelease.releaseDate)}</p>
+                                    <h2 className="text-lg font-bold text-white truncate flex items-center gap-1.5 mt-0.5">
+                                        <span className="truncate">{latestRelease.title}</span>
+                                        {latestRelease.songIds.some(id => songs.find(s => s.id === id)?.explicit) && (
+                                            <span className="text-[10px] w-4 h-4 bg-zinc-300 text-black font-bold rounded-[2px] flex items-center justify-center shrink-0">E</span>
+                                        )}
+                                    </h2>
+                                    <p className="text-xs text-zinc-400 mt-0.5">{latestRelease.type} • {latestRelease.songIds.length} Songs</p>
                                 </div>
+                                <ChevronRightIcon className="w-5 h-5 text-zinc-500 shrink-0" />
                             </button>
                         </section>
                     )}
                     
+                    {/* TOP SONGS (NO Numbers, NO Card Wrapper) */}
                     {topSongs.length > 0 && (
                         <section>
-                            <div className="flex justify-between items-center mb-2">
-                                <h2 className="text-2xl font-bold">Top Songs</h2>
+                            <div className="flex justify-between items-center mb-3">
+                                <h2 className="text-2xl font-bold flex items-center gap-1">
+                                    <span>Top Songs</span>
+                                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
+                                </h2>
                             </div>
-                            <div className="divide-y divide-zinc-800">
+                            <div className="divide-y divide-zinc-800/60 border-t border-b border-zinc-800/60">
                                 {topSongs.map((song) => {
                                     const release = releases.find(r => r.id === song.releaseId);
                                     const songTitle = song.collaboration
@@ -396,21 +587,26 @@ const AppleMusicView: React.FC = () => {
                                     
                                     let subTitle = '';
                                     if (release) {
-                                        if (release.type === 'Single') {
-                                            subTitle = 'Single';
-                                        } else {
-                                            subTitle = `${release.title} • ${release.releaseDate.year}`;
-                                        }
+                                        subTitle = release.type === 'Single' 
+                                            ? `${release.title} - Single · ${release.releaseDate.year}`
+                                            : `${release.title} · ${release.releaseDate.year}`;
+                                    } else {
+                                        subTitle = `${song.genre || 'Single'} · ${song.year || 2025}`;
                                     }
 
                                     return (
-                                        <div key={song.id} className="flex items-center gap-3 py-2">
-                                            <img src={song.coverArt} className="w-12 h-12 rounded-md object-cover" alt={songTitle} />
+                                        <div key={song.id} className="flex items-center gap-3 py-2.5 px-1">
+                                            <img src={song.coverArt} className="w-12 h-12 rounded-lg object-cover shadow shrink-0" alt={songTitle} />
                                             <div className="flex-grow min-w-0">
-                                                <p className="font-semibold truncate">{songTitle}</p>
-                                                <p className="text-sm text-zinc-400 truncate">{subTitle}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="font-bold text-white truncate text-base">{songTitle}</p>
+                                                    {song.explicit && (
+                                                        <span className="text-[10px] w-4 h-4 bg-zinc-300 text-black font-bold rounded-[2px] flex items-center justify-center shrink-0">E</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-zinc-400 truncate mt-0.5 font-medium">{subTitle}</p>
                                             </div>
-                                            <button className="flex-shrink-0"><DotsHorizontalIcon className="w-5 h-5 text-zinc-400" /></button>
+                                            <button className="flex-shrink-0 p-1"><DotsHorizontalIcon className="w-5 h-5 text-zinc-400" /></button>
                                         </div>
                                     );
                                 })}
@@ -418,49 +614,161 @@ const AppleMusicView: React.FC = () => {
                         </section>
                     )}
 
+                    {/* ESSENTIAL ALBUMS SECTION (Sorted newest at top) */}
                     {essentialAlbums.length > 0 && (
                         <section>
-                            <h2 className="text-2xl font-bold mb-4">Essential Albums</h2>
-                            <div className="space-y-6">
+                            <h2 className="text-2xl font-bold mb-3">Essential Albums</h2>
+                            <div className="space-y-4">
                                 {essentialAlbums.map(ea => {
                                     const hasExplicit = ea.songIds.some(id => songs.find(s => s.id === id)?.explicit);
                                     return (
-                                    <div key={ea.id} onClick={() => handleSelectRelease(ea.id)} className="cursor-pointer">
-                                        <div className="w-full aspect-square rounded-xl overflow-hidden relative">
-                                            <img src={ea.coverArt} className="w-full h-full object-cover" alt={ea.title} />
-                                        </div>
-                                        <div className="mt-3">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-lg">{ea.title}</h3>
-                                                {hasExplicit && <span className="text-xs w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center flex-shrink-0">E</span>}
+                                        <div 
+                                            key={ea.id} 
+                                            onClick={() => handleSelectRelease(ea.id)} 
+                                            className="bg-zinc-900/50 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-4 flex gap-4 cursor-pointer hover:bg-zinc-800/50 transition-colors group shadow-lg"
+                                        >
+                                            <img src={ea.coverArt} className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover shrink-0 shadow-xl group-hover:scale-105 transition-transform" alt={ea.title} />
+                                            <div className="flex-grow min-w-0 flex flex-col justify-center">
+                                                <div className="flex items-center gap-1.5">
+                                                    <h3 className="font-bold text-xl text-white truncate">{ea.title}</h3>
+                                                    {hasExplicit && <span className="text-[10px] w-4 h-4 bg-zinc-300 text-black font-bold rounded-[2px] flex items-center justify-center shrink-0">E</span>}
+                                                </div>
+                                                <p className="text-zinc-300 text-sm mt-1.5 leading-snug line-clamp-3">
+                                                    {ea.appleMusicEssentialReview || `${activeArtist.name}'s defining album, featuring standout singles and acclaimed production.`}
+                                                </p>
                                             </div>
-                                            <p className="text-zinc-400 text-sm mt-1 leading-snug line-clamp-2">
-                                                {ea.appleMusicEssentialReview || `${activeArtist.name}'s defining album.`}
-                                            </p>
+                                            <div className="flex items-center shrink-0 pl-1">
+                                                <ChevronRightIcon className="w-6 h-6 text-zinc-500 group-hover:text-white transition-colors" />
+                                            </div>
                                         </div>
-                                    </div>
-                                )})}
+                                    );
+                                })}
                             </div>
                         </section>
                     )}
 
+                    {/* ALBUMS */}
                     {albums.length > 0 && (
                         <HorizontalSection title="Albums" items={albums} onSelect={handleSelectRelease} />
                     )}
-                    {liveAlbums.length > 0 && (
-                        <HorizontalSection title="Live Albums" items={liveAlbums} onSelect={handleSelectRelease} />
-                    )}
-                    {compilations.length > 0 && (
-                        <HorizontalSection title="Compilations" items={compilations} onSelect={handleSelectRelease} />
-                    )}
-                    {upcomingReleases.length > 0 && (
-                        <HorizontalSection title="Coming Soon" items={upcomingReleases} onSelect={handleSelectRelease} />
-                    )}
+
+                    {/* MUSIC VIDEOS */}
                     {musicVideos.length > 0 && (
                         <HorizontalSection title="Music Videos" items={musicVideos} onSelect={() => {}} artistName={activeArtist.name} />
                     )}
+
+                    {/* ALL UPCOMING CONCERTS SECTION */}
+                    <section ref={concertsRef} className="scroll-mt-12">
+                        <div className="flex justify-between items-center mb-3">
+                            <h2 className="text-2xl font-bold flex items-center gap-1">
+                                <span>All Upcoming Concerts</span>
+                                <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
+                            </h2>
+                        </div>
+
+                        {upcomingConcerts.length > 0 ? (
+                            <div className="space-y-3">
+                                {upcomingConcerts.map((c, idx) => (
+                                    <div key={idx} className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-3.5 flex items-center gap-4 shadow-md hover:bg-zinc-800/60 transition-colors">
+                                        {/* Date Badge Box */}
+                                        <div className="w-14 h-14 bg-black/80 rounded-2xl border border-zinc-800 flex flex-col items-center justify-center shrink-0 shadow-inner">
+                                            <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">{c.month}</span>
+                                            <span className="text-xl font-black text-white leading-none mt-0.5">{c.day}</span>
+                                        </div>
+                                        <div className="flex-grow min-w-0">
+                                            <h3 className="font-bold text-base text-white truncate">{c.city}</h3>
+                                            <p className="text-xs text-zinc-400 truncate mt-0.5">{c.venueName} • {c.time}</p>
+                                        </div>
+                                        <button className="bg-white text-black font-bold text-xs px-3.5 py-2 rounded-full shrink-0 hover:bg-zinc-200">
+                                            Tickets
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-zinc-900/40 border border-zinc-800/50 p-6 rounded-2xl text-center">
+                                <p className="text-zinc-400 text-sm">No upcoming tour concerts scheduled at the moment.</p>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* SINGLES & EPS */}
                     {singlesAndEps.length > 0 && (
                         <HorizontalSection title="Singles & EPs" items={singlesAndEps} onSelect={handleSelectRelease} />
+                    )}
+
+                    {/* LIVE ALBUMS */}
+                    {liveAlbums.length > 0 && (
+                        <HorizontalSection title="Live Albums" items={liveAlbums} onSelect={handleSelectRelease} />
+                    )}
+
+                    {/* COMPILATIONS */}
+                    {compilations.length > 0 && (
+                        <HorizontalSection title="Compilations" items={compilations} onSelect={handleSelectRelease} />
+                    )}
+
+                    {/* MORE TO SEE SECTION (Distributed Vevo & Other Non-Music-Video Clips) */}
+                    {watchMoreClips.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3">More To See</h2>
+                            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                {watchMoreClips.map(clip => (
+                                    <div key={clip.id} className="w-64 shrink-0 group cursor-pointer">
+                                        <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-800 shadow-lg">
+                                            <img src={clip.thumbnail} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={clip.title} />
+                                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                <div className="w-10 h-10 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center">
+                                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white translate-x-0.5"><path d="M7 6v12l10-6z" /></svg>
+                                                </div>
+                                            </div>
+                                            <span className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                                                {clip.type}
+                                            </span>
+                                        </div>
+                                        <p className="font-semibold text-sm text-white truncate mt-2">{clip.title}</p>
+                                        <p className="text-xs text-zinc-400 mt-0.5">Vevo • Apple Music Exclusive</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* SIMILAR ARTISTS SECTION (Real NPC Artists in World) */}
+                    {similarArtists.length > 0 && (
+                        <section>
+                            <div className="flex justify-between items-center mb-3">
+                                <h2 className="text-2xl font-bold flex items-center gap-1">
+                                    <span>Similar Artists</span>
+                                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
+                                </h2>
+                            </div>
+                            <div className="flex gap-5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                {similarArtists.map(sa => (
+                                    <div key={sa.id} className="w-28 shrink-0 text-center cursor-pointer group">
+                                        <div className="w-28 h-28 rounded-full overflow-hidden shadow-lg border-2 border-transparent group-hover:border-[#fa243c] transition-all">
+                                            <img src={sa.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt={sa.name} />
+                                        </div>
+                                        <p className="font-semibold text-xs text-white truncate mt-2">{sa.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* APPEARS ON SECTION (Only Songs Where Player Is Featured Guest) */}
+                    {appearsOnTracks.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold mb-3">Appears On</h2>
+                            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                {appearsOnTracks.map(track => (
+                                    <div key={track.id} className="w-36 sm:w-40 shrink-0 text-left cursor-pointer group">
+                                        <img src={track.coverArt} className="w-36 h-36 sm:w-40 sm:h-40 rounded-xl object-cover shadow-lg group-hover:scale-105 transition-transform" alt={track.title} />
+                                        <p className="font-semibold text-sm text-white truncate mt-2">{track.title}</p>
+                                        <p className="text-xs text-zinc-400 truncate mt-0.5">{track.artistName}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                     )}
                 </main>
             </div>
@@ -468,7 +776,7 @@ const AppleMusicView: React.FC = () => {
     };
 
     return (
-        <div className="bg-black text-white h-full pb-24 overflow-y-auto">
+        <div style={{ backgroundColor: pageBgColor }} className="text-white h-full pb-24 overflow-y-auto font-sans transition-colors">
             {tab === 'artist' ? renderArtistView() : <AppleMusicBrowseView 
                  browseView={browseView} 
                  setBrowseView={setBrowseView} 
@@ -477,7 +785,7 @@ const AppleMusicView: React.FC = () => {
                  onExit={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} 
             />}
             
-            <div className="fixed bottom-0 left-0 right-0 bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-800 pb-safe pt-2 px-6 flex justify-around items-center z-50 h-16 sm:pb-2">
+            <div className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-800/80 pb-safe pt-2 px-6 flex justify-around items-center z-50 h-16 sm:pb-2">
                 <button 
                     onClick={() => setTab('artist')}
                     className={`flex flex-col items-center gap-1 ${tab === 'artist' ? 'text-[#fa243c]' : 'text-zinc-500'}`}

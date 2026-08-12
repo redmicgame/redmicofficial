@@ -1817,6 +1817,9 @@ export interface ArtistData {
   spotifyFollowers?: number;
   videos: Video[];
   youtubeStoreUnlocked: boolean;
+  appleMusicBgColor?: string;
+  appleMusicNameFont?: string;
+  appleMusicProfileVideoUrl?: string;
   recurringExpenses?: { id: string; name: string; cost: number; type: "monthly" | "weekly" }[];
   merch: MerchProduct[];
   merchStoreBanner: string | null;
@@ -2313,7 +2316,11 @@ export type GameAction =
     }
   | {
       type: "MARK_APPLE_MUSIC_ESSENTIAL";
-      payload: { releaseId: string; reviewText: string };
+      payload: { releaseId: string; reviewText: string; isEssential?: boolean };
+    }
+  | {
+      type: "UPDATE_APPLE_MUSIC_ARTIST_SETTINGS";
+      payload: { bgColor?: string; nameFont?: string; profileVideoUrl?: string };
     }
   | {
       type: "UPDATE_ITUNES_PRICE";
