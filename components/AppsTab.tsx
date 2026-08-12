@@ -112,6 +112,12 @@ const appCategories: AppCategory[] = [
             { name: 'Chart History', description: 'Your all-time chart stats', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartHistory', bgColor: '#0ea5e9' },
             { name: 'RIAA', description: 'Gold & Platinum Awards', icon: <RiaaIcon className="w-8 h-8"/>, view: 'riaa', bgColor: '#333333', iconColor: '#E5E4E2' },
         ]
+    },
+    {
+        title: 'Personal & Life',
+        apps: [
+            { name: 'Pregnancy Tracker', description: 'Track baby growth & daily insights', icon: <span className="text-2xl">👶</span>, view: 'pregnancyTracker', bgColor: '#f43f5e', iconColor: '#ffffff' },
+        ]
     }
 ];
 
@@ -175,6 +181,9 @@ const AppsTab: React.FC = () => {
         if (appName === 'Reddit') return gameState.date.year >= 2012;
         if (appName === 'Piracy') return gameState.date.year >= 1999 && gameState.date.year <= 2008;
         if (appName === 'ASCAP') return gameState.date.year >= 2008;
+        if (appName === 'Pregnancy Tracker') {
+            return Boolean(activeArtistData?.pregnancy);
+        }
         if (appName === 'Merch Store' && gameState.date.year >= 2005) {
             return true;
         }

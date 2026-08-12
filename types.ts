@@ -1316,6 +1316,7 @@ export interface OscarCategory {
 
 export type GameView =
   | "actingCareer"
+  | "pregnancyTracker"
   | "crypto"
   | "imdb"
   | "spotifyPodcasts"
@@ -1697,6 +1698,9 @@ export interface Pregnancy {
   partnerName: string;
   conceptionDate: GameDate;
   revealed: boolean;
+  loggedSymptoms?: string[];
+  candidateNames?: string[];
+  kickCount?: number;
 }
 
 export interface RedditComment {
@@ -2823,6 +2827,7 @@ export type GameAction =
     }
   | { type: "START_PREGNANCY"; payload: { partnerName: string } }
   | { type: "REVEAL_PREGNANCY" }
+  | { type: "UPDATE_PREGNANCY_DETAILS"; payload: Partial<Pregnancy> }
   | { type: "GIVE_BIRTH"; payload: { childName: string } }
   | { type: "START_KID_CAREER"; payload: { kidId: string } }
   | { type: "REQUEST_PROMO_INTERVIEW" }

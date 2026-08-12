@@ -9,6 +9,7 @@ import { Analytics } from '@vercel/analytics/react';
 import React from 'react';
 import { GameProvider, useGame } from './context/GameContext';
 import StartScreen from './components/StartScreen';
+import PregnancyTrackerView from './components/PregnancyTrackerView';
 import GameUI from './components/GameUI';
 import EncounterModalView from './components/EncounterModalView';
 import SpotifyView from './components/SpotifyView';
@@ -145,6 +146,8 @@ const AppContent: React.FC = () => {
 
     const renderView = () => {
         switch (currentView) {
+            case 'pregnancyTracker':
+                return <PregnancyTrackerView />;
             case 'attendEvent':
                 return <AttendEventView />;
             case 'instagram':

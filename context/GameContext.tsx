@@ -22472,6 +22472,25 @@ Let us know if you accept.`,
         },
       };
     }
+    case "UPDATE_PREGNANCY_DETAILS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData.pregnancy) return state;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            pregnancy: {
+              ...activeData.pregnancy,
+              ...action.payload,
+            },
+          },
+        },
+      };
+    }
     case "GIVE_BIRTH": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
