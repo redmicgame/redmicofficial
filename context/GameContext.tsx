@@ -825,6 +825,113 @@ const NPC_ALBUM_NOUNS = [
   "Odyssey",
 ];
 
+export function getBillboard200NpcUnits(
+  rank: number,
+  isMegaLaunch: boolean = false,
+  randomSeed: number = Math.random()
+): number {
+  let minUnits: number;
+  let maxUnits: number;
+
+  if (rank === 1) {
+    if (isMegaLaunch) {
+      minUnits = 400000;
+      maxUnits = 1250000;
+    } else {
+      minUnits = 120000;
+      maxUnits = 380000;
+    }
+  } else if (rank >= 2 && rank <= 5) {
+    // #2-5: 50,000 - 100,000+
+    const progress = (rank - 2) / 3;
+    minUnits = Math.floor(75000 - progress * 25000);
+    maxUnits = Math.floor(105000 - progress * 37000);
+  } else if (rank >= 6 && rank <= 10) {
+    // #6-10: 30,000 - 60,000
+    const progress = (rank - 6) / 4;
+    minUnits = Math.floor(45000 - progress * 15000);
+    maxUnits = Math.floor(58000 - progress * 22000);
+  } else if (rank >= 11 && rank <= 25) {
+    // #11-25: 20,000 - 40,000
+    const progress = (rank - 11) / 14;
+    minUnits = Math.floor(28000 - progress * 8000);
+    maxUnits = Math.floor(37000 - progress * 13000);
+  } else if (rank >= 26 && rank <= 50) {
+    // #26-50: 15,000 - 30,000
+    const progress = (rank - 26) / 24;
+    minUnits = Math.floor(19000 - progress * 4000);
+    maxUnits = Math.floor(28000 - progress * 11000);
+  } else if (rank >= 51 && rank <= 100) {
+    // #51-100: 12,000 - 25,000
+    const progress = (rank - 51) / 49;
+    minUnits = Math.floor(14500 - progress * 2500);
+    maxUnits = Math.floor(22000 - progress * 8500);
+  } else if (rank >= 101 && rank <= 150) {
+    // #101-150: 10,000 - 18,000
+    const progress = (rank - 101) / 49;
+    minUnits = Math.floor(11800 - progress * 1800);
+    maxUnits = Math.floor(16500 - progress * 5300);
+  } else {
+    // #151-200: 8,000 - 15,000 (#200 often 8k)
+    const progress = Math.min(1, (rank - 151) / 49);
+    minUnits = Math.floor(9800 - progress * 1800);
+    maxUnits = Math.floor(14000 - progress * 5500);
+  }
+
+  const generated = Math.floor(minUnits + randomSeed * (maxUnits - minUnits));
+  return Math.max(8000, generated);
+}
+
+export function generateInitialBillboardTopAlbums(
+  npcAlbums: NpcAlbum[],
+  year: number
+): AlbumChartEntry[] {
+  const sorted = [...npcAlbums].sort(
+    (a, b) => (b.salesPotential || 0) - (a.salesPotential || 0)
+  );
+
+  const top200 = sorted.slice(0, 200);
+  let runningMaxUnits = Infinity;
+  const eraConfig = getEraConfiguration(year);
+
+  return top200.map((album, index) => {
+    const rank = index + 1;
+    const isMegaLaunch = rank === 1 && Math.random() < 0.2;
+    let targetUnits = getBillboard200NpcUnits(rank, isMegaLaunch);
+
+    if (targetUnits > runningMaxUnits) {
+      targetUnits = Math.max(8000, Math.floor(runningMaxUnits - Math.random() * 50));
+    }
+    runningMaxUnits = targetUnits;
+
+    const pureRatio = Math.min(
+      0.55,
+      Math.max(0.15, eraConfig.marketShare.physical + eraConfig.marketShare.digital)
+    );
+    let weeklySales = Math.floor(targetUnits * pureRatio * (0.85 + Math.random() * 0.3));
+    if (weeklySales > targetUnits) weeklySales = Math.floor(targetUnits * 0.5);
+    const weeklySES = targetUnits - weeklySales;
+
+    return {
+      rank,
+      lastWeek: null,
+      peak: rank,
+      weeksOnChart: Math.floor(Math.random() * 20) + 1,
+      title: album.title,
+      artist: album.artist,
+      label: album.label,
+      coverArt: album.coverArt,
+      isPlayerAlbum: false,
+      albumId: album.uniqueId,
+      uniqueId: album.uniqueId,
+      weeklyActivity: targetUnits,
+      weeklySales,
+      weeklySES,
+      weeklyPureSales: weeklySales,
+    };
+  });
+}
+
 const generateNpcAlbums = (
   count: number,
   allNpcSongs: NpcSong[],
@@ -867,10 +974,8 @@ const generateNpcAlbums = (
     const uniqueId = `npcalbum_${title.replace(/[^a-zA-Z0-9]/g, "")}_${mainArtist.replace(/[^a-zA-Z0-9]/g, "")}`;
     if (albums.some((a) => a.uniqueId === uniqueId)) continue; // Avoid duplicate albums
 
-    // Ensure top tier sales potential
-    // Higher index (later generated) means slightly less potential, but we want chart ready albums.
-    // Generate potential between 14,000 and 150,000
-    const salesPotential = Math.floor(Math.pow(Math.random(), 2.5) * 160000) + 3000;
+    // Ensure top tier sales potential spanning from 8k to 350k+
+    const salesPotential = Math.floor(Math.pow(Math.random(), 2.2) * 350000) + 8000;
 
     albums.push({
       uniqueId,
@@ -1894,6 +1999,7 @@ The Red Mic Team`,
       // Increase songs and albums for more realistic charts
       const npcs = generateNpcs(600, [], undefined, [action.payload.artist.name], action.payload.startYear);
       const npcAlbums = generateNpcAlbums(60, npcs);
+      const billboardTopAlbums = generateInitialBillboardTopAlbums(npcAlbums, action.payload.startYear);
 
       return {
         ...initialState,
@@ -1907,6 +2013,7 @@ The Red Mic Team`,
         date: startDate,
         npcs,
         npcAlbums,
+        billboardTopAlbums,
       };
     }
     case "START_GROUP_GAME": {
@@ -2188,6 +2295,7 @@ The Red Mic Team`,
       // Increase songs and albums for more realistic charts
       const npcs = generateNpcs(600, [], undefined, [action.payload.group.name], action.payload.startYear);
       const npcAlbums = generateNpcAlbums(60, npcs);
+      const billboardTopAlbums = generateInitialBillboardTopAlbums(npcAlbums, action.payload.startYear);
 
       return {
         ...initialState,
@@ -2199,6 +2307,7 @@ The Red Mic Team`,
         date: startDate,
         npcs,
         npcAlbums,
+        billboardTopAlbums,
       };
     }
     case "CHANGE_VIEW":
@@ -9583,10 +9692,51 @@ It is now available on your Spotify profile.
         state.billboardTopAlbums.map((entry) => [entry.uniqueId, entry]),
       );
 
+      let runningMaxUnits = Infinity;
+      const eraConfigTmp3 = getEraConfiguration(state.date.year);
+
       top200Albums.forEach((album, index) => {
         const rank = index + 1;
         const history = newAlbumChartHistory[album.uniqueId];
         const prevChartEntry = prevBillboardAlbumsMap.get(album.uniqueId);
+
+        let finalActivity = album.weeklyActivity;
+        let finalSales = album.weeklySales;
+        let finalSES = album.weeklySES;
+
+        if (!album.isPlayerAlbum) {
+          const isMegaLaunch =
+            rank === 1 &&
+            (!prevChartEntry || prevChartEntry.rank > 5) &&
+            Math.random() < 0.15;
+          let targetUnits = getBillboard200NpcUnits(rank, isMegaLaunch);
+
+          if (targetUnits > runningMaxUnits) {
+            targetUnits = Math.max(
+              8000,
+              Math.floor(runningMaxUnits - Math.random() * 50)
+            );
+          }
+          runningMaxUnits = targetUnits;
+
+          const pureRatio = Math.min(
+            0.55,
+            Math.max(
+              0.15,
+              eraConfigTmp3.marketShare.physical +
+                eraConfigTmp3.marketShare.digital
+            )
+          );
+          finalSales = Math.floor(
+            targetUnits * pureRatio * (0.85 + Math.random() * 0.3)
+          );
+          if (finalSales > targetUnits)
+            finalSales = Math.floor(targetUnits * 0.5);
+          finalSES = targetUnits - finalSales;
+          finalActivity = targetUnits;
+        } else {
+          runningMaxUnits = finalActivity;
+        }
 
         if (history) {
           history.weeksOnChart += 1;
@@ -9626,10 +9776,10 @@ It is now available on your Spotify profile.
           isPlayerAlbum: album.isPlayerAlbum,
           albumId: album.albumId,
           uniqueId: album.uniqueId,
-          weeklyActivity: album.weeklyActivity,
-          weeklySales: album.weeklySales,
-          weeklySES: album.weeklySES,
-          weeklyPureSales: album.weeklyPureSales,
+          weeklyActivity: finalActivity,
+          weeklySales: finalSales,
+          weeklySES: finalSES,
+          weeklyPureSales: finalSales,
         });
       });
 
