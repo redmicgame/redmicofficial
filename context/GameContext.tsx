@@ -9624,45 +9624,40 @@ It is now available on your Spotify profile.
           };
         });
 
-      const npcAlbumContenders = newNpcAlbums.map((album) => {
-        const albumSongs = album.songIds
-          .map((id) => newNpcsWithReleases.find((s) => s.uniqueId === id))
-          .filter(Boolean);
+      const sortedNpcAlbums = [...newNpcAlbums].sort(
+        (a, b) => (b.salesPotential || 0) - (a.salesPotential || 0)
+      );
 
-        const totalWeeklyStreams = albumSongs.reduce((sum, song) => {
-          if (!song) return sum;
-          return (
-            sum + Math.floor(song.basePopularity * (Math.random() * 0.4 + 0.8))
+      let runningMaxUnitsNpc = Infinity;
+      const eraConfigTmp3 = getEraConfiguration(state.date.year);
+
+      const npcAlbumContenders = sortedNpcAlbums.map((album, index) => {
+        const npcRankTier = index + 1;
+        const isMegaLaunch = npcRankTier === 1 && Math.random() < 0.15;
+        let targetUnits = getBillboard200NpcUnits(npcRankTier, isMegaLaunch);
+
+        if (targetUnits > runningMaxUnitsNpc) {
+          targetUnits = Math.max(
+            8000,
+            Math.floor(runningMaxUnitsNpc - Math.random() * 50)
           );
-        }, 0);
+        }
+        runningMaxUnitsNpc = targetUnits;
 
-        const eraConfigTmp3 = getEraConfiguration(state.date.year);
-
-        let streamActivity = Math.floor(
-          (totalWeeklyStreams / 1500) * eraConfigTmp3.marketShare.streaming,
+        const pureRatio = Math.min(
+          0.55,
+          Math.max(
+            0.15,
+            eraConfigTmp3.marketShare.physical +
+              eraConfigTmp3.marketShare.digital
+          )
         );
-
-        // Add a baseline boost to ensure Billboard 200 bottom stays around 7000+ units
-        streamActivity += 4000 + (Math.random() * 2000);
-
-        // Use the sales potential to guarantee higher chart positions
-        // Sales potential (14k+) ensures chart relevance.
-        // Vary sales weekly by +/- 10%
-        const variance = 0.9 + Math.random() * 0.2;
-
-        // Pure sales scaling by era
-        // In earlier eras, we need MORE pure sales to be relevant on the chart.
-        const eraSalesBoost =
-          eraConfigTmp3.marketShare.physical +
-            eraConfigTmp3.marketShare.digital >
-          0.8
-            ? 2.5
-            : 1.0;
-        const weeklySales = Math.floor(
-          (album.salesPotential || 1000) * variance * eraSalesBoost * 0.55,
+        let weeklySales = Math.floor(
+          targetUnits * pureRatio * (0.85 + Math.random() * 0.3)
         );
-
-        const weeklyActivity = streamActivity + weeklySales;
+        if (weeklySales > targetUnits)
+          weeklySales = Math.floor(targetUnits * 0.5);
+        const weeklySES = Math.max(0, targetUnits - weeklySales);
 
         return {
           uniqueId: album.uniqueId,
@@ -9672,9 +9667,9 @@ It is now available on your Spotify profile.
           coverArt: album.coverArt,
           isPlayerAlbum: false,
           albumId: album.uniqueId,
-          weeklyActivity,
+          weeklyActivity: targetUnits,
           weeklySales,
-          weeklySES: streamActivity,
+          weeklySES,
           weeklyPureSales: weeklySales,
         };
       });
@@ -9692,51 +9687,14 @@ It is now available on your Spotify profile.
         state.billboardTopAlbums.map((entry) => [entry.uniqueId, entry]),
       );
 
-      let runningMaxUnits = Infinity;
-      const eraConfigTmp3 = getEraConfiguration(state.date.year);
-
       top200Albums.forEach((album, index) => {
         const rank = index + 1;
         const history = newAlbumChartHistory[album.uniqueId];
         const prevChartEntry = prevBillboardAlbumsMap.get(album.uniqueId);
 
-        let finalActivity = album.weeklyActivity;
-        let finalSales = album.weeklySales;
-        let finalSES = album.weeklySES;
-
-        if (!album.isPlayerAlbum) {
-          const isMegaLaunch =
-            rank === 1 &&
-            (!prevChartEntry || prevChartEntry.rank > 5) &&
-            Math.random() < 0.15;
-          let targetUnits = getBillboard200NpcUnits(rank, isMegaLaunch);
-
-          if (targetUnits > runningMaxUnits) {
-            targetUnits = Math.max(
-              8000,
-              Math.floor(runningMaxUnits - Math.random() * 50)
-            );
-          }
-          runningMaxUnits = targetUnits;
-
-          const pureRatio = Math.min(
-            0.55,
-            Math.max(
-              0.15,
-              eraConfigTmp3.marketShare.physical +
-                eraConfigTmp3.marketShare.digital
-            )
-          );
-          finalSales = Math.floor(
-            targetUnits * pureRatio * (0.85 + Math.random() * 0.3)
-          );
-          if (finalSales > targetUnits)
-            finalSales = Math.floor(targetUnits * 0.5);
-          finalSES = targetUnits - finalSales;
-          finalActivity = targetUnits;
-        } else {
-          runningMaxUnits = finalActivity;
-        }
+        const finalActivity = album.weeklyActivity;
+        const finalSales = album.weeklySales;
+        const finalSES = album.weeklySES;
 
         if (history) {
           history.weeksOnChart += 1;

@@ -1,7 +1,7 @@
 
 
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { AlbumChartEntry } from '../types';
 import CalendarIcon from './icons/CalendarIcon';
@@ -50,7 +50,16 @@ const AlbumChartEntryItem: React.FC<{ entry: AlbumChartEntry }> = ({ entry }) =>
 
 const BillboardAlbumsView: React.FC = () => {
     const { gameState, dispatch } = useGame();
-    const { billboardTopAlbums } = gameState;
+    const { billboardTopAlbums = [] } = gameState;
+
+    const sortedAlbums = useMemo(() => {
+        return [...billboardTopAlbums]
+            .sort((a, b) => b.weeklyActivity - a.weeklyActivity)
+            .map((entry, idx) => ({
+                ...entry,
+                rank: idx + 1
+            }));
+    }, [billboardTopAlbums]);
 
     return (
         <div className="bg-white text-black h-full overflow-y-auto">
@@ -64,8 +73,8 @@ const BillboardAlbumsView: React.FC = () => {
             
             <main className="max-w-3xl mx-auto px-4">
                  <div className="divide-y divide-zinc-200">
-                    {billboardTopAlbums.length > 0 ? (
-                        billboardTopAlbums.map(entry => (
+                    {sortedAlbums.length > 0 ? (
+                        sortedAlbums.map(entry => (
                             <AlbumChartEntryItem key={entry.uniqueId} entry={entry} />
                         ))
                     ) : (
