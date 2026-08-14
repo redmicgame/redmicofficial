@@ -5510,13 +5510,13 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 videoTypeMultiplier = 0.5;
                 break;
               case "Genius Verified":
-                videoTypeMultiplier = 1.2;
+                videoTypeMultiplier = 0.3;
                 break;
               case "Live Performance":
                 videoTypeMultiplier = 2.5;
                 break;
               case "Interview":
-                videoTypeMultiplier = 1.5;
+                videoTypeMultiplier = 0.375;
                 break;
             }
             const difficulty = state.difficultyMode || "normal";
@@ -10388,6 +10388,37 @@ HFPA`,
         }
       }
 
+      // Week 18: Additional Golden Globes Red Carpet invitations for notable artists / actors
+      if (newDate.week === 18) {
+        for (const artistId in updatedArtistsData) {
+          const artistData = updatedArtistsData[artistId];
+          const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          if (!artistProfile) continue;
+          const hasReceivedCarpetInvite = artistData.inbox.some(
+            (e) => e.offer?.type === "goldenGlobeRedCarpet" && (e.date?.year === newDate.year || (e.date as any) === newDate.year)
+          );
+          if (!hasReceivedCarpetInvite && (artistData.popularity >= 35 || (artistData.actingRoles && artistData.actingRoles.length > 0) || artistData.hype >= 30)) {
+            const carpetEmailId = crypto.randomUUID();
+            artistData.inbox.push({
+              id: carpetEmailId,
+              sender: "Hollywood Foreign Press Association",
+              subject: "Invitation: Golden Globes Red Carpet",
+              body: `Dear ${artistProfile.name},
+
+We cordially invite you to attend the ${newDate.year} Golden Globe Awards and walk the red carpet.
+
+Please accept this invitation by sharing your look for the evening.
+
+Sincerely,
+HFPA`,
+              date: newDate,
+              isRead: false,
+              offer: { type: "goldenGlobeRedCarpet", emailId: carpetEmailId },
+            });
+          }
+        }
+      }
+
       // Week 20: Golden Globes Ceremony
       if (newDate.week === 20 && state.goldenGlobeCurrentYearNominations) {
         for (const category of state.goldenGlobeCurrentYearNominations) {
@@ -11138,7 +11169,65 @@ The Academy`;
                         hasPerformanceOffer,
                     },
                 });
+
+                // Also invite to Oscars red carpet
+                const oscarCarpetEmailId = crypto.randomUUID();
+                artistData.inbox.push({
+                    id: oscarCarpetEmailId,
+                    sender: "The Academy",
+                    senderIcon: "oscars",
+                    subject: "Invitation: Oscars Red Carpet",
+                    body: `Dear ${artistProfile?.name || 'Artist'},
+
+Congratulations on your nomination. We cordially invite you to walk the red carpet at the ${newDate.year} Academy Awards.
+
+Please accept this invitation by sharing your red carpet look for the evening.
+
+Sincerely,
+The Academy of Motion Picture Arts and Sciences`,
+                    date: newDate,
+                    isRead: false,
+                    offer: {
+                        type: "oscarRedCarpet",
+                        emailId: oscarCarpetEmailId,
+                    },
+                });
             }
+        }
+      }
+
+      // Week 8: Additional Oscars Red Carpet invitations for notable artists / actors
+      if (newDate.week === 8) {
+        for (const artistId in updatedArtistsData) {
+          const artistData = updatedArtistsData[artistId];
+          const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          if (!artistProfile) continue;
+          const hasReceivedCarpetInvite = artistData.inbox.some(
+            (e) => e.offer?.type === "oscarRedCarpet" && (e.date?.year === newDate.year || (e.date as any) === newDate.year)
+          );
+          if (!hasReceivedCarpetInvite && (artistData.popularity >= 35 || (artistData.actingRoles && artistData.actingRoles.length > 0) || artistData.hype >= 30)) {
+            const oscarCarpetEmailId = crypto.randomUUID();
+            artistData.inbox.push({
+              id: oscarCarpetEmailId,
+              sender: "The Academy",
+              senderIcon: "oscars",
+              subject: "Invitation: Oscars Red Carpet",
+              body: `Dear ${artistProfile.name},
+
+The Academy cordially invites you to attend the ${newDate.year} Academy Awards ceremony and walk the official red carpet.
+
+Please share your red carpet look for the evening.
+
+Sincerely,
+The Academy of Motion Picture Arts and Sciences`,
+              date: newDate,
+              isRead: false,
+              offer: {
+                type: "oscarRedCarpet",
+                emailId: oscarCarpetEmailId,
+              },
+            });
+          }
         }
       }
 
@@ -14301,6 +14390,16 @@ The Tonight Show Team`;
       const activeData = state.artistsData[state.activeArtistId];
       const item = action.payload.item;
 
+      const artistProfile =
+        state.soloArtist?.id === state.activeArtistId
+          ? state.soloArtist
+          : state.group?.id === state.activeArtistId
+            ? state.group
+            : state.group?.members.find((m) => m.id === state.activeArtistId) ||
+              (state.extraPlayableArtists || []).find((a) => a.id === state.activeArtistId);
+      const artistName = artistProfile?.name || "Artist";
+      const artistImage = artistProfile?.image || item.image;
+
       let newPosts: XPost[] = [];
       if (item.bonusSongTitles && item.bonusSongTitles.length > 0) {
         const release = activeData.releases.find(r => r.id === item.releaseId);
@@ -14312,8 +14411,8 @@ The Tonight Show Team`;
         const popPost: XPost = {
           id: crypto.randomUUID(),
           authorId: authorChoice,
-          content: `${activeData.name}'s '${releaseTitle}' ${regionTag}exclusive ${item.type.toLowerCase()} variant will feature bonus track${item.bonusSongTitles.length > 1 ? 's' : ''}, ${bonusList}.`,
-          image: activeData.profilePicture || item.image,
+          content: `${artistName}'s '${releaseTitle}' ${regionTag}exclusive ${item.type.toLowerCase()} variant will feature bonus track${item.bonusSongTitles.length > 1 ? 's' : ''}, ${bonusList}.`,
+          image: artistImage,
           image2: item.image || release?.coverArt,
           likes: Math.floor(Math.random() * 45000) + 15000,
           retweets: Math.floor(Math.random() * 12000) + 3000,
@@ -14329,8 +14428,8 @@ The Tonight Show Team`;
         const popPost: XPost = {
           id: crypto.randomUUID(),
           authorId: authorChoice,
-          content: `${activeData.name} announces a ${item.regionExclusive} exclusive ${item.type.toLowerCase()} edition for '${releaseTitle}'.`,
-          image: activeData.profilePicture || item.image,
+          content: `${artistName} announces a ${item.regionExclusive} exclusive ${item.type.toLowerCase()} edition for '${releaseTitle}'.`,
+          image: artistImage,
           image2: item.image || release?.coverArt,
           likes: Math.floor(Math.random() * 35000) + 10000,
           retweets: Math.floor(Math.random() * 9000) + 2000,
@@ -14473,6 +14572,34 @@ The Tonight Show Team`;
           [state.activeArtistId]: {
             ...activeData,
             oscarBanner: action.payload,
+          },
+        },
+      };
+    }
+    case "UPDATE_YOUTUBE_BANNER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            youtubeBanner: action.payload.banner,
+          },
+        },
+      };
+    }
+    case "DELETE_ALL_EMAILS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: [],
           },
         },
       };
@@ -19899,10 +20026,32 @@ Let us know if you accept.`,
         } else {
              return {
                 ...state,
-                activeGoldenGlobeRedCarpetOffer: null,
-                currentView: "game"
+                activeGoldenGlobeRedCarpetOffer: { emailId },
+                currentView: "goldenGlobeRedCarpet"
             };
         }
+    }
+    case "DECLINE_GOLDEN_GLOBE_RED_CARPET": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          email.id === action.payload.emailId &&
+          email.offer?.type === "goldenGlobeRedCarpet"
+        ) {
+          return { ...email, offer: { ...email.offer, isAccepted: false } };
+        }
+        return email;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
+        },
+        currentView: "inbox",
+        activeGoldenGlobeRedCarpetOffer: null,
+      };
     }
     case "ACCEPT_OSCAR_RED_CARPET": {
       if (!state.activeArtistId) return state;

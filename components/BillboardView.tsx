@@ -108,7 +108,7 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">PURE SALES</p>
                             <p className="text-lg font-black text-black">{entry.weeklyPureSales || entry.weeklySales > 0 ? formatNumber(Math.floor(entry.weeklyPureSales || entry.weeklySales)) : '0'}</p>
                         </div>
-                        {gameState.date.year >= 2008 && (
+                        {gameState.date.year >= 2016 && (
                             <>
                                 <div className="w-px h-8 bg-zinc-300"></div>
                                 <div className="text-center">
@@ -134,7 +134,7 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
                             <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
                         </div>
-                        {gameState.date.year >= 2008 && (
+                        {gameState.date.year >= 2016 && (
                             <>
                                 <div className="w-px h-8 bg-zinc-300"></div>
                                 <div className="text-center">

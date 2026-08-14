@@ -37,7 +37,7 @@ const StartScreen: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleMemberCountChange = (count: number) => {
-        const newCount = Math.max(2, Math.min(4, count));
+        const newCount = Math.max(2, Math.min(6, count));
         setMemberCount(newCount);
         const newMembers = [...members];
         while (newMembers.length < newCount) {
@@ -241,8 +241,8 @@ const StartScreen: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-zinc-300">Members</label>
-                                    <div className="mt-1 grid grid-cols-3 gap-2">
-                                        {[2, 3, 4].map(count => (
+                                    <div className="mt-1 grid grid-cols-5 gap-2">
+                                        {[2, 3, 4, 5, 6].map(count => (
                                             <button type="button" key={count} onClick={() => handleMemberCountChange(count)} className={`py-2 rounded-lg font-bold text-sm transition-colors ${memberCount === count ? 'bg-red-600' : 'bg-zinc-700 hover:bg-zinc-600'}`}>{count}</button>
                                         ))}
                                     </div>

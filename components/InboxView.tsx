@@ -23,6 +23,7 @@ import TrshdIcon from './icons/TrshdIcon';
 import OscarAwardIcon from './icons/OscarAwardIcon';
 import AmaAwardIcon from './icons/AmaAwardIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
+import TrashIcon from './icons/TrashIcon';
 
 const SenderAvatar: React.FC<{ email: Email }> = ({ email }) => {
     const { sender, senderIcon } = email;
@@ -97,6 +98,13 @@ const SenderAvatar: React.FC<{ email: Email }> = ({ email }) => {
         return (
             <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
                 <OscarAwardIcon className="w-6 h-6 text-amber-400" />
+            </div>
+        )
+    }
+    if (senderIcon === 'goldenglobes' || senderIcon === 'hfpa' || sender?.toLowerCase().includes('golden globe') || sender?.toLowerCase().includes('hollywood foreign press')) {
+        return (
+            <div className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center">
+                <TrophyIcon className="w-6 h-6 text-black" />
             </div>
         )
     }
@@ -226,6 +234,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 break;
             case 'goldenGlobeNominations':
                 dispatch({ type: 'ACCEPT_GOLDEN_GLOBE_INVITE', payload: { emailId: email.id } });
+                break;
+            case 'goldenGlobeRedCarpet':
+                dispatch({ type: 'ACCEPT_GOLDEN_GLOBE_RED_CARPET', payload: { emailId: email.id, lookUrl: '' } });
                 break;
 
             case 'goldenGlobeSubmission':
@@ -578,6 +589,12 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 acceptedText = "Attending Ceremony";
                 isAccepted = !!email.offer.isAttending;
                 break;
+            case 'goldenGlobeRedCarpet':
+                buttonText = "Attend Red Carpet";
+                buttonClass = "bg-amber-400 hover:bg-amber-500 text-black shadow-amber-400/20";
+                acceptedText = "You are attending the Golden Globes";
+                isAccepted = !!email.offer.isAccepted;
+                break;
             case 'goldenGlobeSubmission':
                 buttonText = "Submit For Golden Globes";
                 buttonClass = "bg-amber-400 hover:bg-amber-500 text-black shadow-amber-400/20";
@@ -764,6 +781,7 @@ const InboxView: React.FC = () => {
     const { dispatch, activeArtist, activeArtistData } = useGame();
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
 
     if (!activeArtist || !activeArtistData) return null;
     const { inbox } = activeArtistData;
@@ -799,6 +817,18 @@ const InboxView: React.FC = () => {
 
     return (
         <div className="h-full w-full bg-[#1c1c1e] text-white flex flex-col">
+            <ConfirmationModal
+                isOpen={showDeleteAllModal}
+                onClose={() => setShowDeleteAllModal(false)}
+                onConfirm={() => {
+                    dispatch({ type: 'DELETE_ALL_EMAILS' });
+                    setShowDeleteAllModal(false);
+                }}
+                title="Delete All Emails?"
+                message="Are you sure you want to permanently delete all emails in your inbox? This action cannot be undone."
+                confirmText="Delete All"
+                cancelText="Cancel"
+            />
             <header className="p-4 sticky top-0 bg-[#1c1c1e]/80 backdrop-blur-sm z-10 space-y-4">
                 <div className="flex items-center gap-4">
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="p-2 rounded-full hover:bg-white/10">
@@ -817,7 +847,18 @@ const InboxView: React.FC = () => {
                 </div>
             </header>
             <main className="flex-grow overflow-y-auto">
-                <h1 className="px-4 py-2 text-xs font-semibold uppercase text-zinc-400">Primary</h1>
+                <div className="px-4 py-2 flex items-center justify-between">
+                    <h1 className="text-xs font-semibold uppercase text-zinc-400">Primary ({inbox.length})</h1>
+                    {inbox.length > 0 && (
+                        <button
+                            onClick={() => setShowDeleteAllModal(true)}
+                            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium px-2.5 py-1 rounded bg-red-950/40 hover:bg-red-900/50 border border-red-800/40 transition-colors"
+                        >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            Delete All
+                        </button>
+                    )}
+                </div>
                 {filteredInbox.length > 0 ? (
                     <div>
                         {filteredInbox.map(email => <EmailItem key={email.id} email={email} onClick={() => setSelectedEmail(email)} />)}

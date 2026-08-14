@@ -172,6 +172,7 @@ const YouTubeChannelView: React.FC = () => {
     const [filter, setFilter] = useState<'Popular' | 'Latest' | 'Oldest'>('Popular');
     const [channelTab, setChannelTab] = useState<'Videos' | 'Podcasts'>('Videos');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
 
     if (!activeArtist || !activeArtistData) return null;
     const { youtubeSubscribers, videos, youtubeStoreUnlocked, contract } = activeArtistData;
@@ -211,13 +212,13 @@ const YouTubeChannelView: React.FC = () => {
             name: activeArtist.name,
             handle: `@${activeArtist.name.replace(/\s/g, '').toLowerCase()}`,
             avatar: activeArtist.image,
-            banner: activeArtist.image,
+            banner: activeArtistData.youtubeBanner || activeArtist.image,
             subscribers: youtubeSubscribers,
             isVerified: youtubeSubscribers >= SUBSCRIBER_THRESHOLD_VERIFIED || videos.some(v => v.views >= VIEWS_THRESHOLD_VERIFIED),
             isPersonal: true,
             bio: `Official YouTube channel for ${activeArtist.name}.`
         }
-    }, [isViewingPastLabel, viewingPastLabelId, activeYoutubeChannel, canSwitchToLabelChannel, currentLabel, activeArtist, youtubeSubscribers, videos]);
+    }, [isViewingPastLabel, viewingPastLabelId, activeYoutubeChannel, canSwitchToLabelChannel, currentLabel, activeArtist, youtubeSubscribers, videos, activeArtistData.youtubeBanner]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && activeArtist && channelData.isPersonal) {
@@ -235,6 +236,25 @@ const YouTubeChannelView: React.FC = () => {
     const triggerFileInput = () => {
         if (channelData.isPersonal) {
             fileInputRef.current?.click();
+        }
+    };
+
+    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0] && channelData.isPersonal) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newBanner = reader.result as string;
+                dispatch({ type: 'UPDATE_YOUTUBE_BANNER', payload: { banner: newBanner } });
+            };
+            reader.readAsDataURL(file);
+        }
+        if (e.target) e.target.value = '';
+    };
+
+    const triggerBannerInput = () => {
+        if (channelData.isPersonal) {
+            bannerInputRef.current?.click();
         }
     };
     
@@ -273,8 +293,22 @@ const YouTubeChannelView: React.FC = () => {
                 <h1 className="text-xl font-bold">YouTube</h1>
             </header>
 
-            <div className="h-24 md:h-32 bg-zinc-700">
-                <img src={channelData.banner} alt="Banner" className="w-full h-full object-cover" />
+            <div className="relative group h-24 md:h-32 bg-zinc-700">
+                <input type="file" ref={bannerInputRef} onChange={handleBannerUpload} className="hidden" accept="image/*" />
+                <button
+                    onClick={triggerBannerInput}
+                    disabled={!channelData.isPersonal}
+                    className={`w-full h-full text-left relative block ${channelData.isPersonal ? 'cursor-pointer' : ''}`}
+                    title={channelData.isPersonal ? "Click to change banner" : undefined}
+                >
+                    <img src={channelData.banner} alt="Banner" className="w-full h-full object-cover" />
+                    {channelData.isPersonal && (
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-sm font-medium">
+                            <CameraIcon className="w-6 h-6" />
+                            <span>Change Banner</span>
+                        </div>
+                    )}
+                </button>
             </div>
             
             <div className="px-4">

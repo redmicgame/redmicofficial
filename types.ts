@@ -1789,6 +1789,7 @@ export interface ArtistData {
   lastFourWeeksStreams: number[];
   lastFourWeeksViews: number[];
   youtubeSubscribers: number;
+  youtubeBanner?: string;
   youtubePartnerProgram?: {
     isActive: boolean;
     eligibleViewsThisQuarter: number;
@@ -2290,7 +2291,10 @@ export type GameAction =
   | { type: "UPDATE_GRAMMY_BANNER"; payload: string }
   | { type: "UPDATE_OSCAR_BANNER"; payload: string }
   | { type: "UPDATE_GOLDEN_GLOBE_BANNER"; payload: string }
+  | { type: "UPDATE_YOUTUBE_BANNER"; payload: { banner: string } }
   | { type: "MARK_INBOX_READ" }
+  | { type: "DELETE_ALL_EMAILS" }
+  | { type: "DECLINE_GOLDEN_GLOBE_RED_CARPET"; payload: { emailId: string } }
   | { type: "TAKE_DOWN_SONG"; payload: { songId: string } }
   | { type: "TAKE_DOWN_RELEASE"; payload: { releaseId: string } }
   | { type: "UPDATE_IMDB_PROFILE"; payload: { bio: string; birthDate: string } }
