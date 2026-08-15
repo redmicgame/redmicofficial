@@ -14797,6 +14797,24 @@ The Tonight Show Team`;
         },
       };
     }
+    case "SET_APPLE_MUSIC_ANIMATED_COVER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            releases: activeData.releases.map((r) =>
+              r.id === action.payload.releaseId
+                ? { ...r, appleMusicAnimatedCoverUrl: action.payload.animatedCoverUrl }
+                : r,
+            ),
+          },
+        },
+      };
+    }
     case "MARK_APPLE_MUSIC_ESSENTIAL": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -14833,7 +14851,76 @@ The Tonight Show Team`;
             ...activeData,
             appleMusicBgColor: action.payload.bgColor !== undefined ? action.payload.bgColor : activeData.appleMusicBgColor,
             appleMusicNameFont: action.payload.nameFont !== undefined ? action.payload.nameFont : activeData.appleMusicNameFont,
+            appleMusicNameStyle: action.payload.nameStyle !== undefined ? action.payload.nameStyle : activeData.appleMusicNameStyle,
             appleMusicProfileVideoUrl: action.payload.profileVideoUrl !== undefined ? action.payload.profileVideoUrl : activeData.appleMusicProfileVideoUrl,
+          },
+        },
+      };
+    }
+    case "CREATE_APPLE_MUSIC_PLAYLIST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const newPlaylist: AppleMusicPlaylist = {
+        id: `amp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        title: action.payload.title,
+        type: action.payload.playlistType,
+        curatorText: action.payload.curatorText || 'Apple Music Pop',
+        bannerColor: action.payload.bannerColor || '#93c5fd',
+        customCoverUrl: action.payload.customCoverUrl,
+        songIds: action.payload.songIds || [],
+        createdAt: { ...state.date },
+      };
+      const existingPlaylists = activeData.appleMusicPlaylists || [];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            appleMusicPlaylists: [newPlaylist, ...existingPlaylists],
+          },
+        },
+      };
+    }
+    case "UPDATE_APPLE_MUSIC_PLAYLIST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const existingPlaylists = activeData.appleMusicPlaylists || [];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            appleMusicPlaylists: existingPlaylists.map((p) => {
+              if (p.id === action.payload.playlistId) {
+                return {
+                  ...p,
+                  ...(action.payload.title !== undefined ? { title: action.payload.title } : {}),
+                  ...(action.payload.playlistType !== undefined ? { type: action.payload.playlistType } : {}),
+                  ...(action.payload.curatorText !== undefined ? { curatorText: action.payload.curatorText } : {}),
+                  ...(action.payload.bannerColor !== undefined ? { bannerColor: action.payload.bannerColor } : {}),
+                  ...(action.payload.customCoverUrl !== undefined ? { customCoverUrl: action.payload.customCoverUrl } : {}),
+                  ...(action.payload.songIds !== undefined ? { songIds: action.payload.songIds } : {}),
+                };
+              }
+              return p;
+            }),
+          },
+        },
+      };
+    }
+    case "DELETE_APPLE_MUSIC_PLAYLIST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const existingPlaylists = activeData.appleMusicPlaylists || [];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            appleMusicPlaylists: existingPlaylists.filter((p) => p.id !== action.payload.playlistId),
           },
         },
       };

@@ -6,10 +6,11 @@ import StarIcon from './icons/StarIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import PlayRedCircleIcon from './icons/PlayRedCircleIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
-import { Song, Release, Video, GameDate, Tour } from '../types';
+import { Song, Release, Video, GameDate, Tour, AppleMusicPlaylist } from '../types';
 import PlusIcon from './icons/PlusIcon';
 import LosslessIcon from './icons/LosslessIcon';
 import AppleMusicBrowseView from './AppleMusicBrowseView';
+import { AppleMusicPlaylistCover, AppleMusicPlaylistDetailView } from './AppleMusicPlaylistDetailView';
 
 const formatDateApple = (gameDate: GameDate) => {
     const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
@@ -20,6 +21,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
     const { activeArtist, activeArtistData } = useGame();
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const [showMotionVideo, setShowMotionVideo] = useState(true);
 
     const { releases, songs, videos, labelSubmissions } = activeArtistData!;
     const release = releases.find(r => r.id === releaseId) || labelSubmissions.find(s => s.release.id === releaseId)?.release;
@@ -69,7 +71,7 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
 
     let distroString = "";
     if (release.releasingLabel) {
-        const customLabel = activeArtistData.customLabels?.find(l => l.id === release.releasingLabel!.id);
+        const customLabel = activeArtistData?.customLabels?.find(l => l.id === release.releasingLabel!.id);
         if (customLabel) {
              if (customLabel.exclusiveLicenseId) {
                   const major = LABELS.find(l => l.id === customLabel.exclusiveLicenseId);
@@ -81,7 +83,8 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
         }
     }
 
-    const pageBgColor = activeArtistData.appleMusicBgColor || '#000000';
+    const pageBgColor = activeArtistData?.appleMusicBgColor || '#000000';
+    const hasAnimatedCover = !!release.appleMusicAnimatedCoverUrl;
 
     return (
         <>
@@ -108,20 +111,48 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                 </div>
             )}
 
-            <div style={{ backgroundColor: pageBgColor }} className="text-white h-full overflow-y-auto pb-24 transition-colors">
+            <div style={{ backgroundColor: pageBgColor }} className="text-white h-full overflow-y-auto pb-28 transition-colors">
                 {(release.isAppleMusicExpandedCover && !isSingle) ? (
-                    <div className="relative w-full aspect-square md:aspect-[4/3] group">
-                        <img src={release.coverArt} alt={releaseTitle} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="relative w-full aspect-square md:aspect-[4/3] group overflow-hidden bg-black">
+                        {/* Animated Video Cover or Static Artwork */}
+                        {hasAnimatedCover && showMotionVideo ? (
+                            <video 
+                                src={release.appleMusicAnimatedCoverUrl} 
+                                autoPlay 
+                                loop 
+                                muted 
+                                playsInline 
+                                className="absolute inset-0 w-full h-full object-cover" 
+                            />
+                        ) : (
+                            <img src={release.coverArt} alt={releaseTitle} className="absolute inset-0 w-full h-full object-cover" />
+                        )}
+
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
+
+                        {/* Top Header Bar */}
                         <header className="absolute top-0 left-0 right-0 z-10 p-4 mt-8 flex justify-between items-center bg-transparent">
-                            <button onClick={onBack} className="bg-black/30 p-1.5 rounded-full backdrop-blur-md"><ChevronLeftIcon className="w-6 h-6 text-white drop-shadow-md" /></button>
+                            <button onClick={onBack} className="bg-black/40 p-1.5 rounded-full backdrop-blur-md hover:bg-black/60 transition-colors">
+                                <ChevronLeftIcon className="w-6 h-6 text-white drop-shadow-md" />
+                            </button>
                             <div className="flex items-center gap-3">
-                                <button className="bg-black/30 p-1.5 rounded-full backdrop-blur-md">
+                                {hasAnimatedCover && (
+                                    <button 
+                                        onClick={() => setShowMotionVideo(!showMotionVideo)}
+                                        className="bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-white flex items-center gap-1 border border-white/20 shadow-md hover:bg-black/70 transition-colors"
+                                        title="Toggle Animated Cover Motion"
+                                    >
+                                        <span>{showMotionVideo ? '⏸ Motion' : '▶ Static'}</span>
+                                    </button>
+                                )}
+                                <button className="bg-black/40 p-1.5 rounded-full backdrop-blur-md hover:bg-black/60 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                     </svg>
                                 </button>
-                                <button className="bg-black/30 p-1.5 rounded-full backdrop-blur-md"><DotsHorizontalIcon className="w-5 h-5 text-white drop-shadow-md" /></button>
+                                <button className="bg-black/40 p-1.5 rounded-full backdrop-blur-md hover:bg-black/60 transition-colors">
+                                    <DotsHorizontalIcon className="w-5 h-5 text-white drop-shadow-md" />
+                                </button>
                             </div>
                         </header>
                         
@@ -137,6 +168,12 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                                 <span className="flex items-center gap-1">
                                     <LosslessIcon className="w-4 h-4 fill-white" /> Lossless
                                 </span>
+                                {hasAnimatedCover && (
+                                    <>
+                                        <span>•</span>
+                                        <span className="text-white/90 font-bold"> Animated Cover</span>
+                                    </>
+                                )}
                             </p>
                             
                             <div className="flex gap-4 mt-6 justify-center items-center px-4">
@@ -167,7 +204,31 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                         </header>
                         <section className="text-center p-4">
                             {distroString && <p className="text-[10px] font-bold uppercase tracking-widest text-[#d60017] mb-3">{distroString}</p>}
-                            <img src={release.coverArt} className="w-56 h-56 rounded-xl object-cover mx-auto shadow-2xl" />
+                            
+                            {/* Standard Cover View with Animated Support */}
+                            <div className="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden shadow-2xl bg-black">
+                                {hasAnimatedCover && showMotionVideo ? (
+                                    <video 
+                                        src={release.appleMusicAnimatedCoverUrl} 
+                                        autoPlay 
+                                        loop 
+                                        muted 
+                                        playsInline 
+                                        className="w-full h-full object-cover" 
+                                    />
+                                ) : (
+                                    <img src={release.coverArt} className="w-full h-full object-cover" alt={releaseTitle} />
+                                )}
+                                {hasAnimatedCover && (
+                                    <button 
+                                        onClick={() => setShowMotionVideo(!showMotionVideo)}
+                                        className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-[10px] font-bold text-white px-2 py-0.5 rounded-full border border-white/20"
+                                    >
+                                        {showMotionVideo ? 'Motion' : 'Static'}
+                                    </button>
+                                )}
+                            </div>
+
                             <h2 className="text-2xl font-bold mt-4">{releaseTitle}</h2>
                             <p className="text-xl text-rose-400 font-semibold">{artistDisplay}</p>
                             <p className="text-sm text-zinc-400 uppercase mt-1 flex items-center justify-center gap-2">
@@ -296,8 +357,8 @@ const HorizontalSection: React.FC<{title: string, items: (Release | Video)[], on
                 })}
             </div>
         </section>
-     )
-}
+     );
+};
 
 const AppleMusicView: React.FC = () => {
     const { dispatch, activeArtist, activeArtistData, gameState } = useGame();
@@ -306,6 +367,7 @@ const AppleMusicView: React.FC = () => {
     const [browseView, setBrowseView] = useState<'home' | 'topPlaylists' | 'topSongs' | 'topAlbums' | 'bestNewSongs' | 'topPreAdds' | 'playlistDetail'>('home');
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
     const [selectedBrowsePlaylist, setSelectedBrowsePlaylist] = useState<string | null>(null);
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
     const concertsRef = useRef<HTMLDivElement>(null);
 
@@ -326,17 +388,28 @@ const AppleMusicView: React.FC = () => {
     const handleSelectRelease = (id: string) => {
         setTab('artist');
         setSelectedReleaseId(id);
+        setSelectedPlaylistId(null);
         setView('releaseDetail');
     };
 
     const handleBackToProfile = () => {
         setSelectedReleaseId(null);
+        setSelectedPlaylistId(null);
         setView('artistProfile');
     };
 
     const pageBgColor = activeArtistData.appleMusicBgColor || '#000000';
     const profileFont = activeArtistData.appleMusicNameFont || 'ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif';
     const profileVideoUrl = activeArtistData.appleMusicProfileVideoUrl || '';
+    const nameStyleKey = activeArtistData.appleMusicNameStyle || 'normal';
+
+    const styleClass = 
+        nameStyleKey === 'glow' ? 'drop-shadow-[0_0_15px_rgba(255,255,255,0.7)]' :
+        nameStyleKey === 'neon_red' ? 'drop-shadow-[0_0_18px_rgba(250,36,60,0.85)] text-white' :
+        nameStyleKey === 'neon_cyan' ? 'drop-shadow-[0_0_18px_rgba(56,189,248,0.85)] text-cyan-100' :
+        nameStyleKey === 'spaced' ? 'tracking-[0.25em] uppercase' :
+        nameStyleKey === 'shadow' ? 'drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)]' :
+        nameStyleKey === 'italic' ? 'italic' : '';
 
     // Active tours or tour concerts
     const activeTours = activeArtistData.tours ? activeArtistData.tours.filter((t: Tour) => t.status === 'active' || t.status === 'presale' || t.status === 'planning') : [];
@@ -443,7 +516,21 @@ const AppleMusicView: React.FC = () => {
         return list;
     }, [activeArtistData.songs, gameState?.npcs, activeArtist.name]);
 
+    const artistPlaylists = activeArtistData.appleMusicPlaylists || [];
+
     const renderArtistView = () => {
+        if (selectedPlaylistId) {
+            return (
+                <AppleMusicPlaylistDetailView 
+                    playlistId={selectedPlaylistId} 
+                    onBack={() => setSelectedPlaylistId(null)}
+                    onEditPlaylist={() => {
+                        dispatch({ type: 'CHANGE_VIEW', payload: 'appleMusicForArtists' });
+                    }}
+                />
+            );
+        }
+
         if (view === 'releaseDetail' && selectedReleaseId) {
             return <AppleMusicReleaseDetailView releaseId={selectedReleaseId} onBack={handleBackToProfile} onSelectRelease={handleSelectRelease} />;
         }
@@ -526,12 +613,19 @@ const AppleMusicView: React.FC = () => {
                         )}
 
                         <div className="flex justify-between items-end gap-4">
-                            <h1 style={{ fontFamily: profileFont }} className="text-5xl md:text-6xl font-black tracking-tight drop-shadow-2xl text-white">
+                            <h1 
+                                style={{ fontFamily: profileFont }} 
+                                className={`text-5xl md:text-6xl font-black tracking-tight drop-shadow-2xl text-white ${styleClass}`}
+                            >
                                 {activeArtist.name}
                             </h1>
 
                             <div className="flex items-center gap-3 shrink-0">
-                                <button className="w-11 h-11 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full flex items-center justify-center text-white hover:bg-zinc-800 font-serif font-bold text-lg">
+                                <button 
+                                    onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'appleMusicForArtists' })}
+                                    className="w-11 h-11 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 rounded-full flex items-center justify-center text-white hover:bg-zinc-800 font-serif font-bold text-lg"
+                                    title="Apple Music for Artists"
+                                >
                                     i
                                 </button>
                                 <button className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-105 transition-transform active:scale-95">
@@ -578,25 +672,17 @@ const AppleMusicView: React.FC = () => {
                                     <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
                                 </h2>
                             </div>
-                            <div className="divide-y divide-zinc-800/60 border-t border-b border-zinc-800/60">
-                                {topSongs.map((song) => {
+                            <div className="space-y-1">
+                                {topSongs.map(song => {
                                     const release = releases.find(r => r.id === song.releaseId);
-                                    const songTitle = song.collaboration
-                                        ? song.title.replace(new RegExp(` \\(feat\\. ${song.collaboration.artistName}\\)`), '')
-                                        : song.title;
-                                    
-                                    let subTitle = '';
-                                    if (release) {
-                                        subTitle = release.type === 'Single' 
-                                            ? `${release.title} - Single · ${release.releaseDate.year}`
-                                            : `${release.title} · ${release.releaseDate.year}`;
-                                    } else {
-                                        subTitle = `${song.genre || 'Single'} · ${song.year || 2025}`;
-                                    }
+                                    const songTitle = song.title.replace(/\s*\(feat\..*\)/i, '');
+                                    const subTitle = song.collaboration 
+                                        ? `${activeArtist.name} & ${song.collaboration.artistName}`
+                                        : (release ? `${activeArtist.name} • ${release.title}` : activeArtist.name);
 
                                     return (
-                                        <div key={song.id} className="flex items-center gap-3 py-2.5 px-1">
-                                            <img src={song.coverArt} className="w-12 h-12 rounded-lg object-cover shadow shrink-0" alt={songTitle} />
+                                        <div key={song.id} className="flex items-center gap-3.5 py-2.5 px-2 hover:bg-zinc-800/40 rounded-xl transition-colors group cursor-pointer">
+                                            <img src={song.coverArt} className="w-12 h-12 rounded-lg object-cover shadow-sm shrink-0" alt={song.title} />
                                             <div className="flex-grow min-w-0">
                                                 <div className="flex items-center gap-1.5">
                                                     <p className="font-bold text-white truncate text-base">{songTitle}</p>
@@ -733,6 +819,41 @@ const AppleMusicView: React.FC = () => {
                         </section>
                     )}
 
+                    {/* ARTIST PLAYLISTS SECTION (Placed ABOVE Similar Artists as requested) */}
+                    {artistPlaylists.length > 0 && (
+                        <section>
+                            <div className="flex justify-between items-center mb-3">
+                                <h2 className="text-2xl font-bold flex items-center gap-1">
+                                    <span>Playlists</span>
+                                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
+                                </h2>
+                            </div>
+                            <div className="flex gap-5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                {artistPlaylists.map(pl => (
+                                    <div 
+                                        key={pl.id} 
+                                        onClick={() => setSelectedPlaylistId(pl.id)}
+                                        className="w-40 sm:w-44 shrink-0 text-left group cursor-pointer"
+                                    >
+                                        <AppleMusicPlaylistCover
+                                            type={pl.type}
+                                            artistImage={activeArtist.image || ''}
+                                            bannerColor={pl.bannerColor}
+                                            customCoverUrl={pl.customCoverUrl}
+                                            className="w-40 h-40 sm:w-44 sm:h-44 shadow-xl group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                        <h3 className="font-bold text-sm text-white truncate mt-2.5 group-hover:text-[#fa243c] transition-colors leading-tight">
+                                            {pl.title}
+                                        </h3>
+                                        <p className="text-xs text-zinc-400 truncate mt-0.5 font-medium">
+                                            {pl.curatorText || 'Apple Music Pop'}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
                     {/* SIMILAR ARTISTS SECTION (Real NPC Artists in World) */}
                     {similarArtists.length > 0 && (
                         <section>
@@ -787,7 +908,7 @@ const AppleMusicView: React.FC = () => {
             
             <div className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-800/80 pb-safe pt-2 px-6 flex justify-around items-center z-50 h-16 sm:pb-2">
                 <button 
-                    onClick={() => setTab('artist')}
+                    onClick={() => { setTab('artist'); setSelectedPlaylistId(null); }}
                     className={`flex flex-col items-center gap-1 ${tab === 'artist' ? 'text-[#fa243c]' : 'text-zinc-500'}`}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -796,7 +917,7 @@ const AppleMusicView: React.FC = () => {
                     <span className="text-[10px] font-medium">Artist</span>
                 </button>
                 <button 
-                    onClick={() => { setTab('browse'); setBrowseView('home'); }}
+                    onClick={() => { setTab('browse'); setBrowseView('home'); setSelectedPlaylistId(null); }}
                     className={`flex flex-col items-center gap-1 ${tab === 'browse' ? 'text-[#fa243c]' : 'text-zinc-500'}`}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">

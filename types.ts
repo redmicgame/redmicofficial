@@ -263,6 +263,7 @@ export interface Release {
   tracklistImageUrl?: string;
   standardEditionId?: string;
   isAppleMusicExpandedCover?: boolean;
+  appleMusicAnimatedCoverUrl?: string;
   preReleaseStreams?: number;
   preReleaseSales?: number;
   sales?: number;
@@ -530,6 +531,17 @@ export interface VogueOffer {
   magazine: "Vogue" | "Vogue Korea" | "Vogue Italy";
   isAccepted: boolean;
   emailId: string;
+}
+
+export interface AppleMusicPlaylist {
+  id: string;
+  title: string;
+  type: 'setlist' | 'playlist';
+  curatorText?: string;
+  bannerColor?: string;
+  customCoverUrl?: string;
+  songIds: string[];
+  createdAt?: GameDate;
 }
 
 export interface SpotifyPlaylistTrack {
@@ -1820,7 +1832,9 @@ export interface ArtistData {
   youtubeStoreUnlocked: boolean;
   appleMusicBgColor?: string;
   appleMusicNameFont?: string;
+  appleMusicNameStyle?: string;
   appleMusicProfileVideoUrl?: string;
+  appleMusicPlaylists?: AppleMusicPlaylist[];
   recurringExpenses?: { id: string; name: string; cost: number; type: "monthly" | "weekly" }[];
   merch: MerchProduct[];
   merchStoreBanner: string | null;
@@ -2319,12 +2333,43 @@ export type GameAction =
       payload: { releaseId: string; enabled: boolean };
     }
   | {
+      type: "SET_APPLE_MUSIC_ANIMATED_COVER";
+      payload: { releaseId: string; animatedCoverUrl: string };
+    }
+  | {
       type: "MARK_APPLE_MUSIC_ESSENTIAL";
       payload: { releaseId: string; reviewText: string; isEssential?: boolean };
     }
   | {
       type: "UPDATE_APPLE_MUSIC_ARTIST_SETTINGS";
-      payload: { bgColor?: string; nameFont?: string; profileVideoUrl?: string };
+      payload: { bgColor?: string; nameFont?: string; nameStyle?: string; profileVideoUrl?: string };
+    }
+  | {
+      type: "CREATE_APPLE_MUSIC_PLAYLIST";
+      payload: {
+        title: string;
+        playlistType: 'setlist' | 'playlist';
+        curatorText?: string;
+        bannerColor?: string;
+        customCoverUrl?: string;
+        songIds: string[];
+      };
+    }
+  | {
+      type: "UPDATE_APPLE_MUSIC_PLAYLIST";
+      payload: {
+        playlistId: string;
+        title?: string;
+        playlistType?: 'setlist' | 'playlist';
+        curatorText?: string;
+        bannerColor?: string;
+        customCoverUrl?: string;
+        songIds?: string[];
+      };
+    }
+  | {
+      type: "DELETE_APPLE_MUSIC_PLAYLIST";
+      payload: { playlistId: string };
     }
   | {
       type: "UPDATE_ITUNES_PRICE";
