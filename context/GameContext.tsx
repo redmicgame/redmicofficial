@@ -1703,10 +1703,7 @@ const calculateGenreChart = (
 
 const getHypeCap = (artistData: ArtistData): number => {
   if (artistData.redMicPro && artistData.redMicPro.unlocked) {
-    if (
-      artistData.redMicPro.hypeMode === "locked" ||
-      artistData.redMicPro.hypeMode === "manual"
-    ) {
+    if (artistData.redMicPro.hypeMode === "locked") {
       return 1000;
     }
   }
@@ -4796,7 +4793,7 @@ ${npcArtistName}`,
         if (artistData.redMicPro.unlocked && hypeMode === "locked") {
           newHype = 1000;
         } else {
-          newHype = Math.max(0, artistData.hype - hypeDecay);
+          newHype = Math.max(0, Math.min(getHypeCap(artistData), artistData.hype - hypeDecay));
         }
 
         let newPopularity = artistData.popularity;
@@ -21279,7 +21276,7 @@ Let us know if you accept.`,
       const activeData = state.artistsData[state.activeArtistId];
       if (!activeData.redMicPro.unlocked) return state;
 
-      const newHype = action.payload === "locked" ? 1000 : activeData.hype;
+      const newHype = action.payload === "locked" ? 1000 : Math.min(100, activeData.hype);
 
       const updatedData: ArtistData = {
         ...activeData,
@@ -21308,7 +21305,7 @@ Let us know if you accept.`,
 
       const updatedData: ArtistData = {
         ...activeData,
-        hype: Math.max(0, Math.min(1000, action.payload)),
+        hype: Math.max(0, Math.min(100, action.payload)),
       };
       return {
         ...state,
@@ -22974,7 +22971,7 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             relationships: updatedRelationships,
-            hype: Math.min(1000, activeData.hype + 50),
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 50),
             xPosts: updatedPosts,
           },
         },
@@ -23034,7 +23031,7 @@ Let us know if you accept.`,
             ...activeData,
             relationships: updatedRelationships,
             hype: rel?.isPublic
-              ? Math.min(1000, activeData.hype + 80)
+              ? Math.min(getHypeCap(activeData), activeData.hype + 80)
               : activeData.hype,
             xPosts: newPosts,
           },
@@ -23087,7 +23084,7 @@ Let us know if you accept.`,
             ...activeData,
             relationships: updatedRelationships,
             hype: rel?.isPublic
-              ? Math.min(1000, activeData.hype + 60)
+              ? Math.min(getHypeCap(activeData), activeData.hype + 60)
               : activeData.hype,
             xPosts: newPosts,
           },
@@ -23183,7 +23180,7 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             relationships: updatedRelationships,
-            hype: Math.min(1000, activeData.hype + 100),
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 100),
             xPosts: newPosts,
           },
         },
@@ -23445,7 +23442,7 @@ Let us know if you accept.`,
             ...activeData,
             relationships: updatedRelationships,
             hype: rel?.isPublic
-              ? Math.min(1000, activeData.hype + 100)
+              ? Math.min(getHypeCap(activeData), activeData.hype + 100)
               : activeData.hype,
             xPosts: newPosts,
           },
@@ -23542,7 +23539,7 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             relationships: updatedRelationships,
-            hype: Math.min(1000, activeData.hype + 50),
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 50),
             xPosts: newPosts,
           },
         },
@@ -23594,7 +23591,7 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             pregnancy: { ...activeData.pregnancy, revealed: true },
-            hype: Math.min(1000, activeData.hype + 200),
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 200),
             xPosts: [newPost, ...(activeData.xPosts || [])],
           },
         },
@@ -23663,7 +23660,7 @@ Let us know if you accept.`,
             pregnancy: undefined,
             kids: [...(activeData.kids || []), newKid],
             hype: activeData.pregnancy?.revealed
-              ? Math.min(1000, activeData.hype + 150)
+              ? Math.min(getHypeCap(activeData), activeData.hype + 150)
               : activeData.hype,
             xPosts: newPosts,
           },

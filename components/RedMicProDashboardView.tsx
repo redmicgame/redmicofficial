@@ -242,20 +242,28 @@ const RedMicProDashboardView: React.FC = () => {
                         </button>
                     </div>
                     {hypeMode === 'manual' && (
-                        <div className="flex gap-2">
-                            <input
-                                type="number"
-                                value={newHype || ''}
-                                onChange={e => setNewHype(parseInt(e.target.value) || 0)}
-                                min="0"
-                                className="w-full bg-zinc-700 p-2 rounded-md"
-                            />
-                            <button
-                                onClick={() => dispatch({ type: 'SET_HYPE', payload: newHype })}
-                                className="bg-zinc-600 font-bold px-4 rounded-md"
-                            >
-                                Set
-                            </button>
+                        <div className="space-y-1">
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    value={newHype ?? ''}
+                                    onChange={e => {
+                                        const val = parseInt(e.target.value);
+                                        setNewHype(isNaN(val) ? 0 : Math.max(0, Math.min(100, val)));
+                                    }}
+                                    min="0"
+                                    max="100"
+                                    placeholder="0 - 100"
+                                    className="w-full bg-zinc-700 p-2 rounded-md"
+                                />
+                                <button
+                                    onClick={() => dispatch({ type: 'SET_HYPE', payload: Math.max(0, Math.min(100, newHype)) })}
+                                    className="bg-zinc-600 font-bold px-4 rounded-md"
+                                >
+                                    Set
+                                </button>
+                            </div>
+                            <p className="text-xs text-zinc-400">Manual hype is capped at 100.</p>
                         </div>
                     )}
                 </div>
