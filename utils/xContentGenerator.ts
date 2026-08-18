@@ -14,7 +14,51 @@ import { formatNumber } from "../context/GameContext";
 import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES, getArtistImage, NPC_ERAS } from "../constants";
 import { ARTIST_GIFS } from "../data/artistGifs";
 
-type PlayerSongWithChart = Song & { chartRank?: number };
+export type PlayerSongWithChart = Song & {
+  chartRank?: number;
+  lastWeekRank?: number | null;
+  peak?: number;
+  weeksOnChart?: number;
+};
+
+export function formatChartDataHot100Post(params: {
+  rank: number;
+  lastWeekRank?: number | null;
+  peak?: number;
+  weeksOnChart?: number;
+  title: string;
+  artist: string;
+  handle?: string;
+}): string {
+  const { rank, lastWeekRank, title, handle } = params;
+  const artistName = params.artist && params.artist !== "undefined" ? params.artist : "Artist";
+  const weeksOnChart = params.weeksOnChart ?? 1;
+  const peak = params.peak ?? rank;
+
+  let movement = "";
+  if (lastWeekRank === null || lastWeekRank === undefined) {
+    if (weeksOnChart > 1) {
+      movement = "(re-entry)";
+    } else {
+      movement = "(debut)";
+    }
+  } else if (lastWeekRank === rank) {
+    movement = "(=)";
+  } else if (lastWeekRank > rank) {
+    // Rose in position (e.g. from #25 to #15 is +10)
+    movement = `(+${lastWeekRank - rank})`;
+  } else {
+    // Fell in position (e.g. from #25 to #34 is -9)
+    movement = `(-${rank - lastWeekRank})`;
+  }
+
+  const cleanHandle = handle && handle !== "undefined" ? handle.replace(/^@/, "").trim() : "";
+  const artistHandleStr = cleanHandle ? ` (@${cleanHandle})` : "";
+  const weeksStr = `[${weeksOnChart} ${weeksOnChart === 1 ? "week" : "weeks"}].`;
+  const peakStr = `*peak: #${peak}*`;
+
+  return `Billboard Hot 100: #${rank}${movement} ${title}, ${artistName}${artistHandleStr} ${weeksStr} ${peakStr}`;
+}
 
 const pickRandom = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)];
@@ -1761,20 +1805,36 @@ export const generateWeeklyXContent = (
   }
 
   // 2. Chart Post if applicable
-  const chartedSong = playerSongs.find(
-    (s) => s.chartRank && s.chartRank <= 100,
-  );
-  if (chartedSong && chartedSong.chartRank) {
+  const chartedSongs = playerSongs
+    .filter((s) => s.chartRank && s.chartRank <= 100)
+    .sort((a, b) => (a.chartRank || 100) - (b.chartRank || 100));
+
+  const playerXUser = artistData.xUsers.find((u) => u.isPlayer);
+  const playerHandle = playerXUser?.username || artistName.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  chartedSongs.slice(0, 3).forEach((chartedSong) => {
+    if (!chartedSong.chartRank) return;
+    const postContent = formatChartDataHot100Post({
+      rank: chartedSong.chartRank,
+      lastWeekRank: chartedSong.lastWeekRank,
+      peak: chartedSong.peak ?? chartedSong.chartRank,
+      weeksOnChart: chartedSong.weeksOnChart ?? 1,
+      title: chartedSong.title,
+      artist: artistName,
+      handle: playerHandle,
+    });
+
     newPosts.push({
       id: crypto.randomUUID(),
       authorId: "chartdata",
-      content: `${artistName}'s "${chartedSong.title}" debuts at #${chartedSong.chartRank} on this week's Billboard Hot 100.`,
-      likes: Math.floor(Math.random() * 15000) + 5000,
-      retweets: Math.floor(Math.random() * 4000) + 1000,
-      views: Math.floor(Math.random() * 200000) + 50000,
+      content: postContent,
+      image: chartedSong.coverArt,
+      likes: Math.floor(Math.random() * 25000) + 8000,
+      retweets: Math.floor(Math.random() * 6000) + 1500,
+      views: Math.floor(Math.random() * 300000) + 80000,
       date,
     });
-  }
+  });
 
   // 2.5 Spotify Global #1 Post from Chart Data
   const spotifyNumberOne = gameState.spotifyGlobal[0];

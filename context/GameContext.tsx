@@ -72,7 +72,7 @@ import {
   GIGS,
   TALENT_AGENCIES,
 } from "../constants";
-import { generateWeeklyXContent } from "../utils/xContentGenerator";
+import { generateWeeklyXContent, formatChartDataHot100Post } from "../utils/xContentGenerator";
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
@@ -2420,9 +2420,9 @@ The Red Mic Team`,
 
       const updatedSongs = [...activeData.songs];
 
-      // Tone down radio promo significantly (divide by 10)
-      const spinsGained = Math.floor(amount / 100) * (Math.random() * 0.5 + 0.8);
-      const impressionsGained = spinsGained * 2500; // Also reduced impressions per spin
+      // Tone down radio promo significantly
+      const spinsGained = Math.floor(amount / 160) * (Math.random() * 0.4 + 0.6);
+      const impressionsGained = spinsGained * 2200; // Realistic impressions per spin
 
       if (region === 'UK') {
           updatedSongs[songIndex] = {
@@ -5899,6 +5899,9 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           if (newlyEvaluatedRelease) {
             let isFlop = false;
             let isSmash = false;
+            const currentStreams = newlyEvaluatedRelease.firstWeekStreams || 0;
+            const reviewScore = newlyEvaluatedRelease.review?.score ?? 7.0;
+
             if (newlyEvaluatedRelease.type === "Single") {
               const pastSingles = artistData.releases
                 .filter(
@@ -5914,32 +5917,20 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                     (a.releaseDate!.year * 52 + a.releaseDate!.week),
                 );
               const priorSingle = pastSingles[0];
-              const previousPrior = pastSingles[1];
-              const currentStreams =
-                newlyEvaluatedRelease.firstWeekStreams || 0;
-              if (
-                priorSingle &&
-                currentStreams < (priorSingle.firstWeekStreams || 0)
-              ) {
-                if (
-                  previousPrior &&
-                  (priorSingle.firstWeekStreams || 0) <
-                    (previousPrior.firstWeekStreams || 0)
-                ) {
-                  isFlop = true;
-                } else if (!previousPrior) {
-                  isFlop = true; // Flop if it's the second single ever and it flopped
-                }
-              }
-              if (pastSingles.length >= 1) {
+              
+              if (currentStreams >= 12000000 || reviewScore >= 8.5) {
+                isSmash = true;
+              } else if (pastSingles.length >= 1) {
                 const lastThree = pastSingles.slice(0, 3);
                 const avg =
                   lastThree.reduce(
                     (sum, s) => sum + (s.firstWeekStreams || 0),
                     0,
                   ) / lastThree.length;
-                if (currentStreams >= avg * 1.5) {
+                if (currentStreams >= avg * 1.35) {
                   isSmash = true;
+                } else if (priorSingle && currentStreams < (priorSingle.firstWeekStreams || 0) * 0.3 && reviewScore < 5.0) {
+                  isFlop = true;
                 }
               }
             } else {
@@ -5957,21 +5948,20 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                     (a.releaseDate!.year * 52 + a.releaseDate!.week),
                 );
               const priorAlbum = pastAlbums[0];
-              const currentStreams =
-                newlyEvaluatedRelease.firstWeekStreams || 0;
-              if (
+              if (currentStreams >= 35000000 || reviewScore >= 8.5) {
+                isSmash = true;
+              } else if (
                 priorAlbum &&
                 currentStreams >= (priorAlbum.firstWeekStreams || 0) * 1.2
               ) {
                 isSmash = true;
+              } else if (
+                priorAlbum &&
+                currentStreams < (priorAlbum.firstWeekStreams || 0) * 0.3 &&
+                reviewScore < 5.0
+              ) {
+                isFlop = true;
               }
-            }
-
-            if (
-              newlyEvaluatedRelease.review &&
-              newlyEvaluatedRelease.review.score < 7.0
-            ) {
-              isFlop = true;
             }
 
             if (isSmash) {
@@ -5981,6 +5971,13 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               if (newCareerStage === "smash") newCareerStage = "neutral";
               else if (newCareerStage === "neutral") newCareerStage = "flop";
             }
+          }
+
+          // Check if artist has high performance milestones that maintain/elevate Smash Era
+          if (totalWeeklyStreams >= 20000000 || (artistData.monthlyListeners || 0) >= 25000000) {
+            newCareerStage = "smash";
+          } else if (newCareerStage === "flop" && totalWeeklyStreams >= 4000000) {
+            newCareerStage = "neutral"; // Lift out of flop era on solid recovery
           }
         }
 
@@ -7869,7 +7866,13 @@ Total — ${totalStreamsMillion} Million`;
             const chartInfo = state.billboardHot100.find(
               (entry) => entry.songId === s.id,
             );
-            return { ...s, chartRank: chartInfo?.rank };
+            return {
+              ...s,
+              chartRank: chartInfo?.rank,
+              lastWeekRank: chartInfo?.lastWeek ?? null,
+              peak: chartInfo?.peak ?? chartInfo?.rank,
+              weeksOnChart: chartInfo?.weeksOnChart ?? 1,
+            };
           });
 
           const {
@@ -9174,8 +9177,8 @@ It is now available on your Spotify profile.
 
               const previousPlays = s.radioPlays || 0;
               
-              const traitRadioBoost = s.trait === "Radio Hit" ? 3.0 : 1.0;
-              const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
+              const traitRadioBoost = s.trait === "Radio Hit" ? 2.5 : 1.0;
+              const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
               let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
               
               // Apply peak and decay: peak around week 10-15
@@ -9185,9 +9188,9 @@ It is now available on your Spotify profile.
                   targetPlays -= decayFactor;
               }
               
-              targetPlays += song.weeklyStreams * 0.0005 * traitRadioBoost; // stream impact also boosted
+              targetPlays += song.weeklyStreams * 0.00025 * traitRadioBoost; // adjusted stream impact
               
-              let maxBasePlays = 16000 + (Math.random() * 4000); // Peak around 16K-20K
+              let maxBasePlays = 14000 + (Math.random() * 3000); // Peak around 14K-17K
               const maxNaturalPlays = maxBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
               
               if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
@@ -9255,7 +9258,7 @@ It is now available on your Spotify profile.
 
               s.lastWeekRadioPlays = previousPlays;
               s.radioPlays = rPlays;
-              rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
+              rImpressions = rPlays * (Math.floor(Math.random() * 1200) + 2000);
               s.radioImpressions = rImpressions;
             }
             
@@ -9266,15 +9269,15 @@ It is now available on your Spotify profile.
               const formatMultiplier = isFormatCompatible(song.genre || "", rFormat);
               const radioEraBoost = state.date.year < 2010 ? (state.date.year < 2000 ? 5.0 : 3.0) : 1.0;
               const previousPlays = s.ukRadioPlays || 0;
-              const traitRadioBoost = s.trait === "Radio Hit" ? 3.0 : 1.0;
-              const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
+              const traitRadioBoost = s.trait === "Radio Hit" ? 2.5 : 1.0;
+              const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
               let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
-              targetPlays += (song.regionalStreams?.["UK"] || 0) * 0.001 * traitRadioBoost; 
-              const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost * traitRadioBoost;
+              targetPlays += (song.regionalStreams?.["UK"] || 0) * 0.0005 * traitRadioBoost; 
+              const maxNaturalPlays = 20000 * formatMultiplier * radioEraBoost * traitRadioBoost;
               if (updatedArtistsData[artistId]?.isBlacklistedByLabel) targetPlays = 0;
               if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
               const pendingSpins = s.pendingUkRadioPromoSpins || 0;
-              const spinIncrease = Math.min(pendingSpins, Math.floor(Math.random() * 1500) + 500);
+              const spinIncrease = Math.min(pendingSpins, Math.floor(Math.random() * 1000) + 300);
               s.pendingUkRadioPromoSpins = pendingSpins - spinIncrease;
               let rPlays = Math.floor(targetPlays) + spinIncrease;
               if (weeksOn > 15 + Math.floor(qualityBoost / 2)) {
@@ -9332,12 +9335,12 @@ It is now available on your Spotify profile.
                 : 1.0;
 
             let targetPlays = Math.floor(
-              song.weeklyStreams * 0.005 * radioEraBoost,
+              song.weeklyStreams * 0.0025 * radioEraBoost,
             );
             if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
             if (isOnRadio) {
               rPlays = targetPlays;
-              rImpressions = rPlays * (Math.floor(Math.random() * 2600) + 4000);
+              rImpressions = rPlays * (Math.floor(Math.random() * 1200) + 2000);
             }
           }
         }
@@ -10721,6 +10724,77 @@ It is now available on your Spotify profile.
           };
         }
       }
+
+      if (hot100One) {
+        let handle = "";
+        if (hot100One.isPlayerSong && hot100One.songId) {
+          const song = allPlayerSongsFlat.find((s) => s.id === hot100One.songId);
+          if (song) {
+            const aData = updatedArtistsData[song.artistId];
+            handle = aData?.xUsers.find((u) => u.isPlayer)?.username || "";
+          }
+        }
+        if (!handle) {
+          handle = hot100One.artist.toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        const hot100PostContent = formatChartDataHot100Post({
+          rank: hot100One.rank,
+          lastWeekRank: hot100One.lastWeek,
+          peak: hot100One.peak,
+          weeksOnChart: hot100One.weeksOnChart,
+          title: hot100One.title,
+          artist: hot100One.artist,
+          handle: handle,
+        });
+
+        npcPopBasePosts.push({
+          id: crypto.randomUUID(),
+          authorId: "chartdata",
+          content: hot100PostContent,
+          image: hot100One.coverArt,
+          likes: Math.floor(Math.random() * 80000) + 30000,
+          retweets: Math.floor(Math.random() * 20000) + 5000,
+          views: Math.floor(Math.random() * 1500000) + 500000,
+          date: newDate,
+        });
+      }
+
+      // Generate chartdata posts for other player songs in newBillboardHot100
+      newBillboardHot100.forEach((entry) => {
+        if (entry.isPlayerSong && entry.songId && entry.rank > 1) {
+          const song = allPlayerSongsFlat.find((s) => s.id === entry.songId);
+          if (song && updatedArtistsData[song.artistId]) {
+            const aData = updatedArtistsData[song.artistId];
+            const songArtistName = entry.artist || (allPlayerArtistsAndGroups.find((a) => a.id === song.artistId)?.name) || "Artist";
+            const playerHandle = aData.xUsers.find((u) => u.isPlayer)?.username || songArtistName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const chartDataPost = formatChartDataHot100Post({
+              rank: entry.rank,
+              lastWeekRank: entry.lastWeek,
+              peak: entry.peak,
+              weeksOnChart: entry.weeksOnChart,
+              title: entry.title,
+              artist: songArtistName,
+              handle: playerHandle,
+            });
+
+            // Prevent duplicate chartdata post if already added this exact date
+            const alreadyPosted = aData.xPosts.some((p) => p.authorId === "chartdata" && p.content === chartDataPost);
+            if (!alreadyPosted) {
+              aData.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "chartdata",
+                content: chartDataPost,
+                image: entry.coverArt,
+                likes: Math.floor(Math.random() * 25000) + 8000,
+                retweets: Math.floor(Math.random() * 6000) + 1500,
+                views: Math.floor(Math.random() * 300000) + 80000,
+                date: newDate,
+              });
+            }
+          }
+        }
+      });
 
       if (hot100One && hot100One.lastWeek === null && !hot100One.isPlayerSong) {
         npcPopBasePosts.push({
@@ -19610,24 +19684,28 @@ Let us know if you accept.`,
       };
     }
     case "SET_CAREER_STAGE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
+      const targetId = action.payload?.artistId || state.activeArtistId;
+      if (!targetId) return state;
+      const activeData = state.artistsData[targetId];
+      if (!activeData) return state;
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, careerStage: action.payload.stage },
+          [targetId]: { ...activeData, careerStage: action.payload.stage },
         },
       };
     }
     case "TOGGLE_FLOP_ERA_LOCK": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
+      const targetId = action.payload?.artistId || state.activeArtistId;
+      if (!targetId) return state;
+      const activeData = state.artistsData[targetId];
+      if (!activeData) return state;
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, flopEraLock: !activeData.flopEraLock },
+          [targetId]: { ...activeData, flopEraLock: !activeData.flopEraLock },
         },
       };
     }

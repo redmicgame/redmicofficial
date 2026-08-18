@@ -202,6 +202,7 @@ const HomeTab: React.FC = () => {
   } = useGame();
   const { date, careerMode, activeArtistId } = gameState;
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [isEraModalOpen, setIsEraModalOpen] = useState(false);
   const [isPopularityExpanded, setIsPopularityExpanded] = useState(false);
   const [deleteSongId, setDeleteSongId] = useState<string | null>(null);
 
@@ -216,6 +217,72 @@ const HomeTab: React.FC = () => {
     contract,
     redMicPro,
   } = activeArtistData;
+
+  const hasNo1Hit = useMemo(() => {
+    return (
+      (activeArtistData.numberOneDebuts || 0) > 0 ||
+      (gameState.chartHistory &&
+        Object.values(gameState.chartHistory).some(
+          (h: any) => h.peak === 1 && songs.some((s) => s.id === h.songId)
+        )) ||
+      (gameState.billboardHot100 &&
+        gameState.billboardHot100.some(
+          (e) => e.isPlayerSong && e.rank === 1 && songs.some((s) => s.id === e.songId)
+        ))
+    );
+  }, [activeArtistData, gameState.chartHistory, gameState.billboardHot100, songs]);
+
+  const hasNo1Album = useMemo(() => {
+    return (
+      (gameState.albumChartHistory &&
+        Object.values(gameState.albumChartHistory).some(
+          (h: any) =>
+            h.peak === 1 &&
+            activeArtistData.releases.some((r) => r.id === h.albumId)
+        )) ||
+      (gameState.billboardTopAlbums &&
+        gameState.billboardTopAlbums.some(
+          (e) =>
+            e.isPlayerAlbum &&
+            e.rank === 1 &&
+            activeArtistData.releases.some((r) => r.id === e.albumId)
+        ))
+    );
+  }, [activeArtistData.releases, gameState.albumChartHistory, gameState.billboardTopAlbums]);
+
+  const hasTop10Hit = useMemo(() => {
+    return (
+      hasNo1Hit ||
+      (gameState.chartHistory &&
+        Object.values(gameState.chartHistory).some(
+          (h: any) => h.peak <= 10 && songs.some((s) => s.id === h.songId)
+        )) ||
+      (gameState.billboardHot100 &&
+        gameState.billboardHot100.some(
+          (e) => e.isPlayerSong && e.rank <= 10 && songs.some((s) => s.id === e.songId)
+        ))
+    );
+  }, [hasNo1Hit, gameState.chartHistory, gameState.billboardHot100, songs]);
+
+  const hasMassiveStreams = useMemo(() => {
+    return (
+      songs.some((s) => (s.weeklyStreams || 0) >= 12000000) ||
+      activeArtistData.releases.some((r) => (r.firstWeekStreams || 0) >= 10000000)
+    );
+  }, [songs, activeArtistData.releases]);
+
+  const has20MListeners = (activeArtistData.monthlyListeners || 0) >= 20000000;
+  const hasCriticalAcclaim = activeArtistData.releases.some(
+    (r) => r.review && r.review.score >= 8.0
+  );
+
+  const qualifiesForSmash =
+    hasNo1Hit ||
+    hasNo1Album ||
+    hasTop10Hit ||
+    hasMassiveStreams ||
+    has20MListeners ||
+    hasCriticalAcclaim;
 
   const regionalScores = useMemo(() => {
     if (activeArtistData.regionalPopularity && Object.keys(activeArtistData.regionalPopularity).length > 0) { return Object.entries(activeArtistData.regionalPopularity).map(([k, v]) => ({ region: k, score: v as number })); }
@@ -378,55 +445,320 @@ const HomeTab: React.FC = () => {
       <div>
         {gameState.difficultyMode !== "easy" && (
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between gap-2 mb-2">
               <h2 className="text-xl font-bold uppercase tracking-widest text-zinc-500 text-sm">
                 Career Stage
               </h2>
+              <button
+                onClick={() => setIsEraModalOpen(true)}
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 hover:underline"
+              >
+                <span>Manage Era & Requirements</span>
+                <ChevronRightIcon className="w-4 h-4" />
+              </button>
             </div>
             <div
-              className={`p-4 rounded-xl border ${
+              onClick={() => setIsEraModalOpen(true)}
+              className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.01] ${
                 activeArtistData.careerStage === "flop"
-                  ? "bg-red-500/10 border-red-500/30"
+                  ? "bg-red-500/10 border-red-500/30 hover:border-red-500/50"
                   : activeArtistData.careerStage === "smash"
-                    ? "bg-green-500/10 border-green-500/30"
-                    : "bg-zinc-800/50 border-zinc-700"
+                    ? "bg-green-500/10 border-green-500/30 hover:border-green-500/50"
+                    : "bg-zinc-800/50 border-zinc-700 hover:border-zinc-500"
               }`}
             >
-              <div className="flex items-center gap-3">
-                {activeArtistData.careerStage === "flop" && (
-                  <div className="text-3xl">📉</div>
-                )}
-                {activeArtistData.careerStage === "smash" && (
-                  <div className="text-3xl">🚀</div>
-                )}
-                {(!activeArtistData.careerStage ||
-                  activeArtistData.careerStage === "neutral") && (
-                  <div className="text-3xl">⚖️</div>
-                )}
-                <div>
-                  <h3
-                    className={`font-black text-xl uppercase tracking-wider ${
-                      activeArtistData.careerStage === "flop"
-                        ? "text-red-400"
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {activeArtistData.careerStage === "flop" && (
+                    <div className="text-3xl">📉</div>
+                  )}
+                  {activeArtistData.careerStage === "smash" && (
+                    <div className="text-3xl">🚀</div>
+                  )}
+                  {(!activeArtistData.careerStage ||
+                    activeArtistData.careerStage === "neutral") && (
+                    <div className="text-3xl">⚖️</div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3
+                        className={`font-black text-xl uppercase tracking-wider ${
+                          activeArtistData.careerStage === "flop"
+                            ? "text-red-400"
+                            : activeArtistData.careerStage === "smash"
+                              ? "text-green-400"
+                              : "text-zinc-300"
+                        }`}
+                      >
+                        {activeArtistData.careerStage === "flop"
+                          ? "Flop Era"
+                          : activeArtistData.careerStage === "smash"
+                            ? "Smash Era"
+                            : "Neutral Era"}
+                      </h3>
+                      {activeArtistData.flopEraLock && (
+                        <span className="text-[10px] uppercase font-bold bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded-full border border-zinc-600">
+                          Flop Locked
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-zinc-400 mt-1">
+                      {activeArtistData.careerStage === "flop"
+                        ? "-80% on all streams and physical sales on new releases."
                         : activeArtistData.careerStage === "smash"
-                          ? "text-green-400"
-                          : "text-zinc-300"
+                          ? "+30% on all streams and physical sales on new releases."
+                          : "Your career is currently stable."}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-zinc-400 text-sm font-medium flex items-center gap-1">
+                  <span>Details</span>
+                  <ChevronRightIcon className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Era Management & Requirements Modal */}
+        {isEraModalOpen && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setIsEraModalOpen(false)}
+          >
+            <div
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-6 text-zinc-100 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">✨</span>
+                  <h2 className="text-xl font-black">Era Management & Milestones</h2>
+                </div>
+                <button
+                  onClick={() => setIsEraModalOpen(false)}
+                  className="text-zinc-400 hover:text-white text-lg font-bold p-1 rounded-lg hover:bg-zinc-800"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Current Active Era */}
+              <div
+                className={`p-4 rounded-xl border ${
+                  activeArtistData.careerStage === "flop"
+                    ? "bg-red-500/10 border-red-500/30"
+                    : activeArtistData.careerStage === "smash"
+                      ? "bg-green-500/10 border-green-500/30"
+                      : "bg-zinc-800 border-zinc-700"
+                }`}
+              >
+                <p className="text-xs uppercase tracking-widest font-bold text-zinc-400">Current Era Status</p>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">
+                      {activeArtistData.careerStage === "flop" ? "📉" : activeArtistData.careerStage === "smash" ? "🚀" : "⚖️"}
+                    </span>
+                    <div>
+                      <h3
+                        className={`text-2xl font-black uppercase ${
+                          activeArtistData.careerStage === "flop"
+                            ? "text-red-400"
+                            : activeArtistData.careerStage === "smash"
+                              ? "text-green-400"
+                              : "text-zinc-200"
+                        }`}
+                      >
+                        {activeArtistData.careerStage === "flop"
+                          ? "Flop Era"
+                          : activeArtistData.careerStage === "smash"
+                            ? "Smash Era"
+                            : "Neutral Era"}
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        {activeArtistData.careerStage === "flop"
+                          ? "Penalty: -80% streams & physical sales on all releases within 26 weeks."
+                          : activeArtistData.careerStage === "smash"
+                            ? "Perk: +30% bonus streams & sales on all releases within 26 weeks."
+                            : "Baseline: Standard industry performance multiplier (1.0x)."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Smash Era Requirements Checklist */}
+              <div className="bg-zinc-800/60 border border-zinc-700/60 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-zinc-200 uppercase tracking-wider">
+                    Smash Era Requirements Checklist
+                  </h4>
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                      qualifiesForSmash
+                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                        : "bg-zinc-700 text-zinc-400"
                     }`}
                   >
-                    {activeArtistData.careerStage === "flop"
-                      ? "Flop Era"
-                      : activeArtistData.careerStage === "smash"
-                        ? "Smash Era"
-                        : "Neutral Era"}
-                  </h3>
-                  <p className="text-sm text-zinc-400 mt-1">
-                    {activeArtistData.careerStage === "flop"
-                      ? "-80% on all streams and physical sales on new releases."
-                      : activeArtistData.careerStage === "smash"
-                        ? "+30% on all streams and physical sales on new releases."
-                        : "Your career is currently stable."}
+                    {qualifiesForSmash ? "Qualifies for Smash Era 🎉" : "In Progress"}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  Hit ANY of the following milestones to unlock and sustain a Smash Era:
+                </p>
+
+                <div className="space-y-2 pt-1 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60">
+                    <div className="flex items-center gap-2">
+                      <span>{hasNo1Hit || hasNo1Album ? "✅" : "⚪"}</span>
+                      <span>Billboard #1 Single or Album</span>
+                    </div>
+                    <span className={hasNo1Hit || hasNo1Album ? "text-green-400 font-bold" : "text-zinc-500"}>
+                      {hasNo1Hit || hasNo1Album ? "Achieved" : "Needs #1 Peak"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60">
+                    <div className="flex items-center gap-2">
+                      <span>{hasTop10Hit ? "✅" : "⚪"}</span>
+                      <span>Billboard Hot 100 Top 10 Entry</span>
+                    </div>
+                    <span className={hasTop10Hit ? "text-green-400 font-bold" : "text-zinc-500"}>
+                      {hasTop10Hit ? "Achieved" : "Needs Top 10"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60">
+                    <div className="flex items-center gap-2">
+                      <span>{hasMassiveStreams ? "✅" : "⚪"}</span>
+                      <span>Massive Streams (10M+ 1st Wk / 12M+ Wkly)</span>
+                    </div>
+                    <span className={hasMassiveStreams ? "text-green-400 font-bold" : "text-zinc-500"}>
+                      {hasMassiveStreams ? "Achieved" : "Needs 10M+ Stream Release"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60">
+                    <div className="flex items-center gap-2">
+                      <span>{has20MListeners ? "✅" : "⚪"}</span>
+                      <span>20M+ Monthly Listeners</span>
+                    </div>
+                    <span className={has20MListeners ? "text-green-400 font-bold" : "text-zinc-500"}>
+                      {formatNumber(activeArtistData.monthlyListeners || 0)} / 20M
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60">
+                    <div className="flex items-center gap-2">
+                      <span>{hasCriticalAcclaim ? "✅" : "⚪"}</span>
+                      <span>Critical Acclaim (8.0+ Review Score)</span>
+                    </div>
+                    <span className={hasCriticalAcclaim ? "text-green-400 font-bold" : "text-zinc-500"}>
+                      {hasCriticalAcclaim ? "Achieved" : "Needs 8.0+ Review"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Era Switch Controls */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-sm text-zinc-300 uppercase tracking-wider">
+                  Switch Active Era
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      dispatch({
+                        type: "SET_CAREER_STAGE",
+                        payload: { stage: "smash", artistId: activeArtistId },
+                      });
+                    }}
+                    disabled={!qualifiesForSmash && !redMicPro}
+                    className={`p-3 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all ${
+                      activeArtistData.careerStage === "smash"
+                        ? "bg-green-600 text-white ring-2 ring-green-400"
+                        : qualifiesForSmash || redMicPro
+                          ? "bg-green-600/20 text-green-300 border border-green-500/40 hover:bg-green-600 hover:text-white"
+                          : "bg-zinc-800 text-zinc-500 border border-zinc-700 opacity-60 cursor-not-allowed"
+                    }`}
+                  >
+                    <span className="text-xl">🚀</span>
+                    <span>Smash Era</span>
+                    {!qualifiesForSmash && !redMicPro && (
+                      <span className="text-[10px] text-zinc-500">Locked</span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      dispatch({
+                        type: "SET_CAREER_STAGE",
+                        payload: { stage: "neutral", artistId: activeArtistId },
+                      });
+                    }}
+                    className={`p-3 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all ${
+                      (!activeArtistData.careerStage || activeArtistData.careerStage === "neutral")
+                        ? "bg-zinc-600 text-white ring-2 ring-zinc-400"
+                        : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700"
+                    }`}
+                  >
+                    <span className="text-xl">⚖️</span>
+                    <span>Neutral Era</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      dispatch({
+                        type: "SET_CAREER_STAGE",
+                        payload: { stage: "flop", artistId: activeArtistId },
+                      });
+                    }}
+                    className={`p-3 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all ${
+                      activeArtistData.careerStage === "flop"
+                        ? "bg-red-600 text-white ring-2 ring-red-400"
+                        : "bg-red-600/20 text-red-300 border border-red-500/40 hover:bg-red-600 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-xl">📉</span>
+                    <span>Flop Era</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Flop Era Lock Toggle */}
+              <div className="flex items-center justify-between bg-zinc-800 p-3.5 rounded-xl border border-zinc-700">
+                <div>
+                  <p className="font-bold text-sm text-zinc-200">Flop Era Lock</p>
+                  <p className="text-xs text-zinc-400">
+                    Protect your artist from naturally falling into a flop era.
                   </p>
                 </div>
+                <button
+                  onClick={() =>
+                    dispatch({
+                      type: "TOGGLE_FLOP_ERA_LOCK",
+                      payload: { artistId: activeArtistId },
+                    })
+                  }
+                  className={`w-12 h-6 rounded-full p-0.5 transition-colors relative ${
+                    activeArtistData.flopEraLock ? "bg-red-500" : "bg-zinc-600"
+                  }`}
+                >
+                  <span
+                    className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                      activeArtistData.flopEraLock ? "translate-x-6" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setIsEraModalOpen(false)}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold py-2.5 rounded-xl transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

@@ -200,12 +200,12 @@ export const ChartPredictionsView: React.FC = () => {
                             const radioEraBoost = gameState.date.year < 2010 ? (gameState.date.year < 2000 ? 5.0 : 3.0) : 1.0;
                             
                             const previousPlays = s.radioPlays || 0;
-                            const baseGrowth = 300 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
+                            const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
                             let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
                             
-                            targetPlays += song.weeklyStreams * 0.0005; 
+                            targetPlays += song.weeklyStreams * 0.00025; 
                             
-                            const maxNaturalPlays = 25000 * formatMultiplier * radioEraBoost;
+                            const maxNaturalPlays = 20000 * formatMultiplier * radioEraBoost;
                             if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
                             
                             let dropLimit = -500;
@@ -230,7 +230,7 @@ export const ChartPredictionsView: React.FC = () => {
                     }
                 }
             } else {
-                const baseRadio = Math.floor(song.weeklyStreams * 0.005);
+                const baseRadio = Math.floor(song.weeklyStreams * 0.0025);
                 const prevRadio = gameState.billboardHot100.find(x => x.uniqueId === song.uniqueId)?.radioPlays || 0;
                 let rPlays = prevRadio > 0 ? (prevRadio + Math.max(-1000, Math.floor((baseRadio - prevRadio) * 0.3))) : baseRadio;
                 if (rPlays > maxPlaysForRank) rPlays = maxPlaysForRank;

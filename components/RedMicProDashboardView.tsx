@@ -412,20 +412,20 @@ const RedMicProDashboardView: React.FC = () => {
                     <h2 className="text-lg font-bold">Career Stage & Lock</h2>
                     <div className="flex gap-2 mb-2">
                         <button 
-                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'smash' }})} 
-                            className={`flex-1 font-bold px-4 py-2 rounded-md ${activeArtistData.careerStage === 'smash' ? 'bg-red-500 text-white' : 'bg-zinc-700'}`}
+                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'smash', artistId: activeArtistId }})} 
+                            className={`flex-1 font-bold px-4 py-2 rounded-md transition-all ${activeArtistData.careerStage === 'smash' ? 'bg-green-600 text-white ring-2 ring-green-400' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200'}`}
                         >
                             Smash Era
                         </button>
                         <button 
-                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'neutral' }})} 
-                            className={`flex-1 font-bold px-4 py-2 rounded-md ${activeArtistData.careerStage === 'neutral' ? 'bg-gray-500 text-white' : 'bg-zinc-700'}`}
+                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'neutral', artistId: activeArtistId }})} 
+                            className={`flex-1 font-bold px-4 py-2 rounded-md transition-all ${(!activeArtistData.careerStage || activeArtistData.careerStage === 'neutral') ? 'bg-zinc-500 text-white ring-2 ring-zinc-400' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200'}`}
                         >
                             Neutral Era
                         </button>
                         <button 
-                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'flop' }})} 
-                            className={`flex-1 font-bold px-4 py-2 rounded-md ${activeArtistData.careerStage === 'flop' ? 'bg-blue-500 text-white' : 'bg-zinc-700'}`}
+                            onClick={() => dispatch({ type: 'SET_CAREER_STAGE', payload: { stage: 'flop', artistId: activeArtistId }})} 
+                            className={`flex-1 font-bold px-4 py-2 rounded-md transition-all ${activeArtistData.careerStage === 'flop' ? 'bg-red-600 text-white ring-2 ring-red-400' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200'}`}
                         >
                             Flop Era
                         </button>
@@ -436,7 +436,7 @@ const RedMicProDashboardView: React.FC = () => {
                             <p className="text-xs text-zinc-400">Prevent ever entering a flop era.</p>
                         </div>
                         <button
-                            onClick={() => dispatch({ type: 'TOGGLE_FLOP_ERA_LOCK' })}
+                            onClick={() => dispatch({ type: 'TOGGLE_FLOP_ERA_LOCK', payload: { artistId: activeArtistId } })}
                             className={`w-14 h-8 rounded-full p-1 transition-colors ${activeArtistData.flopEraLock ? 'bg-red-500' : 'bg-zinc-600'}`}
                         >
                             <span className={`block w-6 h-6 rounded-full bg-white transform transition-transform ${activeArtistData.flopEraLock ? 'translate-x-6' : ''}`} />
