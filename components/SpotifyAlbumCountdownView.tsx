@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useGame } from "../context/GameContext";
+import { useGame, formatNumber } from "../context/GameContext";
 import { LABELS } from "../constants";
 import type { Song, GameDate } from "../types";
 import ChevronLeftIcon from "./icons/ChevronLeftIcon";
@@ -177,6 +177,11 @@ const SpotifyAlbumCountdownView: React.FC = () => {
           <p className="text-zinc-400 text-sm font-medium pt-1">
             Album • Releases on{" "}
             {formatReleaseDateString(submission.projectReleaseDate!)}
+            {submission.hasCountdownPage && (
+              <span className="text-[#1DB954] font-bold ml-2">
+                • {formatNumber(submission.preSaves || 0)} pre-saves
+              </span>
+            )}
           </p>
         </div>
 

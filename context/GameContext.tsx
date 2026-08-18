@@ -11293,17 +11293,46 @@ HFPA`,
         artistData.labelSubmissions.forEach((sub) => {
           if (
             sub.status === "scheduled" &&
-            sub.release.type.includes("Album")
+            sub.release?.type?.includes("Album")
           ) {
+            // Until the album countdown is launched it should be 0
+            if (!sub.hasCountdownPage) {
+              sub.preSaves = 0;
+              return;
+            }
+
             const oldPreSaves = sub.preSaves || 0;
             const popularity = artistData.popularity || 0;
-            const weeksSinceSubmit = Math.max(0, (newDate.year * 52 + newDate.week) - (sub.submittedDate.year * 52 + sub.submittedDate.week));
-            // Removed streams from pre-save calculation to meet prompt requirement
-            const newPreSaves = ((popularity * 15000)) * (1 + (weeksSinceSubmit * 0.25));
-            sub.preSaves = newPreSaves;
+
+            // Popularity tiers:
+            // • under 10 popularity 3k pre saves a week
+            // • under 20 popularity 5k pre saves a week
+            // • under 50 popularity 10k pre saves a week
+            // • under 75 popularity 25k pre saves a week
+            // • under 100 popularity 50k pre saves a week
+            let baseWeeklyPreSaves = 3000;
+            if (popularity < 10) {
+              baseWeeklyPreSaves = 3000;
+            } else if (popularity < 20) {
+              baseWeeklyPreSaves = 5000;
+            } else if (popularity < 50) {
+              baseWeeklyPreSaves = 10000;
+            } else if (popularity < 75) {
+              baseWeeklyPreSaves = 25000;
+            } else {
+              baseWeeklyPreSaves = 50000;
+            }
+
+            // Hype can also increase it by a small %
+            const hype = Math.max(0, Math.min(100, artistData.hype || 0));
+            const hypeMultiplier = 1 + (hype * 0.003); // e.g. up to +30% at 100 hype
+            const randomizedGain = Math.round(baseWeeklyPreSaves * hypeMultiplier * (0.95 + Math.random() * 0.1));
+            const weeklyPreSavesGain = isDailyMode ? Math.max(1, Math.round(randomizedGain / 7)) : randomizedGain;
+
+            sub.preSaves = oldPreSaves + weeklyPreSavesGain;
 
             const preSaves = sub.preSaves;
-            const milestones = [1000000, 3000000, 5000000, 10000000];
+            const milestones = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 3000000, 5000000, 10000000];
             
             let reachedMilestone = 0;
             for (const m of milestones) {
@@ -18879,6 +18908,7 @@ Thank you for trusting X.`,
           return {
             ...sub,
             hasCountdownPage: true,
+            preSaves: 0,
             promoBudgetSpent: (sub.promoBudgetSpent || 0) + cost,
           };
         }

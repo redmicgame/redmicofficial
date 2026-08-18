@@ -1004,6 +1004,7 @@ export interface LabelSubmission {
   promoBudget?: number;
   promoBudgetSpent?: number;
   hasCountdownPage?: boolean;
+  preSaves?: number;
   geniusInterviewRequestedForSongId?: string;
   fallonPerformanceRequestedForSongId?: string;
   magazineInterviewRequestedForSongId?: string;

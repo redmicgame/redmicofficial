@@ -111,7 +111,35 @@ const S4AUpcomingReleaseDetailView: React.FC<{
             {submission.projectReleaseDate!.year}
           </p>
         </div>
-        <div className="pt-8 w-full max-w-sm space-y-4 pb-20">
+
+        {/* Pre-saves Display Card */}
+        <div className="w-full max-w-sm bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 text-left shadow-lg">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Pre-saves</p>
+              <p className="text-3xl font-black text-white mt-1">
+                {formatNumber(isLaunched ? (submission.preSaves || 0) : 0)}
+              </p>
+            </div>
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full font-bold inline-flex items-center gap-1.5 ${
+                isLaunched
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                  : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isLaunched ? "bg-green-400 animate-pulse" : "bg-zinc-500"}`} />
+              {isLaunched ? "Countdown Active" : "Countdown Not Launched"}
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 mt-2">
+            {isLaunched
+              ? "Pre-saves increase weekly based on artist popularity and hype."
+              : "Launch the countdown page to begin collecting pre-saves."}
+          </p>
+        </div>
+
+        <div className="pt-4 w-full max-w-sm space-y-4 pb-20">
           <button
             onClick={handleLaunch}
             disabled={isLaunched || !hasEnoughListeners}
@@ -921,6 +949,8 @@ const S4AMusic: React.FC<{
       type: Release["type"];
       coverArt: string;
       releaseDate: GameDate;
+      hasCountdownPage?: boolean;
+      preSaves?: number;
     }[] = [];
 
     for (const sub of activeArtistData.labelSubmissions) {
@@ -937,6 +967,8 @@ const S4AMusic: React.FC<{
             type: sub.release.type,
             coverArt: sub.release.coverArt,
             releaseDate: sub.projectReleaseDate,
+            hasCountdownPage: sub.hasCountdownPage,
+            preSaves: sub.preSaves,
           });
         }
         if (sub.singlesToRelease) {
@@ -1232,6 +1264,11 @@ const S4AMusic: React.FC<{
                         <p className="font-bold text-black">{release.title}</p>
                         <p className="text-sm text-zinc-500">
                           {release.type.replace(" (Deluxe)", "")}
+                          {isAlbumOrEP && (
+                            <span className="ml-2 font-medium text-emerald-600">
+                              • {formatNumber(release.hasCountdownPage ? (release.preSaves || 0) : 0)} pre-saves
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>

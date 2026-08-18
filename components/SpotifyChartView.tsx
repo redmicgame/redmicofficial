@@ -37,33 +37,26 @@ const SpotifyChartView: React.FC = () => {
                         if (sub.status === 'scheduled' && sub.hasCountdownPage && sub.projectReleaseDate) {
                             const artistProfile = allPlayerArtists.find(a => a.id === artistId);
                             
-                            // Compute pre-saves
-                            let totalSongStreams = 0;
                             let isExplicit = false;
-                            
                             if (sub.release && sub.release.songIds) {
                                sub.release.songIds.forEach(id => {
                                    const song = data.songs.find(s => s.id === id);
-                                   if (song && song.isReleased) totalSongStreams += song.streams;
                                    if (song && song.explicit) isExplicit = true;
                                });
                             } else {
                                const song = data.songs.find(s => s.id === sub.itemId);
-                               if (song && song.isReleased) totalSongStreams += song.streams;
                                if (song && song.explicit) isExplicit = true;
                             }
 
-                            const popularity = data.popularity || 0;
-                            const weeksSinceSubmit = Math.max(0, (gameState.date.year * 52 + gameState.date.week) - (sub.submittedDate.year * 52 + sub.submittedDate.week));
-                            const basePreSaves = ((popularity * 15000) + (totalSongStreams * 0.05)) * (1 + (weeksSinceSubmit * 0.25));
+                            const preSaves = sub.preSaves || 0;
                             
                             countdowns.push({
-                                id: sub.itemId,
-                                title: sub.release?.title || sub.itemName,
+                                id: sub.itemId || sub.id,
+                                title: sub.release?.title || sub.itemName || 'Untitled Album',
                                 artistName: artistProfile?.name || 'Unknown',
                                 coverArt: sub.release?.coverArt || 'https://ui-avatars.com/api/?name=Unknown',
                                 releaseDate: sub.projectReleaseDate,
-                                preSaves: basePreSaves,
+                                preSaves: preSaves,
                                 isExplicit,
                             });
                         }
@@ -81,15 +74,25 @@ const SpotifyChartView: React.FC = () => {
                 const y = gameState.date.year + (gameState.date.week + 1 + index > 52 ? 1 : 0);
                 const releaseDate = { year: y, week: w };
                 const albumSongs = album.songIds.map(id => gameState.npcs.find(s => s.uniqueId === id)).filter(Boolean);
-                const avgPop = albumSongs.length > 0 ? albumSongs.reduce((sum, s) => sum + (s?.basePopularity || 0), 0) / albumSongs.length : 500000;
+                const avgPop = albumSongs.length > 0 ? albumSongs.reduce((sum, s) => sum + (s?.basePopularity || 0), 0) / albumSongs.length : 50;
                 
+                let npcWeekly = 3000;
+                if (avgPop < 10) npcWeekly = 3000;
+                else if (avgPop < 20) npcWeekly = 5000;
+                else if (avgPop < 50) npcWeekly = 10000;
+                else if (avgPop < 75) npcWeekly = 25000;
+                else npcWeekly = 50000;
+
+                const simulatedWeeks = Math.max(1, 4 - index);
+                const npcPreSaves = Math.round(npcWeekly * simulatedWeeks * (0.9 + Math.random() * 0.2));
+
                 countdowns.push({
                     id: `fake_${album.uniqueId}`,
                     title: album.title,
                     artistName: album.artist,
                     coverArt: album.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(album.artist)}`,
                     releaseDate: releaseDate,
-                    preSaves: (avgPop * 0.05) * (1 - (index * 0.05)), 
+                    preSaves: npcPreSaves, 
                     isExplicit: Math.random() > 0.5
                 });
             });
