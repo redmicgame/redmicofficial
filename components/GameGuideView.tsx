@@ -9,6 +9,7 @@ import FireIcon from './icons/FireIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import StarIcon from './icons/StarIcon';
 import AmaAwardIcon from './icons/AmaAwardIcon';
+import LocationMarkerIcon from './icons/LocationMarkerIcon';
 
 interface GuideSection {
     id: string;
@@ -76,7 +77,94 @@ const guideSections: GuideSection[] = [
                 <h3 className="font-bold text-red-400 mt-4">Live Albums</h3>
                 <p>You can package live performances into a <strong>Live Album</strong>. However, be aware that live album tracks receive a massive <strong>-95% stream penalty permanently</strong> compared to studio recordings. They are mostly for fan service and modest revenue bumps, not for topping charts.</p>
                 <h3 className="font-bold text-red-400 mt-4">Compilations & Deluxe</h3>
-                <p>Later in your career, you can release <strong>Deluxe Albums</strong> with vault tracks, or <strong>Compilation Albums</strong> to package greatest hits.</p>
+                <p>Later in your career, you can release <strong>Deluxe Albums</strong> with extra vault tracks, or <strong>Compilation Albums</strong> to package greatest hits and rarities. You can now add <strong>any song — whether unreleased or previously released</strong> — into a compilation with a minimum of 2 tracks.</p>
+            </>
+        )
+    },
+    {
+        id: 'genres-subgenres-regions',
+        title: 'Genres, Subgenres & Regions',
+        icon: <LocationMarkerIcon className="w-5 h-5 text-amber-400" />,
+        content: (
+            <>
+                <p>Music trends change across history, seasons, and geographic borders. Using the right genre, subgenre, and region targeting will give your songs massive algorithmic multipliers.</p>
+
+                <h3 className="font-bold text-red-400 mt-4">1. Subgenre Trends by Era (Year Multipliers)</h3>
+                <div className="space-y-3 mt-2 bg-zinc-900/60 p-3 rounded-lg border border-zinc-700/50">
+                    <div className="border-b border-zinc-800 pb-2">
+                        <p className="font-bold text-white text-sm">📅 Pre-2003 (Up to 2002): The Boyband Mania</p>
+                        <p className="text-xs text-zinc-300 mt-0.5">
+                            • <strong className="text-emerald-400">Teen Pop Boyband:</strong> Receives a massive <span className="text-emerald-400 font-bold">+200% stream boost (3.0x multiplier)</span>!
+                        </p>
+                    </div>
+                    <div className="border-b border-zinc-800 pb-2">
+                        <p className="font-bold text-white text-sm">📅 2006 – 2009: The Digital & Club Boom</p>
+                        <p className="text-xs text-zinc-300 mt-0.5">
+                            • <strong className="text-emerald-400">Ringtone Rap & Electro-Pop:</strong> Receive a <span className="text-emerald-400 font-bold">+150% stream boost (2.5x multiplier)</span>.
+                        </p>
+                    </div>
+                    <div className="border-b border-zinc-800 pb-2">
+                        <p className="font-bold text-white text-sm">📅 2006 – 2012: The Teen Pop Boyband Slump</p>
+                        <p className="text-xs text-zinc-300 mt-0.5">
+                            • <strong className="text-rose-400">Teen Pop Boyband:</strong> Crashes completely during this period, receiving a <span className="text-rose-400 font-bold">-90% penalty (0.1x flop multiplier)</span>.
+                        </p>
+                    </div>
+                    <div className="border-b border-zinc-800 pb-2">
+                        <p className="font-bold text-white text-sm">📅 2010 – 2014: The Golden EDM Era</p>
+                        <p className="text-xs text-zinc-300 mt-0.5">
+                            • <strong className="text-emerald-400">EDM & Festival:</strong> Dominate streaming and clubs with a <span className="text-emerald-400 font-bold">+150% stream boost (2.5x multiplier)</span>.
+                        </p>
+                    </div>
+                    <div>
+                        <p className="font-bold text-white text-sm">📅 2018+: The Modern Streaming Era</p>
+                        <p className="text-xs text-zinc-300 mt-0.5">
+                            • <strong className="text-emerald-400">Trap & Alt-Pop:</strong> Receive a powerful <span className="text-emerald-400 font-bold">+80% stream boost (1.8x multiplier)</span>.<br/>
+                            • <strong className="text-sky-400">Short Song Algorithm Boost:</strong> Any song under 2:30 (&lt;150 seconds) receives an extra <span className="text-sky-400 font-bold">+50% (1.5x)</span> streaming boost!
+                        </p>
+                    </div>
+                </div>
+
+                <h3 className="font-bold text-red-400 mt-4">2. Regional Market Strengths</h3>
+                <p className="text-sm">Certain genres gain huge market share multipliers in specific global territories:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    <div className="bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-700/50">
+                        <p className="font-bold text-white text-sm">🇺🇸 United States</p>
+                        <p className="text-xs text-zinc-300 mt-0.5"><strong className="text-amber-400">Country</strong> gets a <span className="text-emerald-400 font-bold">2.5x boost</span> in US market share.</p>
+                    </div>
+                    <div className="bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-700/50">
+                        <p className="font-bold text-white text-sm">🌏 Asia</p>
+                        <p className="text-xs text-zinc-300 mt-0.5"><strong className="text-pink-400">K-Pop / J-Pop</strong> gets a <span className="text-emerald-400 font-bold">2.5x boost</span> in Asian market share.</p>
+                    </div>
+                    <div className="bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-700/50">
+                        <p className="font-bold text-white text-sm">🌍 Africa</p>
+                        <p className="text-xs text-zinc-300 mt-0.5"><strong className="text-emerald-400">Afrobeats & Reggae</strong> get a <span className="text-emerald-400 font-bold">2.5x boost</span> in African market share.</p>
+                    </div>
+                    <div className="bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-700/50">
+                        <p className="font-bold text-white text-sm">💃 Latin America</p>
+                        <p className="text-xs text-zinc-300 mt-0.5"><strong className="text-orange-400">Latin & Reggaeton</strong> get a <span className="text-emerald-400 font-bold">2.5x boost</span> in Latin American market share.</p>
+                    </div>
+                    <div className="bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-700/50 sm:col-span-2">
+                        <p className="font-bold text-white text-sm">🇬🇧 United Kingdom (UK)</p>
+                        <p className="text-xs text-zinc-300 mt-0.5"><strong className="text-indigo-400">Electronic, Dance, Rock, and Indie</strong> get a <span className="text-emerald-400 font-bold">2.0x boost</span> in UK market share.</p>
+                    </div>
+                </div>
+
+                <h3 className="font-bold text-red-400 mt-4">3. Seasonal Genre Dynamics (Christmas)</h3>
+                <p className="text-sm">The <strong>Christmas</strong> genre follows strict seasonal cycles:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs text-zinc-300 pl-2 mt-2">
+                    <li><strong>Off-Season (Weeks 1–40):</strong> Streams drop significantly (0.05x–0.25x).</li>
+                    <li><strong>Early Momentum (Weeks 41–44):</strong> Streams gain 1.5x–3.0x boost.</li>
+                    <li><strong>Holiday Push (Weeks 45–49):</strong> Streams skyrocket by 8.0x–13.0x.</li>
+                    <li><strong>Peak Holiday Season (Weeks 50–52):</strong> Astronomical <span className="text-emerald-400 font-bold">15.0x–20.0x stream multiplier</span>.</li>
+                </ul>
+
+                <h3 className="font-bold text-red-400 mt-4">4. Radio Format Compatibility</h3>
+                <ul className="list-disc list-inside space-y-1 text-xs text-zinc-300 pl-2 mt-2">
+                    <li><strong>Pop Radio:</strong> Fully supports Pop, K-Pop, Dance, and Electronic (1.0x); R&amp;B receives 0.4x; Hip Hop receives 0.2x; Country receives 0.05x.</li>
+                    <li><strong>Urban Radio:</strong> 1.0x support for Hip Hop, Rap, and R&amp;B.</li>
+                    <li><strong>Rhythmic Radio:</strong> 1.0x support for Hip Hop, Rap, R&amp;B, Pop, Dance, Electronic, and K-Pop.</li>
+                    <li><strong>Country Radio:</strong> 1.0x support for Country songs only.</li>
+                </ul>
             </>
         )
     },

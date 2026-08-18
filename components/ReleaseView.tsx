@@ -44,7 +44,7 @@ const ReleaseView: React.FC = () => {
         });
 
         if (releaseType === 'Compilation') {
-            return songs.filter(s => s.isReleased && !s.isVaulted);
+            return songs.filter(s => !s.isVaulted && !s.title.endsWith(' - Live'));
         }
         
         if (releaseType === 'Live Album') {
@@ -344,8 +344,12 @@ const ReleaseView: React.FC = () => {
                                     <div className="flex-grow">
                                         <p className="font-semibold">{song.title}</p>
                                         <div className="flex items-center gap-2">
-                                            <p className="text-xs text-zinc-400">{song.genre}</p>
-                                            {song.isReleased && <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full font-medium">Released as Single</span>}
+                                            <p className="text-xs text-zinc-400">{song.genre}{song.subgenre && song.subgenre !== 'None' ? ` • ${song.subgenre}` : ''}</p>
+                                            {song.isReleased ? (
+                                                <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full font-medium">Released</span>
+                                            ) : (
+                                                <span className="text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-medium">Unreleased</span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-center">
