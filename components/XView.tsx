@@ -9,6 +9,7 @@ import EnvelopeIcon from "./icons/EnvelopeIcon";
 import PlusIcon from "./icons/PlusIcon";
 import { XPost, XUser, XTrend, XChat } from "../types";
 import { formatNumber } from "../context/GameContext";
+import { getDateFromGameWeek } from "./CalendarDatePicker";
 import CommentIcon from "./icons/CommentIcon";
 import RetweetIcon from "./icons/RetweetIcon";
 import HeartIcon from "./icons/HeartIcon";
@@ -259,8 +260,15 @@ export const Post: React.FC<{
       (activeArtistData!.selectedPlayerXUserId ||
         activeArtistData!.xUsers.find((u) => u.isPlayer)?.id);
 
-  const timeAgo = (postDate: { week: number; year: number }) => {
-    return `${postDate.week}w`;
+  const timeAgo = (postDate?: { week: number; year: number; day?: number }) => {
+    if (!postDate) return "";
+    const day = postDate.day || 1;
+    const d = getDateFromGameWeek(postDate.year, postDate.week, day);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const handleViewProfile = () => {
@@ -496,7 +504,7 @@ export const Post: React.FC<{
             
             {/* Right Column - #2 to #15 */}
             <div className="w-full sm:w-[55%] p-3 sm:p-4 flex flex-col justify-between">
-              <div className="text-right font-bold text-lg mb-4 drop-shadow-sm">Week {post.date.week}, {post.date.year}</div>
+              <div className="text-right font-bold text-lg mb-4 drop-shadow-sm">{timeAgo(post.date)}</div>
               <div className="space-y-[6px]">
                 {post.spotifySnapshotAlbums.slice(1).map((album, idx) => {
                   const rank = album.rank;

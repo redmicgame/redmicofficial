@@ -8,6 +8,7 @@ import {
   Video,
   XChat,
   XMessage,
+  XComment,
 } from "../types";
 import { formatNumber } from "../context/GameContext";
 import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES, getArtistImage, NPC_ERAS } from "../constants";
@@ -740,7 +741,6 @@ export const generateWeeklyXContent = (
          id: "spotify_snapshot",
          username: "SpotifySnapshot",
          name: "Spotify Snapshot",
-         displayName: "Spotify Snapshot",
          isPlayer: false,
          isVerified: true,
          followersCount: 5400000,
@@ -771,14 +771,23 @@ export const generateWeeklyXContent = (
     });
   }
 
-  // Weekly stream gain post for top song (if not debut week)
-  if (topSong && !debutRelease && topSong.lastWeekStreams > 1_000_000) {
+  const isDaily = gameState.timeMode === "daily";
+
+  // Daily / Weekly stream gain post for top song (if not debut week)
+  const topSongStreamCount = isDaily
+    ? (topSong?.lastDayStreams || (topSong ? Math.round(topSong.lastWeekStreams / 7) : 0))
+    : (topSong?.lastWeekStreams || 0);
+  const streamThreshold = isDaily ? 150_000 : 1_000_000;
+
+  if (topSong && !debutRelease && topSongStreamCount > streamThreshold) {
     if (Math.random() > 0.4) {
       // 60% chance of this post
       newPosts.push({
         id: crypto.randomUUID(),
         authorId: "chartdata",
-        content: `${artistName}'s "${topSong.title}" earned ${formatNumber(topSong.lastWeekStreams)} streams in the US this week.`,
+        content: isDaily
+          ? `${artistName}'s "${topSong.title}" earned ${formatNumber(topSongStreamCount)} streams in the US today.`
+          : `${artistName}'s "${topSong.title}" earned ${formatNumber(topSongStreamCount)} streams in the US this week.`,
         likes: Math.floor(Math.random() * 12000) + 4000,
         retweets: Math.floor(Math.random() * 3000) + 800,
         views: Math.floor(Math.random() * 180000) + 40000,
@@ -1777,11 +1786,17 @@ export const generateWeeklyXContent = (
     const matchingPlayerSong = playerSongs.find(
       (s) => s.id === spotifyNumberOne.songId,
     );
-    if (matchingPlayerSong && matchingPlayerSong.lastWeekStreams > 0) {
+    const matchSongStreams = isDaily
+      ? (matchingPlayerSong?.lastDayStreams || (matchingPlayerSong ? Math.round(matchingPlayerSong.lastWeekStreams / 7) : 0))
+      : (matchingPlayerSong?.lastWeekStreams || 0);
+
+    if (matchingPlayerSong && matchSongStreams > 0) {
       newPosts.push({
         id: crypto.randomUUID(),
         authorId: "chartdata",
-        content: `${artistName}'s "${matchingPlayerSong.title}" is #1 on Global Spotify this week with ${formatNumber(matchingPlayerSong.lastWeekStreams)} streams.`,
+        content: isDaily
+          ? `${artistName}'s "${matchingPlayerSong.title}" is #1 on Global Spotify today with ${formatNumber(matchSongStreams)} daily streams.`
+          : `${artistName}'s "${matchingPlayerSong.title}" is #1 on Global Spotify this week with ${formatNumber(matchSongStreams)} streams.`,
         image: matchingPlayerSong.coverArt,
         likes: Math.floor(Math.random() * 45000) + 15000,
         retweets: Math.floor(Math.random() * 12000) + 3000,
@@ -1833,13 +1848,16 @@ export const generateWeeklyXContent = (
   }
 
   // 3. PopBase post if song is doing well (and not a debut, to avoid duplicate posts)
-  if (topSong && !debutRelease && topSong.lastWeekStreams > 5_000_000) {
+  const popBaseThreshold = isDaily ? 700_000 : 5_000_000;
+  if (topSong && !debutRelease && topSongStreamCount > popBaseThreshold) {
     if (Math.random() > 0.5) {
       // 50% chance
       newPosts.push({
         id: crypto.randomUUID(),
         authorId: "popbase",
-        content: `${artistName}'s new single "${topSong.title}" is gaining major traction, racking up over ${formatNumber(topSong.lastWeekStreams)} streams this week alone.`,
+        content: isDaily
+          ? `${artistName}'s new single "${topSong.title}" is gaining major traction, racking up over ${formatNumber(topSongStreamCount)} streams today.`
+          : `${artistName}'s new single "${topSong.title}" is gaining major traction, racking up over ${formatNumber(topSongStreamCount)} streams this week alone.`,
         image: topSong.coverArt,
         likes: Math.floor(Math.random() * 25000) + 8000,
         retweets: Math.floor(Math.random() * 7000) + 2000,
@@ -1877,7 +1895,7 @@ export const generateWeeklyXContent = (
         postCount: Math.floor(Math.random() * 40000) + 15000,
       });
   }
-  if (artistData.tours.some((t) => t.isActive)) {
+  if (artistData.tours.some((t) => t.status === "active")) {
     potentialTrends.push({
       category: "Music · Trending",
       title: `${artistName} Tour`,
@@ -2392,12 +2410,12 @@ export const generateWeeklyXContent = (
       });
 
       // Add NPCs
-      artistData.relationships?.forEach((r) => {
-        const totalStreams = Math.floor(r.popularity * 10000000); // Rough estimation for NPC streams
+      NPC_ARTIST_NAMES.forEach((npcName) => {
+        const totalStreams = Math.floor(Math.random() * 50000000) + 10000000;
         allEntities.push({
-          name: r.artistName,
+          name: npcName,
           streams: totalStreams,
-          image: r.imageUrl,
+          image: getArtistImage(npcName),
         });
       });
 

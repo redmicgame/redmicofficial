@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { getDateFromGameWeek } from './CalendarDatePicker';
 
 const TmzArticleView: React.FC = () => {
     const { gameState, dispatch } = useGame();
@@ -40,7 +41,7 @@ const TmzArticleView: React.FC = () => {
                         <span>|</span>
                         <span>TMZ Staff</span>
                         <span>|</span>
-                        <span>Week {post.date.week}, {post.date.year}</span>
+                        <span>{getDateFromGameWeek(post.date.year, post.date.week, post.date.day || 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
                 </div>
 

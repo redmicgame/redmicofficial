@@ -25,6 +25,7 @@ const StartScreen: React.FC = () => {
     const [soloPronouns, setSoloPronouns] = useState<'he/him' | 'she/her' | 'they/them'>('they/them');
     const [startYear, setStartYear] = useState(new Date().getFullYear());
     const [difficulty, setDifficulty] = useState<'easy' | 'original' | 'normal' | 'hard' | 'extreme'>('normal');
+    const [timeMode, setTimeMode] = useState<'weekly' | 'daily'>('weekly');
     
     // Group state
     const [groupName, setGroupName] = useState('');
@@ -83,7 +84,7 @@ const StartScreen: React.FC = () => {
                 pronouns: soloPronouns,
                 fandomName: soloFandomName.trim()
             };
-            dispatch({ type: 'START_SOLO_GAME', payload: { artist: newArtist, startYear, difficultyMode: difficulty } });
+            dispatch({ type: 'START_SOLO_GAME', payload: { artist: newArtist, startYear, difficultyMode: difficulty, timeMode } });
         } else {
             if (!groupName.trim() || !groupImage || !groupFandomName.trim()) {
                 setError('Group name, image, and fandom name are required.'); return;
@@ -107,7 +108,7 @@ const StartScreen: React.FC = () => {
                     fandomName: groupFandomName.trim()
                 }))
             };
-            dispatch({ type: 'START_GROUP_GAME', payload: { group: newGroup, startYear, difficultyMode: difficulty } });
+            dispatch({ type: 'START_GROUP_GAME', payload: { group: newGroup, startYear, difficultyMode: difficulty, timeMode } });
         }
     };
 
@@ -291,6 +292,44 @@ const StartScreen: React.FC = () => {
                                   <option value="hard">Hard</option>
                                   <option value="extreme">Extreme</option>
                              </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Game Pacing Mode</label>
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setTimeMode('weekly')}
+                                    className={`p-3 rounded-lg border text-left transition-all ${
+                                        timeMode === 'weekly'
+                                            ? 'bg-red-950/50 border-red-500 ring-1 ring-red-500 text-white'
+                                            : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-750 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                                        <span>📅</span> Weekly
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-1 leading-tight">
+                                        Standard pace (1 turn = 1 week). Best for fast, long multi-year runs.
+                                    </p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTimeMode('daily')}
+                                    className={`p-3 rounded-lg border text-left transition-all ${
+                                        timeMode === 'daily'
+                                            ? 'bg-red-950/50 border-red-500 ring-1 ring-red-500 text-white'
+                                            : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-750 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                                        <span>☀️</span> Day by Day
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-1 leading-tight">
+                                        Detailed daily pace (1 turn = 1 day, 7 days/week). Track daily streams & events.
+                                    </p>
+                                </button>
+                            </div>
                         </div>
 
                         {error && <p className="text-red-400 text-sm text-center">{error}</p>}

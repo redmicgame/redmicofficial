@@ -249,10 +249,15 @@ const HomeTab: React.FC = () => {
     return scores.sort((a, b) => b.score - a.score);
   }, [popularity, activeArtist]);
 
-  const getWeekDate = (d: { week: number; year: number }) => {
-    const date = new Date(d.year, 0, (d.week - 1) * 7 + 1);
+  const getWeekDate = (d: { week: number; year: number; day?: number }) => {
+    const dayOffset = d.day !== undefined ? (d.day - 1) : 0;
+    const date = new Date(d.year, 0, (d.week - 1) * 7 + 1 + dayOffset);
     const month = date.toLocaleString("en-US", { month: "long" });
     const day = date.getDate();
+    if (d.day !== undefined || gameState.timeMode === "daily") {
+      const weekday = date.toLocaleString("en-US", { weekday: "short" });
+      return `${weekday}, ${month} ${day}, ${d.year}`;
+    }
     return `${month} ${day}, ${d.year}`;
   };
 
@@ -345,7 +350,6 @@ const HomeTab: React.FC = () => {
         <div>
           <p className="text-lg font-bold">
             Week {date.week}, {date.year}
-            {gameState.timeMode === "daily" ? ` (Day ${date.day || 1})` : ""}
           </p>
           <p className="text-sm text-zinc-400">{getWeekDate(date)}</p>
           <p className="text-3xl font-bold text-green-400 mt-1">

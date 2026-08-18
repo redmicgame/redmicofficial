@@ -115,6 +115,9 @@ export interface Song {
   streams: number;
   lastWeekStreams: number;
   prevWeekStreams: number;
+  lastDayStreams?: number;
+  prevDayStreams?: number;
+  peakDailyStreams?: number;
   actualLastWeekStreams?: number;
   actualPrevWeekStreams?: number;
   pitchforkBoost?: boolean;
@@ -267,6 +270,8 @@ export interface Release {
   preReleaseStreams?: number;
   preReleaseSales?: number;
   sales?: number;
+  peakDailyStreams?: number;
+  peakWeeklyStreams?: number;
   isAppleMusicEssential?: boolean;
   appleMusicEssentialReview?: string;
   releasingLabel?: {
@@ -299,7 +304,6 @@ export interface Release {
   rightsOwnerLabelId?: string;
   isAnnounced?: boolean;
   preorderSales?: number;
-  peakWeeklyStreams?: number;
 }
 
 export interface Video {
@@ -798,6 +802,7 @@ export interface ChartEntry {
   songId?: string;
   uniqueId: string;
   weeklyStreams: number;
+  dailyStreams?: number;
   itunesPrice?: string;
   radioPlays?: number;
   radioImpressions?: number;
@@ -837,6 +842,8 @@ export interface AlbumChartEntry {
   albumId?: string;
   uniqueId: string;
   weeklyActivity: number;
+  dailyActivity?: number;
+  dailyStreams?: number;
   weeklySales: number;
   weeklySES?: number;
   weeklyPureSales?: number;
@@ -1004,6 +1011,7 @@ export interface LabelSubmission {
   tvInterviewRequestedForSongId?: string;
   recommendedSingles?: { songId: string; reason: string }[];
   preorderSales?: number;
+  reviewDaysNeeded?: number;
 }
 
 export interface XUser {

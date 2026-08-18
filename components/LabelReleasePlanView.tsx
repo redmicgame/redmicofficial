@@ -4,11 +4,13 @@ import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import { GameDate, Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { CalendarDatePicker, formatFullDateString, getDateFromGameWeek, getGameWeekFromDate } from './CalendarDatePicker';
+import { LABELS } from '../constants';
 
 const LabelReleasePlanView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
     const { date, activeSubmissionId } = gameState;
-    const { songs, labelSubmissions } = activeArtistData!;
+    const { songs, labelSubmissions, contract } = activeArtistData!;
 
     const submission = useMemo(() => {
         return labelSubmissions.find(s => s.id === activeSubmissionId);
@@ -19,17 +21,37 @@ const LabelReleasePlanView: React.FC = () => {
         return submission.release.songIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as Song[];
     }, [submission, songs]);
 
-    
+    const isSigned = !!contract;
+    const labelName = contract?.isCustom
+        ? (gameState.customLabels?.find(l => l.id === contract.labelId)?.name || 'Custom Label')
+        : (LABELS.find(l => l.id === contract?.labelId)?.name || 'Record Label');
+
     interface SinglePlanData {
         date: GameDate;
         singleType: 'lead' | 'standalone' | 'interlude';
         eraImages: string[];
     }
     const [selectedSingles, setSelectedSingles] = useState<Map<string, SinglePlanData>>(new Map());
+    const [activeCalendarForSingle, setActiveCalendarForSingle] = useState<string | null>(null);
 
-    
-    const nextWeek = { week: date.week === 52 ? 1 : date.week + 1, year: date.week === 52 ? date.year + 1 : date.year };
-    const [projectDate, setProjectDate] = useState<GameDate>({ week: nextWeek.week + 8, year: nextWeek.year });
+    const isFriday = (d: GameDate) => {
+        const dateObj = getDateFromGameWeek(d.year, d.week, d.day || 1);
+        return dateObj.getDay() === 5;
+    };
+
+    const getDefaultFridayDate = (weeksAhead: number): GameDate => {
+        const currentRealDate = getDateFromGameWeek(date.year, date.week, date.day || 1);
+        const targetRealDate = new Date(currentRealDate);
+        targetRealDate.setDate(targetRealDate.getDate() + weeksAhead * 7);
+        const currentDay = targetRealDate.getDay();
+        const distanceToFriday = (5 - currentDay + 7) % 7;
+        targetRealDate.setDate(targetRealDate.getDate() + distanceToFriday);
+        const { week, year, day } = getGameWeekFromDate(targetRealDate);
+        return { week, year, day };
+    };
+
+    const nextWeek = { week: date.week === 52 ? 1 : date.week + 1, year: date.week === 52 ? date.year + 1 : date.year, day: 1 };
+    const [projectDate, setProjectDate] = useState<GameDate>(() => isSigned ? getDefaultFridayDate(8) : { week: Math.min(52, nextWeek.week + 8), year: nextWeek.year, day: 1 });
     const [projectSingleType, setProjectSingleType] = useState<'lead' | 'standalone' | 'interlude'>('standalone');
     const [projectEraImages, setProjectEraImages] = useState<string[]>([]);
     const [error, setError] = useState('');
@@ -46,25 +68,23 @@ const LabelReleasePlanView: React.FC = () => {
             newSelection.delete(songId);
         } else {
             if (newSelection.size < maxSingles) {
-                const newDate = { week: nextWeek.week + (newSelection.size * 2), year: nextWeek.year };
+                const newDate = isSigned
+                    ? getDefaultFridayDate((newSelection.size + 1) * 2)
+                    : { week: Math.min(52, nextWeek.week + (newSelection.size * 2)), year: nextWeek.year, day: 1 };
                 newSelection.set(songId, { date: newDate, singleType: 'lead', eraImages: [] });
             }
         }
         setSelectedSingles(newSelection);
     };
 
-    const handleSingleDateChange = (songId: string, part: 'week' | 'year', value: number) => {
+    const handleSingleDateChange = (songId: string, newDate: GameDate) => {
         const newSelection = new Map(selectedSingles);
         const current = newSelection.get(songId);
         if (current) {
-            const newDate: GameDate = { ...current.date, [part]: value };
             newSelection.set(songId, { ...current, date: newDate });
         }
         setSelectedSingles(newSelection);
-    };
-    
-    const handleProjectDateChange = (part: 'week' | 'year', value: number) => {
-        setProjectDate(prev => ({ ...prev, [part]: value }));
+        setActiveCalendarForSingle(null);
     };
 
     const handleSubmit = () => {
@@ -72,20 +92,30 @@ const LabelReleasePlanView: React.FC = () => {
         const singleDates: GameDate[] = Array.from(selectedSingles.values()).map(s => s.date);
         
         // Validation
-        const toTotalWeeks = (d: GameDate) => d.year * 52 + d.week;
-        const nowTotalWeeks = toTotalWeeks(date);
+        const toTotalDays = (d: GameDate) => d.year * 364 + (d.week - 1) * 7 + (d.day || 1);
+        const nowTotalDays = toTotalDays(date);
 
         for (const singleDate of singleDates) {
-            if (toTotalWeeks(singleDate) <= nowTotalWeeks) {
+            if (toTotalDays(singleDate) <= nowTotalDays) {
                 setError('All single release dates must be in the future.'); return;
             }
-            if (toTotalWeeks(singleDate) >= toTotalWeeks(projectDate)) {
+            if (toTotalDays(singleDate) >= toTotalDays(projectDate)) {
                 setError('All singles must be released before the main project.'); return;
             }
+
+            if (isSigned && !isFriday(singleDate)) {
+                setError(`${labelName} requires all single releases to drop on Friday (New Music Friday).`);
+                return;
+            }
         }
-        if(toTotalWeeks(projectDate) <= nowTotalWeeks) {
+        if(toTotalDays(projectDate) <= nowTotalDays) {
             setError('Project release date must be in the future.'); return;
         }
+        if (isSigned && !isFriday(projectDate)) {
+            setError(`${labelName} requires project releases to drop on Friday (New Music Friday).`);
+            return;
+        }
+
         // Check for date clashes
         const allDates = [...singleDates, projectDate];
         const uniqueDates = new Set(allDates.map(d => `${d.year}-${d.week}`));
@@ -113,9 +143,26 @@ const LabelReleasePlanView: React.FC = () => {
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
-                <h1 className="text-2xl font-bold">Plan Release: {submission.release.title}</h1>
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-bold">Plan Release: {submission.release.title}</h1>
+                    {isSigned && (
+                        <p className="text-xs text-emerald-400 font-medium">Signed to {labelName} &bull; Friday Releases Only</p>
+                    )}
+                </div>
             </header>
             <div className="flex-grow p-4 space-y-6 overflow-y-auto">
+                {isSigned && (
+                    <div className="p-3 bg-emerald-950/40 border border-emerald-600/40 rounded-xl text-xs text-emerald-300 flex items-start gap-2.5">
+                        <span className="text-base">📅</span>
+                        <div>
+                            <p className="font-bold text-white">Label Release Policy</p>
+                            <p className="mt-0.5 text-zinc-300">
+                                As an artist signed to <strong className="text-emerald-300">{labelName}</strong>, your singles and project must be scheduled on <strong className="text-emerald-300">Fridays (New Music Friday)</strong>. Tap any highlighted Friday on the calendar to schedule.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {submission.release.type !== 'Single' && (
                 <div>
                     <h2 className="text-lg font-bold">1. Select Pre-Release Singles ({selectedSingles.size}/{maxSingles})</h2>
@@ -139,86 +186,109 @@ const LabelReleasePlanView: React.FC = () => {
                 {submission.release.type !== 'Single' && selectedSingles.size > 0 && (
                     <div>
                         <h2 className="text-lg font-bold">2. Schedule Single Releases</h2>
-                        <div className="space-y-3 mt-2">
+                        <div className="space-y-4 mt-2">
                             {Array.from(selectedSingles.entries()).map(([songId, data]) => {
                                 const song = projectSongs.find(s => s.id === songId);
+                                const isCalendarOpen = activeCalendarForSingle === songId;
+
                                 return (
-                                    <div key={songId}><div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
-                                        <p className="font-semibold flex-grow">{song?.title}</p>
-                                        <div className="flex items-center gap-2">
-                                            <label className="text-sm text-zinc-400">W:</label>
-                                            <input type="number" value={data.date.week || ''} onChange={e => handleSingleDateChange(songId, 'week', parseInt(e.target.value) || 0)} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
-                                            <label className="text-sm text-zinc-400">Y:</label>
-                                            <input type="number" value={data.date.year || ''} onChange={e => handleSingleDateChange(songId, 'year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
+                                    <div key={songId} className="bg-zinc-800/90 border border-zinc-700/60 p-3.5 rounded-xl space-y-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <img src={song?.coverArt} alt={song?.title} className="w-9 h-9 rounded object-cover flex-shrink-0" />
+                                                <p className="font-semibold text-white truncate">{song?.title}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveCalendarForSingle(isCalendarOpen ? null : songId)}
+                                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0"
+                                            >
+                                                <span>📅</span>
+                                                <span>{formatFullDateString(data.date)}</span>
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="mt-2 flex flex-col gap-2">
-                                        <select 
-                                            value={data.singleType} 
-                                            onChange={(e) => {
-                                                const newSelection = new Map(selectedSingles);
-                                                const current = newSelection.get(songId);
-                                                if (current) {
-                                                    newSelection.set(songId, { ...current, singleType: e.target.value as any });
-                                                }
-                                                setSelectedSingles(newSelection);
-                                            }}
-                                            className="w-full bg-zinc-700 text-white p-2 rounded-md"
-                                        >
-                                            <option value="lead">Lead Single (must be added to your next album)</option>
-                                            <option value="standalone">Standalone Single</option>
-                                            <option value="interlude">Interlude (-50% streams permanently)</option>
-                                        </select>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-sm text-zinc-400">Era Images (Optional)</label>
-                                            <div className="flex gap-2">
-                                                {[0, 1, 2].map((idx) => (
-                                                    <div key={idx} className="flex-1">
-                                                        {data.eraImages[idx] ? (
-                                                            <div className="relative aspect-square">
-                                                                <img src={data.eraImages[idx]} className="w-full h-full object-cover rounded-md" />
-                                                                <button 
-                                                                    onClick={() => {
-                                                                        const newSelection = new Map(selectedSingles);
-                                                                        const current = newSelection.get(songId);
-                                                                        if (current) {
-                                                                            const newImages = [...current.eraImages];
-                                                                            newImages.splice(idx, 1);
-                                                                            newSelection.set(songId, { ...current, eraImages: newImages });
-                                                                            setSelectedSingles(newSelection);
-                                                                        }
-                                                                    }}
-                                                                    className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold cursor-pointer z-10"
-                                                                >✕</button>
-                                                            </div>
-                                                        ) : (
-                                                            <label className="w-full aspect-square bg-zinc-700 hover:bg-zinc-600 rounded-md flex items-center justify-center cursor-pointer border border-dashed border-zinc-500">
-                                                                <span className="text-xl text-zinc-400">+</span>
-                                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                                                    const file = e.target.files?.[0];
-                                                                    if (file) {
-                                                                        const reader = new FileReader();
-                                                                        reader.onload = (ev) => {
-                                                                            const url = ev.target?.result;
+
+                                        {isCalendarOpen && (
+                                            <div className="mt-2">
+                                                <CalendarDatePicker
+                                                    currentDate={date}
+                                                    selectedDate={data.date}
+                                                    onSelectDate={(newDate) => handleSingleDateChange(songId, newDate)}
+                                                    isSigned={isSigned}
+                                                    labelName={labelName}
+                                                    title={`Select Friday Release Date for "${song?.title}"`}
+                                                    onClose={() => setActiveCalendarForSingle(null)}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="flex flex-col gap-2">
+                                            <select 
+                                                value={data.singleType} 
+                                                onChange={(e) => {
+                                                    const newSelection = new Map(selectedSingles);
+                                                    const current = newSelection.get(songId);
+                                                    if (current) {
+                                                        newSelection.set(songId, { ...current, singleType: e.target.value as any });
+                                                    }
+                                                    setSelectedSingles(newSelection);
+                                                }}
+                                                className="w-full bg-zinc-700 text-white p-2 rounded-md text-sm"
+                                            >
+                                                <option value="lead">Lead Single (must be added to your next album)</option>
+                                                <option value="standalone">Standalone Single</option>
+                                                <option value="interlude">Interlude (-50% streams permanently)</option>
+                                            </select>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs text-zinc-400">Era Images (Optional)</label>
+                                                <div className="flex gap-2">
+                                                    {[0, 1, 2].map((idx) => (
+                                                        <div key={idx} className="flex-1">
+                                                            {data.eraImages[idx] ? (
+                                                                <div className="relative aspect-square">
+                                                                    <img src={data.eraImages[idx]} className="w-full h-full object-cover rounded-md" />
+                                                                    <button 
+                                                                        onClick={() => {
                                                                             const newSelection = new Map(selectedSingles);
                                                                             const current = newSelection.get(songId);
                                                                             if (current) {
                                                                                 const newImages = [...current.eraImages];
-                                                                                newImages[idx] = url;
+                                                                                newImages.splice(idx, 1);
                                                                                 newSelection.set(songId, { ...current, eraImages: newImages });
                                                                                 setSelectedSingles(newSelection);
                                                                             }
-                                                                        };
-                                                                        reader.readAsDataURL(file);
-                                                                    }
-                                                                }} />
-                                                            </label>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                                        }}
+                                                                        className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold cursor-pointer z-10"
+                                                                    >✕</button>
+                                                                </div>
+                                                            ) : (
+                                                                <label className="w-full aspect-square bg-zinc-700 hover:bg-zinc-600 rounded-md flex items-center justify-center cursor-pointer border border-dashed border-zinc-500">
+                                                                    <span className="text-xl text-zinc-400">+</span>
+                                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                                        const file = e.target.files?.[0];
+                                                                        if (file) {
+                                                                            const reader = new FileReader();
+                                                                            reader.onload = (ev) => {
+                                                                                const url = ev.target?.result as string;
+                                                                                const newSelection = new Map(selectedSingles);
+                                                                                const current = newSelection.get(songId);
+                                                                                if (current) {
+                                                                                    const newImages = [...current.eraImages];
+                                                                                    newImages[idx] = url;
+                                                                                    newSelection.set(songId, { ...current, eraImages: newImages });
+                                                                                    setSelectedSingles(newSelection);
+                                                                                }
+                                                                            };
+                                                                            reader.readAsDataURL(file);
+                                                                        }
+                                                                    }} />
+                                                                </label>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
                                     </div>
                                 );
                             })}
@@ -226,23 +296,25 @@ const LabelReleasePlanView: React.FC = () => {
                     </div>
                 )}
                 
-                 <div>
-                    <h2 className="text-lg font-bold">3. Schedule Project Release</h2>
-                     <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4 mt-2">
-                        <p className="font-semibold flex-grow">{submission.release.title} ({submission.release.type.replace(" (Deluxe)", "")})</p>
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm text-zinc-400">W:</label>
-                            <input type="number" value={projectDate.week || ''} onChange={e => handleProjectDateChange('week', parseInt(e.target.value) || 0)} min="1" max="52" className="w-16 bg-zinc-700 p-1 rounded-md text-center" />
-                            <label className="text-sm text-zinc-400">Y:</label>
-                            <input type="number" value={projectDate.year || ''} onChange={e => handleProjectDateChange('year', parseInt(e.target.value) || 0)} min={date.year} className="w-20 bg-zinc-700 p-1 rounded-md text-center" />
-                        </div>
-                    </div>
+                 <div className="space-y-3">
+                    <h2 className="text-lg font-bold">
+                        {submission.release.type === 'Single' ? '1. Schedule Single Release' : '3. Schedule Project Release'}
+                    </h2>
+                    <CalendarDatePicker
+                        currentDate={date}
+                        selectedDate={projectDate}
+                        onSelectDate={(newDate) => setProjectDate(newDate)}
+                        isSigned={isSigned}
+                        labelName={labelName}
+                        title={`Select ${isSigned ? 'Friday ' : ''}Date for "${submission.release.title}"`}
+                    />
+
                     {submission.release.type === 'Single' && (
                         <div className="mt-4 flex flex-col gap-2">
                             <select 
                                 value={projectSingleType} 
                                 onChange={(e) => setProjectSingleType(e.target.value as any)}
-                                className="w-full bg-zinc-700 text-white p-2 rounded-md"
+                                className="w-full bg-zinc-700 text-white p-2 rounded-md text-sm"
                             >
                                 <option value="lead">Lead Single (must be added to your next album)</option>
                                 <option value="standalone">Standalone Single</option>

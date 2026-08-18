@@ -10,8 +10,12 @@ import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
 import ArrowRightIcon from './icons/ArrowRightIcon';
 
-const ChartRow: React.FC<{ entry: ChartEntry }> = ({ entry }) => {
-    const { rank, lastWeek, title, artist, coverArt, peak, weeksOnChart, weeklyStreams } = entry;
+const ChartRow: React.FC<{ entry: ChartEntry; isDaily: boolean }> = ({ entry, isDaily }) => {
+    const { rank, lastWeek, title, artist, coverArt, peak, weeksOnChart, weeklyStreams, dailyStreams } = entry;
+
+    const displayStreams = isDaily
+        ? (dailyStreams || Math.round(weeklyStreams / 7))
+        : weeklyStreams;
 
     const renderMovement = () => {
         if (!lastWeek || lastWeek === rank) {
@@ -47,7 +51,7 @@ const ChartRow: React.FC<{ entry: ChartEntry }> = ({ entry }) => {
             <div className="hidden sm:block text-center text-gray-500">{peak}</div>
             <div className="hidden sm:block text-center text-gray-500">{lastWeek || '—'}</div>
             <div className="hidden sm:block text-center text-gray-500">{weeksOnChart}</div>
-            <div className="text-right text-gray-600 font-medium">{formatNumber(weeklyStreams)}</div>
+            <div className="text-right text-gray-600 font-medium">{formatNumber(displayStreams)}</div>
         </div>
     );
 };
@@ -56,23 +60,46 @@ const SpotifyTopSongsView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const { spotifyGlobal = [], spotifyUS = [], spotifyCanada = [], spotifyUK = [], spotifyLatin = [], spotifyAsia = [], spotifyAfrica = [], date } = gameState as any;
     const [region, setRegion] = React.useState<'Global' | 'US' | 'Canada' | 'UK' | 'Latin America' | 'Asia' | 'Africa'>('Global');
+    const [timeframe, setTimeframe] = React.useState<'weekly' | 'daily'>(gameState.timeMode === 'daily' ? 'daily' : 'weekly');
 
-    const getWeekDate = (d: { week: number; year: number; }) => {
-        const dateObj = new Date(d.year, 0, (d.week - 1) * 7 + 1);
+    const getWeekDate = (d: { week: number; year: number; day?: number }) => {
+        const dayOffset = d.day !== undefined ? (d.day - 1) : 0;
+        const dateObj = new Date(d.year, 0, (d.week - 1) * 7 + 1 + dayOffset);
+        if (timeframe === 'daily') {
+            return dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
         return `Week of ${dateObj.toLocaleString('en-US', { month: 'short' })} ${dateObj.getDate()}`;
     };
 
     const currentChart = React.useMemo(() => {
+        let baseList: ChartEntry[] = [];
         switch(region) {
-            case 'US': return spotifyUS;
-            case 'Canada': return spotifyCanada;
-            case 'UK': return spotifyUK;
-            case 'Latin America': return spotifyLatin;
-            case 'Asia': return spotifyAsia;
-            case 'Africa': return spotifyAfrica;
-            default: return spotifyGlobal;
+            case 'US': baseList = spotifyUS; break;
+            case 'Canada': baseList = spotifyCanada; break;
+            case 'UK': baseList = spotifyUK; break;
+            case 'Latin America': baseList = spotifyLatin; break;
+            case 'Asia': baseList = spotifyAsia; break;
+            case 'Africa': baseList = spotifyAfrica; break;
+            default: baseList = spotifyGlobal; break;
         }
-    }, [spotifyGlobal, spotifyUS, spotifyCanada, spotifyUK, spotifyLatin, spotifyAsia, spotifyAfrica, region]);
+
+        // Augment player songs with exact daily stream values from songs state if available
+        return baseList.map(entry => {
+            if (entry.isPlayerSong && gameState.artistsData) {
+                for (const artistId in gameState.artistsData) {
+                    const song = gameState.artistsData[artistId]?.songs?.find((s: any) => s.id === entry.songId || s.title === entry.title);
+                    if (song) {
+                        const daily = song.lastDayStreams || (song.actualLastWeekStreams ? Math.round(song.actualLastWeekStreams / 7) : Math.round((song.lastWeekStreams || entry.weeklyStreams) / 7));
+                        return { ...entry, dailyStreams: daily };
+                    }
+                }
+            }
+            return {
+                ...entry,
+                dailyStreams: entry.dailyStreams || Math.round(entry.weeklyStreams / 7)
+            };
+        });
+    }, [spotifyGlobal, spotifyUS, spotifyCanada, spotifyUK, spotifyLatin, spotifyAsia, spotifyAfrica, region, gameState.artistsData]);
     
     const highestNewEntry = currentChart.find((s: ChartEntry) => s.lastWeek === null && s.weeksOnChart === 1);
 
@@ -107,7 +134,7 @@ const SpotifyTopSongsView: React.FC = () => {
                     <div className="bg-rose-800 rounded-lg p-4 flex justify-between items-center">
                         <div className="w-2/3">
                             <p className="text-lg font-bold">“{highestNewEntry.title}” by {highestNewEntry.artist} is the highest new entry on Top Songs {region} at #{highestNewEntry.rank}.</p>
-                            <p className="text-xs opacity-80 mt-1">Top Songs {region} · Week of {date.week}</p>
+                            <p className="text-xs opacity-80 mt-1">Top Songs {region} · {timeframe === 'daily' ? 'Daily Chart' : `Week of ${date.week}`}</p>
                         </div>
                         <img src={highestNewEntry.coverArt} alt={highestNewEntry.title} className="w-24 h-24 rounded-lg object-cover" />
                     </div>
@@ -116,16 +143,30 @@ const SpotifyTopSongsView: React.FC = () => {
             
             <main className="p-4 bg-white text-black mt-2 rounded-t-3xl h-full overflow-y-auto">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-3xl font-bold tracking-tight">Weekly Top Songs {region}</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">{timeframe === 'daily' ? 'Daily' : 'Weekly'} Top Songs {region}</h2>
                     <button className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center">
                         <DownloadIcon className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">Your weekly update of the most played tracks right now.</p>
+                <p className="text-sm text-gray-500 mt-1">Your {timeframe === 'daily' ? 'daily' : 'weekly'} update of the most played tracks right now.</p>
                 
-                <div className="flex gap-2 mt-6">
-                    <button className="border border-gray-300 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-1">Weekly <ChevronDownIcon className="w-4 h-4"/></button>
-                    <button className="border border-gray-300 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-1">{getWeekDate(date)} <ChevronDownIcon className="w-4 h-4"/></button>
+                <div className="flex items-center gap-2 mt-6 flex-wrap">
+                    {/* Timeframe Toggle Buttons */}
+                    <div className="bg-gray-100 p-1 rounded-full flex gap-1 border border-gray-300">
+                        <button 
+                            onClick={() => setTimeframe('daily')}
+                            className={`px-4 py-1 rounded-full text-sm font-semibold transition-all ${timeframe === 'daily' ? 'bg-black text-white shadow-sm' : 'text-gray-600 hover:text-black'}`}
+                        >
+                            Daily Streams
+                        </button>
+                        <button 
+                            onClick={() => setTimeframe('weekly')}
+                            className={`px-4 py-1 rounded-full text-sm font-semibold transition-all ${timeframe === 'weekly' ? 'bg-black text-white shadow-sm' : 'text-gray-600 hover:text-black'}`}
+                        >
+                            Weekly Streams
+                        </button>
+                    </div>
+                    <button className="border border-gray-300 px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-1">{getWeekDate(date)}</button>
                 </div>
 
                 <div className="mt-8 border-b border-gray-200 pb-2 text-xs text-gray-500 font-semibold grid grid-cols-[auto_auto_1fr_auto] sm:grid-cols-[auto_auto_1fr_repeat(4,_minmax(0,_1fr))] gap-2 sm:gap-4 uppercase">
@@ -135,11 +176,11 @@ const SpotifyTopSongsView: React.FC = () => {
                     <div className="hidden sm:flex text-center items-center gap-1 justify-center"><span className="border border-gray-300 rounded-full w-3 h-3 inline-block text-[8px] leading-[10px]">?</span> Peak</div>
                     <div className="hidden sm:flex text-center items-center gap-1 justify-center">Prev</div>
                     <div className="hidden sm:flex text-center items-center gap-1 justify-center"><span className="border border-gray-300 rounded-full w-3 h-3 inline-block text-[8px] leading-[10px]">?</span> Streak</div>
-                    <div className="text-right flex items-center gap-1 justify-end"><span className="border border-gray-300 rounded-full w-3 h-3 inline-block text-[8px] leading-[10px]">?</span> Streams</div>
+                    <div className="text-right flex items-center gap-1 justify-end"><span className="border border-gray-300 rounded-full w-3 h-3 inline-block text-[8px] leading-[10px]">?</span> {timeframe === 'daily' ? 'Daily Streams' : 'Weekly Streams'}</div>
                 </div>
 
                 <div className="divide-y divide-gray-100">
-                    {currentChart.map(entry => <ChartRow key={entry.uniqueId} entry={entry} />)}
+                    {currentChart.map(entry => <ChartRow key={entry.uniqueId} entry={entry} isDaily={timeframe === 'daily'} />)}
                 </div>
             </main>
         </div>

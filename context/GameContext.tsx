@@ -1739,8 +1739,9 @@ const gameReducerInternal = (
 
   switch (action.type) {
     case "START_SOLO_GAME": {
-      const { artist, startYear } = action.payload;
-      const startDate = { week: 1, year: startYear };
+      const { artist, startYear, timeMode } = action.payload;
+      const isDaily = timeMode === "daily";
+      const startDate = isDaily ? { day: 1, week: 1, year: startYear } : { week: 1, year: startYear };
       const welcomeEmail: Email = {
         id: crypto.randomUUID(),
         sender: "Red Mic",
@@ -2003,6 +2004,7 @@ The Red Mic Team`,
 
       return {
         ...initialState,
+        timeMode: timeMode || "weekly",
         difficultyMode: action.payload.difficultyMode || "normal",
         careerMode: "solo",
         soloArtist: artist,
@@ -2017,8 +2019,9 @@ The Red Mic Team`,
       };
     }
     case "START_GROUP_GAME": {
-      const { group, startYear } = action.payload;
-      const startDate = { week: 1, year: startYear };
+      const { group, startYear, timeMode } = action.payload;
+      const isDaily = timeMode === "daily";
+      const startDate = isDaily ? { day: 1, week: 1, year: startYear } : { week: 1, year: startYear };
 
       const newArtistsData: { [artistId: string]: ArtistData } = {};
 
@@ -2299,6 +2302,7 @@ The Red Mic Team`,
 
       return {
         ...initialState,
+        timeMode: timeMode || "weekly",
         difficultyMode: action.payload.difficultyMode || "normal",
         careerMode: "group",
         group: group,
@@ -2713,7 +2717,7 @@ The Red Mic Team`,
       const isDailyMode = state.timeMode === "daily";
       let autoGrammySubmissions: GameState["grammySubmissions"] = [];
       let autoAmaSubmissions: any[] = [];
-      let newDay = state.date.day || 7;
+      let newDay = state.date.day || (isDailyMode ? 1 : 7);
       let newWeek = state.date.week;
       let newYear = state.date.year;
 
@@ -2737,12 +2741,519 @@ The Red Mic Team`,
         newYear++;
       }
 
-      const newDate = { day: newDay, week: newWeek, year: newYear };
+      const newDate = { ...(isDailyMode ? { day: newDay } : {}), week: newWeek, year: newYear };
 
       if (!isWeeklyUpdate) {
+        const updatedArtistsData: { [id: string]: ArtistData } = JSON.parse(
+          JSON.stringify(state.artistsData),
+        );
+
+        for (const artistId in updatedArtistsData) {
+          const artistData = updatedArtistsData[artistId];
+          const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          const playerCut = artistData.contract?.royaltyRate ? artistData.contract.royaltyRate / 100 : 1;
+
+          if (!artistData.inbox) artistData.inbox = [];
+          if (!artistData.xPosts) artistData.xPosts = [];
+          if (!artistData.songs) artistData.songs = [];
+          if (!artistData.releases) artistData.releases = [];
+          if (!artistData.labelSubmissions) artistData.labelSubmissions = [];
+
+          // 1. Process scheduled releases if they drop today (e.g. Day 1 / Friday)
+          const isDateToday = (d?: GameDate) => {
+            if (!d) return false;
+            if (d.year !== newDate.year || d.week !== newDate.week) return false;
+            return d.day === undefined || d.day === newDate.day;
+          };
+
+          artistData.releases = artistData.releases.map((release) => {
+            if (!release.isReleased && isDateToday(release.releaseDate)) {
+              // Also mark songs in this release as released
+              artistData.songs = artistData.songs.map((s) =>
+                release.songIds.includes(s.id) ? { ...s, isReleased: true } : s,
+              );
+              return { ...release, isReleased: true };
+            }
+            return release;
+          });
+
+          // Check scheduled singles and album projects from label submissions dropping today
+          artistData.labelSubmissions.forEach((sub) => {
+            if (sub.status === "scheduled") {
+              // Pre-release singles
+              sub.singlesToRelease?.forEach((single) => {
+                if (isDateToday(single.releaseDate)) {
+                  const song = artistData.songs.find((s) => s.id === single.songId);
+                  if (song && !song.isReleased) {
+                    artistData.songs = artistData.songs.map((s) =>
+                      s.id === single.songId
+                        ? {
+                            ...s,
+                            isReleased: true,
+                            isPreReleaseSingle: true,
+                            isInterlude: single.singleType === 'interlude',
+                            singleType: single.singleType,
+                            coverArt: sub.release?.coverArt || s.coverArt,
+                          }
+                        : s,
+                    );
+                    const existingRelease = artistData.releases.find((r) => r.songIds.includes(single.songId));
+                    if (!existingRelease) {
+                      artistData.releases.push({
+                        id: crypto.randomUUID(),
+                        title: song.title,
+                        type: "Single",
+                        coverArt: sub.release?.coverArt,
+                        songIds: [song.id],
+                        releaseDate: newDate,
+                        artistId: song.artistId,
+                      });
+                    }
+                  }
+                }
+              });
+
+              // Project Album/EP release
+              if (isDateToday(sub.projectReleaseDate)) {
+                sub.status = "released";
+                if (sub.release) {
+                  sub.release.isReleased = true;
+                  artistData.songs = artistData.songs.map((s) =>
+                    sub.release.songIds.includes(s.id) ? { ...s, isReleased: true } : s,
+                  );
+                  const existingAlbum = artistData.releases.find((r) => r.id === sub.release.id);
+                  if (existingAlbum) {
+                    existingAlbum.isReleased = true;
+                  } else {
+                    artistData.releases.push({ ...sub.release, isReleased: true, releaseDate: newDate });
+                  }
+                }
+              }
+            }
+          });
+
+          // Check pending label submissions in daily mode (2-7 days review period)
+          const currentContractLabel = artistData.contract
+            ? LABELS.find((l) => l.id === artistData.contract!.labelId) ||
+              artistData.customLabels?.find(
+                (l) => l.id === artistData.contract!.labelId,
+              )
+            : null;
+
+          if (currentContractLabel) {
+            artistData.labelSubmissions = artistData.labelSubmissions.map((sub) => {
+              if (sub.status === "pending") {
+                const totalDaysSinceSubmission =
+                  (newDate.year * 52 * 7 + newDate.week * 7 + (newDate.day || 1)) -
+                  (sub.submittedDate.year * 52 * 7 + sub.submittedDate.week * 7 + (sub.submittedDate.day || 1));
+                const daysNeeded = sub.reviewDaysNeeded ?? (Math.floor(Math.random() * 6) + 2); // 2-7 days
+                if (totalDaysSinceSubmission >= daysNeeded) {
+                  const avgQuality =
+                    sub.release.songIds.reduce(
+                      (sum, id) =>
+                        sum +
+                        (artistData.songs.find((s) => s.id === id)?.quality || 0),
+                      0,
+                    ) / sub.release.songIds.length;
+
+                  let minQuality = currentContractLabel.minQuality ?? 0;
+                  let feedback = `The average quality of ${avgQuality.toFixed(0)} didn't meet our standard of ${minQuality}. Back to the drawing board.`;
+
+                  if (currentContractLabel.contractType === "petty" && avgQuality < 70) {
+                    minQuality = 70;
+                    feedback = `The average quality of ${avgQuality.toFixed(0)} is unacceptable. We require a minimum quality of 70 for all releases. Do better.`;
+                  }
+
+                  if (!artistData.inbox) artistData.inbox = [];
+                  if (avgQuality >= minQuality) {
+                    artistData.inbox.unshift({
+                      id: crypto.randomUUID(),
+                      sender: currentContractLabel.name,
+                      subject: `Submission Approved: "${sub.release.title}"`,
+                      body: `Great news!\n\nWe've approved your submission for "${sub.release.title}". Please head to the 'Labels' tab to select your pre-release singles and set a release date for the project. Get ready!\n\n- ${currentContractLabel.name}`,
+                      date: newDate,
+                      isRead: false,
+                      senderIcon: "label",
+                    });
+                    return {
+                      ...sub,
+                      status: "awaiting_player_input",
+                      decisionDate: newDate,
+                    };
+                  } else {
+                    artistData.inbox.unshift({
+                      id: crypto.randomUUID(),
+                      sender: currentContractLabel.name,
+                      subject: `Submission Update: "${sub.release.title}"`,
+                      body: `Hi ${artistProfile?.name},\n\nAfter careful consideration, we've decided to pass on releasing "${sub.release.title}" at this time. ${feedback}\n\n- ${currentContractLabel.name}`,
+                      date: newDate,
+                      isRead: false,
+                      senderIcon: "label",
+                    });
+                    return {
+                      ...sub,
+                      status: "rejected",
+                      decisionDate: newDate,
+                      feedback,
+                    };
+                  }
+                }
+              }
+              return sub;
+            });
+          }
+
+          // 2. Process daily streams for player songs
+          artistData.songs = artistData.songs.map((song) => {
+            let effectivelyReleased = song.isReleased;
+            if (
+              !effectivelyReleased &&
+              song.releaseDate &&
+              song.releaseDate.year === newDate.year &&
+              song.releaseDate.week === newDate.week
+            ) {
+              effectivelyReleased = true;
+            }
+
+            if (effectivelyReleased && !song.isTakenDown) {
+              const quality = song.quality || 50;
+              const pop = artistData.popularity || 10;
+              const hype = artistData.hype || 5;
+
+              // Day of week factor: Friday/Saturday weekend spikes
+              let dayFactor = 1.0;
+              if (newDay === 1 || newDay === 2) dayFactor = 1.18;
+              else if (newDay === 3) dayFactor = 0.96;
+              else if (newDay === 4) dayFactor = 0.88;
+              else if (newDay === 5) dayFactor = 0.94;
+              else if (newDay === 6) dayFactor = 0.98;
+              else if (newDay === 7) dayFactor = 1.02;
+
+              const noise = 0.92 + Math.random() * 0.16;
+              const baseWeeklyExpected = song.lastWeekStreams && song.lastWeekStreams > 0
+                ? song.lastWeekStreams
+                : Math.floor((quality ** 2) * 20 * (pop / 40 + 0.5) * (1 + hype / 200));
+
+              let dayStreams = Math.floor((baseWeeklyExpected / 7) * dayFactor * noise);
+
+              if (song.promotion) {
+                dayStreams = Math.floor(dayStreams * (1 + (song.promotion.boost || 0.2)));
+              }
+              if (song.purchasedPlaylists && song.purchasedPlaylists.length > 0) {
+                dayStreams = Math.floor(dayStreams * 1.3);
+              }
+
+              dayStreams = Math.max(25, dayStreams);
+
+              const currentDaily = song.dailyStreams || [];
+              const newDailyStreams = [...currentDaily.slice(-27), dayStreams];
+
+              const grossIncome = Math.floor(dayStreams / 150) * STREAM_INCOME_MULTIPLIER;
+              const netIncome = Math.floor(grossIncome * playerCut);
+
+              artistData.money += netIncome;
+
+              // Daily pure sales
+              const baseSales = song.sales && song.sales > 0 ? Math.floor(song.sales / 60) : Math.floor(pop * 3);
+              const dailySales = Math.max(0, Math.floor((baseSales / 7) * dayFactor * noise));
+              const saleUnitCost = newDate.year < 2003 ? 12 : 1.29;
+              const saleIncome = Math.floor(dailySales * saleUnitCost * playerCut);
+              artistData.money += saleIncome;
+
+              // Daily radio
+              const dailyRadio = Math.max(0, Math.floor(((song.radioPlays || (pop * 10)) / 7) * noise));
+
+              return {
+                ...song,
+                isReleased: effectivelyReleased,
+                streams: (song.streams || 0) + dayStreams,
+                dailyStreams: newDailyStreams,
+                sales: (song.sales || 0) + dailySales,
+                radioPlays: (song.radioPlays || 0) + dailyRadio,
+                revenue: (song.revenue || 0) + grossIncome,
+                netRevenue: (song.netRevenue || 0) + netIncome,
+              };
+            }
+
+            return effectivelyReleased !== song.isReleased
+              ? { ...song, isReleased: effectivelyReleased }
+              : song;
+          });
+
+          // Daily Monthly Listeners Recalculation (Rolling 28-Day Window)
+          const totalStreamsLast28Days = artistData.songs.reduce((sum, s) => {
+            if (!s.isReleased || s.isTakenDown) return sum;
+            const last28 = s.dailyStreams || [];
+            if (last28.length === 0) return sum + (s.lastWeekStreams ? s.lastWeekStreams * 4 : 0);
+            const sum28 = last28.reduce((a, b) => a + b, 0);
+            return sum + (last28.length < 28 ? Math.floor(sum28 * (28 / last28.length)) : sum28);
+          }, 0);
+          const calculatedListeners = Math.floor(totalStreamsLast28Days * 0.1);
+          const maxListeners = 148000000 + (artistId.charCodeAt(0) % 2000000);
+          artistData.monthlyListeners = Math.min(calculatedListeners, maxListeners);
+          artistData.peakMonthlyListeners = Math.max(
+            artistData.monthlyListeners,
+            artistData.peakMonthlyListeners || 0,
+          );
+          artistData.listeningNow = Math.floor(
+            artistData.monthlyListeners * (Math.random() * 0.001),
+          );
+
+          // Daily Touring Logic
+          if (artistData.tours && artistData.tours.length > 0) {
+            artistData.tours = artistData.tours.map((tour) => {
+              if (tour.status === "active") {
+                if (tour.currentVenueIndex < tour.venues.length) {
+                  const venueIdx = tour.currentVenueIndex;
+                  const venue = tour.venues[venueIdx];
+                  const newVenues = [...tour.venues];
+
+                  let baseDemand = (artistData.popularity || 10) * 800 + (artistData.hype || 5) * 50;
+                  let supportDemand = 0;
+                  if (tour.openerId) {
+                    const op = state.npcs?.find((n) => n.uniqueId === tour.openerId);
+                    if (op) supportDemand += op.basePopularity / 2000;
+                  }
+                  if (tour.guestIds) {
+                    tour.guestIds.forEach((gid) => {
+                      const gu = state.npcs?.find((n) => n.uniqueId === gid);
+                      if (gu) supportDemand += gu.basePopularity / 4000;
+                    });
+                  }
+                  baseDemand += supportDemand;
+
+                  const priceSensitivity = 1.2 - venue.ticketPrice / 200;
+                  let demand = baseDemand * Math.max(0.1, priceSensitivity);
+                  demand = demand * (0.8 + Math.random() * 0.4);
+                  if (tour.isSetlistMissingHits) demand *= 0.5;
+
+                  const newTicketsSold = Math.floor(
+                    Math.min(venue.capacity - (venue.ticketsSold || 0), demand)
+                  );
+                  let actualTicketPrice = venue.ticketPrice;
+                  if (tour.useDynamicPricing) {
+                    actualTicketPrice = venue.ticketPrice * (Math.random() * 2 + 2);
+                    artistData.publicImage = Math.max(0, (artistData.publicImage || 80) - 1);
+                  }
+
+                  let revenue = newTicketsSold * actualTicketPrice;
+                  if (tour.useVipPackages) {
+                    const vipTickets = Math.floor(newTicketsSold * 0.05);
+                    revenue += vipTickets * (actualTicketPrice * 4);
+                  }
+
+                  let merchRevenue = 0;
+                  if (tour.merchItems && tour.merchItems.length > 0) {
+                    artistData.merch = (artistData.merch || []).map((item) => {
+                      const isTourMerch = tour.merchItems?.find((m) => m.id === item.id);
+                      if (isTourMerch && item.stock > 0) {
+                        const safePrice = Math.max(0.01, item.price);
+                        let buyerRate = (0.1 + Math.random() * 0.2) * Math.min(1, 20 / safePrice);
+                        buyerRate = Math.min(buyerRate, 0.4);
+                        let buyers = Math.floor(newTicketsSold * buyerRate);
+                        buyers = Math.min(buyers, item.stock);
+                        merchRevenue += buyers * item.price;
+                        return {
+                          ...item,
+                          stock: item.stock - buyers,
+                          unitsSold: (item.unitsSold || 0) + buyers,
+                          _actualWeeklySales: (item._actualWeeklySales || 0) + buyers,
+                        };
+                      }
+                      return item;
+                    });
+                    revenue += merchRevenue;
+                  }
+
+                  const updatedVenue = {
+                    ...venue,
+                    ticketsSold: (venue.ticketsSold || 0) + newTicketsSold,
+                    revenue: (venue.revenue || 0) + revenue,
+                    soldOut: (venue.ticketsSold || 0) + newTicketsSold >= venue.capacity,
+                  };
+                  newVenues[venueIdx] = updatedVenue;
+                  artistData.money += revenue;
+
+                  if (!artistData.regionalPopularity) {
+                    artistData.regionalPopularity = {
+                      US: artistData.popularity || 0,
+                      Canada: 0,
+                      UK: 0,
+                      "Latin America": 0,
+                      Asia: 0,
+                      Africa: 0,
+                    };
+                  }
+                  const vReg = venue.region || "North America";
+                  let gameReg = "US";
+                  if (vReg === "Europe") gameReg = "UK";
+                  else if (vReg === "South America" || venue.city === "Mexico City") gameReg = "Latin America";
+                  else if (vReg === "Asia" || vReg === "Middle East" || vReg === "Oceania") gameReg = "Asia";
+                  else if (vReg === "Africa") gameReg = "Africa";
+                  else if (venue.city === "Toronto" || venue.city === "Montreal" || venue.city === "Vancouver") gameReg = "Canada";
+
+                  artistData.regionalPopularity[gameReg] = Math.min(
+                    100,
+                    (artistData.regionalPopularity[gameReg] || 0) + 1
+                  );
+
+                  if (updatedVenue.soldOut) {
+                    artistData.hype = Math.min(getHypeCap(artistData), (artistData.hype || 0) + 5);
+                    if (artistProfile) {
+                      artistData.xPosts.unshift({
+                        id: crypto.randomUUID(),
+                        authorId: artistProfile.id,
+                        content: `Sold out show in ${venue.city} tonight! Thank you all for coming out! ❤️ #TourLife`,
+                        likes: Math.floor(newTicketsSold * 0.5),
+                        retweets: Math.floor(newTicketsSold * 0.1),
+                        views: Math.floor(newTicketsSold * 10),
+                        date: newDate,
+                      });
+                    }
+                  }
+
+                  const nextIndex = venueIdx + 1;
+                  const isFinished = nextIndex >= tour.venues.length;
+                  return {
+                    ...tour,
+                    venues: newVenues,
+                    currentVenueIndex: nextIndex,
+                    ticketsSold: (tour.ticketsSold || 0) + newTicketsSold,
+                    totalRevenue: (tour.totalRevenue || 0) + revenue,
+                    status: isFinished ? "finished" : "active",
+                  };
+                } else {
+                  return { ...tour, status: "finished" };
+                }
+              }
+              return tour;
+            });
+          }
+
+          // 3. Process daily views for videos
+          artistData.videos = artistData.videos.map((video) => {
+            const baseRate = video.lastWeekViews && video.lastWeekViews > 0
+              ? Math.floor(video.lastWeekViews / 7)
+              : Math.max(50, Math.floor((artistData.popularity * 300) / 7));
+            const dayViews = Math.floor(baseRate * (0.88 + Math.random() * 0.24));
+            const videoIncome = Math.floor(dayViews * VIEW_INCOME_MULTIPLIER);
+            artistData.money += videoIncome;
+
+            let spotifyViewsData = {};
+            if (video.isOnSpotify) {
+              const currentSpotifyDaily = video.spotifyDailyViews || [];
+              const newSpotifyDaily = [...currentSpotifyDaily.slice(-6), Math.floor(dayViews * 0.8)];
+              spotifyViewsData = {
+                spotifyViews: (video.spotifyViews || 0) + Math.floor(dayViews * 0.8),
+                spotifyDailyViews: newSpotifyDaily,
+              };
+            }
+
+            return {
+              ...video,
+              views: video.views + dayViews,
+              ...spotifyViewsData,
+            };
+          });
+
+          // 4. Daily Social Growth
+          artistData.youtubeSubscribers = (artistData.youtubeSubscribers || 0) + Math.floor(Math.random() * 8 + (artistData.popularity / 8));
+          artistData.tiktokFollowers = (artistData.tiktokFollowers || 0) + Math.floor(Math.random() * 15 + (artistData.popularity / 5));
+          artistData.instagramFollowers = (artistData.instagramFollowers || 0) + Math.floor(Math.random() * 12 + (artistData.popularity / 6));
+
+          // 5. Daily fan posts
+          if (Math.random() < 0.25) {
+            const fanAccounts = artistData.xUsers?.filter((u) => !u.isPlayer && !u.isVerified) || [];
+            const randomFan = fanAccounts[Math.floor(Math.random() * fanAccounts.length)];
+            if (randomFan && artistProfile) {
+              const releasedSongs = artistData.songs.filter((s) => s.isReleased && !s.isTakenDown);
+              const randomSong = releasedSongs.length > 0 ? releasedSongs[Math.floor(Math.random() * releasedSongs.length)] : null;
+              if (randomSong) {
+                const dayMessages = [
+                  `streaming "${randomSong.title}" all day today on repeat 🎧✨`,
+                  `"${randomSong.title}" by ${artistProfile.name} is on heavy rotation today!`,
+                  `Day ${newDay} of the week and "${randomSong.title}" is still my favourite track 🔥`,
+                  `Can we talk about how good "${randomSong.title}" is?? ${artistProfile.name} really didn't miss!`,
+                ];
+                artistData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: randomFan.id,
+                  content: dayMessages[Math.floor(Math.random() * dayMessages.length)],
+                  likes: Math.floor(Math.random() * ((artistData.popularity || 20) * 40)) + 150,
+                  retweets: Math.floor(Math.random() * ((artistData.popularity || 20) * 10)) + 30,
+                  views: Math.floor(Math.random() * ((artistData.popularity || 20) * 800)) + 3000,
+                  date: newDate,
+                });
+              }
+            }
+          }
+          // 6. Daily Spotify Snapshot Posts on X
+          const releasedSongs = artistData.songs.filter(s => s.isReleased && !s.isTakenDown);
+          if (releasedSongs.length > 0 && artistProfile) {
+            const topSongToday = [...releasedSongs].sort((a, b) => {
+              const aDaily = a.dailyStreams?.[a.dailyStreams.length - 1] || 0;
+              const bDaily = b.dailyStreams?.[b.dailyStreams.length - 1] || 0;
+              return bDaily - aDaily;
+            })[0];
+
+            const topDailyStreams = topSongToday?.dailyStreams?.[topSongToday.dailyStreams.length - 1] || 0;
+            if (topSongToday && topDailyStreams > 10000) {
+              const prevDaily = topSongToday.dailyStreams && topSongToday.dailyStreams.length > 1
+                ? topSongToday.dailyStreams[topSongToday.dailyStreams.length - 2]
+                : Math.round(topDailyStreams * 0.95);
+              const songDiff = topDailyStreams - prevDaily;
+              const songPct = prevDaily > 0 ? (songDiff / prevDaily) * 100 : 0;
+              const isBestDay = !topSongToday.peakDailyStreams || topDailyStreams > topSongToday.peakDailyStreams;
+              
+              if (isBestDay) {
+                topSongToday.peakDailyStreams = topDailyStreams;
+              }
+
+              if (isBestDay || Math.random() < 0.4) {
+                const jsonStr = JSON.stringify({
+                  type: "song",
+                  songName: topSongToday.title,
+                  artistName: artistProfile.name,
+                  coverArt: topSongToday.coverArt,
+                  streams: topDailyStreams,
+                  dailyStreams: topSongToday.dailyStreams,
+                  totalStreams: topSongToday.streams,
+                  changeVal: songDiff,
+                  changePct: songPct,
+                  isDaily: true,
+                  tracks: [{
+                    title: topSongToday.title,
+                    dailyStreams: topDailyStreams,
+                    weekly: topDailyStreams,
+                    streams: topSongToday.streams,
+                    totalStreams: topSongToday.streams,
+                    changeVal: songDiff,
+                    changePct: songPct,
+                  }],
+                  date: newDate,
+                });
+
+                artistData.xPosts.unshift({
+                  id: crypto.randomUUID(),
+                  authorId: "spotifysnapshot",
+                  content: isBestDay
+                    ? `🏆 "${topSongToday.title}" by ${artistProfile.name} has earned its BEST DAY EVER on Spotify with ${formatNumber(topDailyStreams)} streams!`
+                    : `📊 "${topSongToday.title}" by ${artistProfile.name} received ${formatNumber(topDailyStreams)} streams on Spotify yesterday (${songPct >= 0 ? '+' : ''}${songPct.toFixed(2)}%).`,
+                  image: `snapshot:${jsonStr}`,
+                  likes: Math.floor(Math.random() * 40000) + 10000,
+                  retweets: Math.floor(Math.random() * 8000) + 2000,
+                  views: Math.floor(Math.random() * 800000) + 200000,
+                  date: newDate,
+                });
+              }
+            }
+          }
+        }
+
         return {
           ...state,
           date: newDate,
+          artistsData: updatedArtistsData,
         };
       }
 
@@ -3561,7 +4072,7 @@ Live Nation`,
 
           if (tour.status === "active") {
             const showsToPerform = Math.min(
-              tour.showsPerWeek || 1,
+              isDailyMode ? 1 : (tour.showsPerWeek || 1),
               tour.venues.length - tour.currentVenueIndex
             );
 
@@ -5214,14 +5725,43 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 generatedNet * Math.max(0, 1 - song.contributorCutsTotal / 100);
             }
 
-            artistStreamIncome += generatedNet;
-
-            const actualStreamsThisWeek = hasStreamingRights
+            let actualStreamsThisWeek = hasStreamingRights
               ? Math.floor(weeklyStreams * effectiveStreamingShare)
               : 0;
             const pureSalesThisWeek = Math.floor(
               (weeklyStreams * (1 - effectiveStreamingShare)) / 150,
             );
+
+            let streamsToAdd = actualStreamsThisWeek;
+            let salesToAdd = pureSalesThisWeek;
+            let netIncomeToAdd = generatedNet;
+            let grossRevenueToAdd = generatedGross;
+            let finalDailyStreams = newDailyStreams;
+
+            if (isDailyMode) {
+              // On Day 1 in Daily Mode: add only 1 day of streams & income to avoid Monday spike
+              const day1Streams = Math.max(25, Math.floor(weeklyStreams / 7));
+              const day1ActualStreams = hasStreamingRights ? Math.floor(day1Streams * effectiveStreamingShare) : 0;
+              const day1Sales = Math.floor(pureSalesThisWeek / 7);
+              const day1Net = Math.floor(generatedNet / 7);
+              const day1Gross = Math.floor(generatedGross / 7);
+
+              streamsToAdd = day1ActualStreams;
+              salesToAdd = day1Sales;
+              netIncomeToAdd = day1Net;
+              grossRevenueToAdd = day1Gross;
+
+              finalDailyStreams = [...(song.dailyStreams || []).slice(-27), day1Streams];
+
+              // Sum the actual past 7 days of daily streams for charts & billboard
+              const last7Daily = finalDailyStreams.slice(-7);
+              if (last7Daily.length > 0) {
+                weeklyStreams = last7Daily.reduce((a, b) => a + b, 0);
+                actualStreamsThisWeek = hasStreamingRights ? Math.floor(weeklyStreams * effectiveStreamingShare) : 0;
+              }
+            }
+
+            artistStreamIncome += netIncomeToAdd;
 
             const regPop = artistData.regionalPopularity || {
               "US": artistData.popularity || 0,
@@ -5277,18 +5817,18 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             
             const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 };
             const newRegionalStreams = {
-              "US": (currentRegStreams["US"] || 0) + regStreams["US"],
-              "Canada": (currentRegStreams["Canada"] || 0) + regStreams["Canada"],
-              "UK": (currentRegStreams["UK"] || 0) + regStreams["UK"],
-              "Latin America": (currentRegStreams["Latin America"] || 0) + regStreams["Latin America"],
-              "Asia": (currentRegStreams["Asia"] || 0) + regStreams["Asia"],
-              "Africa": (currentRegStreams["Africa"] || 0) + regStreams["Africa"],
+              "US": (currentRegStreams["US"] || 0) + (isDailyMode ? Math.floor(regStreams["US"] / 7) : regStreams["US"]),
+              "Canada": (currentRegStreams["Canada"] || 0) + (isDailyMode ? Math.floor(regStreams["Canada"] / 7) : regStreams["Canada"]),
+              "UK": (currentRegStreams["UK"] || 0) + (isDailyMode ? Math.floor(regStreams["UK"] / 7) : regStreams["UK"]),
+              "Latin America": (currentRegStreams["Latin America"] || 0) + (isDailyMode ? Math.floor(regStreams["Latin America"] / 7) : regStreams["Latin America"]),
+              "Asia": (currentRegStreams["Asia"] || 0) + (isDailyMode ? Math.floor(regStreams["Asia"] / 7) : regStreams["Asia"]),
+              "Africa": (currentRegStreams["Africa"] || 0) + (isDailyMode ? Math.floor(regStreams["Africa"] / 7) : regStreams["Africa"]),
             };
 
             return {
               ...song,
-              streams: (song.streams || 0) + actualStreamsThisWeek,
-              sales: (song.sales || 0) + pureSalesThisWeek,
+              streams: (song.streams || 0) + streamsToAdd,
+              sales: (song.sales || 0) + salesToAdd,
               prevWeekStreams: song.lastWeekStreams || 0,
               lastWeekStreams: weeklyStreams,
               actualPrevWeekStreams: song.actualLastWeekStreams || 0,
@@ -5299,16 +5839,16 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               playlistBoostWeeks: newPlaylistBoostWeeks,
               purchasedPlaylists: newPurchasedPlaylists,
               promoBoostWeeks: newPromoBoostWeeks,
-              dailyStreams: newDailyStreams,
+              dailyStreams: finalDailyStreams,
               revenue:
                 (song.revenue ||
                   Math.floor((song.streams || 0) / 150) *
-                    STREAM_INCOME_MULTIPLIER) + generatedGross, // Wait, revenue formula wasn't precise before, but whatever
+                    STREAM_INCOME_MULTIPLIER) + grossRevenueToAdd,
               netRevenue:
                 (song.netRevenue ||
                   Math.floor((song.streams || 0) / 150) *
                     STREAM_INCOME_MULTIPLIER *
-                    playerCut) + generatedNet,
+                    playerCut) + netIncomeToAdd,
               isReleased: effectivelyReleased,
             };
           }
@@ -5448,10 +5988,18 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           totalWeeklyStreams,
           ...artistData.lastFourWeeksStreams,
         ].slice(0, 4);
-        const totalStreamsLastMonth = updatedLastFourWeeksStreams.reduce(
-          (sum, streams) => sum + streams,
-          0,
-        );
+        const totalStreamsLastMonth = isDailyMode
+          ? artistData.songs.reduce((sum, s) => {
+              if (!s.isReleased || s.isTakenDown) return sum;
+              const last28 = s.dailyStreams || [];
+              if (last28.length === 0) return sum + (s.lastWeekStreams ? s.lastWeekStreams * 4 : 0);
+              const sum28 = last28.reduce((a, b) => a + b, 0);
+              return sum + (last28.length < 28 ? Math.floor(sum28 * (28 / last28.length)) : sum28);
+            }, 0)
+          : updatedLastFourWeeksStreams.reduce(
+              (sum, streams) => sum + streams,
+              0,
+            );
         const calculatedListeners = Math.floor(totalStreamsLastMonth * 0.1);
         const maxListeners = 148000000 + (artistId.charCodeAt(0) % 2000000);
         artistData.monthlyListeners = Math.min(
@@ -6174,11 +6722,26 @@ ${label.name}`,
           artistData.labelSubmissions = artistData.labelSubmissions.map(
             (sub) => {
               if (sub.status === "pending" && label) {
-                const weeksSinceSubmission =
-                  newDate.year * 52 +
-                  newDate.week -
-                  (sub.submittedDate.year * 52 + sub.submittedDate.week);
-                if (weeksSinceSubmission >= 2) {
+                let isReadyForReview = false;
+                if (isDailyMode) {
+                  const totalDaysSinceSubmission =
+                    (newDate.year * 52 * 7 + newDate.week * 7 + (newDate.day || 1)) -
+                    (sub.submittedDate.year * 52 * 7 + sub.submittedDate.week * 7 + (sub.submittedDate.day || 1));
+                  const daysNeeded = sub.reviewDaysNeeded ?? (Math.floor(Math.random() * 6) + 2); // 2-7 days
+                  if (totalDaysSinceSubmission >= daysNeeded) {
+                    isReadyForReview = true;
+                  }
+                } else {
+                  const weeksSinceSubmission =
+                    newDate.year * 52 +
+                    newDate.week -
+                    (sub.submittedDate.year * 52 + sub.submittedDate.week);
+                  if (weeksSinceSubmission >= 2) {
+                    isReadyForReview = true;
+                  }
+                }
+
+                if (isReadyForReview) {
                   const avgQuality =
                     sub.release.songIds.reduce(
                       (sum, id) =>
@@ -10485,19 +11048,27 @@ HFPA`,
           (a) => a.id === artistId,
         );
 
+        const isDailyMode = state.timeMode === "daily";
+
         // For songs
         artistData.songs.forEach((song) => {
+          const streamCount = isDailyMode
+            ? (song.lastDayStreams || (song.actualLastWeekStreams ? Math.round(song.actualLastWeekStreams / 7) : Math.round(song.lastWeekStreams / 7)))
+            : song.lastWeekStreams;
+          const minStreamThreshold = isDailyMode ? 15000 : 100000;
+          const peakStreams = isDailyMode ? (song.peakDailyStreams || 0) : (song.peakWeeklyStreams || 0);
+
           const isEligible =
             song.isReleased &&
-            song.lastWeekStreams >= 100000 &&
+            streamCount >= minStreamThreshold &&
             !song.remixOfSongId;
           if (
             isEligible &&
-            song.lastWeekStreams > (song.peakWeeklyStreams || 0)
+            streamCount > peakStreams
           ) {
             // Generate daily streams mockup
             const dailyStreams = [];
-            const actualSongStreams = song.actualLastWeekStreams || 0;
+            const actualSongStreams = isDailyMode ? streamCount : (song.actualLastWeekStreams || 0);
             if (actualSongStreams === 0) return; // Hide snapshots for taken-down or un-streamable songs
             let remain = actualSongStreams;
             for (let i = 0; i < 6; i++) {
@@ -10509,7 +11080,7 @@ HFPA`,
             }
             dailyStreams.push(Math.max(0, remain));
 
-            const songPrev = song.prevWeekStreams || 0;
+            const songPrev = isDailyMode ? (song.prevDayStreams || 0) : (song.prevWeekStreams || 0);
             const songDiff = actualSongStreams - songPrev;
             const songPct = songPrev > 0 ? (songDiff / songPrev) * 100 : 0;
 
@@ -10523,6 +11094,7 @@ HFPA`,
               dailyStreams: dailyStreams,
               changeVal: songDiff,
               changePct: songPct,
+              isDaily: isDailyMode,
               tracks: [{
                 title: song.title,
                 dailyStreams: actualSongStreams,
@@ -10541,7 +11113,9 @@ HFPA`,
               post: {
                 id: crypto.randomUUID(),
                 authorId: "spotifysnapshot",
-                content: `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
+                content: isDailyMode
+                  ? `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST DAY EVER on Spotify!`
+                  : `🏆 "${song.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
                 image: `snapshot:${jsonStr}`,
                 likes: Math.floor(Math.random() * 50000) + 10000,
                 retweets: Math.floor(Math.random() * 10000) + 2000,
@@ -10550,7 +11124,11 @@ HFPA`,
               },
             });
 
-            song.peakWeeklyStreams = song.lastWeekStreams;
+            if (isDailyMode) {
+              song.peakDailyStreams = streamCount;
+            } else {
+              song.peakWeeklyStreams = song.lastWeekStreams;
+            }
           }
         });
 
@@ -10568,25 +11146,25 @@ HFPA`,
             const albumSongs = release.songIds
               .map((id) => artistData.songs.find((s) => s.id === id))
               .filter((s): s is Song => !!s);
-            const weeklyAlbumStreams = albumSongs.reduce(
-              (sum, s) => sum + s.lastWeekStreams,
-              0,
-            );
-            const actualWeeklyAlbumStreams = albumSongs.reduce(
-              (sum, s) => sum + (s.actualLastWeekStreams || 0),
-              0,
-            );
+            const albumStreams = isDailyMode
+              ? albumSongs.reduce((sum, s) => sum + (s.lastDayStreams || (s.actualLastWeekStreams ? Math.round(s.actualLastWeekStreams / 7) : Math.round(s.lastWeekStreams / 7))), 0)
+              : albumSongs.reduce((sum, s) => sum + s.lastWeekStreams, 0);
+            const actualAlbumStreams = isDailyMode
+              ? albumStreams
+              : albumSongs.reduce((sum, s) => sum + (s.actualLastWeekStreams || 0), 0);
+            const minAlbumThreshold = isDailyMode ? 70000 : 500000;
+            const peakAlbumStreams = isDailyMode ? (release.peakDailyStreams || 0) : (release.peakWeeklyStreams || 0);
 
             if (
               release.isReleased &&
-              weeklyAlbumStreams >= 500000 &&
-              weeklyAlbumStreams > (release.peakWeeklyStreams || 0)
+              albumStreams >= minAlbumThreshold &&
+              albumStreams > peakAlbumStreams
             ) {
-              if (actualWeeklyAlbumStreams === 0) return; // Hide snapshots for taken-down albums
+              if (actualAlbumStreams === 0) return; // Hide snapshots for taken-down albums
 
               const tracks = albumSongs.map((s) => {
-                const sPrev = s.prevWeekStreams || 0;
-                const sCurr = s.actualLastWeekStreams || s.lastWeekStreams || 0;
+                const sPrev = isDailyMode ? (s.prevDayStreams || 0) : (s.prevWeekStreams || 0);
+                const sCurr = isDailyMode ? (s.lastDayStreams || (s.actualLastWeekStreams ? Math.round(s.actualLastWeekStreams / 7) : Math.round(s.lastWeekStreams / 7))) : (s.actualLastWeekStreams || s.lastWeekStreams || 0);
                 const diff = sCurr - sPrev;
                 let pct = 0;
                 if (sPrev > 0) pct = (diff / sPrev) * 100;
@@ -10606,19 +11184,22 @@ HFPA`,
                 albumName: release.title,
                 artistName: artistProfile?.name || "Unknown",
                 coverArt: release.coverArt,
-                streams: actualWeeklyAlbumStreams,
+                streams: actualAlbumStreams,
                 totalStreams: albumSongs.reduce((sum, s) => sum + s.streams, 0),
                 tracks: tracks,
+                isDaily: isDailyMode,
                 date: newDate,
               });
 
               snapshotCandidates.push({
                 artistId,
-                streams: actualWeeklyAlbumStreams,
+                streams: actualAlbumStreams,
                 post: {
                   id: crypto.randomUUID(),
                   authorId: "spotifysnapshot",
-                  content: `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
+                  content: isDailyMode
+                    ? `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST DAY EVER on Spotify!`
+                    : `🏆 "${release.title}" by ${artistProfile?.name} has earned its BEST WEEK EVER on Spotify!`,
                   image: `snapshot:${jsonStr}`,
                   likes: Math.floor(Math.random() * 80000) + 20000,
                   retweets: Math.floor(Math.random() * 15000) + 3000,
@@ -10627,7 +11208,11 @@ HFPA`,
                 },
               });
 
-              release.peakWeeklyStreams = weeklyAlbumStreams;
+              if (isDailyMode) {
+                release.peakDailyStreams = albumStreams;
+              } else {
+                release.peakWeeklyStreams = albumStreams;
+              }
             }
           });
 
@@ -10678,18 +11263,24 @@ HFPA`,
                 const topPreRelease = [...preReleaseSongs].sort(
                   (a, b) => b.lastWeekStreams - a.lastWeekStreams,
                 )[0];
-                if (topPreRelease && topPreRelease.lastWeekStreams > 100000) {
+                if (topPreRelease && (topPreRelease.lastWeekStreams > 100000 || (isDailyMode && (topPreRelease.dailyStreams?.[topPreRelease.dailyStreams.length - 1] || 0) > 15000))) {
+                  const preDaily = topPreRelease.dailyStreams?.[topPreRelease.dailyStreams.length - 1] || Math.round((topPreRelease.lastWeekStreams || 0) / 7);
+                  const displayPreStreams = isDailyMode ? preDaily : topPreRelease.lastWeekStreams;
+
                   const jsonStr = JSON.stringify({
                     type: "prerelease_streams",
                     albumName: sub.release.title,
                     songName: topPreRelease.title,
                     artistName: artistProfile?.name || "Unknown",
                     coverArt: topPreRelease.coverArt,
-                    streams: topPreRelease.lastWeekStreams,
+                    streams: displayPreStreams,
+                    dailyStreams: preDaily,
                     totalStreams: topPreRelease.streams,
+                    isDaily: isDailyMode,
                     tracks: preReleaseSongs.map((s) => ({
                       title: s.title,
                       streams: s.streams,
+                      dailyStreams: s.dailyStreams?.[s.dailyStreams.length - 1] || Math.round((s.lastWeekStreams || 0) / 7),
                       weekly: s.lastWeekStreams,
                     })),
                     date: newDate,
@@ -10697,13 +11288,13 @@ HFPA`,
 
                   snapshotCandidates.push({
                     artistId,
-                    streams: topPreRelease.lastWeekStreams,
+                    streams: displayPreStreams,
                     post: {
                       id: crypto.randomUUID(),
                       authorId: "spotifysnapshot",
-                      content: `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(topPreRelease.lastWeekStreams)} streams on Spotify this week.
-
-It was the #1 most streamed pre-release on Spotify.`,
+                      content: isDailyMode
+                        ? `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(displayPreStreams)} streams on Spotify yesterday.\n\nIt was the #1 most streamed pre-release on Spotify.`
+                        : `"${topPreRelease.title}" by ${artistProfile?.name} received ${formatNumber(displayPreStreams)} streams on Spotify this week.\n\nIt was the #1 most streamed pre-release on Spotify.`,
                       image: `snapshot:${jsonStr}`,
                       likes: Math.floor(Math.random() * 50000) + 10000,
                       retweets: Math.floor(Math.random() * 10000) + 2000,
@@ -10763,19 +11354,36 @@ It was the #1 most streamed pre-release on Spotify.`,
               (sum, s) => sum + s.lastWeekStreams,
               0,
             );
-            if (weeklyStreams > 100000) {
+            const dailyReleaseStreams = topReleaseSongs.reduce(
+              (sum, s) => sum + (s.dailyStreams?.[s.dailyStreams.length - 1] || Math.round((s.lastWeekStreams || 0) / 7)),
+              0,
+            );
+            const displayAlbumStreams = isDailyMode ? dailyReleaseStreams : weeklyStreams;
+
+            if (weeklyStreams > 100000 || (isDailyMode && dailyReleaseStreams > 15000)) {
               const prevWeeklyStreams = topReleaseSongs.reduce((sum, s) => sum + (s.prevWeekStreams || 0), 0);
+              const prevDailyStreams = topReleaseSongs.reduce((sum, s) => {
+                const prevD = s.dailyStreams && s.dailyStreams.length > 1
+                  ? s.dailyStreams[s.dailyStreams.length - 2]
+                  : Math.round((s.dailyStreams?.[s.dailyStreams.length - 1] || Math.round(s.lastWeekStreams / 7)) * 0.95);
+                return sum + prevD;
+              }, 0);
+
+              const comparePrev = isDailyMode ? prevDailyStreams : prevWeeklyStreams;
               let percentChangeStr = "";
-              if (prevWeeklyStreams > 0) {
-                 const pct = ((weeklyStreams - prevWeeklyStreams) / prevWeeklyStreams) * 100;
+              if (comparePrev > 0) {
+                 const pct = ((displayAlbumStreams - comparePrev) / comparePrev) * 100;
                  percentChangeStr = ` [${pct > 0 ? '+' : ''}${pct.toFixed(2)}%]`;
               }
               
               let biggestGainerSong: Song | null = null;
               let biggestGainerPct = -Infinity;
               topReleaseSongs.forEach(s => {
-                 const sPrev = s.prevWeekStreams || 0;
-                 const sCurr = s.lastWeekStreams || 0;
+                 const sDaily = s.dailyStreams?.[s.dailyStreams.length - 1] || Math.round((s.lastWeekStreams || 0) / 7);
+                 const sPrev = isDailyMode
+                   ? (s.dailyStreams && s.dailyStreams.length > 1 ? s.dailyStreams[s.dailyStreams.length - 2] : Math.round(sDaily * 0.95))
+                   : (s.prevWeekStreams || 0);
+                 const sCurr = isDailyMode ? sDaily : (s.lastWeekStreams || 0);
                  if (sPrev > 0) {
                     const sPct = ((sCurr - sPrev) / sPrev) * 100;
                     if (sPct > biggestGainerPct) {
@@ -10786,24 +11394,31 @@ It was the #1 most streamed pre-release on Spotify.`,
               });
               let gainerText = "";
               if (biggestGainerSong && biggestGainerPct > -Infinity) {
-                  gainerText = `
-
-—"${biggestGainerSong.title}" was the biggest gainer, ${biggestGainerPct > 0 ? 'up' : 'down'} ${Math.abs(biggestGainerPct).toFixed(2)}% with ${formatNumber(biggestGainerSong.lastWeekStreams)} streams!`;
+                  const gainerCurr = isDailyMode
+                    ? (biggestGainerSong.dailyStreams?.[biggestGainerSong.dailyStreams.length - 1] || Math.round((biggestGainerSong.lastWeekStreams || 0) / 7))
+                    : biggestGainerSong.lastWeekStreams;
+                  gainerText = `\n\n—"${biggestGainerSong.title}" was the biggest gainer, ${biggestGainerPct > 0 ? 'up' : 'down'} ${Math.abs(biggestGainerPct).toFixed(2)}% with ${formatNumber(gainerCurr)} streams!`;
               }
               
               const jsonStr = JSON.stringify({
-                type: "album_weekly",
+                type: isDailyMode ? "album" : "album_weekly",
                 albumName: topRelease.title,
                 artistName: artistProfile?.name || "Unknown",
                 coverArt: topRelease.coverArt,
-                streams: weeklyStreams,
+                streams: displayAlbumStreams,
+                dailyStreams: isDailyMode ? displayAlbumStreams : undefined,
+                weeklyStreams: !isDailyMode ? displayAlbumStreams : undefined,
+                isDaily: isDailyMode,
                 totalStreams: topReleaseSongs.reduce(
                   (sum, s) => sum + s.streams,
                   0,
                 ),
                 tracks: topReleaseSongs.map((s) => {
-                  const sPrev = s.prevWeekStreams || 0;
-                  const sCurr = s.lastWeekStreams || 0;
+                  const sDaily = s.dailyStreams?.[s.dailyStreams.length - 1] || Math.round((s.lastWeekStreams || 0) / 7);
+                  const sPrev = isDailyMode
+                    ? (s.dailyStreams && s.dailyStreams.length > 1 ? s.dailyStreams[s.dailyStreams.length - 2] : Math.round(sDaily * 0.95))
+                    : (s.prevWeekStreams || 0);
+                  const sCurr = isDailyMode ? sDaily : (s.lastWeekStreams || 0);
                   const diff = sCurr - sPrev;
                   let pct = 0;
                   if (sPrev > 0) pct = (diff / sPrev) * 100;
@@ -10811,6 +11426,7 @@ It was the #1 most streamed pre-release on Spotify.`,
                     title: s.title,
                     streams: s.streams,
                     weekly: s.lastWeekStreams,
+                    dailyStreams: sDaily,
                     changeVal: diff,
                     changePct: pct
                   };
@@ -10819,11 +11435,13 @@ It was the #1 most streamed pre-release on Spotify.`,
               });
               snapshotCandidates.push({
                 artistId,
-                streams: weeklyStreams,
+                streams: displayAlbumStreams,
                 post: {
                   id: crypto.randomUUID(),
                   authorId: "spotifysnapshot",
-                  content: `"${topRelease.title}" by ${artistProfile?.name} received ${formatNumber(weeklyStreams)} streams on Spotify this week${percentChangeStr}.${gainerText}`,
+                  content: isDailyMode
+                    ? `"${topRelease.title}" by ${artistProfile?.name} received ${formatNumber(displayAlbumStreams)} streams on Spotify yesterday${percentChangeStr}.${gainerText}`
+                    : `"${topRelease.title}" by ${artistProfile?.name} received ${formatNumber(displayAlbumStreams)} streams on Spotify this week${percentChangeStr}.${gainerText}`,
                   image: `snapshot:${jsonStr}`,
                   likes: Math.floor(Math.random() * 20000) + 5000,
                   retweets: Math.floor(Math.random() * 5000) + 1000,
@@ -10841,30 +11459,37 @@ It was the #1 most streamed pre-release on Spotify.`,
             .slice(0, 10);
           if (
             popularTracks.length >= 2 &&
-            popularTracks[0].lastWeekStreams > 100000
+            (popularTracks[0].lastWeekStreams > 100000 || isDailyMode)
           ) {
+            const track1Daily = popularTracks[0].dailyStreams?.[popularTracks[0].dailyStreams.length - 1] || Math.round((popularTracks[0].lastWeekStreams || 0) / 7);
+            const track2Daily = popularTracks[1].dailyStreams?.[popularTracks[1].dailyStreams.length - 1] || Math.round((popularTracks[1].lastWeekStreams || 0) / 7);
+            const displayPop1 = isDailyMode ? track1Daily : popularTracks[0].lastWeekStreams;
+            const displayPop2 = isDailyMode ? track2Daily : popularTracks[1].lastWeekStreams;
+
             const jsonStr = JSON.stringify({
               type: "popular_tracks",
               artistName: artistProfile?.name || "Unknown",
+              isDaily: isDailyMode,
               tracks: popularTracks.map((s) => ({
                 title: s.title,
                 coverArt: s.coverArt,
                 weekly: s.lastWeekStreams,
+                dailyStreams: s.dailyStreams?.[s.dailyStreams.length - 1] || Math.round((s.lastWeekStreams || 0) / 7),
                 streams: s.streams,
               })),
               date: newDate,
             });
             snapshotCandidates.push({
               artistId,
-              streams: popularTracks[0].lastWeekStreams,
+              streams: displayPop1,
               post: {
                 id: crypto.randomUUID(),
                 authorId: spotifyDataId,
                 content: `'${popularTracks[0].title}' is the #1 most popular song by ${artistProfile?.name} on Spotify.
 
-Daily streams:
-#1. ${popularTracks[0].title} - ${formatNumber(popularTracks[0].lastWeekStreams)}
-#2. ${popularTracks[1].title} - ${formatNumber(popularTracks[1].lastWeekStreams)}`,
+${isDailyMode ? 'Daily' : 'Weekly'} streams:
+#1. ${popularTracks[0].title} - ${formatNumber(displayPop1)}
+#2. ${popularTracks[1].title} - ${formatNumber(displayPop2)}`,
                 image: `snapshot:${jsonStr}`,
                 likes: Math.floor(Math.random() * 15000) + 3000,
                 retweets: Math.floor(Math.random() * 3000) + 500,
@@ -10877,19 +11502,21 @@ Daily streams:
       }
 
       
-      // SPOTIFY SNAPSHOT: WEEKLY TOP ALBUMS
-      if (newDate.week % 2 === 0) {
+      // SPOTIFY SNAPSHOT: TOP ALBUMS
+      if (isDailyMode || newDate.week % 2 === 0) {
           const streamingAlbums = [...allAlbumContenders].sort((a, b) => (b.weeklyStreams || 0) - (a.weeklyStreams || 0));
           const top15Streaming = streamingAlbums.slice(0, 15);
           
           if (top15Streaming.length > 0 && top15Streaming[0].weeklyStreams > 0) {
               const top15Data = top15Streaming.map((a, i) => {
+                  const dailyAStreams = Math.round((a.weeklyStreams || 0) / 7);
                   return {
                       rank: i + 1,
                       albumName: a.title,
                       artistName: a.artist,
                       coverArt: a.coverArt,
-                      weeklyStreams: a.weeklyStreams || 0,
+                      weeklyStreams: isDailyMode ? dailyAStreams : (a.weeklyStreams || 0),
+                      dailyStreams: dailyAStreams,
                       // mock a change pct for now since we don't have historical streaming data
                       changePct: (Math.random() * 20) - 10,
                       previousRank: (i + 1) + Math.floor(Math.random() * 3) - 1,
@@ -10897,9 +11524,10 @@ Daily streams:
               });
               
               const jsonStr = JSON.stringify({
-                  type: "weekly_top_albums",
+                  type: isDailyMode ? "daily_top_albums" : "weekly_top_albums",
                   date: newDate,
-                  topAlbums: top15Data
+                  topAlbums: top15Data,
+                  isDaily: isDailyMode,
               });
               
               // We want to add this post to the player's feed, but who's the active artist?
@@ -10909,7 +11537,9 @@ Daily streams:
                   updatedArtistsData[activePlayerId].xPosts.unshift({
                       id: crypto.randomUUID(),
                       authorId: "spotifysnapshot",
-                      content: `Top 15 Most Streamed Albums of the Week on Spotify! 📊\n\n#1. ${top15Data[0].albumName}\n#2. ${top15Data[1]?.albumName}\n#3. ${top15Data[2]?.albumName}`,
+                      content: isDailyMode
+                        ? `Top 15 Most Streamed Albums of the Day on Spotify! 📊\n\n#1. ${top15Data[0].albumName}\n#2. ${top15Data[1]?.albumName}\n#3. ${top15Data[2]?.albumName}`
+                        : `Top 15 Most Streamed Albums of the Week on Spotify! 📊\n\n#1. ${top15Data[0].albumName}\n#2. ${top15Data[1]?.albumName}\n#3. ${top15Data[2]?.albumName}`,
                       image: `snapshot:${jsonStr}`,
                       likes: Math.floor(Math.random() * 100000) + 20000,
                       retweets: Math.floor(Math.random() * 20000) + 5000,
@@ -12564,6 +13194,37 @@ Keep up the great work!
             if (playlist.genre === "Reggae" && c.genre === "Reggae")
               return true;
             return false;
+          });
+        }
+
+        if (
+          playlist.id === "newmusicfriday" ||
+          playlist.name.toLowerCase().includes("new music friday")
+        ) {
+          playlistContenders = playlistContenders.filter((c) => {
+            if (c.isPlayerSong && c.songId) {
+              const artistDataForSong = Object.values(updatedArtistsData).find((d) =>
+                d.songs.some((s) => s.id === c.songId),
+              );
+              const songObj = artistDataForSong?.songs.find((s) => s.id === c.songId);
+              if (!songObj || !songObj.releaseDate) return false;
+              // Must be released this week
+              const isThisWeek =
+                songObj.releaseDate.year === newDate.year &&
+                songObj.releaseDate.week === newDate.week;
+              if (!isThisWeek) return false;
+              // Must be released on Friday (day 1 or isFriday or day undefined)
+              const isFridayRelease =
+                songObj.releaseDate.day === 1 ||
+                songObj.releaseDate.day === undefined ||
+                (songObj as any).isFriday === true;
+              return isFridayRelease;
+            }
+            // For NPC songs: must be new this week
+            const isNpcNewThisWeek =
+              newlyGeneratedNpcs.some((npc) => npc.uniqueId === c.uniqueId) ||
+              (c.debutWeek === newDate.week && c.debutYear === newDate.year);
+            return isNpcNewThisWeek;
           });
         }
 
@@ -24157,16 +24818,16 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             : Math.max(10, coin.holders + Math.floor((Math.random() - 0.4 + artistPopularityMod) * 200 * (coin.reputation.hype/50)));
           
           if (Math.random() < 0.6) {
-              const cryptoFan = {
+              const cryptoFan: XUser = {
                   id: "crypto_fan_" + Math.random().toString(36).substring(7),
+                  name: "Crypto Whale 🚀",
                   username: "cryptobro_" + Math.floor(Math.random() * 9999),
-                  displayName: "Crypto Whale 🚀",
                   followersCount: Math.floor(Math.random() * 50000) + 1000,
+                  followingCount: Math.floor(Math.random() * 200) + 50,
                   isVerified: Math.random() > 0.8,
                   bio: "Web3 | Crypto | NFTs | Not financial advice",
                   isPlayer: false,
                   avatar: "https://images.unsplash.com/photo-1622630998477-20b41cd0e074?w=150&h=150&fit=crop&q=80",
-                  joinedDate: { year: 2020, week: 1 },
               };
               if (!artist.xUsers.find(u => u.username === cryptoFan.username)) {
                   artist.xUsers.push(cryptoFan);

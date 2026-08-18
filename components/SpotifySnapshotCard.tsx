@@ -62,10 +62,12 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
     // Fallback if rendered outside context
   }
 
+  const isDaily = gameState?.timeMode === "daily";
   const effectiveStyle = style || gameState?.spotifySnapshotStyle || 'normal';
   try {
     const jsonStr = dataString.replace("snapshot:", "");
     const data = JSON.parse(jsonStr);
+    const cardIsDaily = isDaily || data?.isDaily || data?.isDailyMode;
 
     if (data.type === "presave") {
       return (
@@ -125,7 +127,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
     }
 
     
-    if (data.type === "weekly_top_albums") {
+    if (data.type === "weekly_top_albums" || data.type === "daily_top_albums") {
       const top1 = data.topAlbums[0];
       const rest = data.topAlbums.slice(1, 15);
       
@@ -143,7 +145,9 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
             <div className="w-[45%] flex flex-col justify-between">
               <div>
                 <h2 className="text-[1.1rem] sm:text-[1.3rem] font-bold uppercase tracking-tight text-white drop-shadow-md mb-2 flex flex-col leading-none">
-                  <span className="text-transparent font-outline-2 font-outline-white text-stroke text-stroke-white text-fill-transparent tracking-widest text-lg sm:text-xl">Weekly Top</span> 
+                  <span className="text-transparent font-outline-2 font-outline-white text-stroke text-stroke-white text-fill-transparent tracking-widest text-lg sm:text-xl">
+                    {cardIsDaily ? "Daily Top" : "Weekly Top"}
+                  </span> 
                   <span className="font-black">ALBUMS</span>
                 </h2>
                 
@@ -166,7 +170,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                 </div>
 
                 <div className="mt-3 w-[80%] bg-white/30 text-white font-bold text-lg sm:text-xl text-center py-1 rounded-sm shadow-inner">
-                  +{top1.weeklyStreams.toLocaleString()}
+                  +{(cardIsDaily && top1.dailyStreams !== undefined ? top1.dailyStreams : (top1.weeklyStreams || 0)).toLocaleString()}
                 </div>
                 
                 <div className="mt-2 font-bold text-white text-base sm:text-lg">
@@ -200,6 +204,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                   {rest.map((album: any, i: number) => {
                      const isUp = album.previousRank > album.rank;
                      const isDown = album.previousRank < album.rank;
+                     const streamVal = cardIsDaily && album.dailyStreams !== undefined ? album.dailyStreams : (album.weeklyStreams || 0);
                      return (
                         <div key={i} className="flex items-center w-full h-1/14 text-white text-xs sm:text-sm px-1 my-[1px]">
                            {/* Change indicator */}
@@ -232,7 +237,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
 
                            {/* Streams */}
                            <div className="font-bold text-[10px] sm:text-sm text-right min-w-[70px] sm:min-w-[90px] pr-1">
-                             +{album.weeklyStreams.toLocaleString()}
+                             +{streamVal.toLocaleString()}
                            </div>
                            
                            {/* Change Pct */}
@@ -278,11 +283,12 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
             <div className="grid grid-cols-4 p-2 opacity-80 border-b border-white/20 font-semibold uppercase text-[10px] tracking-wider text-right">
               <div className="text-center">Song</div>
               <div>Total Streams</div>
-              <div>Weekly Streams</div>
+              <div>{cardIsDaily ? "Daily Streams" : "Weekly Streams"}</div>
               <div>Change</div>
             </div>
             {data.tracks.map((t: any, i: number) => {
               const isTarget = t.title === data.songName;
+              const streamCount = (cardIsDaily && t.dailyStreams !== undefined) ? t.dailyStreams : (t.weekly || 0);
               return (
                 <div
                   key={i}
@@ -292,7 +298,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                     {t.title}
                   </div>
                   <div>{t.streams.toLocaleString()}</div>
-                  <div>+{t.weekly.toLocaleString()}</div>
+                  <div>+{streamCount.toLocaleString()}</div>
                   <div className="text-green-300">
                     +{(Math.random() * 40 + 5).toFixed(2)}%
                   </div>
@@ -311,7 +317,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
               <div>
                 +
                 {data.tracks
-                  .reduce((sum: number, t: any) => sum + t.weekly, 0)
+                  .reduce((sum: number, t: any) => sum + ((cardIsDaily && t.dailyStreams !== undefined) ? t.dailyStreams : (t.weekly || 0)), 0)
                   .toLocaleString()}
               </div>
               <div className="text-green-300">
@@ -360,7 +366,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
           const albumTitle = (data.songName || data.albumName || data.title || "RELEASE").toUpperCase();
           const artistName = (data.artistName || "ARTIST").toUpperCase();
           const totalStreams = data.totalStreams || data.streams || 0;
-          const weeklyStreams = data.streams || 0;
+          const displayStreams = (cardIsDaily ? (data.dailyStreams || data.streams) : (data.weeklyStreams || data.streams)) || 0;
 
           return (
             <ScaledCardWrapper targetWidth={560}>
@@ -392,7 +398,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                     <div className="flex items-center gap-3 my-1 flex-wrap">
                       <span className="text-zinc-400 text-xl font-bold font-mono">↗</span>
                       <div className="text-3xl font-mono font-black text-white tracking-tight">
-                        {weeklyStreams.toLocaleString()}
+                        {displayStreams.toLocaleString()}
                       </div>
                       <div className={`${isOverallPos ? "bg-[#16a34a]" : "bg-[#dc2626]"} text-white text-xs font-extrabold font-mono px-2 py-0.5 rounded flex items-center gap-1`}>
                         {pctStr}
@@ -412,7 +418,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                   <div className="w-full">
                     <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-2 pb-2 text-xs font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider">
                       <div className="col-span-2">TRACK</div>
-                      <div className="text-right">DAILY STREAMS</div>
+                      <div className="text-right">{cardIsDaily ? "DAILY STREAMS" : "WEEKLY STREAMS"}</div>
                       <div className="text-right">CHANGE</div>
                       <div className="text-right">%CHANGE</div>
                       <div className="text-right">TOTAL</div>
@@ -463,7 +469,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                         </span>
                       </div>
                       <div className="text-right text-white font-mono">
-                        {weeklyStreams.toLocaleString()}
+                        {displayStreams.toLocaleString()}
                       </div>
                       <div className={`text-right font-mono ${isOverallPos ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
                         {overallChangeVal > 0 ? "+" : ""}{overallChangeVal.toLocaleString()}
@@ -556,7 +562,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                 <div className="grid grid-cols-[1rem_1fr_4rem_4rem_3rem_4.5rem] gap-2 p-2 text-[10px] font-bold text-zinc-500 border-b border-zinc-700/50">
                   <div></div>
                   <div>Track</div>
-                  <div className="text-right">Weekly Streams</div>
+                  <div className="text-right">{cardIsDaily ? "Daily Streams" : "Weekly Streams"}</div>
                   <div className="text-right">Change</div>
                   <div className="text-right">%</div>
                   <div className="text-right">Total</div>
@@ -574,10 +580,10 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                         {t.title}
                       </div>
                       <div className="text-right">
-                        {t.weekly
-                          ? t.weekly.toLocaleString()
-                          : t.dailyStreams
-                            ? t.dailyStreams.toLocaleString()
+                        {t.dailyStreams !== undefined
+                          ? t.dailyStreams.toLocaleString()
+                          : t.weekly !== undefined
+                            ? t.weekly.toLocaleString()
                             : 0}
                       </div>
                       <div className={`text-right ${t.changeVal >= 0 ? "text-green-400" : "text-red-400"}`}>
@@ -606,7 +612,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                     {data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) > 0 ? "+" : ""}{data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0).toLocaleString()}
                   </div>
                   <div className="text-right">
-                    {data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) > 0 ? "+" : ""}{data.tracks.reduce((acc: number, t: any) => acc + (t.weekly - (t.changeVal || 0)), 0) > 0 ? (data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) / data.tracks.reduce((acc: number, t: any) => acc + (t.weekly - (t.changeVal || 0)), 0) * 100).toFixed(2) + "%" : "0.00%"}
+                    {data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) > 0 ? "+" : ""}{data.tracks.reduce((acc: number, t: any) => acc + ((t.dailyStreams || t.weekly || 0) - (t.changeVal || 0)), 0) > 0 ? (data.tracks.reduce((acc: number, t: any) => acc + (t.changeVal || 0), 0) / data.tracks.reduce((acc: number, t: any) => acc + ((t.dailyStreams || t.weekly || 0) - (t.changeVal || 0)), 0) * 100).toFixed(2) + "%" : "0.00%"}
                   </div>
                   <div className="text-right">
                     {data.totalStreams.toLocaleString()}
@@ -649,14 +655,14 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
             >
               {data.artistName}
             </p>
-            <p className="text-[#1DB954] text-xs sm:text-sm mt-1 font-bold">
-              BEST WEEK EVER
+            <p className="text-[#1DB954] text-xs sm:text-sm mt-1 font-bold uppercase">
+              {cardIsDaily ? "BEST DAY EVER" : "BEST WEEK EVER"}
             </p>
           </div>
         </div>
         <div className="bg-zinc-800/50 rounded-lg p-3 z-10 relative mb-4">
           <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wider">
-            Weekly Streams
+            {cardIsDaily ? "Daily Streams" : "Weekly Streams"}
           </div>
           <div className="text-2xl font-black">
             {data.streams.toLocaleString()}

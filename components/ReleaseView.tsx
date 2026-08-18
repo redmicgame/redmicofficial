@@ -207,12 +207,13 @@ const ReleaseView: React.FC = () => {
                 return; // Go directly to planning, skip the final CHANGE_VIEW
             }
 
-            // For major labels, submit for approval.
+            // For major labels, submit for approval (2-7 day review period in daily mode)
             const submission: LabelSubmission = {
                 id: crypto.randomUUID(),
                 release: newRelease,
                 submittedDate: date,
-                status: 'pending'
+                status: 'pending',
+                reviewDaysNeeded: Math.floor(Math.random() * 6) + 2,
             };
             dispatch({ type: 'SUBMIT_TO_LABEL', payload: { submission }});
         } else {

@@ -13,13 +13,13 @@ const CATEGORIES = [
     { id: 'mostIgFollowers', label: 'Most IG Followers' }
 ];
 
-const MODES = ['easy', 'normal', 'hard', 'extreme'];
+const MODES = ['original', 'easy', 'normal', 'hard', 'extreme'];
 
 const LiveLeaderboardView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const { user, login } = useFirebase();
 
-    const [activeMode, setActiveMode] = useState('normal');
+    const [activeMode, setActiveMode] = useState('original');
     const [activeCategory, setActiveCategory] = useState('mostStreamedSong');
     
     const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
@@ -340,40 +340,92 @@ const LiveLeaderboardView: React.FC = () => {
                                 No entries found for this category and mode yet. Sync your saves to be the first!
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {leaderboardData.map((entry, idx) => (
-                                    <div key={entry.id} className="flex items-center p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700/50 transition-colors">
-                                        <div className="w-8 text-center font-bold text-zinc-500 text-sm">
-                                            #{idx + 1}
+                            <div className="space-y-4">
+                                {leaderboardData[0] && (
+                                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-red-950/60 via-zinc-900 to-zinc-900 border-2 border-red-500/50 p-4 shadow-xl">
+                                        <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-red-500/20">
+                                            <div className="flex items-center gap-2">
+                                                <span className="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+                                                <span className="text-xs font-black tracking-wider uppercase text-red-400">
+                                                    POTENTIAL RED MIC PRO WINNER
+                                                </span>
+                                            </div>
+                                            <div className="bg-red-600/30 text-red-300 border border-red-500/40 text-xs font-black px-2.5 py-0.5 rounded-full">
+                                                #1 SPOT
+                                            </div>
                                         </div>
-                                        {entry.imageUrl && (
-                                            <img 
-                                                src={entry.imageUrl} 
-                                                alt="" 
-                                                className={`w-12 h-12 object-cover ${activeCategory.includes('Song') || activeCategory.includes('Album') ? 'rounded-md' : 'rounded-full'} mx-3`}
-                                                onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(entry.artistName) }}
-                                            />
-                                        )}
-                                        <div className="flex-grow min-w-0">
-                                            <p className="font-bold text-white truncate text-sm sm:text-base">
-                                                {entry.itemName || entry.artistName}
-                                            </p>
-                                            {entry.itemName && (
-                                                <p className="text-xs sm:text-sm text-zinc-400 truncate">
-                                                    {entry.artistName}
-                                                </p>
+
+                                        <div className="flex items-center gap-4">
+                                            {leaderboardData[0].imageUrl ? (
+                                                <img 
+                                                    src={leaderboardData[0].imageUrl} 
+                                                    alt="" 
+                                                    className={`w-20 h-20 sm:w-24 sm:h-24 object-cover ${activeCategory.includes('Song') || activeCategory.includes('Album') ? 'rounded-xl' : 'rounded-full'} border-2 border-red-500/40 shadow-lg flex-shrink-0`}
+                                                    onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(leaderboardData[0].artistName) }}
+                                                />
+                                            ) : (
+                                                <div className={`w-20 h-20 sm:w-24 sm:h-24 bg-zinc-800 flex items-center justify-center ${activeCategory.includes('Song') || activeCategory.includes('Album') ? 'rounded-xl' : 'rounded-full'} border-2 border-red-500/40 shadow-lg flex-shrink-0 text-red-400 font-black text-2xl`}>
+                                                    #1
+                                                </div>
                                             )}
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-red-500 text-sm sm:text-base">
-                                                {formatNumber(entry.score)}
-                                            </p>
-                                            <p className="text-[10px] sm:text-xs text-zinc-500">
-                                                {activeCategory.includes('Stream') ? 'Streams' : activeCategory.includes('Sell') ? 'Sales' : activeCategory.includes('Grammy') ? 'GRAMMYs' : 'Followers'}
-                                            </p>
+
+                                            <div className="flex-grow min-w-0">
+                                                <h3 className="font-extrabold text-white truncate text-base sm:text-xl leading-tight">
+                                                    {leaderboardData[0].itemName || leaderboardData[0].artistName}
+                                                </h3>
+                                                {leaderboardData[0].itemName && (
+                                                    <p className="text-sm text-zinc-300 font-medium truncate mt-0.5">
+                                                        by {leaderboardData[0].artistName}
+                                                    </p>
+                                                )}
+                                                <div className="mt-2 flex items-baseline gap-1.5">
+                                                    <span className="text-xl sm:text-2xl font-black text-red-500">
+                                                        {formatNumber(leaderboardData[0].score)}
+                                                    </span>
+                                                    <span className="text-xs text-zinc-400 font-medium">
+                                                        {activeCategory.includes('Stream') ? 'Streams' : activeCategory.includes('Sell') ? 'Sales' : activeCategory.includes('Grammy') ? 'GRAMMYs' : 'Followers'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
+                                )}
+
+                                <div className="space-y-2 pt-2">
+                                    {leaderboardData.map((entry, idx) => (
+                                        <div key={entry.id} className={`flex items-center p-3 rounded-lg ${idx === 0 ? 'bg-red-950/20 border border-red-900/40' : 'bg-zinc-800 hover:bg-zinc-700/50'} transition-colors`}>
+                                            <div className={`w-8 text-center font-bold ${idx === 0 ? 'text-red-400 text-base' : 'text-zinc-500 text-sm'}`}>
+                                                #{idx + 1}
+                                            </div>
+                                            {entry.imageUrl && (
+                                                <img 
+                                                    src={entry.imageUrl} 
+                                                    alt="" 
+                                                    className={`w-12 h-12 object-cover ${activeCategory.includes('Song') || activeCategory.includes('Album') ? 'rounded-md' : 'rounded-full'} mx-3`}
+                                                    onError={(e) => { e.currentTarget.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(entry.artistName) }}
+                                                />
+                                            )}
+                                            <div className="flex-grow min-w-0">
+                                                <p className="font-bold text-white truncate text-sm sm:text-base">
+                                                    {entry.itemName || entry.artistName}
+                                                </p>
+                                                {entry.itemName && (
+                                                    <p className="text-xs sm:text-sm text-zinc-400 truncate">
+                                                        {entry.artistName}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-bold text-red-500 text-sm sm:text-base">
+                                                    {formatNumber(entry.score)}
+                                                </p>
+                                                <p className="text-[10px] sm:text-xs text-zinc-500">
+                                                    {activeCategory.includes('Stream') ? 'Streams' : activeCategory.includes('Sell') ? 'Sales' : activeCategory.includes('Grammy') ? 'GRAMMYs' : 'Followers'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
