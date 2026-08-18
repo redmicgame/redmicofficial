@@ -175,7 +175,7 @@ const SpotifyAlbumCountdownView: React.FC = () => {
             <p className="font-bold text-lg">{activeArtist.name}</p>
           </div>
           <p className="text-zinc-400 text-sm font-medium pt-1">
-            Album • Releases on{" "}
+            {submission.release?.type || "Album"} • Releases on{" "}
             {formatReleaseDateString(submission.projectReleaseDate!)}
             {submission.hasCountdownPage && (
               <span className="text-[#1DB954] font-bold ml-2">

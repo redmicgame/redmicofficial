@@ -56,7 +56,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     // Pre-adds: Use upcoming player submissions and some top albums
     const preAdds = useMemo(() => {
-        const playerUpcoming = activeArtistData?.labelSubmissions.filter(s => s.hasCountdownPage && (s.release.type === 'Album' || s.release.type === 'EP')).map(s => ({
+        const playerUpcoming = activeArtistData?.labelSubmissions.filter(s => s.hasCountdownPage && s.status === 'scheduled' && s.release.type !== 'Single').map(s => ({
             id: s.release.id,
             title: s.release.title,
             artist: activeArtistData.artistName || 'Unknown',

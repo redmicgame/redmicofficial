@@ -953,12 +953,17 @@ const S4AMusic: React.FC<{
       preSaves?: number;
     }[] = [];
 
+    const isDaily = gameState.timeMode === "daily";
+    const toTotalDays = (d: GameDate) => d.year * 52 * 7 + d.week * 7 + (d.day || 1);
+    const toTotalWeeks = (d: GameDate) => d.year * 52 + d.week;
+    const nowTime = isDaily ? toTotalDays(gameState.date) : toTotalWeeks(gameState.date);
+    const checkUpcoming = (d?: GameDate) => d ? (isDaily ? toTotalDays(d) : toTotalWeeks(d)) >= nowTime : false;
+
     for (const sub of activeArtistData.labelSubmissions) {
       if (sub.status === "scheduled") {
         if (
           sub.projectReleaseDate &&
-          sub.projectReleaseDate.year * 52 + sub.projectReleaseDate.week >
-            gameState.date.year * 52 + gameState.date.week
+          checkUpcoming(sub.projectReleaseDate)
         ) {
           upcoming.push({
             id: sub.release.id,
@@ -974,8 +979,8 @@ const S4AMusic: React.FC<{
         if (sub.singlesToRelease) {
           for (const single of sub.singlesToRelease) {
             if (
-              single.releaseDate.year * 52 + single.releaseDate.week >
-              gameState.date.year * 52 + gameState.date.week
+              single.releaseDate &&
+              checkUpcoming(single.releaseDate)
             ) {
               const song = activeArtistData.songs.find(
                 (s) => s.id === single.songId,

@@ -11290,7 +11290,7 @@ HFPA`,
         artistData.labelSubmissions.forEach((sub) => {
           if (
             sub.status === "scheduled" &&
-            sub.release?.type?.includes("Album")
+            sub.release?.type !== "Single"
           ) {
             // Until the album countdown is launched it should be 0
             if (!sub.hasCountdownPage) {
