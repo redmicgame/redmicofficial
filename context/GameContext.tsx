@@ -598,6 +598,16 @@ const formatCertification = (
   return cert.level;
 };
 
+const formatMonthDay = (gameDate: GameDate, dayOffset: number = 0): string => {
+  const date = new Date(gameDate.year, 0, 1);
+  const baseDays = (gameDate.week - 1) * 7 + (gameDate.day ? gameDate.day - 1 : 0) + dayOffset;
+  date.setDate(date.getDate() + baseDays);
+  return date.toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+  });
+};
+
 const getRandomNpcName = (excludedNames: (string | undefined)[] = [], currentYear?: number): string => {
   let name = "";
   let attempts = 0;
@@ -3109,6 +3119,29 @@ The Red Mic Team`,
                     }
                   }
 
+                  // NPC Celebrity Tour Attendance Tweet (daily mode)
+                  if ((artistData.popularity || 0) >= 50 && artistProfile) {
+                    const attendanceChance = Math.min(1.0, (artistData.popularity || 0) / 100);
+                    if (Math.random() < attendanceChance / 7) {
+                      const npcName = getRandomNpcName([artistProfile.name], newDate.year);
+                      const npcImg = getArtistImage(npcName);
+                      const playerImg = artistProfile.imageUrl || (artistProfile as any).image || artistData.avatar || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80";
+                      const showCity = venue.city || "London";
+
+                      artistData.xPosts.unshift({
+                        id: crypto.randomUUID(),
+                        authorId: "popbase",
+                        content: `${npcName} is attending ${artistProfile.name}’s show tonight in ${showCity}.`,
+                        image: npcImg,
+                        image2: playerImg,
+                        likes: Math.floor(Math.random() * 60000) + 20000,
+                        retweets: Math.floor(Math.random() * 12000) + 3000,
+                        views: Math.floor(Math.random() * 800000) + 250000,
+                        date: newDate,
+                      });
+                    }
+                  }
+
                   const nextIndex = venueIdx + 1;
                   const isFinished = nextIndex >= tour.venues.length;
                   return {
@@ -4306,6 +4339,30 @@ Live Nation`,
                     likes: Math.floor(newTicketsSold * 0.5),
                     retweets: Math.floor(newTicketsSold * 0.1),
                     views: Math.floor(newTicketsSold * 10),
+                    date: newDate,
+                  });
+                }
+              }
+
+              // NPC Celebrity Tour Attendance Tweet (weekly mode)
+              if ((artistData.popularity || 0) >= 50 && artistProfileForEmail) {
+                const attendanceChance = Math.min(1.0, (artistData.popularity || 0) / 100);
+                if (Math.random() < attendanceChance) {
+                  const currentVenue = tour.venues[currentIdx] || tour.venues[0];
+                  const npcName = getRandomNpcName([artistProfileForEmail.name], newDate.year);
+                  const npcImg = getArtistImage(npcName);
+                  const playerImg = artistProfileForEmail.imageUrl || (artistProfileForEmail as any).image || artistData.avatar || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80";
+                  const showCity = currentVenue?.city || "London";
+
+                  artistData.xPosts.unshift({
+                    id: crypto.randomUUID(),
+                    authorId: "popbase",
+                    content: `${npcName} is attending ${artistProfileForEmail.name}’s show tonight in ${showCity}.`,
+                    image: npcImg,
+                    image2: playerImg,
+                    likes: Math.floor(Math.random() * 60000) + 20000,
+                    retweets: Math.floor(Math.random() * 12000) + 3000,
+                    views: Math.floor(Math.random() * 800000) + 250000,
                     date: newDate,
                   });
                 }
@@ -5882,99 +5939,186 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           return release;
         });
 
+        const hasPro = Boolean(artistData.redMicPro && artistData.redMicPro.unlocked);
         let newCareerStage = artistData.careerStage || "neutral";
-        if (state.difficultyMode !== "easy") {
-          const newlyEvaluatedRelease = artistData.releases.find(
-            (r) =>
-              r.isReleased &&
-              r.releaseDate &&
-              newDate.year * 52 +
-                newDate.week -
-                (r.releaseDate.year * 52 + r.releaseDate.week) ===
-              1,
-          );
-          if (newlyEvaluatedRelease) {
-            let isFlop = false;
-            let isSmash = false;
-            const currentStreams = newlyEvaluatedRelease.firstWeekStreams || 0;
-            const reviewScore = newlyEvaluatedRelease.review?.score ?? 7.0;
 
-            if (newlyEvaluatedRelease.type === "Single") {
-              const pastSingles = artistData.releases
-                .filter(
-                  (r) =>
-                    r.type === "Single" &&
-                    r.firstWeekStreams !== undefined &&
-                    r.id !== newlyEvaluatedRelease.id,
-                )
-                .sort(
-                  (a, b) =>
-                    b.releaseDate!.year * 52 +
-                    b.releaseDate!.week -
-                    (a.releaseDate!.year * 52 + a.releaseDate!.week),
-                );
-              const priorSingle = pastSingles[0];
-              
-              if (currentStreams >= 12000000 || reviewScore >= 8.5) {
-                isSmash = true;
-              } else if (pastSingles.length >= 1) {
-                const lastThree = pastSingles.slice(0, 3);
-                const avg =
-                  lastThree.reduce(
-                    (sum, s) => sum + (s.firstWeekStreams || 0),
-                    0,
-                  ) / lastThree.length;
-                if (currentStreams >= avg * 1.35) {
+        if (hasPro && (artistData.eraLock || artistData.stuckOnEra)) {
+          // If stuck on an era (Pro users only), retain exact current career stage
+          newCareerStage = artistData.careerStage || "neutral";
+        } else if (!hasPro) {
+          // Non-pro users can NEVER enter smash era.
+          // If a user without pro has smash era and they progress a week, take them all the way to flop era.
+          if (artistData.careerStage === "smash") {
+            newCareerStage = "flop";
+          } else {
+            // Non-pro users can only fluctuate between neutral and flop eras. Flop era lock is disabled for non-pro.
+            if (state.difficultyMode !== "easy") {
+              const newlyEvaluatedRelease = artistData.releases.find(
+                (r) =>
+                  r.isReleased &&
+                  r.releaseDate &&
+                  newDate.year * 52 +
+                    newDate.week -
+                    (r.releaseDate.year * 52 + r.releaseDate.week) ===
+                  1,
+              );
+              if (newlyEvaluatedRelease) {
+                let isFlop = false;
+                const currentStreams = newlyEvaluatedRelease.firstWeekStreams || 0;
+                const reviewScore = newlyEvaluatedRelease.review?.score ?? 7.0;
+
+                if (newlyEvaluatedRelease.type === "Single") {
+                  const pastSingles = artistData.releases
+                    .filter(
+                      (r) =>
+                        r.type === "Single" &&
+                        r.firstWeekStreams !== undefined &&
+                        r.id !== newlyEvaluatedRelease.id,
+                    )
+                    .sort(
+                      (a, b) =>
+                        b.releaseDate!.year * 52 +
+                        b.releaseDate!.week -
+                        (a.releaseDate!.year * 52 + a.releaseDate!.week),
+                    );
+                  const priorSingle = pastSingles[0];
+                  if (pastSingles.length >= 1 && priorSingle && currentStreams < (priorSingle.firstWeekStreams || 0) * 0.3 && reviewScore < 5.0) {
+                    isFlop = true;
+                  }
+                } else {
+                  const pastAlbums = artistData.releases
+                    .filter(
+                      (r) =>
+                        (r.type === "Album" || r.type === "EP") &&
+                        r.firstWeekStreams !== undefined &&
+                        r.id !== newlyEvaluatedRelease.id,
+                    )
+                    .sort(
+                      (a, b) =>
+                        b.releaseDate!.year * 52 +
+                        b.releaseDate!.week -
+                        (a.releaseDate!.year * 52 + a.releaseDate!.week),
+                    );
+                  const priorAlbum = pastAlbums[0];
+                  if (
+                    priorAlbum &&
+                    currentStreams < (priorAlbum.firstWeekStreams || 0) * 0.3 &&
+                    reviewScore < 5.0
+                  ) {
+                    isFlop = true;
+                  }
+                }
+
+                if (isFlop) {
+                  newCareerStage = "flop";
+                }
+              }
+
+              if (newCareerStage === "flop" && totalWeeklyStreams >= 4000000) {
+                newCareerStage = "neutral";
+              }
+            }
+
+            // Ensure non-pro can never end up in smash era
+            if (newCareerStage === "smash") {
+              newCareerStage = "neutral";
+            }
+          }
+        } else {
+          // Pro users with regular progression
+          if (state.difficultyMode !== "easy") {
+            const newlyEvaluatedRelease = artistData.releases.find(
+              (r) =>
+                r.isReleased &&
+                r.releaseDate &&
+                newDate.year * 52 +
+                  newDate.week -
+                  (r.releaseDate.year * 52 + r.releaseDate.week) ===
+                1,
+            );
+            if (newlyEvaluatedRelease) {
+              let isFlop = false;
+              let isSmash = false;
+              const currentStreams = newlyEvaluatedRelease.firstWeekStreams || 0;
+              const reviewScore = newlyEvaluatedRelease.review?.score ?? 7.0;
+
+              if (newlyEvaluatedRelease.type === "Single") {
+                const pastSingles = artistData.releases
+                  .filter(
+                    (r) =>
+                      r.type === "Single" &&
+                      r.firstWeekStreams !== undefined &&
+                      r.id !== newlyEvaluatedRelease.id,
+                  )
+                  .sort(
+                    (a, b) =>
+                      b.releaseDate!.year * 52 +
+                      b.releaseDate!.week -
+                      (a.releaseDate!.year * 52 + a.releaseDate!.week),
+                  );
+                const priorSingle = pastSingles[0];
+                
+                if (currentStreams >= 12000000 || reviewScore >= 8.5) {
                   isSmash = true;
-                } else if (priorSingle && currentStreams < (priorSingle.firstWeekStreams || 0) * 0.3 && reviewScore < 5.0) {
+                } else if (pastSingles.length >= 1) {
+                  const lastThree = pastSingles.slice(0, 3);
+                  const avg =
+                    lastThree.reduce(
+                      (sum, s) => sum + (s.firstWeekStreams || 0),
+                      0,
+                    ) / lastThree.length;
+                  if (currentStreams >= avg * 1.35) {
+                    isSmash = true;
+                  } else if (priorSingle && currentStreams < (priorSingle.firstWeekStreams || 0) * 0.3 && reviewScore < 5.0) {
+                    isFlop = true;
+                  }
+                }
+              } else {
+                const pastAlbums = artistData.releases
+                  .filter(
+                    (r) =>
+                      (r.type === "Album" || r.type === "EP") &&
+                      r.firstWeekStreams !== undefined &&
+                      r.id !== newlyEvaluatedRelease.id,
+                  )
+                  .sort(
+                    (a, b) =>
+                      b.releaseDate!.year * 52 +
+                      b.releaseDate!.week -
+                      (a.releaseDate!.year * 52 + a.releaseDate!.week),
+                  );
+                const priorAlbum = pastAlbums[0];
+                if (currentStreams >= 35000000 || reviewScore >= 8.5) {
+                  isSmash = true;
+                } else if (
+                  priorAlbum &&
+                  currentStreams >= (priorAlbum.firstWeekStreams || 0) * 1.2
+                ) {
+                  isSmash = true;
+                } else if (
+                  priorAlbum &&
+                  currentStreams < (priorAlbum.firstWeekStreams || 0) * 0.3 &&
+                  reviewScore < 5.0
+                ) {
                   isFlop = true;
                 }
               }
-            } else {
-              const pastAlbums = artistData.releases
-                .filter(
-                  (r) =>
-                    (r.type === "Album" || r.type === "EP") &&
-                    r.firstWeekStreams !== undefined &&
-                    r.id !== newlyEvaluatedRelease.id,
-                )
-                .sort(
-                  (a, b) =>
-                    b.releaseDate!.year * 52 +
-                    b.releaseDate!.week -
-                    (a.releaseDate!.year * 52 + a.releaseDate!.week),
-                );
-              const priorAlbum = pastAlbums[0];
-              if (currentStreams >= 35000000 || reviewScore >= 8.5) {
-                isSmash = true;
-              } else if (
-                priorAlbum &&
-                currentStreams >= (priorAlbum.firstWeekStreams || 0) * 1.2
-              ) {
-                isSmash = true;
-              } else if (
-                priorAlbum &&
-                currentStreams < (priorAlbum.firstWeekStreams || 0) * 0.3 &&
-                reviewScore < 5.0
-              ) {
-                isFlop = true;
+
+              if (isSmash) {
+                if (newCareerStage === "flop") newCareerStage = "neutral";
+                else if (newCareerStage === "neutral") newCareerStage = "smash";
+              } else if (isFlop && !artistData.flopEraLock) {
+                if (newCareerStage === "smash") newCareerStage = "neutral";
+                else if (newCareerStage === "neutral") newCareerStage = "flop";
               }
             }
 
-            if (isSmash) {
-              if (newCareerStage === "flop") newCareerStage = "neutral";
-              else if (newCareerStage === "neutral") newCareerStage = "smash";
-            } else if (isFlop && !artistData.flopEraLock) {
-              if (newCareerStage === "smash") newCareerStage = "neutral";
-              else if (newCareerStage === "neutral") newCareerStage = "flop";
+            // Check if artist has high performance milestones that maintain/elevate Smash Era
+            if (totalWeeklyStreams >= 20000000 || (artistData.monthlyListeners || 0) >= 25000000) {
+              newCareerStage = "smash";
+            } else if (newCareerStage === "flop" && totalWeeklyStreams >= 4000000) {
+              newCareerStage = "neutral"; // Lift out of flop era on solid recovery
             }
-          }
-
-          // Check if artist has high performance milestones that maintain/elevate Smash Era
-          if (totalWeeklyStreams >= 20000000 || (artistData.monthlyListeners || 0) >= 25000000) {
-            newCareerStage = "smash";
-          } else if (newCareerStage === "flop" && totalWeeklyStreams >= 4000000) {
-            newCareerStage = "neutral"; // Lift out of flop era on solid recovery
           }
         }
 
@@ -7809,6 +7953,69 @@ We would like to invite you to perform at a special Spotify Billions Club concer
 
           if (newCertificationPosts.length > 0) {
             artistData.xPosts.unshift(...newCertificationPosts);
+
+            // Pop Base tweet for new RIAA certifications showing the 8 most recent / top ones
+            const certifiedItems: { title: string; cert: string; units: number }[] = [];
+
+            // From songs
+            artistData.songs.forEach((song) => {
+              if (song.lastCertification) {
+                certifiedItems.push({
+                  title: song.title,
+                  cert: song.lastCertification,
+                  units: song.streams || 0,
+                });
+              }
+            });
+
+            // From releases (albums/EPs)
+            artistData.releases.forEach((rel) => {
+              if (rel.type !== "Single" && rel.lastCertification) {
+                certifiedItems.push({
+                  title: rel.title,
+                  cert: rel.lastCertification,
+                  units: (rel.sales || 0) * 1500,
+                });
+              }
+            });
+
+            if (certifiedItems.length > 0) {
+              const getCertWeight = (certStr: string) => {
+                if (certStr.includes("Diamond")) {
+                  const match = certStr.match(/(\d+)x/);
+                  return 10000000 * (match ? parseInt(match[1], 10) : 1);
+                }
+                if (certStr.includes("Platinum")) {
+                  const match = certStr.match(/(\d+)x/);
+                  return 1000000 * (match ? parseInt(match[1], 10) : 1);
+                }
+                if (certStr.includes("Gold")) return 500000;
+                return 0;
+              };
+
+              certifiedItems.sort((a, b) => {
+                const weightDiff = getCertWeight(b.cert) - getCertWeight(a.cert);
+                if (weightDiff !== 0) return weightDiff;
+                return b.units - a.units;
+              });
+
+              const top8 = certifiedItems.slice(0, 8);
+              const listLines = top8.map((item) => `• ${item.title} - ${item.cert}`).join("\n");
+              const popBaseCertContent = `${artistProfile.name}'s new RIAA certifications:\n\n${listLines}`;
+
+              const popBaseImage = artistProfile.imageUrl || (artistProfile as any).image || artistData.avatar || newCertificationPosts[0]?.image;
+
+              artistData.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content: popBaseCertContent,
+                image: popBaseImage,
+                likes: Math.floor(Math.random() * 55000) + 15000,
+                retweets: Math.floor(Math.random() * 9000) + 2000,
+                views: Math.floor(Math.random() * 500000) + 150000,
+                date: newDate,
+              });
+            }
           }
           
           if (albumsWithNewCerts.size > 0) {
@@ -19715,6 +19922,11 @@ Let us know if you accept.`,
       if (!targetId) return state;
       const activeData = state.artistsData[targetId];
       if (!activeData) return state;
+      const hasPro = Boolean(activeData.redMicPro && activeData.redMicPro.unlocked);
+      // Non-pro users can NEVER switch to smash era
+      if (action.payload.stage === "smash" && !hasPro) {
+        return state;
+      }
       return {
         ...state,
         artistsData: {
@@ -19728,11 +19940,33 @@ Let us know if you accept.`,
       if (!targetId) return state;
       const activeData = state.artistsData[targetId];
       if (!activeData) return state;
+      const hasPro = Boolean(activeData.redMicPro && activeData.redMicPro.unlocked);
+      if (!hasPro) return state; // Pro users only
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
           [targetId]: { ...activeData, flopEraLock: !activeData.flopEraLock },
+        },
+      };
+    }
+    case "TOGGLE_ERA_LOCK": {
+      const targetId = action.payload?.artistId || state.activeArtistId;
+      if (!targetId) return state;
+      const activeData = state.artistsData[targetId];
+      if (!activeData) return state;
+      const hasPro = Boolean(activeData.redMicPro && activeData.redMicPro.unlocked);
+      if (!hasPro) return state; // Pro users only
+      const currentLock = Boolean(activeData.eraLock || activeData.stuckOnEra);
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [targetId]: {
+            ...activeData,
+            eraLock: !currentLock,
+            stuckOnEra: !currentLock,
+          },
         },
       };
     }
@@ -22071,7 +22305,77 @@ Let us know if you accept.`,
     case "CREATE_TOUR": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const cost = action.payload.bookingCostsPaid || 0;
+      const activeArtistProfile =
+        state.soloArtist ||
+        state.group?.members.find((m) => m.id === state.activeArtistId) ||
+        state.group;
+      const newTour = action.payload;
+      const cost = newTour.bookingCostsPaid || 0;
+
+      let additionalPosts: XPost[] = [];
+
+      // Pop Base tweet for one-show free tour celebration (4 weeks before or after album release)
+      const isOneShow = newTour.venues && newTour.venues.length === 1;
+      const isFree = newTour.venues && (newTour.venues[0]?.ticketPrice === 0 || !newTour.venues[0]?.ticketPrice);
+
+      if (isOneShow && isFree && activeArtistProfile) {
+        const currentTotalWeeks = state.date.year * 52 + state.date.week;
+        const venue = newTour.venues[0];
+
+        // Check for upcoming album/EP within 4 weeks (0 to 4 weeks away)
+        const upcomingSub = (activeData.labelSubmissions || []).find((sub) => {
+          if (sub.status !== "scheduled" || !sub.projectReleaseDate) return false;
+          if (sub.release?.type === "Single") return false;
+          const subWeeks = sub.projectReleaseDate.year * 52 + sub.projectReleaseDate.week;
+          const diff = subWeeks - currentTotalWeeks;
+          return diff >= 0 && diff <= 4;
+        });
+
+        // Check for recent album/EP release within 4 weeks (0 to 4 weeks ago)
+        const recentRelease = (activeData.releases || []).find((rel) => {
+          if (!rel.isReleased || !rel.releaseDate) return false;
+          if (rel.type === "Single") return false;
+          const relWeeks = rel.releaseDate.year * 52 + rel.releaseDate.week;
+          const diff = currentTotalWeeks - relWeeks;
+          return diff >= 0 && diff <= 4;
+        });
+
+        const targetAlbum = upcomingSub ? upcomingSub.release : (recentRelease || null);
+        const isUpcoming = !!upcomingSub;
+
+        if (targetAlbum) {
+          const pronounPossessive =
+            activeArtistProfile && "pronouns" in activeArtistProfile
+              ? (activeArtistProfile as any).pronouns === "he/him"
+                ? "his"
+                : (activeArtistProfile as any).pronouns === "she/her"
+                  ? "her"
+                  : "their"
+              : "their";
+
+          const albumTypeLabel = targetAlbum.type === "EP" ? "EP" : "album";
+          const albumStatusWord = isUpcoming ? `upcoming ${albumTypeLabel}` : `new ${albumTypeLabel}`;
+
+          const showDateStr = formatMonthDay(state.date, 5);
+          const rsvpDateStr = formatMonthDay(state.date, 1);
+
+          const tweetContent = `${activeArtistProfile.name} will celebrate the release of ${pronounPossessive} ${albumStatusWord} '${targetAlbum.title}' with a free show at ${venue.name} on ${showDateStr}.\n\nFree ticket requests are open now through ${rsvpDateStr} at 11:59 p.m. ET.`;
+
+          const popBasePost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: tweetContent,
+            image: targetAlbum.coverArt || activeArtistProfile.imageUrl || (activeArtistProfile as any).image,
+            likes: Math.floor(Math.random() * 45000) + 15000,
+            retweets: Math.floor(Math.random() * 9000) + 2000,
+            views: Math.floor(Math.random() * 500000) + 150000,
+            date: state.date,
+          };
+
+          additionalPosts.push(popBasePost);
+        }
+      }
+
       return {
         ...state,
         artistsData: {
@@ -22080,6 +22384,7 @@ Let us know if you accept.`,
             ...activeData,
             money: activeData.money - cost,
             tours: [...activeData.tours, action.payload],
+            xPosts: additionalPosts.length > 0 ? [...additionalPosts, ...(activeData.xPosts || [])] : activeData.xPosts,
           },
         },
       };

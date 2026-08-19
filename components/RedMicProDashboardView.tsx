@@ -450,6 +450,18 @@ const RedMicProDashboardView: React.FC = () => {
                             <span className={`block w-6 h-6 rounded-full bg-white transform transition-transform ${activeArtistData.flopEraLock ? 'translate-x-6' : ''}`} />
                         </button>
                     </div>
+                    <div className="flex items-center justify-between bg-zinc-700/50 p-3 rounded-lg border border-zinc-600 mt-2">
+                        <div>
+                            <p className="font-bold">Stuck on Era (Era Lock)</p>
+                            <p className="text-xs text-zinc-400">Freeze your current era so it never changes automatically during weekly progression.</p>
+                        </div>
+                        <button
+                            onClick={() => dispatch({ type: 'TOGGLE_ERA_LOCK', payload: { artistId: activeArtistId } })}
+                            className={`w-14 h-8 rounded-full p-1 transition-colors ${activeArtistData.eraLock || activeArtistData.stuckOnEra ? 'bg-amber-500' : 'bg-zinc-600'}`}
+                        >
+                            <span className={`block w-6 h-6 rounded-full bg-white transform transition-transform ${activeArtistData.eraLock || activeArtistData.stuckOnEra ? 'translate-x-6' : ''}`} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">

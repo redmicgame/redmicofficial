@@ -1780,6 +1780,8 @@ export interface ArtistData {
   aboutImages?: string[];
   careerStage?: 'neutral' | 'flop' | 'smash';
   flopEraLock?: boolean;
+  eraLock?: boolean;
+  stuckOnEra?: boolean;
   isBlacklistedByLabel?: boolean;
   money: number;
   location?: "US" | "Canada" | "UK" | "Asia" | "Latin America";
@@ -2235,8 +2237,9 @@ export type GameAction =
   | { type: "UPDATE_CUSTOM_IMAGES"; payload: Record<string, string> }
   | { type: "UPDATE_RELEASE_REVIEW_SCORE"; payload: { releaseId: string; score: number } }
   | { type: "SHRED_CONTRACT" }
-  | { type: "SET_CAREER_STAGE"; payload: { stage: 'neutral' | 'flop' | 'smash' } }
-  | { type: "TOGGLE_FLOP_ERA_LOCK" }
+  | { type: "SET_CAREER_STAGE"; payload: { stage: 'neutral' | 'flop' | 'smash'; artistId?: string } }
+  | { type: "TOGGLE_FLOP_ERA_LOCK"; payload?: { artistId?: string } }
+  | { type: "TOGGLE_ERA_LOCK"; payload?: { artistId?: string } }
   | { type: "CREATE_CUSTOM_AWARD_SHOW"; payload: { customAwardShow: NonNullable<GameState['customAwardShow']> } }
   | { type: "ADD_CUSTOM_FEATURE"; payload: { name: string; cost: number } }
   | { type: "REMOVE_CUSTOM_FEATURE"; payload: { name: string } }

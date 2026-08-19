@@ -218,6 +218,8 @@ const HomeTab: React.FC = () => {
     redMicPro,
   } = activeArtistData;
 
+  const isPro = Boolean(redMicPro && redMicPro.unlocked);
+
   const hasNo1Hit = useMemo(() => {
     return (
       (activeArtistData.numberOneDebuts || 0) > 0 ||
@@ -496,7 +498,12 @@ const HomeTab: React.FC = () => {
                             ? "Smash Era"
                             : "Neutral Era"}
                       </h3>
-                      {activeArtistData.flopEraLock && (
+                      {isPro && (activeArtistData.eraLock || activeArtistData.stuckOnEra) && (
+                        <span className="text-[10px] uppercase font-bold bg-amber-900/80 text-amber-200 px-2 py-0.5 rounded-full border border-amber-600">
+                          Era Locked
+                        </span>
+                      )}
+                      {isPro && activeArtistData.flopEraLock && (
                         <span className="text-[10px] uppercase font-bold bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded-full border border-zinc-600">
                           Flop Locked
                         </span>
@@ -590,22 +597,39 @@ const HomeTab: React.FC = () => {
               {/* Smash Era Requirements Checklist */}
               <div className="bg-zinc-800/60 border border-zinc-700/60 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-zinc-200 uppercase tracking-wider">
-                    Smash Era Requirements Checklist
-                  </h4>
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="font-bold text-sm text-zinc-200 uppercase tracking-wider">
+                      Smash Era Milestones
+                    </h4>
+                    <span className="text-[10px] bg-red-900 border border-red-700 text-red-100 px-1.5 py-0.5 rounded font-bold">
+                      PRO
+                    </span>
+                  </div>
                   <span
                     className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                      qualifiesForSmash
-                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                        : "bg-zinc-700 text-zinc-400"
+                      !isPro
+                        ? "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                        : qualifiesForSmash
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : "bg-zinc-700 text-zinc-400"
                     }`}
                   >
-                    {qualifiesForSmash ? "Qualifies for Smash Era 🎉" : "In Progress"}
+                    {!isPro
+                      ? "PRO Tier Required"
+                      : qualifiesForSmash
+                        ? "Qualifies for Smash Era 🎉"
+                        : "In Progress"}
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400">
-                  Hit ANY of the following milestones to unlock and sustain a Smash Era:
-                </p>
+                {!isPro ? (
+                  <p className="text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+                    ⚡ Smash Era is exclusive to Red Mic PRO members. Non-PRO artists can only fluctuate between Neutral and Flop eras.
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-400">
+                    Hit ANY of the following milestones to unlock and sustain a Smash Era:
+                  </p>
+                )}
 
                 <div className="space-y-2 pt-1 text-xs">
                   <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60">
@@ -668,24 +692,25 @@ const HomeTab: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     onClick={() => {
+                      if (!isPro) return;
                       dispatch({
                         type: "SET_CAREER_STAGE",
                         payload: { stage: "smash", artistId: activeArtistId },
                       });
                     }}
-                    disabled={!qualifiesForSmash && !redMicPro}
+                    disabled={!isPro}
                     className={`p-3 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all ${
                       activeArtistData.careerStage === "smash"
                         ? "bg-green-600 text-white ring-2 ring-green-400"
-                        : qualifiesForSmash || redMicPro
+                        : isPro
                           ? "bg-green-600/20 text-green-300 border border-green-500/40 hover:bg-green-600 hover:text-white"
-                          : "bg-zinc-800 text-zinc-500 border border-zinc-700 opacity-60 cursor-not-allowed"
+                          : "bg-zinc-800 text-zinc-500 border border-zinc-700 opacity-50 cursor-not-allowed"
                     }`}
                   >
                     <span className="text-xl">🚀</span>
                     <span>Smash Era</span>
-                    {!qualifiesForSmash && !redMicPro && (
-                      <span className="text-[10px] text-zinc-500">Locked</span>
+                    {!isPro && (
+                      <span className="text-[10px] text-red-400 font-semibold">PRO Only</span>
                     )}
                   </button>
 
@@ -725,32 +750,78 @@ const HomeTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Flop Era Lock Toggle */}
-              <div className="flex items-center justify-between bg-zinc-800 p-3.5 rounded-xl border border-zinc-700">
-                <div>
-                  <p className="font-bold text-sm text-zinc-200">Flop Era Lock</p>
-                  <p className="text-xs text-zinc-400">
-                    Protect your artist from naturally falling into a flop era.
-                  </p>
+              {/* Pro Era Controls (Flop Era Lock & Stuck on Era) */}
+              {isPro && (
+                <div className="space-y-3">
+                  {/* Flop Era Lock Toggle (Pro Only) */}
+                  <div className="flex items-center justify-between bg-zinc-800 p-3.5 rounded-xl border border-zinc-700">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-sm text-zinc-200">Flop Era Lock</p>
+                        <span className="text-[10px] bg-red-900 border border-red-700 text-red-100 px-1.5 py-0.5 rounded font-bold">
+                          PRO
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">
+                        Protect your artist from naturally falling into a flop era.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() =>
+                        dispatch({
+                          type: "TOGGLE_FLOP_ERA_LOCK",
+                          payload: { artistId: activeArtistId },
+                        })
+                      }
+                      className={`w-12 h-6 rounded-full p-0.5 transition-colors relative ${
+                        activeArtistData.flopEraLock ? "bg-red-500" : "bg-zinc-600"
+                      }`}
+                    >
+                      <span
+                        className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                          activeArtistData.flopEraLock ? "translate-x-6" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Stuck on Era / Era Lock Toggle (Pro Only) */}
+                  <div className="flex items-center justify-between bg-zinc-800 p-3.5 rounded-xl border border-zinc-700">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-sm text-zinc-200">Stuck on Era (Era Freeze)</p>
+                        <span className="text-[10px] bg-red-900 border border-red-700 text-red-100 px-1.5 py-0.5 rounded font-bold">
+                          PRO
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">
+                        Freeze your current era so it never changes automatically during weekly progression.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() =>
+                        dispatch({
+                          type: "TOGGLE_ERA_LOCK",
+                          payload: { artistId: activeArtistId },
+                        })
+                      }
+                      className={`w-12 h-6 rounded-full p-0.5 transition-colors relative ${
+                        activeArtistData.eraLock || activeArtistData.stuckOnEra
+                          ? "bg-amber-500"
+                          : "bg-zinc-600"
+                      }`}
+                    >
+                      <span
+                        className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                          activeArtistData.eraLock || activeArtistData.stuckOnEra
+                            ? "translate-x-6"
+                            : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() =>
-                    dispatch({
-                      type: "TOGGLE_FLOP_ERA_LOCK",
-                      payload: { artistId: activeArtistId },
-                    })
-                  }
-                  className={`w-12 h-6 rounded-full p-0.5 transition-colors relative ${
-                    activeArtistData.flopEraLock ? "bg-red-500" : "bg-zinc-600"
-                  }`}
-                >
-                  <span
-                    className={`block w-5 h-5 rounded-full bg-white transition-transform ${
-                      activeArtistData.flopEraLock ? "translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
+              )}
 
               <div className="pt-2">
                 <button
