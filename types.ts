@@ -213,6 +213,11 @@ export interface Song {
   formatWeeksOnRadio?: Record<string, number>;
   pendingRadioPromoSpins?: number;
   hasRadioPromo?: boolean;
+  pendingFormatRadioPromoSpins?: Record<string, number>;
+  formatHasRadioPromo?: Record<string, boolean>;
+  formatConsecutiveWeeksAtNo1?: Record<string, number>;
+  overallRadioConsecutiveWeeksAtNo1?: number;
+  radioMilestonesPosted?: Record<string, { top10?: boolean; top5?: boolean; reachedNo1?: boolean; consecutiveWeeksAtNo1?: number }>;
   
   isOnUkRadio?: boolean;
   ukRadioPlays?: number;

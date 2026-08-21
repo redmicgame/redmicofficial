@@ -59,6 +59,16 @@ const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, acti
       bio: "Pop culture news, media & stats.",
     };
   }
+  if (id === "usradio") {
+    return {
+      id: "usradio",
+      name: "US Radio Updater",
+      username: "USRadioUpdater",
+      avatar: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSIxNiIgZmlsbD0iIzBFNzRFNyIvPjxwYXRoIGQ9Ik0zMiAyMHYyNG0tMTAgLTIwYTE0IDE0IDAgMCAxIDIwIDBtLTE2IDZhOCA4IDAgMCAxIDEyIDAiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=",
+      isVerified: true,
+      bio: "Official updates on US Mediabase and Billboard radio charts.",
+    };
+  }
 
   if (gameState?.artistsData) {
     for (const aData of Object.values(gameState.artistsData) as any[]) {

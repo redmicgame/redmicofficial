@@ -7,7 +7,7 @@ import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import type { Song, ChartEntry } from '../types';
 import { LABELS } from '../constants';
-import { getFormatCompatibilityMultiplier, normalizeRadioFormatId } from '../constants/radioFormats';
+import { getFormatCompatibilityMultiplier, normalizeRadioFormatId, calculateMultiFormatWeights } from '../constants/radioFormats';
 
 export const ChartPredictionsView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, allPlayerArtists } = useGame();
@@ -179,14 +179,16 @@ export const ChartPredictionsView: React.FC = () => {
                                 : [normalizeRadioFormatId(s.radioFormat || 'chr')];
                             const qualityBoost = (s.quality || 50) + (aData.popularity || 0);
                             const radioEraBoost = gameState.date.year < 2010 ? (gameState.date.year < 2000 ? 5.0 : 3.0) : 1.0;
+                            const formatWeights = calculateMultiFormatWeights(s.genre || 'pop', activeFormats);
 
                             let totalEstPlays = 0;
                             activeFormats.forEach(fmt => {
                                 const formatMultiplier = getFormatCompatibilityMultiplier(s.genre || 'pop', fmt);
                                 const previousFmtPlays = s.formatRadioPlays?.[fmt] || 0;
-                                const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
+                                const fmtWeight = formatWeights[fmt] || (1 / activeFormats.length);
+                                const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * (0.6 + 0.8 * fmtWeight);
                                 let targetPlays = previousFmtPlays === 0 ? baseGrowth : previousFmtPlays + baseGrowth;
-                                targetPlays += (song.weeklyStreams / activeFormats.length) * 0.00025; 
+                                targetPlays += ((song.weeklyStreams || 0) * fmtWeight) * 0.00025; 
                                 
                                 const maxNaturalPlays = 20000 * formatMultiplier * radioEraBoost;
                                 if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
@@ -196,14 +198,11 @@ export const ChartPredictionsView: React.FC = () => {
                                     dropLimit = -Math.floor(previousFmtPlays * 0.1); 
                                 }
 
-                                let rPlays = previousFmtPlays + Math.max(dropLimit, Math.floor((targetPlays - previousFmtPlays) * 0.2));
+                                const fmtPromo = (s.pendingFormatRadioPromoSpins?.[fmt] || 0) + Math.floor((s.pendingRadioPromoSpins || 0) / Math.max(1, activeFormats.length));
+                                let rPlays = previousFmtPlays + Math.max(dropLimit, Math.floor((targetPlays - previousFmtPlays) * 0.2)) + fmtPromo;
                                 if (rPlays < 0) rPlays = 0;
                                 totalEstPlays += rPlays;
                             });
-
-                            if (s.pendingRadioPromoSpins) {
-                                totalEstPlays += s.pendingRadioPromoSpins;
-                            }
 
                             currentRadioPlays = totalEstPlays || s.radioPlays || 0;
                         }

@@ -77,6 +77,8 @@ import {
   getRadioFormatById,
   getFormatCompatibilityMultiplier,
   normalizeRadioFormatId,
+  calculateMultiFormatWeights,
+  getFormatMaxImpressions,
 } from "../constants/radioFormats";
 import { generateWeeklyXContent, formatChartDataHot100Post } from "../utils/xContentGenerator";
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
@@ -2511,7 +2513,13 @@ The Red Mic Team`,
       if (songIndex === -1) return state;
       const song = activeData.songs[songIndex];
       
-      if (region === 'US' && song.hasRadioPromo) return state;
+      const targetFmt = format
+        ? normalizeRadioFormatId(format)
+        : (song.radioFormats && song.radioFormats.length > 0 ? normalizeRadioFormatId(song.radioFormats[0]) : (song.radioFormat ? normalizeRadioFormatId(song.radioFormat) : 'chr'));
+
+      if (region === 'US') {
+        if (song.formatHasRadioPromo?.[targetFmt]) return state;
+      }
       if (region === 'UK' && song.hasUkRadioPromo) return state;
 
       let newMoney = activeData.money;
@@ -2538,10 +2546,18 @@ The Red Mic Team`,
             hasUkRadioPromo: true,
           };
       } else {
+          const pendingFmtMap = { ...(song.pendingFormatRadioPromoSpins || {}) };
+          pendingFmtMap[targetFmt] = (pendingFmtMap[targetFmt] || 0) + spinsGained;
+
+          const fmtPromoMap = { ...(song.formatHasRadioPromo || {}) };
+          fmtPromoMap[targetFmt] = true;
+
           updatedSongs[songIndex] = {
             ...song,
             pendingRadioPromoSpins: (song.pendingRadioPromoSpins || 0) + spinsGained,
             hasRadioPromo: true,
+            pendingFormatRadioPromoSpins: pendingFmtMap,
+            formatHasRadioPromo: fmtPromoMap,
           };
       }
 
@@ -9489,15 +9505,18 @@ It is now available on your Spotify profile.
                 const promoPerFmt = activeFormats.length > 0 ? Math.floor(totalPromoSpins / activeFormats.length) : 0;
 
                 const survivingFormats: string[] = [];
+                const formatWeights = calculateMultiFormatWeights(song.genre || s.genre || "", activeFormats);
 
                 for (const fmt of activeFormats) {
                   const fmtWeeks = (formatWeeksMap[fmt] || 0) + 1;
                   formatWeeksMap[fmt] = fmtWeeks;
 
-                  const formatMultiplier = getFormatCompatibilityMultiplier(song.genre || "", fmt);
+                  const formatMultiplier = getFormatCompatibilityMultiplier(song.genre || s.genre || "", fmt);
                   const previousFmtPlays = formatPlaysMap[fmt] || 0;
+                  const fmtWeight = formatWeights[fmt] || (1 / activeFormats.length);
+                  const maxFmtImpressions = getFormatMaxImpressions(fmt);
 
-                  const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
+                  const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost * (0.6 + 0.8 * fmtWeight);
                   let targetFmtPlays = previousFmtPlays === 0 ? baseGrowth : previousFmtPlays + baseGrowth;
 
                   if (fmtWeeks > 10) {
@@ -9505,10 +9524,10 @@ It is now available on your Spotify profile.
                     targetFmtPlays -= decayFactor;
                   }
 
-                  targetFmtPlays += ((song.weeklyStreams || 0) / Math.max(1, activeFormats.length)) * 0.00025 * traitRadioBoost;
+                  targetFmtPlays += ((song.weeklyStreams || 0) * fmtWeight) * 0.00025 * traitRadioBoost;
 
-                  const maxBasePlays = 14000 + (Math.random() * 3000);
-                  const maxNaturalPlays = maxBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
+                  const maxFormatBasePlays = Math.floor(maxFmtImpressions / 3200) * (0.85 + Math.random() * 0.3);
+                  const maxNaturalPlays = maxFormatBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
 
                   if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
                     targetFmtPlays = 0;
@@ -9520,12 +9539,14 @@ It is now available on your Spotify profile.
                     dropLimit = -Math.floor(previousFmtPlays * 0.1);
                   }
 
+                  const promoForFmt = (s.pendingFormatRadioPromoSpins?.[fmt] || 0) + promoPerFmt;
+
                   let calculatedFmtPlays =
                     previousFmtPlays +
                     Math.max(
                       dropLimit,
                       Math.floor((targetFmtPlays - previousFmtPlays) * 0.2)
-                    ) + promoPerFmt;
+                    ) + promoForFmt;
 
                   if (calculatedFmtPlays < 0) calculatedFmtPlays = 0;
 
@@ -9570,8 +9591,13 @@ It is now available on your Spotify profile.
                   }
 
                   formatPlaysMap[fmt] = calculatedFmtPlays;
-                  formatImprMap[fmt] = calculatedFmtPlays * (Math.floor(Math.random() * 1200) + 2000);
+                  const rawImpr = calculatedFmtPlays * (Math.floor(Math.random() * 1200) + 2200);
+                  formatImprMap[fmt] = Math.min(maxFmtImpressions, rawImpr);
                 }
+
+                s.pendingFormatRadioPromoSpins = {};
+                s.formatHasRadioPromo = {};
+                s.hasRadioPromo = false;
 
                 s.radioFormats = survivingFormats;
                 s.radioFormat = survivingFormats[0] || "chr";
@@ -9689,15 +9715,19 @@ It is now available on your Spotify profile.
             );
             if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
 
+            const npcWeights = calculateMultiFormatWeights(song.genre || "", npcFormats);
             const npcPlaysMap: Record<string, number> = {};
             const npcImprMap: Record<string, number> = {};
             let totalNpcPlays = 0;
             let totalNpcImpr = 0;
 
-            npcFormats.forEach((fmt, idx) => {
-              const share = idx === 0 ? (npcFormats.length === 1 ? 1 : 0.55) : (0.45 / (npcFormats.length - 1));
+            npcFormats.forEach((fmt) => {
+              const share = npcWeights[fmt] || (1 / npcFormats.length);
+              const maxFmtImpressions = getFormatMaxImpressions(fmt);
               const fmtPlays = Math.floor(targetPlays * share);
-              const fmtImpr = fmtPlays * (Math.floor(Math.random() * 1200) + 2000);
+              const rawImpr = fmtPlays * (Math.floor(Math.random() * 1200) + 2200);
+              const fmtImpr = Math.min(maxFmtImpressions, rawImpr);
+
               npcPlaysMap[fmt] = fmtPlays;
               npcImprMap[fmt] = fmtImpr;
               totalNpcPlays += fmtPlays;
@@ -10308,52 +10338,113 @@ It is now available on your Spotify profile.
 
       // --- RADIO UPDATER POSTS ---
       const newRadioPosts: XPost[] = [];
-      const checkRadioNews = (chart: ChartEntry[], formatName: string) => {
-        if (!chart || chart.length === 0) return;
-        const numberOne = chart[0];
-        if (numberOne.rank === 1 && numberOne.lastWeek !== 1) {
-          if (numberOne.lastWeek === null) {
-            newRadioPosts.push({
-              id: crypto.randomUUID(),
-              authorId: "usradio",
-              date: newDate,
-              content: `"${numberOne.title}" by ${numberOne.artist} debuts at #1 on the ${formatName} radio chart with ${Math.floor(numberOne.radioPlays || 0).toLocaleString()} plays!`,
-              likes: Math.floor(Math.random() * 20000) + 5000,
-              retweets: Math.floor(Math.random() * 5000) + 1000,
-              views: Math.floor(Math.random() * 300000) + 50000,
-            });
-          } else {
-            newRadioPosts.push({
-              id: crypto.randomUUID(),
-              authorId: "usradio",
-              date: newDate,
-              content: `"${numberOne.title}" by ${numberOne.artist} rises to #1 on the ${formatName} radio chart (+${(numberOne.lastWeek || 2) - 1})!`,
-              likes: Math.floor(Math.random() * 20000) + 5000,
-              retweets: Math.floor(Math.random() * 5000) + 1000,
-              views: Math.floor(Math.random() * 300000) + 50000,
-            });
-          }
-        } else if (numberOne.rank === 1 && numberOne.lastWeek === 1) {
-          // retaining condition
-          if (Math.random() < 0.25) {
-            // 25% chance so it doesn't spam every week
-            newRadioPosts.push({
-              id: crypto.randomUUID(),
-              authorId: "usradio",
-              date: newDate,
-              content: `"${numberOne.title}" by ${numberOne.artist} retains #1 on the ${formatName} radio chart for another week with ${Math.floor(numberOne.radioPlays || 0).toLocaleString()} plays!`,
-              likes: Math.floor(Math.random() * 20000) + 5000,
-              retweets: Math.floor(Math.random() * 5000) + 1000,
-              views: Math.floor(Math.random() * 300000) + 50000,
-            });
-          }
-        }
+      const getOrdinal = (n: number) => {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
       };
-      checkRadioNews(radioOverallChart, "US Overall");
+
+      const checkRadioNews = (chart: ChartEntry[], formatKey: string, formatName: string) => {
+        if (!chart || chart.length === 0) return;
+
+        chart.forEach((entry) => {
+          const isPlayerSong = Boolean(entry.isPlayerSong);
+          // Only post updates for the user / player's songs, NOT for NPCs
+          if (!isPlayerSong) return;
+
+          const rank = entry.rank;
+          const lastWeek = entry.lastWeek;
+
+          let matchingSong: Song | undefined;
+          if (entry.songId) {
+            for (const aId in updatedArtistsData) {
+              const found = updatedArtistsData[aId].songs.find((s) => s.id === entry.songId);
+              if (found) {
+                matchingSong = found;
+                break;
+              }
+            }
+          }
+
+          let consecutiveWeeks = 1;
+          if (rank === 1) {
+            if (lastWeek === 1) {
+              const prevConsecutive = matchingSong?.formatConsecutiveWeeksAtNo1?.[formatKey] || 1;
+              consecutiveWeeks = prevConsecutive + 1;
+            } else {
+              consecutiveWeeks = 1;
+            }
+            if (matchingSong) {
+              matchingSong.formatConsecutiveWeeksAtNo1 = {
+                ...(matchingSong.formatConsecutiveWeeksAtNo1 || {}),
+                [formatKey]: consecutiveWeeks,
+              };
+            }
+          } else if (matchingSong) {
+            if (matchingSong.formatConsecutiveWeeksAtNo1?.[formatKey]) {
+              matchingSong.formatConsecutiveWeeksAtNo1[formatKey] = 0;
+            }
+          }
+
+          // 1. Reaching #1
+          if (rank === 1 && lastWeek !== 1) {
+            newRadioPosts.push({
+              id: crypto.randomUUID(),
+              authorId: "usradio",
+              date: newDate,
+              image: entry.coverArt,
+              content: `"${entry.title}" by ${entry.artist} ${lastWeek === null ? "debuts" : "rises"} to #1 on the ${formatName} radio chart${lastWeek ? ` (+${lastWeek - 1})` : ""} with ${Math.floor(entry.radioPlays || 0).toLocaleString()} plays!`,
+              likes: Math.floor(Math.random() * 25000) + 8000,
+              retweets: Math.floor(Math.random() * 6000) + 2000,
+              views: Math.floor(Math.random() * 400000) + 100000,
+            });
+          }
+          // 2. Consecutive weeks at #1
+          else if (rank === 1 && lastWeek === 1) {
+            newRadioPosts.push({
+              id: crypto.randomUUID(),
+              authorId: "usradio",
+              date: newDate,
+              image: entry.coverArt,
+              content: `"${entry.title}" by ${entry.artist} spends a ${getOrdinal(consecutiveWeeks)} consecutive week at #1 on the ${formatName} radio chart with ${Math.floor(entry.radioPlays || 0).toLocaleString()} plays!`,
+              likes: Math.floor(Math.random() * 25000) + 8000,
+              retweets: Math.floor(Math.random() * 6000) + 2000,
+              views: Math.floor(Math.random() * 400000) + 100000,
+            });
+          }
+          // 3. Enters Top 5
+          else if (rank <= 5 && rank > 1 && (lastWeek === null || lastWeek > 5)) {
+            newRadioPosts.push({
+              id: crypto.randomUUID(),
+              authorId: "usradio",
+              date: newDate,
+              image: entry.coverArt,
+              content: `"${entry.title}" by ${entry.artist} enters the Top 5 on the ${formatName} radio chart at #${rank}${lastWeek ? ` (+${lastWeek - rank})` : " (NEW)"} with ${Math.floor(entry.radioPlays || 0).toLocaleString()} plays!`,
+              likes: Math.floor(Math.random() * 18000) + 5000,
+              retweets: Math.floor(Math.random() * 4000) + 1000,
+              views: Math.floor(Math.random() * 250000) + 50000,
+            });
+          }
+          // 4. Enters Top 10
+          else if (rank <= 10 && rank > 5 && (lastWeek === null || lastWeek > 10)) {
+            newRadioPosts.push({
+              id: crypto.randomUUID(),
+              authorId: "usradio",
+              date: newDate,
+              image: entry.coverArt,
+              content: `"${entry.title}" by ${entry.artist} enters the Top 10 on the ${formatName} radio chart at #${rank}${lastWeek ? ` (+${lastWeek - rank})` : " (NEW)"} with ${Math.floor(entry.radioPlays || 0).toLocaleString()} plays!`,
+              likes: Math.floor(Math.random() * 14000) + 4000,
+              retweets: Math.floor(Math.random() * 3000) + 800,
+              views: Math.floor(Math.random() * 200000) + 40000,
+            });
+          }
+        });
+      };
+      checkRadioNews(radioOverallChart, "overall", "US Overall");
       RADIO_FORMATS.forEach((rf) => {
         if (rf.seasonalOnly && (newDate.week < 40 && newDate.week > 2)) return;
         if (radioFormatCharts[rf.id]) {
-          checkRadioNews(radioFormatCharts[rf.id], `US ${rf.shortName}`);
+          checkRadioNews(radioFormatCharts[rf.id], rf.id, `US ${rf.shortName}`);
         }
       });
 
