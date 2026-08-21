@@ -7,6 +7,7 @@ import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import type { Song, ChartEntry } from '../types';
 import { LABELS } from '../constants';
+import { getFormatCompatibilityMultiplier, normalizeRadioFormatId } from '../constants/radioFormats';
 
 export const ChartPredictionsView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, allPlayerArtists } = useGame();
@@ -173,57 +174,38 @@ export const ChartPredictionsView: React.FC = () => {
                                 }
                             }
                             
-                            const rFormat = s.radioFormat || 'pop';
+                            const activeFormats = (s.radioFormats && s.radioFormats.length > 0)
+                                ? s.radioFormats.map(normalizeRadioFormatId)
+                                : [normalizeRadioFormatId(s.radioFormat || 'chr')];
                             const qualityBoost = (s.quality || 50) + (aData.popularity || 0);
-                            
-                            const isFormatCompatible = (genre: string, format: string) => {
-                                const g = (genre || "").toLowerCase();
-                                const f = (format || "").toLowerCase();
-                                if (f === 'pop') {
-                                    if (g.includes('hip hop') || g.includes('rap')) return 0.2;
-                                    if (g.includes('country')) return 0.05;
-                                    if (g.includes('hip hop') || g.includes('r&b') || g.includes('rap') || g.includes('pop') || g.includes('dance') || g.includes('k-pop') || g.includes('kpop') || g.includes('electronic')) return 1.0;
-                                    return 0.1;
-                                }
-                                if (f === 'country') {
-                                    if (g.includes('country')) return 1.0;
-                                    return 0.05;
-                                }
-                                if (f === 'christmas') {
-                                    if (g.includes('holiday') || g.includes('christmas')) return 1.0;
-                                    return 0.01;
-                                }
-                                return 1.0; // fallback
-                            };
-
-                            const formatMultiplier = isFormatCompatible(s.genre || 'pop', rFormat);
                             const radioEraBoost = gameState.date.year < 2010 ? (gameState.date.year < 2000 ? 5.0 : 3.0) : 1.0;
-                            
-                            const previousPlays = s.radioPlays || 0;
-                            const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
-                            let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
-                            
-                            targetPlays += song.weeklyStreams * 0.00025; 
-                            
-                            const maxNaturalPlays = 20000 * formatMultiplier * radioEraBoost;
-                            if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
-                            
-                            let dropLimit = -500;
-                            if (previousPlays > targetPlays * 1.5) {
-                                dropLimit = -Math.floor(previousPlays * 0.1); 
-                            }
 
-                            let rPlays = previousPlays + Math.max(dropLimit, Math.floor((targetPlays - previousPlays) * 0.2));
-                            
-                            let promoSpins = 0;
+                            let totalEstPlays = 0;
+                            activeFormats.forEach(fmt => {
+                                const formatMultiplier = getFormatCompatibilityMultiplier(s.genre || 'pop', fmt);
+                                const previousFmtPlays = s.formatRadioPlays?.[fmt] || 0;
+                                const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost;
+                                let targetPlays = previousFmtPlays === 0 ? baseGrowth : previousFmtPlays + baseGrowth;
+                                targetPlays += (song.weeklyStreams / activeFormats.length) * 0.00025; 
+                                
+                                const maxNaturalPlays = 20000 * formatMultiplier * radioEraBoost;
+                                if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
+                                
+                                let dropLimit = -500;
+                                if (previousFmtPlays > targetPlays * 1.5) {
+                                    dropLimit = -Math.floor(previousFmtPlays * 0.1); 
+                                }
+
+                                let rPlays = previousFmtPlays + Math.max(dropLimit, Math.floor((targetPlays - previousFmtPlays) * 0.2));
+                                if (rPlays < 0) rPlays = 0;
+                                totalEstPlays += rPlays;
+                            });
+
                             if (s.pendingRadioPromoSpins) {
-                                promoSpins = s.pendingRadioPromoSpins;
-                                rPlays += promoSpins;
+                                totalEstPlays += s.pendingRadioPromoSpins;
                             }
 
-                            if (rPlays < 0) rPlays = 0;
-
-                            currentRadioPlays = rPlays;
+                            currentRadioPlays = totalEstPlays || s.radioPlays || 0;
                         }
 
                         break;

@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { RADIO_FORMATS, getRadioFormatById, getFormatCompatibilityMultiplier, normalizeRadioFormatId } from '../constants/radioFormats';
+import type { Song } from '../types';
 
 const RadioDashView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const [selectedTab, setSelectedTab] = useState<'manage' | 'charts'>('manage');
-    const [selectedChart, setSelectedChart] = useState<'overall' | 'pop' | 'urban' | 'rhythmic' | 'country' | 'christmas'>('overall');
+    const [metricMode, setMetricMode] = useState<'plays' | 'impressions'>('plays');
+    const [selectedChart, setSelectedChart] = useState<string>('overall');
     const [promoSongId, setPromoSongId] = useState<string | null>(null);
     const [promoAmount, setPromoAmount] = useState<number>(10000);
     const [promoSource, setPromoSource] = useState<'personal' | 'label'>('personal');
+    const [selectedRegion, setSelectedRegion] = useState<'US' | 'UK'>('US');
+
+    // Multi-format submission modal / selection state
+    const [submittingSongId, setSubmittingSongId] = useState<string | null>(null);
+    const [selectedFormats, setSelectedFormats] = useState<string[]>(['chr']);
 
     const activeArtistData = gameState.activeArtistId ? gameState.artistsData[gameState.activeArtistId] : null;
 
@@ -47,22 +55,69 @@ const RadioDashView: React.FC = () => {
     
     const songsOnRadioCount = activeArtistData?.songs.filter(s => s.isOnRadio || s.isOnUkRadio).length || 0;
 
-    const handleWithdraw = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
+    const handleWithdraw = (songId: string, format?: string, region: 'US' | 'UK' = 'US') => {
         dispatch({ type: 'WITHDRAW_FROM_RADIO', payload: { songId, format, region } });
     };
 
-    const [selectedRegion, setSelectedRegion] = useState<'US'|'UK'>('US');
-
-    const handleSubmit = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
-        const onRadioCount = activeArtistData?.songs.filter(s => region === 'US' ? s.isOnRadio : s.isOnUkRadio).length || 0;
-        if (onRadioCount >= maxSongs) {
-            alert(`Your label restricts you to ${maxSongs} concurrent song(s) on ${region} radio.`);
-            return;
-        }
-        dispatch({ type: 'SUBMIT_TO_RADIO', payload: { songId, format, region } });
+    const openSubmitModal = (song: Song) => {
+        setSubmittingSongId(song.id);
+        const existing = (song.radioFormats && song.radioFormats.length > 0)
+            ? song.radioFormats.map(normalizeRadioFormatId)
+            : (song.radioFormat ? [normalizeRadioFormatId(song.radioFormat)] : ['chr']);
+        setSelectedFormats(existing);
     };
 
-    const handlePromote = (songId: string, format: string, region: 'US'|'UK' = 'US') => {
+    const toggleFormatSelection = (formatId: string) => {
+        if (selectedFormats.includes(formatId)) {
+            if (selectedFormats.length === 1) {
+                // Must keep at least 1
+                return;
+            }
+            setSelectedFormats(selectedFormats.filter(f => f !== formatId));
+        } else {
+            if (selectedFormats.length >= 5) {
+                alert("You can send a song to up to 5 radio formats maximum.");
+                return;
+            }
+            setSelectedFormats([...selectedFormats, formatId]);
+        }
+    };
+
+    const handleConfirmSubmit = (songId: string) => {
+        if (selectedFormats.length === 0) {
+            alert("Please select at least 1 radio format.");
+            return;
+        }
+        if (selectedFormats.length > 5) {
+            alert("You can select up to 5 radio formats max.");
+            return;
+        }
+
+        const song = activeArtistData?.songs.find(s => s.id === songId);
+        const isAlreadyOnRadio = selectedRegion === 'US' ? song?.isOnRadio : song?.isOnUkRadio;
+
+        if (!isAlreadyOnRadio) {
+            const onRadioCount = activeArtistData?.songs.filter(s => selectedRegion === 'US' ? s.isOnRadio : s.isOnUkRadio).length || 0;
+            if (onRadioCount >= maxSongs) {
+                alert(`Your label restricts you to ${maxSongs} concurrent song(s) on ${selectedRegion} radio.`);
+                return;
+            }
+        }
+
+        dispatch({ 
+            type: 'SUBMIT_TO_RADIO', 
+            payload: { 
+                songId, 
+                formats: selectedFormats,
+                format: selectedFormats[0],
+                region: selectedRegion 
+            } 
+        });
+
+        setSubmittingSongId(null);
+    };
+
+    const handlePromote = (songId: string, region: 'US'|'UK' = 'US') => {
         const activePayolaCount = activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0;
         if (gameState.difficultyMode === 'hard' && activePayolaCount >= 2) {
             alert('You can only have 2 songs active in payola on Hard mode.');
@@ -81,9 +136,19 @@ const RadioDashView: React.FC = () => {
             alert("Not enough label marketing budget.");
             return;
         }
+        const song = activeArtistData?.songs.find(s => s.id === songId);
+        const format = song?.radioFormats?.[0] || song?.radioFormat || 'chr';
         dispatch({ type: 'PROMOTE_RADIO', payload: { songId, format, amount: promoAmount, source: promoSource, region } });
         setPromoSongId(null);
         alert(`Successfully invested $${formatNumber(promoAmount)} in radio promotion!`);
+    };
+
+    const formatMetricValue = (plays: number, impressions: number) => {
+        if (metricMode === 'plays') {
+            return `${formatNumber(Math.floor(plays))} plays`;
+        } else {
+            return `${formatNumber(Math.floor(impressions))} imp.`;
+        }
     };
 
     const renderManage = () => {
@@ -102,184 +167,418 @@ const RadioDashView: React.FC = () => {
             );
         }
 
+        const targetSubmittingSong = activeArtistData.songs.find(s => s.id === submittingSongId);
+
         return (
             <div className="p-4 space-y-6">
-                <div>
-                    <h2 className="text-xl font-bold mb-2">My Airplay</h2>
-                    <p className="text-sm text-zinc-500 mb-4">Capacity: {songsOnRadioCount} / {maxSongs} active campaigns</p>
-                    {activeRadioSongs.map(song => (
-                        <div key={song._key} className="bg-white p-3 rounded-lg border border-black shadow mb-3 flex flex-col">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <img src={song.coverArt} className="w-12 h-12 object-cover border border-black" />
-                                    <div>
-                                        <p className="font-bold text-sm truncate w-40">{song.title}</p>
-                                        <p className="text-xs text-zinc-500 pt-1">
-                                            Plays: {formatNumber(song._region === 'US' ? (song.radioPlays || 0) : (song.ukRadioPlays || 0))} TW • Format: {(song._region === 'US' ? song.radioFormat : song.ukRadioFormat)?.toUpperCase()} • Region: {song._region}
-                                        </p>
-                                    </div>
+                {/* Modal for selecting up to 5 formats */}
+                {targetSubmittingSong && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-zinc-300 animate-in fade-in zoom-in duration-150">
+                            <div className="bg-black text-white p-4 flex justify-between items-center">
+                                <div>
+                                    <h3 className="font-bold text-base">Select Radio Formats</h3>
+                                    <p className="text-xs text-zinc-400">Choose up to 5 formats for &ldquo;{targetSubmittingSong.title}&rdquo; ({targetSubmittingSong.genre || 'Pop'})</p>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <button 
-                                        onClick={() => setPromoSongId(promoSongId === song.id ? null : song.id)} 
-                                        disabled={song._region === 'US' ? song.hasRadioPromo : song.hasUkRadioPromo}
-                                        className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded uppercase disabled:opacity-50">
-                                        {(song._region === 'US' ? song.hasRadioPromo : song.hasUkRadioPromo) ? 'Promoted' : promoSongId === song.id ? 'Cancel' : 'Promote'}
-                                    </button>
-                                    <button onClick={() => handleWithdraw(song.id, song._region === 'US' ? (song.radioFormat || 'pop') : (song.ukRadioFormat || 'pop'), song._region)} className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded uppercase">Withdraw</button>
-                                </div>
+                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${selectedFormats.length > 5 ? 'bg-red-500 text-white' : selectedFormats.length > 0 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-300'}`}>
+                                    {selectedFormats.length} / 5 Formats
+                                </span>
                             </div>
-                            {promoSongId === song.id && (
-                                <div className="mt-4 pt-4 border-t border-zinc-200">
-                                    <h4 className="font-bold text-sm mb-2 text-blue-800">Radio Promotion (Payola)</h4>
-                                    {(gameState.difficultyMode === 'hard' && (activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0) >= 2) || (gameState.difficultyMode === 'extreme' && (activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0) >= 1) ? (
-                                        <p className="text-sm text-red-600 font-bold mb-2">Payola limit reached for {gameState.difficultyMode === 'extreme' ? 'Extreme' : 'Hard'} Mode. Remove a song's promotion to add more.</p>
-                                    ) : (
-                                        <>
-                                    <p className="text-xs text-zinc-600 mb-4">Invest money to boost spins and impressions this week.</p>
-                                    <div className="mb-4">
-                                        <label className="text-xs font-bold text-zinc-700">Amount: ${formatNumber(promoAmount)}</label>
-                                        <input 
-                                            type="range" 
-                                            min="1000" 
-                                            max="1000000" 
-                                            step="1000"
-                                            value={promoAmount} 
-                                            onChange={(e) => setPromoAmount(parseInt(e.target.value))}
-                                            className="w-full accent-blue-600 h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer mt-2" 
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 mb-4">
-                                        <button 
-                                            onClick={() => setPromoSource('personal')} 
-                                            className={`flex-1 py-2 text-xs font-bold rounded ${promoSource === 'personal' ? 'bg-black text-white' : 'bg-zinc-200 text-black'}`}
-                                        >
-                                            Personal Funds<br/>
-                                            <span className="text-[10px] opacity-80">${formatNumber(activeArtistData.money)}</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => setPromoSource('label')} 
-                                            disabled={!activeArtistData.contract}
-                                            className={`flex-1 py-2 text-xs font-bold rounded disabled:opacity-50 ${promoSource === 'label' ? 'bg-black text-white' : 'bg-zinc-200 text-black'}`}
-                                        >
-                                            Label Budget<br/>
-                                            <span className="text-[10px] opacity-80">{activeArtistData.contract ? `$${formatNumber(activeArtistData.contract.marketingBudget)}` : 'N/A'}</span>
-                                        </button>
-                                    </div>
-                                    <button 
-                                        onClick={() => handlePromote(song.id, song._region === 'US' ? (song.radioFormat || 'pop') : (song.ukRadioFormat || 'pop'), song._region)} 
-                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2 rounded shadow text-sm uppercase tracking-wide transition-colors"
-                                    >
-                                        Confirm Campaign
-                                    </button>
-                                    </>
-                                    )}
+
+                            <div className="p-4 overflow-y-auto space-y-2 flex-1 divide-y divide-zinc-100">
+                                <div className="text-xs text-zinc-600 mb-2 font-medium bg-zinc-50 p-2.5 rounded border border-zinc-200">
+                                    💡 Total plays and audience across all active formats are aggregated on the national charts and Billboard Hot 100.
                                 </div>
-                            )}
+                                {RADIO_FORMATS.map(fmt => {
+                                    const isSelected = selectedFormats.includes(fmt.id);
+                                    const compat = getFormatCompatibilityMultiplier(targetSubmittingSong.genre || 'pop', fmt.id);
+                                    let compatBadge = { text: 'High Compatibility', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+                                    if (compat <= 0.05) compatBadge = { text: 'Incompatible', color: 'bg-red-100 text-red-800 border-red-300' };
+                                    else if (compat < 0.4) compatBadge = { text: 'Low Compatibility', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+                                    else if (compat < 0.8) compatBadge = { text: 'Moderate Compatibility', color: 'bg-blue-100 text-blue-800 border-blue-300' };
+
+                                    return (
+                                        <div 
+                                            key={fmt.id}
+                                            onClick={() => toggleFormatSelection(fmt.id)}
+                                            className={`p-3 rounded-lg border transition-all cursor-pointer flex items-start justify-between gap-3 ${isSelected ? 'bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-500' : 'bg-white border-zinc-200 hover:border-zinc-300'}`}
+                                        >
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-sm text-zinc-900">{fmt.name}</span>
+                                                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">{fmt.shortName}</span>
+                                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${compatBadge.color}`}>
+                                                        {compatBadge.text}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-zinc-500 mt-1">{fmt.description}</p>
+                                                <p className="text-[11px] text-zinc-400 mt-0.5">Allowed genres: {fmt.allowedGenres.join(', ')}</p>
+                                            </div>
+                                            <div className="pt-0.5">
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => {}}
+                                                    className="w-5 h-5 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="bg-zinc-50 p-4 border-t border-zinc-200 flex gap-3">
+                                <button
+                                    onClick={() => setSubmittingSongId(null)}
+                                    className="flex-1 py-2.5 rounded-lg border border-zinc-300 bg-white font-bold text-sm text-zinc-700 hover:bg-zinc-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleConfirmSubmit(targetSubmittingSong.id)}
+                                    disabled={selectedFormats.length === 0 || selectedFormats.length > 5}
+                                    className="flex-1 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 font-bold text-sm text-white shadow"
+                                >
+                                    Confirm ({selectedFormats.length} Formats)
+                                </button>
+                            </div>
                         </div>
-                    ))}
-                    {songsOnRadioCount === 0 && <p className="text-zinc-400 text-sm italic">No active radio campaigns.</p>}
+                    </div>
+                )}
+
+                {/* Top header stats + Metric toggle */}
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-2 border-b border-zinc-200">
+                    <div>
+                        <h2 className="text-xl font-bold">My Airplay</h2>
+                        <p className="text-xs text-zinc-500">Capacity: {songsOnRadioCount} / {maxSongs} active campaigns</p>
+                    </div>
+                    {/* Metric Toggle (Plays vs Impressions) */}
+                    <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200 self-start sm:self-auto">
+                        <button
+                            onClick={() => setMetricMode('plays')}
+                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${metricMode === 'plays' ? 'bg-white shadow-sm text-black border border-zinc-300' : 'text-zinc-500 hover:text-black'}`}
+                        >
+                            Spins / Plays
+                        </button>
+                        <button
+                            onClick={() => setMetricMode('impressions')}
+                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${metricMode === 'impressions' ? 'bg-white shadow-sm text-black border border-zinc-300' : 'text-zinc-500 hover:text-black'}`}
+                        >
+                            Audience / Impressions
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    {activeRadioSongs.map(song => {
+                        const songPlays = song._region === 'US' ? (song.radioPlays || 0) : (song.ukRadioPlays || 0);
+                        const songImpressions = song._region === 'US' ? (song.radioImpressions || songPlays * 4500) : (song.ukRadioImpressions || songPlays * 3000);
+                        const activeFormats = (song.radioFormats && song.radioFormats.length > 0)
+                            ? song.radioFormats.map(normalizeRadioFormatId)
+                            : [normalizeRadioFormatId(song._region === 'US' ? (song.radioFormat || 'chr') : (song.ukRadioFormat || 'chr'))];
+
+                        return (
+                            <div key={song._key} className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm mb-4 flex flex-col space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <img src={song.coverArt} className="w-14 h-14 object-cover rounded-lg border border-zinc-200 shrink-0" alt={song.title} />
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-base truncate">{song.title}</p>
+                                            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                                                <span className="text-xs font-semibold text-zinc-900">
+                                                    Total: {formatMetricValue(songPlays, songImpressions)} TW
+                                                </span>
+                                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 font-bold text-zinc-600">
+                                                    {song._region} RADIO
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button 
+                                            onClick={() => openSubmitModal(song)}
+                                            className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-zinc-300">
+                                            Edit Formats ({activeFormats.length}/5)
+                                        </button>
+                                        <button 
+                                            onClick={() => setPromoSongId(promoSongId === song.id ? null : song.id)} 
+                                            disabled={song._region === 'US' ? song.hasRadioPromo : song.hasUkRadioPromo}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 shadow-sm">
+                                            {(song._region === 'US' ? song.hasRadioPromo : song.hasUkRadioPromo) ? 'Promoted' : promoSongId === song.id ? 'Cancel' : 'Payola'}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleWithdraw(song.id, undefined, song._region)} 
+                                            className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-sm">
+                                            Withdraw
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Active Formats Breakdown Pills */}
+                                <div className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-200">
+                                    <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                                        <span>Active Formats ({activeFormats.length} / 5 max)</span>
+                                        <span>Spins / Impressions</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {activeFormats.map(fmtId => {
+                                            const fmt = getRadioFormatById(fmtId);
+                                            const fPlays = song.formatRadioPlays?.[fmtId] || (activeFormats.length === 1 ? songPlays : Math.floor(songPlays / activeFormats.length));
+                                            const fImpr = song.formatRadioImpressions?.[fmtId] || (fPlays * 4500);
+
+                                            return (
+                                                <div key={fmtId} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded border border-zinc-200 text-xs">
+                                                    <div className="flex items-center gap-1.5 truncate">
+                                                        <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                                                        <span className="font-bold truncate">{fmt?.shortName || fmtId.toUpperCase()}</span>
+                                                        <span className="text-[10px] text-zinc-400 truncate">({fmt?.name})</span>
+                                                    </div>
+                                                    <span className="font-mono font-semibold text-zinc-700 ml-2 shrink-0">
+                                                        {metricMode === 'plays' ? `${formatNumber(fPlays)} spins` : `${formatNumber(fImpr)} aud.`}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Payola Drawer */}
+                                {promoSongId === song.id && (
+                                    <div className="mt-2 pt-3 border-t border-zinc-200 animate-in fade-in duration-150">
+                                        <h4 className="font-bold text-sm mb-1 text-blue-800">Radio Promotion Campaign (Payola)</h4>
+                                        {(gameState.difficultyMode === 'hard' && (activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0) >= 2) || (gameState.difficultyMode === 'extreme' && (activeArtistData?.songs.filter(s => s.hasRadioPromo || s.hasUkRadioPromo).length || 0) >= 1) ? (
+                                            <p className="text-sm text-red-600 font-bold mb-2">Payola limit reached for {gameState.difficultyMode === 'extreme' ? 'Extreme' : 'Hard'} Mode.</p>
+                                        ) : (
+                                            <>
+                                                <p className="text-xs text-zinc-600 mb-3">Invest money to boost airplay spins and audience impressions this week across all selected formats.</p>
+                                                <div className="mb-3">
+                                                    <label className="text-xs font-bold text-zinc-700 flex justify-between">
+                                                        <span>Investment: ${formatNumber(promoAmount)}</span>
+                                                        <span className="text-blue-600">~+{formatNumber(Math.floor(promoAmount / 25))} plays</span>
+                                                    </label>
+                                                    <input 
+                                                        type="range" 
+                                                        min="1000" 
+                                                        max="1000000" 
+                                                        step="1000" 
+                                                        value={promoAmount} 
+                                                        onChange={(e) => setPromoAmount(parseInt(e.target.value))}
+                                                        className="w-full accent-blue-600 h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer mt-1.5" 
+                                                    />
+                                                </div>
+                                                <div className="flex gap-2 mb-3">
+                                                    <button 
+                                                        onClick={() => setPromoSource('personal')} 
+                                                        className={`flex-1 py-2 text-xs font-bold rounded-lg border ${promoSource === 'personal' ? 'bg-black text-white border-black' : 'bg-zinc-100 text-black border-zinc-200'}`}
+                                                    >
+                                                        Personal Funds<br/>
+                                                        <span className="text-[10px] opacity-80">${formatNumber(activeArtistData.money)}</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setPromoSource('label')} 
+                                                        disabled={!activeArtistData.contract}
+                                                        className={`flex-1 py-2 text-xs font-bold rounded-lg border disabled:opacity-50 ${promoSource === 'label' ? 'bg-black text-white border-black' : 'bg-zinc-100 text-black border-zinc-200'}`}
+                                                    >
+                                                        Label Budget<br/>
+                                                        <span className="text-[10px] opacity-80">{activeArtistData.contract ? `$${formatNumber(activeArtistData.contract.marketingBudget)}` : 'N/A'}</span>
+                                                    </button>
+                                                </div>
+                                                <button 
+                                                    onClick={() => handlePromote(song.id, song._region)} 
+                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg shadow text-xs uppercase tracking-wide transition-colors"
+                                                >
+                                                    Confirm Payola Campaign
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                    {songsOnRadioCount === 0 && <p className="text-zinc-400 text-sm italic py-4 text-center">No active radio campaigns.</p>}
                 </div>
 
                 <div>
                     <div className="flex justify-between items-center mb-4 pt-4 border-t border-zinc-200">
-                        <h2 className="text-xl font-bold">Submit New Track</h2>
+                        <div>
+                            <h2 className="text-xl font-bold">Submit New Track</h2>
+                            <p className="text-xs text-zinc-500">Send songs to up to 5 radio formats at once</p>
+                        </div>
                         <select 
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value as 'US'|'UK')}
-                            className="bg-zinc-800 text-white px-3 py-1 rounded border border-zinc-700"
+                            className="bg-zinc-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-700"
                         >
                             <option value="US">US Radio</option>
                             <option value="UK">UK Radio</option>
                         </select>
                     </div>
-                    {activeArtistData.songs.filter(s => !(selectedRegion === 'US' ? s.isOnRadio : s.isOnUkRadio) && s.isReleased && !s.remixOfSongId).map(song => (
-                        <div key={song.id} className="bg-white p-3 rounded border border-zinc-300 mb-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                            <div className="flex items-center w-full gap-3">
-                                <img src={song.coverArt} className="w-10 h-10 object-cover border border-zinc-200" />
-                                <p className="font-bold text-sm truncate flex-1">{song.title}</p>
+
+                    <div className="space-y-3">
+                        {activeArtistData.songs.filter(s => !(selectedRegion === 'US' ? s.isOnRadio : s.isOnUkRadio) && s.isReleased && !s.remixOfSongId).map(song => (
+                            <div key={song.id} className="bg-white p-3.5 rounded-xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <div className="flex items-center w-full gap-3 min-w-0">
+                                    <img src={song.coverArt} className="w-12 h-12 object-cover rounded-lg border border-zinc-200 shrink-0" alt={song.title} />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-bold text-sm truncate">{song.title}</p>
+                                        <p className="text-xs text-zinc-500 truncate">{song.genre || 'Pop'} • {formatNumber(song.streams)} streams</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => openSubmitModal(song)}
+                                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm whitespace-nowrap transition-colors"
+                                >
+                                    Select Formats &amp; Submit
+                                </button>
                             </div>
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <button onClick={() => handleSubmit(song.id, 'pop', selectedRegion)} className="bg-blue-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Pop</button>
-                                <button onClick={() => handleSubmit(song.id, 'urban', selectedRegion)} className="bg-orange-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Urban</button>
-                                <button onClick={() => handleSubmit(song.id, 'rhythmic', selectedRegion)} className="bg-purple-500 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Rhythm</button>
-                                <button onClick={() => handleSubmit(song.id, 'country', selectedRegion)} className="bg-green-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Country</button>
-                                {(gameState.date.week > 40 || gameState.date.week < 2) && (
-                                    <button onClick={() => handleSubmit(song.id, 'christmas', selectedRegion)} className="bg-red-600 flex-1 text-white text-[10px] sm:text-xs font-bold px-2 py-1.5 rounded uppercase whitespace-nowrap">Holiday</button>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             </div>
         );
     };
 
     const renderCharts = () => {
-        let title = "ALL RADIO";
-        let chartData = gameState.radioOverallChart || [];
-        if (selectedChart === 'pop') { title = "POP RADIO"; chartData = gameState.radioPopChart || []; }
-        if (selectedChart === 'urban') { title = "URBAN AC & HIP HOP"; chartData = gameState.radioUrbanChart || []; }
-        if (selectedChart === 'rhythmic') { title = "RHYTHMIC"; chartData = gameState.radioRhythmicChart || []; }
-        if (selectedChart === 'country') { title = "COUNTRY"; chartData = gameState.radioCountryChart || []; }
-        if (selectedChart === 'christmas') { title = "HOLIDAY / CHRISTMAS"; chartData = gameState.radioChristmasChart || []; }
+        let chartData: any[] = [];
+        let chartTitle = "ALL RADIO (MEDIABASE OVERALL)";
+        let formatObj = RADIO_FORMATS.find(rf => rf.id === selectedChart);
 
-        const isInChristmasSeason = gameState.date.week > 40 || gameState.date.week < 2;
+        if (selectedChart === 'overall') {
+            chartTitle = "ALL RADIO (OVERALL MEDIABASE)";
+            chartData = gameState.radioOverallChart || [];
+        } else if (formatObj) {
+            chartTitle = `${formatObj.name.toUpperCase()} (${formatObj.shortName})`;
+            chartData = gameState.radioFormatCharts?.[formatObj.id] ||
+                (formatObj.id === 'chr' ? gameState.radioPopChart :
+                 formatObj.id === 'urban' ? gameState.radioUrbanChart :
+                 formatObj.id === 'rhythmic' ? gameState.radioRhythmicChart :
+                 formatObj.id === 'country' ? gameState.radioCountryChart :
+                 formatObj.id === 'christmas' ? gameState.radioChristmasChart : undefined) || [];
+        } else {
+            chartData = gameState.radioOverallChart || [];
+        }
+
+        const sortedChartData = [...chartData].sort((a, b) => {
+            if (metricMode === 'impressions') {
+                const aImp = a.radioImpressions || (a.radioPlays || 0) * 4500;
+                const bImp = b.radioImpressions || (b.radioPlays || 0) * 4500;
+                return bImp - aImp;
+            } else {
+                return (b.radioPlays || 0) - (a.radioPlays || 0);
+            }
+        });
 
         return (
             <div className="p-0">
-                <div className="flex overflow-x-auto p-4 gap-2 border-b border-zinc-200 bg-white items-center hide-scrollbar">
-                    {['overall', 'pop', 'urban', 'rhythmic', 'country', isInChristmasSeason ? 'christmas' : null].filter(Boolean).map(c => (
-                        <button key={c} onClick={() => setSelectedChart(c as any)} 
-                                className={`px-3 py-1.5 whitespace-nowrap rounded font-bold text-xs uppercase ${selectedChart === c ? 'bg-black text-white' : 'bg-transparent text-zinc-500 border border-zinc-300'}`}>
-                            {c}
+                {/* Format selection horizontal pill bar */}
+                <div className="border-b border-zinc-200 bg-white sticky top-[108px] z-10">
+                    <div className="flex overflow-x-auto p-3 gap-2 hide-scrollbar items-center">
+                        <button 
+                            onClick={() => setSelectedChart('overall')} 
+                            className={`px-3 py-1.5 whitespace-nowrap rounded-lg font-bold text-xs uppercase transition-all ${selectedChart === 'overall' ? 'bg-black text-white shadow' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                        >
+                            All Formats (Overall)
                         </button>
-                    ))}
-                </div>
-                <div className="p-4 bg-[#f8f9fa] min-h-[50vh]">
-                    <h2 className="font-black text-xl mb-4 italic tracking-tight uppercase flex items-center justify-between">
-                        <span>{title}</span>
-                        <span className="text-red-600 text-xs text-right pr-2">MEDIABASE</span>
-                    </h2>
-                    {chartData.map((entry, idx) => (
-                        <div key={idx} className="flex bg-white border border-zinc-200 mb-2 p-2 items-center">
-                            <div className="w-8 text-center font-black text-zinc-800">{idx + 1}</div>
-                            <img src={entry.coverArt} className="w-12 h-12 object-cover border border-zinc-100 mx-3" />
-                            <div className="flex-1 min-w-0">
-                                <p className="font-bold text-sm truncate">{entry.title}</p>
-                                <p className="text-xs text-zinc-500 truncate">{entry.artist}</p>
-                            </div>
-                            <div className="text-right text-xs">
-                                <p className="font-mono font-bold text-zinc-800">{formatNumber(entry.radioPlays || 0)}</p>
-                                <p className="text-[9px] text-zinc-400">PLAYS TW</p>
-                            </div>
+                        {RADIO_FORMATS.map(fmt => (
+                            <button 
+                                key={fmt.id} 
+                                onClick={() => setSelectedChart(fmt.id)} 
+                                className={`px-3 py-1.5 whitespace-nowrap rounded-lg font-bold text-xs uppercase transition-all ${selectedChart === fmt.id ? 'bg-black text-white shadow' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                            >
+                                {fmt.shortName}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Chart Sub-header: Metric toggle + Format description */}
+                    <div className="px-4 py-2.5 bg-zinc-50 border-t border-zinc-200 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                        <div className="text-xs text-zinc-600 truncate">
+                            {formatObj ? `${formatObj.description}` : 'Top songs compiled from aggregate airplay across all 15 formats.'}
                         </div>
-                    ))}
-                    {chartData.length === 0 && <p className="text-center text-zinc-500 py-10">Chart currently building...</p>}
+                        <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-zinc-200 self-start sm:self-auto shrink-0 shadow-sm">
+                            <button
+                                onClick={() => setMetricMode('plays')}
+                                className={`px-2.5 py-1 text-[11px] font-bold rounded transition-all ${metricMode === 'plays' ? 'bg-black text-white' : 'text-zinc-500 hover:text-black'}`}
+                            >
+                                Plays (Spins)
+                            </button>
+                            <button
+                                onClick={() => setMetricMode('impressions')}
+                                className={`px-2.5 py-1 text-[11px] font-bold rounded transition-all ${metricMode === 'impressions' ? 'bg-black text-white' : 'text-zinc-500 hover:text-black'}`}
+                            >
+                                Impressions (Audience)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-4 bg-[#f8f9fa] min-h-[60vh]">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-black text-lg italic tracking-tight uppercase">
+                            {chartTitle}
+                        </h2>
+                        <span className="text-red-600 text-xs font-bold tracking-wider">MEDIABASE AIRPLAY</span>
+                    </div>
+
+                    {sortedChartData.map((entry, idx) => {
+                        const rank = idx + 1;
+                        const plays = entry.radioPlays || 0;
+                        const impressions = entry.radioImpressions || (plays * 4500);
+
+                        return (
+                            <div key={idx} className="flex bg-white border border-zinc-200 mb-2 p-2.5 rounded-lg shadow-sm items-center hover:border-zinc-300 transition-colors">
+                                <div className="w-9 text-center font-black text-base text-zinc-900">{rank}</div>
+                                <img src={entry.coverArt} className="w-12 h-12 object-cover rounded-md border border-zinc-100 mx-3 shrink-0" alt={entry.title} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm truncate text-zinc-900">{entry.title}</p>
+                                    <p className="text-xs text-zinc-500 truncate">{entry.artist}</p>
+                                </div>
+                                <div className="text-right text-xs shrink-0 pl-2">
+                                    <p className="font-mono font-bold text-zinc-900">
+                                        {metricMode === 'plays' ? formatNumber(Math.floor(plays)) : formatNumber(Math.floor(impressions))}
+                                    </p>
+                                    <p className="text-[9px] text-zinc-400 font-semibold uppercase">
+                                        {metricMode === 'plays' ? 'SPINS TW' : 'AUDIENCE TW'}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {sortedChartData.length === 0 && (
+                        <div className="text-center text-zinc-500 py-16">
+                            <p className="font-bold text-base mb-1">Chart building...</p>
+                            <p className="text-xs">Songs submitted to this format will appear on next chart update.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         );
-    }
+    };
 
     return (
         <div className="bg-white h-full overflow-y-auto font-sans pb-24 text-black">
-            <header className="bg-black text-white p-4 sticky top-0 z-10 flex items-center justify-between">
-                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="font-bold text-sm">&larr; BACK</button>
-                <div className="font-black italic tracking-widest text-lg ml-auto mr-auto pl-4">HITS</div>
+            <header className="bg-black text-white p-4 sticky top-0 z-20 flex items-center justify-between shadow-md">
+                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="font-bold text-sm hover:text-zinc-300 flex items-center gap-1">
+                    <span>&larr;</span> BACK
+                </button>
+                <div className="font-black italic tracking-widest text-lg ml-auto mr-auto pl-4">HITS RADIO</div>
+                <div className="text-[10px] font-mono bg-zinc-800 px-2 py-0.5 rounded text-zinc-300">Nielsen / Mediabase</div>
             </header>
 
-            <div className="flex border-b-2 border-black sticky top-14 bg-white z-10">
+            <div className="flex border-b-2 border-black sticky top-14 bg-white z-20 shadow-sm">
                 <button 
                     onClick={() => setSelectedTab('manage')} 
-                    className={`flex-1 py-3 text-sm font-black uppercase tracking-wider ${selectedTab === 'manage' ? 'border-b-4 border-black text-black' : 'text-zinc-400 border-b-4 border-transparent'}`}
+                    className={`flex-1 py-3 text-sm font-black uppercase tracking-wider transition-colors ${selectedTab === 'manage' ? 'border-b-4 border-black text-black bg-zinc-50' : 'text-zinc-400 border-b-4 border-transparent hover:text-zinc-700'}`}
                 >
-                    Manage
+                    Airplay Dashboard
                 </button>
                 <button 
                     onClick={() => setSelectedTab('charts')} 
-                    className={`flex-1 py-3 text-sm font-black uppercase tracking-wider ${selectedTab === 'charts' ? 'border-b-4 border-black text-black' : 'text-zinc-400 border-b-4 border-transparent'}`}
+                    className={`flex-1 py-3 text-sm font-black uppercase tracking-wider transition-colors ${selectedTab === 'charts' ? 'border-b-4 border-black text-black bg-zinc-50' : 'text-zinc-400 border-b-4 border-transparent hover:text-zinc-700'}`}
                 >
-                    Building Charts
+                    Radio Charts (15 Formats)
                 </button>
             </div>
 

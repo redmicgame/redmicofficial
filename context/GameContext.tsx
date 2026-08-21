@@ -72,6 +72,12 @@ import {
   GIGS,
   TALENT_AGENCIES,
 } from "../constants";
+import {
+  RADIO_FORMATS,
+  getRadioFormatById,
+  getFormatCompatibilityMultiplier,
+  normalizeRadioFormatId,
+} from "../constants/radioFormats";
 import { generateWeeklyXContent, formatChartDataHot100Post } from "../utils/xContentGenerator";
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
@@ -1580,10 +1586,22 @@ const initialState: GameState = {
   electronicChart: [],
   countryChart: [],
   radioOverallChart: [],
+  radioFormatCharts: {},
   radioUrbanChart: [],
   radioPopChart: [],
-  radioRhythmicChart: [],
+  radioChrChart: [],
+  radioAcChart: [],
+  radioHotAcChart: [],
   radioCountryChart: [],
+  radioClassicHitsChart: [],
+  radioClassicRockChart: [],
+  radioActiveRockChart: [],
+  radioAltRockChart: [],
+  radioAaaChart: [],
+  radioUrbanAcChart: [],
+  radioRhythmicChart: [],
+  radioAdultHitsChart: [],
+  radioLatinChart: [],
   radioChristmasChart: [],
   hotPopSongsHistory: {},
   hotRapRnbHistory: {},
@@ -2339,26 +2357,94 @@ The Red Mic Team`,
       );
       if (songIndex === -1) return state;
       const updatedSongs = [...activeData.songs];
+      const existingSong = updatedSongs[songIndex];
       
       const region = (action.payload as any).region || 'US';
       if (region === 'US') {
-          updatedSongs[songIndex] = {
-            ...updatedSongs[songIndex],
-            isOnRadio: true,
-            radioFormat: action.payload.format,
-            weeksOnRadio: 0,
-            radioPlays: 0,
-            radioImpressions: 0,
-          };
+        const payloadFormats: string[] = (action.payload as any).formats || (action.payload.format ? [action.payload.format] : ['chr']);
+        const sanitizedFormats = Array.from(new Set(payloadFormats.map(normalizeRadioFormatId))).slice(0, 5);
+        
+        const initialPlays: Record<string, number> = { ...(existingSong.formatRadioPlays || {}) };
+        const initialImpr: Record<string, number> = { ...(existingSong.formatRadioImpressions || {}) };
+        const initialWeeks: Record<string, number> = { ...(existingSong.formatWeeksOnRadio || {}) };
+        sanitizedFormats.forEach((fmt) => {
+          if (initialPlays[fmt] === undefined) initialPlays[fmt] = 0;
+          if (initialImpr[fmt] === undefined) initialImpr[fmt] = 0;
+          if (initialWeeks[fmt] === undefined) initialWeeks[fmt] = 0;
+        });
+
+        updatedSongs[songIndex] = {
+          ...existingSong,
+          isOnRadio: true,
+          radioFormat: sanitizedFormats[0] || 'chr',
+          radioFormats: sanitizedFormats,
+          formatRadioPlays: initialPlays,
+          formatRadioImpressions: initialImpr,
+          formatWeeksOnRadio: initialWeeks,
+          weeksOnRadio: existingSong.weeksOnRadio || 0,
+          radioPlays: existingSong.radioPlays || 0,
+          radioImpressions: existingSong.radioImpressions || 0,
+        };
       } else if (region === 'UK') {
-          updatedSongs[songIndex] = {
-            ...updatedSongs[songIndex],
-            isOnUkRadio: true,
-            ukRadioFormat: action.payload.format,
-            ukWeeksOnRadio: 0,
-            ukRadioPlays: 0,
-          };
+        updatedSongs[songIndex] = {
+          ...existingSong,
+          isOnUkRadio: true,
+          ukRadioFormat: action.payload.format || 'pop',
+          ukWeeksOnRadio: 0,
+          ukRadioPlays: 0,
+        };
       }
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: updatedSongs,
+          },
+        },
+      };
+    }
+    case "UPDATE_RADIO_FORMATS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const songIndex = activeData.songs.findIndex(
+        (s) => s.id === action.payload.songId,
+      );
+      if (songIndex === -1) return state;
+      const updatedSongs = [...activeData.songs];
+      const existingSong = updatedSongs[songIndex];
+      
+      const payloadFormats: string[] = action.payload.formats || [];
+      const sanitizedFormats = Array.from(new Set(payloadFormats.map(normalizeRadioFormatId))).slice(0, 5);
+
+      if (sanitizedFormats.length === 0) {
+        updatedSongs[songIndex] = {
+          ...existingSong,
+          isOnRadio: false,
+          radioFormats: [],
+        };
+      } else {
+        const initialPlays: Record<string, number> = { ...(existingSong.formatRadioPlays || {}) };
+        const initialImpr: Record<string, number> = { ...(existingSong.formatRadioImpressions || {}) };
+        const initialWeeks: Record<string, number> = { ...(existingSong.formatWeeksOnRadio || {}) };
+        sanitizedFormats.forEach((fmt) => {
+          if (initialPlays[fmt] === undefined) initialPlays[fmt] = 0;
+          if (initialImpr[fmt] === undefined) initialImpr[fmt] = 0;
+          if (initialWeeks[fmt] === undefined) initialWeeks[fmt] = 0;
+        });
+
+        updatedSongs[songIndex] = {
+          ...existingSong,
+          isOnRadio: true,
+          radioFormat: sanitizedFormats[0] || 'chr',
+          radioFormats: sanitizedFormats,
+          formatRadioPlays: initialPlays,
+          formatRadioImpressions: initialImpr,
+          formatWeeksOnRadio: initialWeeks,
+        };
+      }
+
       return {
         ...state,
         artistsData: {
@@ -2378,18 +2464,32 @@ The Red Mic Team`,
       );
       if (songIndex === -1) return state;
       const updatedSongs = [...activeData.songs];
+      const existingSong = updatedSongs[songIndex];
       
       const region = (action.payload as any).region || 'US';
       if (region === 'UK') {
-          updatedSongs[songIndex] = {
-            ...updatedSongs[songIndex],
-            isOnUkRadio: false,
-          };
+        updatedSongs[songIndex] = {
+          ...existingSong,
+          isOnUkRadio: false,
+        };
       } else {
+        const formatToRemove = action.payload.format ? normalizeRadioFormatId(action.payload.format) : null;
+        if (formatToRemove && existingSong.radioFormats && existingSong.radioFormats.length > 1) {
+          const remainingFormats = existingSong.radioFormats.filter(
+            (f) => normalizeRadioFormatId(f) !== formatToRemove
+          );
           updatedSongs[songIndex] = {
-            ...updatedSongs[songIndex],
-            isOnRadio: false,
+            ...existingSong,
+            radioFormats: remainingFormats,
+            radioFormat: remainingFormats[0] || 'chr',
           };
+        } else {
+          updatedSongs[songIndex] = {
+            ...existingSong,
+            isOnRadio: false,
+            radioFormats: [],
+          };
+        }
       }
       return {
         ...state,
@@ -9366,105 +9466,143 @@ It is now available on your Spotify profile.
               }
 
               if (s.isOnRadio) {
-                  isOnRadio = true;
-                  rFormat = s.radioFormat || "pop";
-                  const weeksOn = s.weeksOnRadio || 0;
-                  s.weeksOnRadio = weeksOn + 1;
+                isOnRadio = true;
+                let activeFormats = (s.radioFormats && s.radioFormats.length > 0)
+                  ? s.radioFormats.map(normalizeRadioFormatId)
+                  : [normalizeRadioFormatId(s.radioFormat || "chr")];
+                activeFormats = Array.from(new Set(activeFormats)).slice(0, 5);
 
-              const formatMultiplier = isFormatCompatible(song.genre || "", rFormat);
-              const radioEraBoost =
-                state.date.year < 2010
-                  ? state.date.year < 2000
-                    ? 5.0
-                    : 3.0
-                  : 1.0;
+                const formatPlaysMap: Record<string, number> = { ...(s.formatRadioPlays || {}) };
+                const formatImprMap: Record<string, number> = { ...(s.formatRadioImpressions || {}) };
+                const formatWeeksMap: Record<string, number> = { ...(s.formatWeeksOnRadio || {}) };
 
-              const previousPlays = s.radioPlays || 0;
-              
-              const traitRadioBoost = s.trait === "Radio Hit" ? 2.5 : 1.0;
-              const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
-              let targetPlays = previousPlays === 0 ? baseGrowth : previousPlays + baseGrowth;
-              
-              // Apply peak and decay: peak around week 10-15
-              let decayFactor = 0;
-              if (s.weeksOnRadio > 10) {
-                  decayFactor = (s.weeksOnRadio - 10) * 800 * radioEraBoost;
-                  targetPlays -= decayFactor;
-              }
-              
-              targetPlays += song.weeklyStreams * 0.00025 * traitRadioBoost; // adjusted stream impact
-              
-              let maxBasePlays = 14000 + (Math.random() * 3000); // Peak around 14K-17K
-              const maxNaturalPlays = maxBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
-              
-              if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
-                 targetPlays = 0;
-              }
-              if (targetPlays > maxNaturalPlays) targetPlays = maxNaturalPlays;
+                const radioEraBoost =
+                  state.date.year < 2010
+                    ? state.date.year < 2000
+                      ? 5.0
+                      : 3.0
+                    : 1.0;
+                const traitRadioBoost = s.trait === "Radio Hit" ? 2.5 : 1.0;
 
-              let dropLimit = -500;
-              if (previousPlays > targetPlays * 1.5) {
-                dropLimit = -Math.floor(previousPlays * 0.1); 
-              }
+                const totalPromoSpins = s.pendingRadioPromoSpins || 0;
+                s.pendingRadioPromoSpins = 0;
+                const promoPerFmt = activeFormats.length > 0 ? Math.floor(totalPromoSpins / activeFormats.length) : 0;
 
-              rPlays =
-                previousPlays +
-                Math.max(
-                  dropLimit,
-                  Math.floor((targetPlays - previousPlays) * 0.2),
+                const survivingFormats: string[] = [];
+
+                for (const fmt of activeFormats) {
+                  const fmtWeeks = (formatWeeksMap[fmt] || 0) + 1;
+                  formatWeeksMap[fmt] = fmtWeeks;
+
+                  const formatMultiplier = getFormatCompatibilityMultiplier(song.genre || "", fmt);
+                  const previousFmtPlays = formatPlaysMap[fmt] || 0;
+
+                  const baseGrowth = 160 * (qualityBoost / 50) * labelBoost * formatMultiplier * radioEraBoost * traitRadioBoost;
+                  let targetFmtPlays = previousFmtPlays === 0 ? baseGrowth : previousFmtPlays + baseGrowth;
+
+                  if (fmtWeeks > 10) {
+                    const decayFactor = (fmtWeeks - 10) * 800 * radioEraBoost;
+                    targetFmtPlays -= decayFactor;
+                  }
+
+                  targetFmtPlays += ((song.weeklyStreams || 0) / Math.max(1, activeFormats.length)) * 0.00025 * traitRadioBoost;
+
+                  const maxBasePlays = 14000 + (Math.random() * 3000);
+                  const maxNaturalPlays = maxBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
+
+                  if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
+                    targetFmtPlays = 0;
+                  }
+                  if (targetFmtPlays > maxNaturalPlays) targetFmtPlays = maxNaturalPlays;
+
+                  let dropLimit = -500;
+                  if (previousFmtPlays > targetFmtPlays * 1.5) {
+                    dropLimit = -Math.floor(previousFmtPlays * 0.1);
+                  }
+
+                  let calculatedFmtPlays =
+                    previousFmtPlays +
+                    Math.max(
+                      dropLimit,
+                      Math.floor((targetFmtPlays - previousFmtPlays) * 0.2)
+                    ) + promoPerFmt;
+
+                  if (calculatedFmtPlays < 0) calculatedFmtPlays = 0;
+
+                  // Check removal reasons for this format
+                  let fmtRemovedReason: string | null = null;
+                  if (fmtWeeks >= 30) {
+                    fmtRemovedReason = `it reached the maximum 30-week run`;
+                  } else if (
+                    fmt === "christmas" &&
+                    newDate.week > 2 &&
+                    newDate.week < 40
+                  ) {
+                    fmtRemovedReason = `the holiday season has ended`;
+                  } else if (
+                    fmtWeeks >= 2 &&
+                    calculatedFmtPlays < 50 &&
+                    formatMultiplier < 0.5
+                  ) {
+                    const fmtObj = getRadioFormatById(fmt);
+                    fmtRemovedReason = `it was submitted to the wrong format (${fmtObj?.name || fmt.toUpperCase()}) and received very little airplay`;
+                  } else if (fmtWeeks >= 6 && calculatedFmtPlays < 100) {
+                    fmtRemovedReason = `it failed to gain traction`;
+                  }
+
+                  if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
+                    fmtRemovedReason = "your label blacklisted you and pulled the song from all stations";
+                  }
+
+                  if (fmtRemovedReason) {
+                    calculatedFmtPlays = 0;
+                    const fmtObj = getRadioFormatById(fmt);
+                    updatedArtistsData[artistId].inbox.push({
+                      id: Math.random().toString(36).substr(2, 9),
+                      sender: "Radio Department",
+                      subject: `Radio Removed: ${song.title} (${fmtObj?.code || fmt.toUpperCase()})`,
+                      body: `Your song "${song.title}" has been removed from ${fmtObj?.name || fmt.toUpperCase()} radio because ${fmtRemovedReason}.`,
+                      date: newDate,
+                      isRead: false,
+                    });
+                  } else {
+                    survivingFormats.push(fmt);
+                  }
+
+                  formatPlaysMap[fmt] = calculatedFmtPlays;
+                  formatImprMap[fmt] = calculatedFmtPlays * (Math.floor(Math.random() * 1200) + 2000);
+                }
+
+                s.radioFormats = survivingFormats;
+                s.radioFormat = survivingFormats[0] || "chr";
+                s.formatRadioPlays = formatPlaysMap;
+                s.formatRadioImpressions = formatImprMap;
+                s.formatWeeksOnRadio = formatWeeksMap;
+
+                if (survivingFormats.length === 0) {
+                  isOnRadio = false;
+                  s.isOnRadio = false;
+                }
+
+                const prevTotalPlays = s.radioPlays || 0;
+                const currentTotalPlays = Object.keys(formatPlaysMap).reduce(
+                  (sum, k) => (survivingFormats.includes(k) ? sum + (formatPlaysMap[k] || 0) : sum),
+                  0
+                );
+                const currentTotalImpr = Object.keys(formatImprMap).reduce(
+                  (sum, k) => (survivingFormats.includes(k) ? sum + (formatImprMap[k] || 0) : sum),
+                  0
                 );
 
-              let promoSpins = 0;
-              if (s.pendingRadioPromoSpins) {
-                promoSpins = s.pendingRadioPromoSpins;
-                rPlays += promoSpins;
-                s.pendingRadioPromoSpins = 0;
-              }
+                s.lastWeekRadioPlays = prevTotalPlays;
+                s.radioPlays = currentTotalPlays;
+                s.radioImpressions = currentTotalImpr;
+                s.weeksOnRadio = Math.max(0, ...survivingFormats.map((f) => formatWeeksMap[f] || 0));
 
-              if (rPlays < 0) rPlays = 0;
-
-              // Handle radio removal
-              let removedReason = null;
-              if (s.weeksOnRadio >= 30) {
-                removedReason = `it reached the maximum 30-week run`;
-              } else if (
-                rFormat === "christmas" &&
-                newDate.week > 2 &&
-                newDate.week < 40
-              ) {
-                removedReason = `the holiday season has ended`;
-              } else if (
-                s.weeksOnRadio >= 2 &&
-                rPlays < 50 &&
-                formatMultiplier < 0.5
-              ) {
-                removedReason = `it was submitted to the wrong format (${rFormat.toUpperCase()}) and received very little airplay`;
-              } else if (s.weeksOnRadio >= 6 && rPlays < 100) {
-                removedReason = `it failed to gain traction`;
+                rPlays = currentTotalPlays;
+                rImpressions = currentTotalImpr;
+                rFormat = s.radioFormat;
               }
-              
-              if (updatedArtistsData[artistId]?.isBlacklistedByLabel) {
-                 removedReason = "your label blacklisted you and pulled the song from all stations";
-              }
-
-              if (removedReason) {
-                isOnRadio = false;
-                s.isOnRadio = false;
-                updatedArtistsData[artistId].inbox.push({
-                  id: Math.random().toString(36).substr(2, 9),
-                  sender: "Radio Department",
-                  subject: `Radio Removed: ${song.title}`,
-                  body: `Your song "${song.title}" has been removed from ${rFormat.toUpperCase()} radio because ${removedReason}.`,
-                  date: newDate,
-                  isRead: false,
-                });
-              }
-
-              s.lastWeekRadioPlays = previousPlays;
-              s.radioPlays = rPlays;
-              rImpressions = rPlays * (Math.floor(Math.random() * 1200) + 2000);
-              s.radioImpressions = rImpressions;
-            }
             
             if (s.isOnUkRadio) {
               const rFormat = s.ukRadioFormat || "pop";
@@ -9505,32 +9643,40 @@ It is now available on your Spotify profile.
         } else {
           if (song.weeklyStreams > 1000000) {
             isOnRadio = true;
-
-            // Decide format for NPC based on genre
             const g = (song.genre || "").toLowerCase();
+            const isHolidaySeason = newDate.week > 40 || newDate.week < 2;
+
+            let possibleFormats: string[] = [];
             if (g.includes("holiday") || g.includes("christmas")) {
-              if (newDate.week > 2 && newDate.week < 40) {
-                rPlays = 0;
-                isOnRadio = false;
-                rImpressions = 0;
-              } else {
-                rFormat = "christmas";
-              }
+              if (isHolidaySeason) possibleFormats = ["christmas", "ac", "classic_hits"];
             } else if (g.includes("country")) {
-              rFormat = "country";
-            } else if (
-              g.includes("hip hop") ||
-              g.includes("rap") ||
-              g.includes("r&b")
-            ) {
-              rFormat = Math.random() > 0.5 ? "urban" : "rhythmic";
-            } else if (g.includes("k-pop") || g.includes("kpop")) {
-              rFormat = "pop";
-            } else if (g.includes("dance") || g.includes("electronic")) {
-              rFormat = Math.random() > 0.5 ? "rhythmic" : "pop";
+              possibleFormats = ["country", "hot_ac", "adult_hits"];
+            } else if (g.includes("hip hop") || g.includes("rap")) {
+              possibleFormats = ["urban", "rhythmic", "chr"];
+            } else if (g.includes("r&b")) {
+              possibleFormats = ["urban_ac", "urban", "rhythmic", "ac"];
+            } else if (g.includes("rock") || g.includes("metal")) {
+              possibleFormats = ["alt_rock", "active_rock", "classic_rock", "aaa"];
+            } else if (g.includes("indie") || g.includes("folk")) {
+              possibleFormats = ["aaa", "alt_rock", "hot_ac", "ac"];
+            } else if (g.includes("latin") || g.includes("reggaeton")) {
+              possibleFormats = ["latin", "chr", "rhythmic"];
+            } else if (g.includes("electronic") || g.includes("dance")) {
+              possibleFormats = ["chr", "rhythmic", "alt_rock"];
+            } else if (g.includes("k-pop") || g.includes("kpop") || g.includes("afrobeats") || g.includes("afrobeat")) {
+              possibleFormats = ["chr", "rhythmic"];
             } else {
-              rFormat = "pop";
+              possibleFormats = ["chr", "hot_ac", "ac", "adult_hits"];
             }
+
+            if (possibleFormats.length === 0) possibleFormats = ["chr"];
+
+            const countToPick = Math.min(
+              possibleFormats.length,
+              song.weeklyStreams > 15000000 ? 3 : song.weeklyStreams > 5000000 ? 2 : 1
+            );
+            const npcFormats = possibleFormats.slice(0, countToPick);
+
             const radioEraBoost =
               state.date.year < 2010
                 ? state.date.year < 2000
@@ -9542,10 +9688,29 @@ It is now available on your Spotify profile.
               song.weeklyStreams * 0.0025 * radioEraBoost,
             );
             if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
-            if (isOnRadio) {
-              rPlays = targetPlays;
-              rImpressions = rPlays * (Math.floor(Math.random() * 1200) + 2000);
-            }
+
+            const npcPlaysMap: Record<string, number> = {};
+            const npcImprMap: Record<string, number> = {};
+            let totalNpcPlays = 0;
+            let totalNpcImpr = 0;
+
+            npcFormats.forEach((fmt, idx) => {
+              const share = idx === 0 ? (npcFormats.length === 1 ? 1 : 0.55) : (0.45 / (npcFormats.length - 1));
+              const fmtPlays = Math.floor(targetPlays * share);
+              const fmtImpr = fmtPlays * (Math.floor(Math.random() * 1200) + 2000);
+              npcPlaysMap[fmt] = fmtPlays;
+              npcImprMap[fmt] = fmtImpr;
+              totalNpcPlays += fmtPlays;
+              totalNpcImpr += fmtImpr;
+            });
+
+            rPlays = totalNpcPlays;
+            rImpressions = totalNpcImpr;
+            rFormat = npcFormats[0] || "chr";
+
+            (song as any).radioFormats = npcFormats;
+            (song as any).formatRadioPlays = npcPlaysMap;
+            (song as any).formatRadioImpressions = npcImprMap;
           }
         }
 
@@ -9563,12 +9728,18 @@ It is now available on your Spotify profile.
             }
         }
 
+        const songAny = song as any;
+        const matchingPlayerSong = song.isPlayerSong && song.songId && Object.values(updatedArtistsData).flatMap(a => a.songs).find(s => s.id === song.songId);
+
         return {
           ...song,
           isOnRadio,
           radioPlays: rPlays,
           radioImpressions: rImpressions,
           radioFormat: rFormat,
+          radioFormats: matchingPlayerSong ? matchingPlayerSong.radioFormats : songAny.radioFormats || (isOnRadio ? [rFormat] : []),
+          formatRadioPlays: matchingPlayerSong ? matchingPlayerSong.formatRadioPlays : songAny.formatRadioPlays || (isOnRadio ? { [rFormat]: rPlays } : {}),
+          formatRadioImpressions: matchingPlayerSong ? matchingPlayerSong.formatRadioImpressions : songAny.formatRadioImpressions || (isOnRadio ? { [rFormat]: rImpressions } : {}),
           ...( !song.isPlayerSong ? { isOnUkRadio, ukRadioPlays, ukRadioFormat } : { isOnUkRadio: pIsOnUkRadio, ukRadioPlays: pUkRadioPlays, ukRadioFormat: pUkRadioFormat } ),
         };
       });
@@ -10080,61 +10251,65 @@ It is now available on your Spotify profile.
           state.radioOverallChart?.find((x) => x.uniqueId === c.uniqueId)
             ?.rank || null,
       }));
-      const radioPopChart = radioEligible
-        .filter((c) => c.radioFormat === "pop")
-        .slice(0, 40)
-        .map((c, i) => ({
+
+      const radioFormatCharts: Record<string, ChartEntry[]> = {};
+      RADIO_FORMATS.forEach((rf) => {
+        const formatCandidates = radioEligible
+          .filter((c) => {
+            const fmts = (c.radioFormats && c.radioFormats.length > 0)
+              ? c.radioFormats.map(normalizeRadioFormatId)
+              : [normalizeRadioFormatId(c.radioFormat || "")];
+            return fmts.includes(rf.id);
+          })
+          .map((c) => {
+            const fPlays = c.formatRadioPlays?.[rf.id] || (normalizeRadioFormatId(c.radioFormat || "") === rf.id ? c.radioPlays : 0) || 0;
+            const fImpr = c.formatRadioImpressions?.[rf.id] || (fPlays * (Math.floor(Math.random() * 1200) + 2000));
+            return {
+              ...c,
+              radioPlays: fPlays,
+              radioImpressions: fImpr,
+              radioFormat: rf.id,
+            };
+          })
+          .filter((c) => (c.radioPlays || 0) > 0);
+
+        formatCandidates.sort((a, b) => (b.radioPlays || 0) - (a.radioPlays || 0));
+
+        const prevChart = state.radioFormatCharts?.[rf.id] ||
+          (rf.id === 'chr' ? state.radioPopChart :
+           rf.id === 'urban' ? state.radioUrbanChart :
+           rf.id === 'rhythmic' ? state.radioRhythmicChart :
+           rf.id === 'country' ? state.radioCountryChart :
+           rf.id === 'christmas' ? state.radioChristmasChart : undefined) || [];
+
+        radioFormatCharts[rf.id] = formatCandidates.slice(0, 40).map((c, i) => ({
           ...c,
           rank: i + 1,
-          lastWeek:
-            state.radioPopChart?.find((x) => x.uniqueId === c.uniqueId)?.rank ||
-            null,
+          lastWeek: prevChart.find((x) => x.uniqueId === c.uniqueId)?.rank || null,
         }));
-      const radioUrbanChart = radioEligible
-        .filter((c) => c.radioFormat === "urban")
-        .slice(0, 40)
-        .map((c, i) => ({
-          ...c,
-          rank: i + 1,
-          lastWeek:
-            state.radioUrbanChart?.find((x) => x.uniqueId === c.uniqueId)
-              ?.rank || null,
-        }));
-      const radioRhythmicChart = radioEligible
-        .filter((c) => c.radioFormat === "rhythmic")
-        .slice(0, 40)
-        .map((c, i) => ({
-          ...c,
-          rank: i + 1,
-          lastWeek:
-            state.radioRhythmicChart?.find((x) => x.uniqueId === c.uniqueId)
-              ?.rank || null,
-        }));
-      const radioCountryChart = radioEligible
-        .filter((c) => c.radioFormat === "country")
-        .slice(0, 40)
-        .map((c, i) => ({
-          ...c,
-          rank: i + 1,
-          lastWeek:
-            state.radioCountryChart?.find((x) => x.uniqueId === c.uniqueId)
-              ?.rank || null,
-        }));
-      const radioChristmasChart = radioEligible
-        .filter((c) => c.radioFormat === "christmas")
-        .slice(0, 40)
-        .map((c, i) => ({
-          ...c,
-          rank: i + 1,
-          lastWeek:
-            state.radioChristmasChart?.find((x) => x.uniqueId === c.uniqueId)
-              ?.rank || null,
-        }));
+      });
+
+      const radioChrChart = radioFormatCharts["chr"] || [];
+      const radioPopChart = radioChrChart;
+      const radioAcChart = radioFormatCharts["ac"] || [];
+      const radioHotAcChart = radioFormatCharts["hot_ac"] || [];
+      const radioCountryChart = radioFormatCharts["country"] || [];
+      const radioClassicHitsChart = radioFormatCharts["classic_hits"] || [];
+      const radioClassicRockChart = radioFormatCharts["classic_rock"] || [];
+      const radioActiveRockChart = radioFormatCharts["active_rock"] || [];
+      const radioAltRockChart = radioFormatCharts["alt_rock"] || [];
+      const radioAaaChart = radioFormatCharts["aaa"] || [];
+      const radioUrbanChart = radioFormatCharts["urban"] || [];
+      const radioUrbanAcChart = radioFormatCharts["urban_ac"] || [];
+      const radioRhythmicChart = radioFormatCharts["rhythmic"] || [];
+      const radioAdultHitsChart = radioFormatCharts["adult_hits"] || [];
+      const radioLatinChart = radioFormatCharts["latin"] || [];
+      const radioChristmasChart = radioFormatCharts["christmas"] || [];
 
       // --- RADIO UPDATER POSTS ---
       const newRadioPosts: XPost[] = [];
       const checkRadioNews = (chart: ChartEntry[], formatName: string) => {
-        if (chart.length === 0) return;
+        if (!chart || chart.length === 0) return;
         const numberOne = chart[0];
         if (numberOne.rank === 1 && numberOne.lastWeek !== 1) {
           if (numberOne.lastWeek === null) {
@@ -10175,12 +10350,12 @@ It is now available on your Spotify profile.
         }
       };
       checkRadioNews(radioOverallChart, "US Overall");
-      checkRadioNews(radioPopChart, "US Pop");
-      checkRadioNews(radioUrbanChart, "US Urban");
-      checkRadioNews(radioRhythmicChart, "US Rhythmic");
-      checkRadioNews(radioCountryChart, "US Country");
-      if (newDate.week > 40 || newDate.week < 2)
-        checkRadioNews(radioChristmasChart, "US Holiday");
+      RADIO_FORMATS.forEach((rf) => {
+        if (rf.seasonalOnly && (newDate.week < 40 && newDate.week > 2)) return;
+        if (radioFormatCharts[rf.id]) {
+          checkRadioNews(radioFormatCharts[rf.id], `US ${rf.shortName}`);
+        }
+      });
 
       if (newRadioPosts.length > 0) {
         for (const artistId in updatedArtistsData) {
@@ -13735,10 +13910,22 @@ Keep up the great work!
           ukAlbumsChart: newUkAlbumsChart,
           ukAlbumsChartHistory: newUkAlbumsChartHistory,
           radioOverallChart,
+          radioFormatCharts,
           radioUrbanChart,
           radioPopChart,
-          radioRhythmicChart,
+          radioChrChart,
+          radioAcChart,
+          radioHotAcChart,
           radioCountryChart,
+          radioClassicHitsChart,
+          radioClassicRockChart,
+          radioActiveRockChart,
+          radioAltRockChart,
+          radioAaaChart,
+          radioUrbanAcChart,
+          radioRhythmicChart,
+          radioAdultHitsChart,
+          radioLatinChart,
           radioChristmasChart,
           hotPopSongs: newHotPopSongs,
           hotRapRnb: newHotRapRnb,
@@ -14487,10 +14674,22 @@ Keep up the great work!
         ukAlbumsChart: newUkAlbumsChart,
         ukAlbumsChartHistory: newUkAlbumsChartHistory,
         radioOverallChart,
+        radioFormatCharts,
         radioUrbanChart,
         radioPopChart,
-        radioRhythmicChart,
+        radioChrChart,
+        radioAcChart,
+        radioHotAcChart,
         radioCountryChart,
+        radioClassicHitsChart,
+        radioClassicRockChart,
+        radioActiveRockChart,
+        radioAltRockChart,
+        radioAaaChart,
+        radioUrbanAcChart,
+        radioRhythmicChart,
+        radioAdultHitsChart,
+        radioLatinChart,
         radioChristmasChart,
         hotPopSongs: newHotPopSongs,
         hotRapRnb: newHotRapRnb,

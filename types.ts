@@ -207,6 +207,10 @@ export interface Song {
   lastWeekRadioPlays?: number;
   weeksOnRadio?: number;
   radioFormat?: string;
+  radioFormats?: string[];
+  formatRadioPlays?: Record<string, number>;
+  formatRadioImpressions?: Record<string, number>;
+  formatWeeksOnRadio?: Record<string, number>;
   pendingRadioPromoSpins?: number;
   hasRadioPromo?: boolean;
   
@@ -768,6 +772,9 @@ export interface NpcSong {
   lastWeekRadioPlays?: number;
   weeksOnRadio?: number;
   radioFormat?: string;
+  radioFormats?: string[];
+  formatRadioPlays?: Record<string, number>;
+  formatRadioImpressions?: Record<string, number>;
   pendingRadioPromoSpins?: number;
   hasRadioPromo?: boolean;
   
@@ -806,6 +813,10 @@ export interface ChartEntry {
   itunesPrice?: string;
   radioPlays?: number;
   radioImpressions?: number;
+  radioFormat?: string;
+  radioFormats?: string[];
+  formatRadioPlays?: Record<string, number>;
+  formatRadioImpressions?: Record<string, number>;
   digitalSales?: number;
   isItunesVersion?: boolean;
   itunesSales?: number;
@@ -2060,10 +2071,22 @@ export interface GameState {
   electronicChartHistory: ChartHistory;
   countryChartHistory: ChartHistory;
   radioOverallChart?: ChartEntry[];
-  radioUrbanChart?: ChartEntry[];
+  radioFormatCharts?: Record<string, ChartEntry[]>;
   radioPopChart?: ChartEntry[];
-  radioRhythmicChart?: ChartEntry[];
+  radioChrChart?: ChartEntry[];
+  radioAcChart?: ChartEntry[];
+  radioHotAcChart?: ChartEntry[];
   radioCountryChart?: ChartEntry[];
+  radioClassicHitsChart?: ChartEntry[];
+  radioClassicRockChart?: ChartEntry[];
+  radioActiveRockChart?: ChartEntry[];
+  radioAltRockChart?: ChartEntry[];
+  radioAaaChart?: ChartEntry[];
+  radioUrbanChart?: ChartEntry[];
+  radioUrbanAcChart?: ChartEntry[];
+  radioRhythmicChart?: ChartEntry[];
+  radioAdultHitsChart?: ChartEntry[];
+  radioLatinChart?: ChartEntry[];
   radioChristmasChart?: ChartEntry[];
   ukSinglesChart?: ChartEntry[];
   ukSinglesChartHistory?: ChartHistory;
@@ -2928,14 +2951,18 @@ export type GameAction =
       type: "UPLOAD_ALBUM_CANVAS";
       payload: { releaseId: string; videoUrl: string; hashtags: string[] };
     }
-  | { type: "SUBMIT_TO_RADIO"; payload: { songId: string; format: string; region?: "US" | "UK" } }
+  | { type: "SUBMIT_TO_RADIO"; payload: { songId: string; format?: string; formats?: string[]; region?: "US" | "UK" } }
+  | {
+      type: "UPDATE_RADIO_FORMATS";
+      payload: { songId: string; formats: string[]; region?: "US" | "UK" };
+    }
   | {
       type: "WITHDRAW_FROM_RADIO";
-      payload: { songId: string; format: string; region?: "US" | "UK" };
+      payload: { songId: string; format?: string; region?: "US" | "UK" };
     }
   | {
       type: "PROMOTE_RADIO";
-      payload: { songId: string; format: string; amount: number; source: "personal" | "label" };
+      payload: { songId: string; format?: string; amount: number; source: "personal" | "label"; region?: "US" | "UK" };
     }
   | {
       type: "DO_BRAND_CAMPAIGN";
