@@ -32,7 +32,9 @@ const getLabelSplit = (label: Label) => {
 
 const LabelCard: React.FC<{ label: Label, onSign: (label: Label) => void, canSign: boolean, isStreamingActive: boolean }> = ({ label, onSign, canSign, isStreamingActive }) => (
     <div className={`bg-zinc-800 p-4 rounded-lg flex flex-col items-center text-center transition-opacity ${!canSign ? 'opacity-50' : ''}`}>
-        <img src={label.logo} alt={label.name} className="w-20 h-20 rounded-full object-cover mb-3" />
+        <div className="w-20 h-20 rounded-xl bg-white border border-zinc-200 p-2.5 flex items-center justify-center mb-3 shadow-md">
+            <img src={label.logo} alt={label.name} className="max-w-full max-h-full object-contain" />
+        </div>
         <h3 className="text-lg font-bold">{label.name}</h3>
         <p className="text-sm font-semibold" style={{ color: label.tier === 'Top' ? '#f59e0b' : '#a1a1aa' }}>{label.tier} Tier</p>
         <div className="mt-3 text-xs text-zinc-400 space-y-1">
@@ -162,7 +164,9 @@ const SignedView: React.FC<{ contract: Contract }> = ({ contract }) => {
     return (
         <div className="space-y-6">
             <div className="bg-zinc-800 rounded-lg p-6 flex flex-col items-center">
-                <img src={majorLabel.logo} alt={majorLabel.name} className="w-24 h-24 rounded-full object-cover mb-4" />
+                <div className="w-24 h-24 rounded-2xl bg-white border border-zinc-200 p-3 flex items-center justify-center mb-4 shadow-md">
+                    <img src={majorLabel.logo} alt={majorLabel.name} className="max-w-full max-h-full object-contain" />
+                </div>
                 <h3 className="text-2xl font-bold">{majorLabel.name}</h3>
                 <p className="text-zinc-400">{majorLabel.tier} Tier Label</p>
                 <div className="mt-3 text-sm text-center">
@@ -262,7 +266,9 @@ const SignedView: React.FC<{ contract: Contract }> = ({ contract }) => {
                             return (
                                 <div key={pastLabel.id} className="bg-zinc-800 p-3 rounded-lg">
                                     <div className="flex items-center gap-4">
-                                        <img src={pastLabel.logo} alt={pastLabel.name} className="w-12 h-12 rounded-full object-cover"/>
+                                        <div className="w-12 h-12 rounded-lg bg-white border border-zinc-200 p-1.5 flex items-center justify-center shrink-0 shadow-sm">
+                                            <img src={pastLabel.logo} alt={pastLabel.name} className="max-w-full max-h-full object-contain"/>
+                                        </div>
                                         <div className="flex-grow">
                                             <p className="font-bold">{pastLabel.name}</p>
                                             <p className="text-sm text-zinc-400">Ended: W{endDate.week}, {endDate.year}</p>

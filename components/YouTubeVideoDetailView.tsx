@@ -401,7 +401,7 @@ const YouTubeVideoDetailView: React.FC = () => {
 
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <img src={channelData.avatar} alt={channelData.name} className="w-10 h-10 rounded-full object-cover" />
+                        <img src={channelData.avatar} alt={channelData.name} className={`w-10 h-10 rounded-full ${channelData.isPersonal ? 'object-cover' : 'object-contain bg-white p-1'}`} />
                         <div>
                             <p className="font-semibold">{channelData.name}</p>
                             <p className="text-xs text-zinc-400">{formatNumber(channelData.subscribers)} subscribers</p>

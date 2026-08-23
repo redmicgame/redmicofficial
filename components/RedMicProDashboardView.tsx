@@ -617,11 +617,13 @@ const RedMicProDashboardView: React.FC = () => {
                             <button 
                                 key={label.id}
                                 onClick={() => dispatch({ type: 'PRO_SIGN_LABEL', payload: { labelId: label.id }})}
-                                className="bg-zinc-700 p-3 rounded-md hover:bg-zinc-600 disabled:opacity-50"
+                                className="bg-zinc-700 p-3 rounded-md hover:bg-zinc-600 disabled:opacity-50 flex flex-col items-center justify-center text-center"
                                 disabled={contract?.labelId === label.id && !contract.isCustom}
                             >
-                                <img src={label.logo} className="w-12 h-12 mx-auto rounded-full" />
-                                <p className="font-bold mt-2">{label.name}</p>
+                                <div className="w-12 h-12 rounded-lg bg-white border border-zinc-200 p-1.5 flex items-center justify-center mb-1 shadow-sm">
+                                    <img src={label.logo} className="max-w-full max-h-full object-contain" alt={label.name} />
+                                </div>
+                                <p className="font-bold mt-1 text-xs">{label.name}</p>
                             </button>
                         ))}
                     </div>

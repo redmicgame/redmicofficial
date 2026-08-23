@@ -124,11 +124,13 @@ const RecordLabelsGuideContent: React.FC = () => {
                         >
                             <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <img
-                                        src={label.logo}
-                                        alt={label.name}
-                                        className="w-10 h-10 rounded-md object-contain bg-black/40 p-1 border border-zinc-800 flex-shrink-0"
-                                    />
+                                    <div className="w-10 h-10 rounded-md bg-white border border-zinc-200 p-1 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                        <img
+                                            src={label.logo}
+                                            alt={label.name}
+                                            className="max-w-full max-h-full object-contain"
+                                        />
+                                    </div>
                                     <div className="min-w-0">
                                         <h4 className="font-bold text-white truncate text-base">{label.name}</h4>
                                         <div className="flex items-center gap-1.5 mt-0.5">

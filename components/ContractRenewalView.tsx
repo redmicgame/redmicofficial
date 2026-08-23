@@ -33,7 +33,9 @@ const ContractRenewalView: React.FC = () => {
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-zinc-800 rounded-2xl shadow-lg p-8 border border-red-500/50 text-center">
-                <img src={label.logo} alt={label.name} className="w-24 h-24 rounded-full object-cover mx-auto mb-4" />
+                <div className="w-24 h-24 rounded-2xl bg-white border border-zinc-200 p-3 flex items-center justify-center mx-auto mb-4 shadow-md">
+                    <img src={label.logo} alt={label.name} className="max-w-full max-h-full object-contain" />
+                </div>
                 <h2 className="text-2xl font-bold">Contract Ended</h2>
                 <p className="text-zinc-300 mt-4">
                     Your contract with <span className="font-bold">{label.name}</span> has expired. They would like to offer you a new deal.

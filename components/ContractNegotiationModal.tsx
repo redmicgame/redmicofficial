@@ -126,7 +126,9 @@ export const ContractNegotiationModal: React.FC<Props> = ({ label, onClose, onSi
              <div className="bg-zinc-900 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-zinc-800 shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        <img src={label.logo} alt={label.name} className="w-10 h-10 rounded-full object-cover" />
+                        <div className="w-10 h-10 rounded-lg bg-white border border-zinc-200 p-1 flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={label.logo} alt={label.name} className="max-w-full max-h-full object-contain" />
+                        </div>
                         <div>
                             <h2 className="text-xl font-bold">Negotiate Contract with {label.name}</h2>
                             <p className="text-xs text-zinc-400">{label.tier} Tier Label</p>

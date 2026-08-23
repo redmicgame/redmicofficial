@@ -139,7 +139,9 @@ const CreateLabelView: React.FC = () => {
                         {availableDeals.map(deal => (
                              <button key={deal.id} onClick={() => setDealWith(deal.id)} className={`p-3 rounded-lg text-left transition-all border-2 ${dealWith === deal.id ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'}`}>
                                 <div className="flex items-center gap-3">
-                                    <img src={deal.logo} alt={deal.name} className="w-10 h-10 rounded-full" />
+                                    <div className="w-10 h-10 bg-white border border-zinc-200 rounded-lg flex items-center justify-center p-1 shrink-0 shadow-sm">
+                                        <img src={deal.logo} alt={deal.name} className="w-full h-full object-contain" />
+                                    </div>
                                     <div>
                                         <p className="font-bold">Distribution Deal with {deal.name}</p>
                                         <p className="text-sm text-green-400 font-semibold">-${formatNumber(deal.streamRequirement * 0.0001)}</p>

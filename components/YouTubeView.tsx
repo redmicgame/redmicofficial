@@ -334,7 +334,7 @@ const YouTubeChannelView: React.FC = () => {
                 <div className="flex items-end -mt-10">
                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                     <button onClick={triggerFileInput} className={`relative group ${channelData.isPersonal ? 'cursor-pointer' : ''}`}>
-                        <img src={channelData.avatar} alt={channelData.name} className="w-20 h-20 rounded-full border-4 border-[#0f0f0f] object-cover" />
+                        <img src={channelData.avatar} alt={channelData.name} className={`w-20 h-20 rounded-full border-4 border-[#0f0f0f] ${channelData.isPersonal ? 'object-cover' : 'object-contain bg-white p-1.5'}`} />
                         {channelData.isPersonal && (
                             <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <CameraIcon className="w-8 h-8 text-white" />

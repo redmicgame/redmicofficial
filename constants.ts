@@ -186,249 +186,249 @@ export const NPC_COVER_ART = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBo
 
 // Record Label Constants
 export const LABELS: Label[] = [
-    { 
-        id: 'umg', 
-        name: 'UMG', 
-        tier: 'Top',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzE5MTkxOSIvPjxwYXRoIGQ9Ik0zMiA1Mi4yODhjLTExLjIxMyAwLTIwLjI4OC05LjA3NS0yMC4yODgtMjAuMjg4IDAtMTEuMjEzIDkuMDc1LTIwLjI4OCAyMC4yODgtMjAuMjg4IDExLjIxMyAwIDIwLjI4OCA5LjA3NSAyMC4yODggMjAuMjg4IDAgMTEuMjEzLTkuMDc1IDIwLjI4OC0yMC4yODggMjAuMjg4ek0zMiAxNS43ODhjLTYuNzUgMC0xMi4yMjUgNS40NzYtMTIuMjI1IDEyLjIyNCAwIDYuNzUgNS40NzUgMTIuMjI1IDEyLjIyNSAxMi4yIjc1IDYuNzQ4IDAgMTIuMjI0LTUuNDc1IDEyLjIyNC0xMi4yMjUgMC02Ljc0OC01LjQ3NC0xMi4yMjQtMTIuMjI0LTEyLjIyNHoiIGZpbGw9IndoaXRlIi8+PC9zdmc+', 
-        promotionMultiplier: 2.0, 
-        creativeControl: 80,
-        minQuality: 68,
-        streamRequirement: 1_000_000_000,
-        youtubeChannel: {
-            name: 'Universal Music Group',
-            handle: '@universalmusicgroup',
-            subscribers: 58_000_000,
-            banner: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+    {
+        "id": "umg",
+        "name": "UMG",
+        "tier": "Top",
+        "logo": "/labels/umg.svg",
+        "promotionMultiplier": 2,
+        "creativeControl": 80,
+        "minQuality": 68,
+        "streamRequirement": 1000000000,
+        "youtubeChannel": {
+            "name": "Universal Music Group",
+            "handle": "@universalmusicgroup",
+            "subscribers": 58000000,
+            "banner": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         }
     },
-    { 
-        id: 'interscope', 
-        name: 'Interscope Records', 
-        tier: 'Mid-high',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iYmxhY2siLz48cGF0aCBkPSJNMjggMjBIMzZWMjRIMjhWMjBaIiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik0zMCAyNkgzNFY0NEgzMFYyNloiIGZpbGw9IndoaXRlIi8+PC9zdmc+', 
-        promotionMultiplier: 1.7, 
-        creativeControl: 70,
-        minQuality: 60,
-        streamRequirement: 750_000_000,
+    {
+        "id": "interscope",
+        "name": "Interscope Records",
+        "tier": "Mid-high",
+        "logo": "/labels/interscope.svg",
+        "promotionMultiplier": 1.7,
+        "creativeControl": 70,
+        "minQuality": 60,
+        "streamRequirement": 750000000
     },
-    { 
-        id: 'republic', 
-        name: 'Republic Records', 
-        tier: 'Mid-high',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjRkZGRkZGIi8+PHBhdGggZD0iTTMyIDYuMzk4YzQuMjY0IDAgOC40NTYgMS40MyAxMS45NDQgNC4wNDVMOC4zNiAzMS4xMjhWMTAuNDQzQzE1MjIgNy44MyAyMy4yNTYgNi40IDMyIDYuNHpNMzIgNTcuNmMtNC4yNjQgMC04LjQ1Ni0xLjQzLTExLjk0NC00LjA0NUw1NS42NCAzMi44NzJ2MjAuNjg1Yy02LjgtMi42MTItMTQuODU2LTQuMDQzLTIzLjY0LTQuMDQzeiIgZmlsbD0iIzAwMCIvPjwvc3ZnPg==', 
-        promotionMultiplier: 1.5, 
-        creativeControl: 60,
-        minQuality: 50,
-        streamRequirement: 500_000_000,
+    {
+        "id": "republic",
+        "name": "Republic Records",
+        "tier": "Mid-high",
+        "logo": "/labels/republic.svg",
+        "promotionMultiplier": 1.5,
+        "creativeControl": 60,
+        "minQuality": 50,
+        "streamRequirement": 500000000
     },
-    { 
-        id: 'columbia', 
-        name: 'Columbia Records', 
-        tier: 'Mid-Low',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9ImJsYWNrIi8+PHBhdGggZD0iTTMyIDE2QzE2IDE2IDggMzIgOCAzMkM4IDMyIDE2IDQ4IDMyIDQ4QzQ4IDQ4IDU2IDMyIDU2IDMyQzU2IDMyIDQ4IDE2IDMyIDE2WiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iOCIgZmlsbD0id2hpdGUiLz48L3N2Zz4=', 
-        promotionMultiplier: 1.4, 
-        creativeControl: 50,
-        minQuality: 45,
-        streamRequirement: 275_000_000,
-        youtubeChannel: {
-            name: 'Columbia Records',
-            handle: '@columbiarecords',
-            subscribers: 12_500_000,
-            banner: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+    {
+        "id": "columbia",
+        "name": "Columbia Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/columbia.svg",
+        "promotionMultiplier": 1.4,
+        "creativeControl": 50,
+        "minQuality": 45,
+        "streamRequirement": 275000000,
+        "youtubeChannel": {
+            "name": "Columbia Records",
+            "handle": "@columbiarecords",
+            "subscribers": 12500000,
+            "banner": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         }
     },
-    { 
-        id: 'rca', 
-        name: 'RCA Records', 
-        tier: 'Mid-Low',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iIzAwMCIvPjxwYXRoIGQ9Ik0zMiA1MC42NjdjLTEwLjMxIDAtMTguNjY3LTguMzU3LTE4LjY2Ny0xOC42NjdzOC4zNTctMTguNjY3IDE4LjY2Ny0xOC42NjcgMTguNjY3IDguMzU3IDE4LjY2NyAxOC42NjctOC4zNTcgMTguNjY3LTE4LjY2NyAxOC42Njd6IiBmaWxsPSIjRTQxRTI3Ii8+PHBhdGggZD0iTTMyIDE4LjY2N2MtMi43NTIgMC01LjM5IDEuMTU1LTYuNTM0IDMuMzQybC0uMDA4LjAxM2MtLjE0OS4yNTYtLjIyNi41NTYtLjIyNi44NjggMCAuNzY1LjYxOCAxLjM4MyAxLjM4MyAxLjM4My4zMTIgMCAuNjA3LS4xMDMuODU1LS4yNzggMS40NjgtMS4wMzQgMy4xODUtMS41OTQgNC44NzUtMS42MS4wNTQgMCAuMTA2LjAwMi4xNi4wMDJhMS4zNjggMS4zNjggMCAwMC44MTMtLjU0MyAxLjM4MiAxLjM4MiAwIDAwLjM2OC0xLjYyNWMtLjA1My0uMDk1LS4xMTYtLjE4My0uMTg4LS4yNjQtLjk4LTEuMzMtMi40Ny0yLjA3NC00LjA5NS0yLjA3NHptLTkuMDI2IDE0LjYyNWMxLjQ0OC4wMDQgMi44OTU-.27IDQuMjM1LS44MDJsLjEyNC0uMDQ4Yy4yMDctLjA3OC40My0uMTE4LjY1LS4xMTguNzc1IDAgMS40MDQuNjMgMS40MDQgMS40MDQgMCAuMjE4LS4wNTIuNDM1LS4xNDguNjM0bC0uMDIuMDQyYy0xLjgwNyAzLjA0Mi00LjQ4IDQuNzctNy4xNzQgNC43Ny0zLjQ0NyAwLTYuNTYtMi4zNDYtNy42NzMtNS44MDgtLjA1NC0uMTcxLS4wODQtLjM1LS4wODQtLjUzNCAwLS43NzUuNjMtMS40MDQgMS40MDQtMS40MDQuMjM1IDAgLjQ2LjA2LjY2LjE2OGwxLjQ5LjY3OGMxLjMyLjYgMi43NS45MzYgNC4yNDIuOTM2em0xOC45MDgtMi40MjJjLTEuMjgtLjg4OC0yLjczLTEuMzk0LTQuMjYtMS40MDgtMi4zOTgtLjAyLTIuNTU4LS4wMi00LjY2Ni4wMDItLjg3NS4wMDItMS42NzctLjMxMi0yLjQ5LS44NzUtMS44MTctMS4yNi0yLjQxNy0zLjM4My0xLjczNC01LjU4LjU1NC0xLjc3NiAyLjA1OC0zLjA2NyAzLjg1NC0zLjQ0OC4yMS0uMDQ0LjQzLS4wNjYuNjUtLjA2Ni43NzUgMCAxLjQwNC42MyAxLjQwNCAxLjQwNCAwIC4yOS0uMDkgLjU2OC0uMjQ4LjgwMmwtLjQzMi42NDhjLS40MTcuNjI0LS45OC45OTYtMS42MTguOTk2LS4zMSAwLS41OTgtLjA3OC0uODYyLS4yMzZsLS4xMy0uMDhjLS4xOC0uMTE1LS4yODMtLjMxMi0uMjgzLS41MiAwLS4zMTIuMTY0LS42LjQyNC0uNzY2bC4wNTctLjAzNWMuNTE0LS4zMiAxLjA3My0uNDggMS42Ni0uNDgucDEuNzM4Yy4zOTIgMCAuNzU3LjE1NSAxLjAyNC40MzZsLjAzNi4wMzRjLjI2LjI1LjM5Ny41OTIuMzk3Ljk1IDAgLjM2LS4xNDIuNzA4LS4zOTcuOTYybC0uMDc0LjA3Yy0uNTU0LjUzNC0xLjI4NC44My0yLjA1LjgzLS4wMiAwIDAgMCAwIDBsLTMuMTQ4LjAwMmMtLjMxMiAwLS42LS4xMi0uODI4LS4zMjgtLjIzLS4yMi0uMzYtLjUxLS4zNi0uODI2IDAtLjI4OC4xLS4wNjIuMjgzLS43NzZsLjAxLS4wMTJjLjc3NS0uOTEyIDEuODQtMS40MTggMi45Ny0xLjQxOCAxLjI5IDAgMi40NjIuNTggMy4yMzggMS41MzZsLjA0Mi4wNTFjLjM4LjQ2LjU4MyAxLjA0LjU4MyAxLjY0IDAgLjYtLjIwMyAxLjE4LS41OSAxLjY0eiIgZmlsbD0iI0ZGRiIvPjwvc3ZnPg==',
-        promotionMultiplier: 1.2, 
-        creativeControl: 40,
-        minQuality: 40,
-        streamRequirement: 200_000_000,
+    {
+        "id": "rca",
+        "name": "RCA Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/rca.svg",
+        "promotionMultiplier": 1.2,
+        "creativeControl": 40,
+        "minQuality": 40,
+        "streamRequirement": 200000000
     },
-    { 
-        id: 'atlantic', 
-        name: 'Atlantic Records', 
-        tier: 'Mid-Low',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0id2hpdGUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIyOCIgZmlsbD0iYmxhY2siLz48cGF0aCBkPSJNMzIgMTZMNDQgNDhIMzlMMzUuNSAzOEgyOC41TDI1IDQ4SDIwTDMyIDE2Wk0zMCAzNEgzNEwzMiAyOEwzMCAzNFoiIGZpbGw9IndoaXRlIi8+PC9zdmc+',
-        promotionMultiplier: 1.15, 
-        creativeControl: 30,
-        minQuality: 30,
-        streamRequirement: 50_000_000,
+    {
+        "id": "atlantic",
+        "name": "Atlantic Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/atlantic.svg",
+        "promotionMultiplier": 1.15,
+        "creativeControl": 30,
+        "minQuality": 30,
+        "streamRequirement": 50000000
     },
-    { 
-        id: 'epic', 
-        name: 'Epic Records', 
-        tier: 'Low',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9ImJsYWNrIi8+PHBhdGggZD0iTTIwIDIwSDQ0VjI2SDIwVjIwWiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjAgMzBIMzhWMzZIMjBWMzBaIiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik0yMCA0MEg0NFY0NkgMjBWMDRaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==', 
-        promotionMultiplier: 1.12, 
-        creativeControl: 25,
-        minQuality: 20,
-        streamRequirement: 10_000_000,
-        youtubeChannel: {
-            name: 'Epic Records',
-            handle: '@epicrecords',
-            subscribers: 9_200_000,
-            banner: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+    {
+        "id": "epic",
+        "name": "Epic Records",
+        "tier": "Low",
+        "logo": "/labels/epic.svg",
+        "promotionMultiplier": 1.12,
+        "creativeControl": 25,
+        "minQuality": 20,
+        "streamRequirement": 10000000,
+        "youtubeChannel": {
+            "name": "Epic Records",
+            "handle": "@epicrecords",
+            "subscribers": 9200000,
+            "banner": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         }
     },
-    { 
-        id: 'island', 
-        name: 'Island Records', 
-        tier: 'Low',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJDMjguNjU0IDMyIDAgMzIgMCAzMiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMCAzMkM1IDMyIDMyIDU5IDMyIDU5IiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik02NCAzMkM1OSA0MSAzMiA1OSAzMiA1OSIgZmlsbD0iIzAwQjk5RiIvPjxwYXRoIGQ9Ik0wIDMyQzUgMjMgMzIgNSAzMiA1IiBmaWxsPSIjRkZBMDNDIi8+PHBhdGggZD0iTTY0IDMyQzU5IDIzIDMyIDUgMzIgNSIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMCAzMkMzLjUgMzIgMzIgMzIgMzIgMzIiIGZpbGw9IiMwMEI5OUYiLz48L3N2Zz4=',
-        promotionMultiplier: 1.1, 
-        creativeControl: 20,
-        minQuality: 0,
-        streamRequirement: 1_000_000,
-        youtubeChannel: {
-            name: 'Island Records',
-            handle: '@islandrecords',
-            subscribers: 5_100_000,
-            banner: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+    {
+        "id": "island",
+        "name": "Island Records",
+        "tier": "Low",
+        "logo": "/labels/island.svg",
+        "promotionMultiplier": 1.1,
+        "creativeControl": 20,
+        "minQuality": 0,
+        "streamRequirement": 1000000,
+        "youtubeChannel": {
+            "name": "Island Records",
+            "handle": "@islandrecords",
+            "subscribers": 5100000,
+            "banner": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         }
     },
-    { 
-        id: 'quality_control', 
-        name: 'Quality Control Music', 
-        tier: 'Mid-high',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iYmxhY2siLz48dGV4dCB4PSIzMiIgeT0iMzciIGZvbnQtZmFtaWx5PSJzZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5RQzwvdGV4dD48L3N2Zz4=',
-        promotionMultiplier: 1.6, 
-        creativeControl: 65,
-        minQuality: 70,
-        streamRequirement: 0,
-        contractType: 'petty'
+    {
+        "id": "quality_control",
+        "name": "Quality Control Music",
+        "tier": "Mid-high",
+        "logo": "/labels/quality_control.jpg",
+        "promotionMultiplier": 1.6,
+        "creativeControl": 65,
+        "minQuality": 70,
+        "streamRequirement": 0,
+        "contractType": "petty"
     },
-    { 
-        id: 'tde', 
-        name: 'Top Dawg Entertainment', 
-        tier: 'Top',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iYmxhY2siLz48dGV4dCB4PSIzMiIgeT0iMzciIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjIyIiBmb250LXdlaWdodD0iOTAwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VERFPC90ZXh0Pjwvc3ZnPg==',
-        promotionMultiplier: 1.8, 
-        creativeControl: 85,
-        minQuality: 70,
-        streamRequirement: 0,
-        contractType: 'petty'
+    {
+        "id": "tde",
+        "name": "Top Dawg Entertainment",
+        "tier": "Top",
+        "logo": "/labels/tde.webp",
+        "promotionMultiplier": 1.8,
+        "creativeControl": 85,
+        "minQuality": 70,
+        "streamRequirement": 0,
+        "contractType": "petty"
     },
-    { 
-        id: 'roc_nation', 
-        name: 'Roc Nation', 
-        tier: 'Top',
-        logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iYmxhY2siLz48cGF0aCBkPSJNMjEuNSA0MC41TDUwLjUgMTguNUwzMi41IDM0LjVMMzggNDUuNUwyMS41IDQwLjVaIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==',
-        promotionMultiplier: 1.9, 
-        creativeControl: 80,
-        minQuality: 70,
-        streamRequirement: 0,
-        contractType: 'petty'
+    {
+        "id": "roc_nation",
+        "name": "Roc Nation",
+        "tier": "Top",
+        "logo": "/labels/roc_nation.svg",
+        "promotionMultiplier": 1.9,
+        "creativeControl": 80,
+        "minQuality": 70,
+        "streamRequirement": 0,
+        "contractType": "petty"
     },
-{
-    "id": "def_jam",
-    "name": "Def Jam Recordings",
-    "tier": "Mid-high",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMxMTEiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5ERUYgSkFNPC90ZXh0Pjwvc3ZnPg==",
-    "promotionMultiplier": 1.6,
-    "creativeControl": 65,
-    "minQuality": 50,
-    "streamRequirement": 350000000
-},
-{
-    "id": "bad_boy",
-    "name": "Bad Boy Records",
-    "tier": "Mid-Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMwMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5CQUQgQk9ZPC90ZXh0Pjwvc3ZnPg==",
-    "promotionMultiplier": 1.3,
-    "creativeControl": 60,
-    "minQuality": 40,
-    "streamRequirement": 10000,
-    "activeFromYear": 1998,
-    "activeUntilYear": 2013
-},
-{
-    "id": "polydor",
-    "name": "Polydor Records",
-    "tier": "Mid-Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNEMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5QT0xZRE9SPC90ZXh0Pjwvc3ZnPg==",
-    "promotionMultiplier": 1.2,
-    "creativeControl": 50,
-    "minQuality": 40,
-    "streamRequirement": 0,
-    "activeFromYear": 2013
-},
-{
-    "id": "nice_life",
-    "name": "Nice Life",
-    "tier": "Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNGOTAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5OSUNFIExJRkU8L3RleHQ+PC9zdmc+",
-    "promotionMultiplier": 1.1,
-    "creativeControl": 80,
-    "minQuality": 30,
-    "streamRequirement": 0,
-    "activeFromYear": 2018,
-    "isDistributionOnly": true
-},
-{
-    "id": "sony",
-    "name": "Sony Music",
-    "tier": "Top",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNEMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5TT05ZPC90ZXh0Pjwvc3ZnPg==",
-    "promotionMultiplier": 2,
-    "creativeControl": 75,
-    "minQuality": 65,
-    "streamRequirement": 5000000000
-},
-{
-    "id": "capitol",
-    "name": "Capitol Records",
-    "tier": "Mid-Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMwMDkiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5DQVBJVE9MPC90ZXh0Pjwvc3ZnPg==",
-    "promotionMultiplier": 1.3,
-    "creativeControl": 55,
-    "minQuality": 45,
-    "streamRequirement": 1000000
-},
-{
-    "id": "motown",
-    "name": "Motown Records",
-    "tier": "Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMwMDUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5NT1RPV048L3RleHQ+PC9zdmc+",
-    "promotionMultiplier": 1.1,
-    "creativeControl": 40,
-    "minQuality": 30,
-    "streamRequirement": 0
-},
-{
-    "id": "geffen",
-    "name": "Geffen Records",
-    "tier": "Mid-Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMyMjIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5HRUZGRU48L3RleHQ+PC9zdmc+",
-    "promotionMultiplier": 1.4,
-    "creativeControl": 60,
-    "minQuality": 40,
-    "streamRequirement": 3000000
-},
-{
-    "id": "empire",
-    "name": "EMPIRE",
-    "tier": "Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNGRkYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDAwIj5FTVBJUkU8L3RleHQ+PC9zdmc+",
-    "promotionMultiplier": 1.15,
-    "creativeControl": 90,
-    "minQuality": 25,
-    "streamRequirement": 0,
-    "isDistributionOnly": true
-},
-{
-    "id": "virgin",
-    "name": "Virgin Music Group",
-    "tier": "Low",
-    "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNFMDAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj5WSVJHSU48L3RleHQ+PC9zdmc+",
-    "promotionMultiplier": 1.2,
-    "creativeControl": 50,
-    "minQuality": 30,
-    "streamRequirement": 0
-},
+    {
+        "id": "def_jam",
+        "name": "Def Jam Recordings",
+        "tier": "Mid-high",
+        "logo": "/labels/def_jam.svg",
+        "promotionMultiplier": 1.6,
+        "creativeControl": 65,
+        "minQuality": 50,
+        "streamRequirement": 350000000
+    },
+    {
+        "id": "bad_boy",
+        "name": "Bad Boy Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/bad_boy.png",
+        "promotionMultiplier": 1.3,
+        "creativeControl": 60,
+        "minQuality": 40,
+        "streamRequirement": 10000,
+        "activeFromYear": 1998,
+        "activeUntilYear": 2013
+    },
+    {
+        "id": "polydor",
+        "name": "Polydor Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/polydor.svg",
+        "promotionMultiplier": 1.2,
+        "creativeControl": 50,
+        "minQuality": 40,
+        "streamRequirement": 0,
+        "activeFromYear": 2013
+    },
+    {
+        "id": "nice_life",
+        "name": "Nice Life",
+        "tier": "Low",
+        "logo": "/labels/nice_life.jpg",
+        "promotionMultiplier": 1.1,
+        "creativeControl": 80,
+        "minQuality": 30,
+        "streamRequirement": 0,
+        "activeFromYear": 2018,
+        "isDistributionOnly": true
+    },
+    {
+        "id": "sony",
+        "name": "Sony Music",
+        "tier": "Top",
+        "logo": "/labels/sony.svg",
+        "promotionMultiplier": 2,
+        "creativeControl": 75,
+        "minQuality": 65,
+        "streamRequirement": 5000000000
+    },
+    {
+        "id": "capitol",
+        "name": "Capitol Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/capitol.svg",
+        "promotionMultiplier": 1.3,
+        "creativeControl": 55,
+        "minQuality": 45,
+        "streamRequirement": 1000000
+    },
+    {
+        "id": "motown",
+        "name": "Motown Records",
+        "tier": "Low",
+        "logo": "/labels/motown.svg",
+        "promotionMultiplier": 1.1,
+        "creativeControl": 40,
+        "minQuality": 30,
+        "streamRequirement": 0
+    },
+    {
+        "id": "geffen",
+        "name": "Geffen Records",
+        "tier": "Mid-Low",
+        "logo": "/labels/geffen.svg",
+        "promotionMultiplier": 1.4,
+        "creativeControl": 60,
+        "minQuality": 40,
+        "streamRequirement": 3000000
+    },
+    {
+        "id": "empire",
+        "name": "EMPIRE",
+        "tier": "Low",
+        "logo": "/labels/empire.svg",
+        "promotionMultiplier": 1.15,
+        "creativeControl": 90,
+        "minQuality": 25,
+        "streamRequirement": 0,
+        "isDistributionOnly": true
+    },
+    {
+        "id": "virgin",
+        "name": "Virgin Music Group",
+        "tier": "Low",
+        "logo": "/labels/virgin.svg",
+        "promotionMultiplier": 1.2,
+        "creativeControl": 50,
+        "minQuality": 30,
+        "streamRequirement": 0
+    }
 ];
 
 export const CUSTOM_LABEL_TIERS = {
