@@ -297,10 +297,18 @@ const MiscTab: React.FC = () => {
                     <ChevronRightIcon className="w-6 h-6 text-red-500/50" />
                 </button>
 
-                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'chartHistory' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
+                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'billboardChartHistory' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
                     <div>
-                        <h3 className="font-bold text-lg">Chart History</h3>
-                        <p className="text-sm text-zinc-400">View your lifetime chart performance.</p>
+                        <h3 className="font-bold text-lg text-emerald-400">Billboard Chart History</h3>
+                        <p className="text-sm text-zinc-400">View your Hot 100 & Billboard 200 history.</p>
+                    </div>
+                    <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
+                </button>
+
+                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'ukChartHistory' })} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-lg text-[#3b82f6]">UK Chart History</h3>
+                        <p className="text-sm text-zinc-400">View your Official UK Singles & Albums history.</p>
                     </div>
                     <ChevronRightIcon className="w-6 h-6 text-zinc-500" />
                 </button>

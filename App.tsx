@@ -76,7 +76,8 @@ import ITunesView from './components/ITunesView';
 import OnlyFansSetupView from './components/OnlyFansSetupView';
 import OnlyFansView from './components/OnlyFansView';
 import CreateOnlyFansPostView from './components/CreateOnlyFansPostView';
-import ChartHistoryView from './components/ChartHistoryView';
+import BillboardChartHistoryView from './components/BillboardChartHistoryView';
+import UkChartHistoryView from './components/UkChartHistoryView';
 import AlbumSalesChartView from './components/AlbumSalesChartView';
 import LabelsView from './components/LabelsView';
 import ReleaseHubView from './components/ReleaseHubView';
@@ -258,7 +259,10 @@ const AppContent: React.FC = () => {
             case 'achievements':
                 return <AchievementsView />;
             case 'chartHistory':
-                return <ChartHistoryView />;
+            case 'billboardChartHistory':
+                return <BillboardChartHistoryView />;
+            case 'ukChartHistory':
+                return <UkChartHistoryView />;
             case 'albumSalesChart':
                 return <AlbumSalesChartView />;
             case 'radioDash':

@@ -109,7 +109,8 @@ const appCategories: AppCategory[] = [
             { name: 'Oscars', description: 'Your film awards history', icon: <OscarAwardIcon className="w-8 h-8" />, view: 'oscars', bgColor: '#c7a34a' },
             { name: 'Golden Globes', description: 'Your TV & film awards history', icon: <TrophyIcon className="w-8 h-8" />, view: 'goldenGlobes', bgColor: '#d97706' },
             { name: 'Achievements', description: 'View career milestones', icon: <TrophyIcon className="w-8 h-8"/>, view: 'achievements', bgColor: '#ca8a04' },
-            { name: 'Chart History', description: 'Your all-time chart stats', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'chartHistory', bgColor: '#0ea5e9' },
+            { name: 'Billboard Chart History', description: 'Your Hot 100 & Billboard 200 stats', icon: <ChartBarIcon className="w-8 h-8"/>, view: 'billboardChartHistory', bgColor: '#10B981' },
+            { name: 'UK Chart History', description: 'Your Official UK Singles & Albums stats', icon: <span className="font-bold text-xl text-white">UK</span>, view: 'ukChartHistory', bgColor: '#0022EB' },
             { name: 'RIAA', description: 'Gold & Platinum Awards', icon: <RiaaIcon className="w-8 h-8"/>, view: 'riaa', bgColor: '#333333', iconColor: '#E5E4E2' },
         ]
     },

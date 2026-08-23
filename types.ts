@@ -878,8 +878,10 @@ export interface ChartHistory {
     weeksOnChart: number;
     lastRank: number | null;
     weeksAtNo1?: number;
+    weeksAtPeak?: number;
     chartRun?: number[];
     firstEntered?: { year: number; week: number };
+    peakDate?: { year: number; week: number };
   };
 }
 
@@ -1418,6 +1420,8 @@ export type GameView =
   | "onlyfans"
   | "createOnlyFansPost"
   | "chartHistory"
+  | "billboardChartHistory"
+  | "ukChartHistory"
   | "albumSalesChart"
   | "labels"
   | "releaseHub"
@@ -1836,6 +1840,7 @@ export interface ArtistData {
   lastFourWeeksViews: number[];
   youtubeSubscribers: number;
   youtubeBanner?: string;
+  ukBannerImage?: string;
   youtubePartnerProgram?: {
     isActive: boolean;
     eligibleViewsThisQuarter: number;
