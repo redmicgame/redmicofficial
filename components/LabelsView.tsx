@@ -71,21 +71,33 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({ submission 
         dispatch({ type: 'GO_TO_LABEL_PLAN', payload: { submissionId: submission.id } });
     };
 
+    const handleDismiss = () => {
+        dispatch({ type: 'DISMISS_LABEL_SUBMISSION', payload: { submissionId: submission.id } });
+    };
+
     return (
         <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
-            <img src={submission.release.coverArt} alt={submission.release.title} className="w-16 h-16 rounded-md object-cover"/>
-            <div className="flex-grow">
-                <p className="font-bold">{submission.release.title}</p>
+            <img src={submission.release.coverArt} alt={submission.release.title} className="w-16 h-16 rounded-md object-cover flex-shrink-0"/>
+            <div className="flex-grow min-w-0">
+                <p className="font-bold truncate">{submission.release.title}</p>
                 <p className="text-sm text-zinc-400">{submission.release.type.replace(" (Deluxe)", "")}</p>
                 {submission.status === 'scheduled' && submission.projectReleaseDate && (
                     <p className="text-xs text-green-300">Releasing W{submission.projectReleaseDate.week}, {submission.projectReleaseDate.year}</p>
                 )}
+                {submission.status === 'rejected' && submission.feedback && (
+                    <p className="text-xs text-red-400 mt-1 line-clamp-2">{submission.feedback}</p>
+                )}
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
                 <SubmissionStatusBadge status={submission.status} />
                 {submission.status === 'awaiting_player_input' && (
-                    <button onClick={handlePlanRelease} className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600">
+                    <button onClick={handlePlanRelease} className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600 transition-colors">
                         Plan Release
+                    </button>
+                )}
+                {submission.status === 'rejected' && (
+                    <button onClick={handleDismiss} className="text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-semibold px-3 py-1.5 rounded transition-colors">
+                        Dismiss
                     </button>
                 )}
             </div>

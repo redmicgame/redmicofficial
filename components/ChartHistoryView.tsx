@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { Song, Release, ChartHistory } from '../types';
 
-type ChartType = 'billboardHot100' | 'billboardTopAlbums' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'ukSinglesChart';
+type ChartType = 'billboardHot100' | 'billboardTopAlbums' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'ukSinglesChart' | 'ukAlbumsChart';
 
 const ChartHistoryView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
@@ -28,6 +28,11 @@ const ChartHistoryView: React.FC = () => {
                 history = gameState.albumChartHistory || {};
                 items = releases.filter(r => r.type !== 'Single');
                 title = 'Billboard 200';
+                break;
+            case 'ukAlbumsChart':
+                history = gameState.ukAlbumsChartHistory || {};
+                items = releases.filter(r => r.type !== 'Single');
+                title = 'UK Official Albums Chart';
                 break;
             case 'hotPopSongs':
                 history = gameState.hotPopSongsHistory || {};
@@ -58,7 +63,7 @@ const ChartHistoryView: React.FC = () => {
                 break;
         }
 
-        if (selectedChart !== 'billboardTopAlbums') {
+        if (selectedChart !== 'billboardTopAlbums' && selectedChart !== 'ukAlbumsChart') {
             Object.values(gameState.artistsData).forEach(data => {
                 data.songs.forEach(song => {
                     if (song.collaboration?.artistName === activeArtist.name) {
@@ -136,6 +141,7 @@ const ChartHistoryView: React.FC = () => {
                     <option value="electronicChart">Electronic Chart</option>
                     <option value="countryChart">Country Chart</option>
                     {gameState.date.year >= 2016 && <option value="ukSinglesChart">UK Official Singles Chart</option>}
+                    {gameState.date.year >= 2016 && <option value="ukAlbumsChart">UK Official Albums Chart</option>}
                 </select>
             </div>
 

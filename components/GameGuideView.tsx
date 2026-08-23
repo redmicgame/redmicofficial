@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import BookOpenIcon from './icons/BookOpenIcon';
@@ -10,6 +10,9 @@ import ChartBarIcon from './icons/ChartBarIcon';
 import StarIcon from './icons/StarIcon';
 import AmaAwardIcon from './icons/AmaAwardIcon';
 import LocationMarkerIcon from './icons/LocationMarkerIcon';
+import BuildingOfficeIcon from './icons/BuildingOfficeIcon';
+import { LABELS } from '../constants';
+import { Label } from '../types';
 
 interface GuideSection {
     id: string;
@@ -17,6 +20,183 @@ interface GuideSection {
     icon: React.ReactNode;
     content: React.ReactNode;
 }
+
+const RecordLabelsGuideContent: React.FC = () => {
+    const [tierFilter, setTierFilter] = useState<'All' | 'Top' | 'Mid-high' | 'Mid-Low' | 'Low' | 'Petty'>('All');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredLabels = useMemo(() => {
+        return LABELS.filter(label => {
+            const matchesTier =
+                tierFilter === 'All' ? true :
+                tierFilter === 'Petty' ? label.contractType === 'petty' :
+                label.tier === tierFilter;
+            const matchesSearch = label.name.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesTier && matchesSearch;
+        });
+    }, [tierFilter, searchQuery]);
+
+    const formatStreams = (streams: number) => {
+        if (!streams) return '0 Streams (Open)';
+        if (streams >= 1_000_000_000) return `${(streams / 1_000_000_000).toFixed(1)}B Streams`;
+        if (streams >= 1_000_000) return `${Math.round(streams / 1_000_000)}M Streams`;
+        if (streams >= 1_000) return `${Math.round(streams / 1_000)}k Streams`;
+        return `${streams.toLocaleString()} Streams`;
+    };
+
+    const getQualityBadgeColor = (minQuality: number, isPetty?: boolean) => {
+        if (isPetty || minQuality >= 70) {
+            return 'bg-red-950/80 text-red-300 border-red-700/80';
+        }
+        if (minQuality >= 60) {
+            return 'bg-amber-950/80 text-amber-300 border-amber-700/80';
+        }
+        if (minQuality >= 40) {
+            return 'bg-blue-950/80 text-blue-300 border-blue-700/80';
+        }
+        if (minQuality > 0) {
+            return 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80';
+        }
+        return 'bg-zinc-800 text-zinc-300 border-zinc-700';
+    };
+
+    const getTierBadgeColor = (tier: string, isPetty?: boolean) => {
+        if (isPetty) return 'bg-purple-900/60 text-purple-300 border-purple-600';
+        switch (tier) {
+            case 'Top': return 'bg-yellow-900/60 text-yellow-300 border-yellow-600';
+            case 'Mid-high': return 'bg-blue-900/60 text-blue-300 border-blue-600';
+            case 'Mid-Low': return 'bg-indigo-900/60 text-indigo-300 border-indigo-600';
+            case 'Low':
+            default: return 'bg-zinc-700/60 text-zinc-300 border-zinc-600';
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <p>
+                When you submit songs, singles, EPs, or albums to your signed record label, the label A&R team evaluates the <strong>average quality of all tracks</strong>. If your submission falls below the label's <strong>Required Quality</strong> threshold, the release is <strong>rejected</strong>.
+            </p>
+
+            <div className="bg-zinc-900/80 p-3 rounded-lg border border-zinc-700 space-y-2 text-xs">
+                <p className="font-bold text-white text-sm">💡 Key Approval & Contract Rules:</p>
+                <p>• <strong>Average Quality Calculation:</strong> All songs in a multi-track release are averaged together.</p>
+                <p>• <strong>Petty Labels (TDE, Roc Nation, QC):</strong> Enforce a strict minimum quality of <strong>70</strong>. If you ever leave a petty label, they seize all masters released during your contract!</p>
+                <p>• <strong>Distribution Only Deals (EMPIRE, Nice Life):</strong> Offer higher creative control (80-90%) with lower quality bars (25-30).</p>
+                <p>• <strong>Dismissing Rejected Submissions:</strong> If your release is rejected, you can dismiss it directly from your Home Screen or Labels tab to clean up your dashboard.</p>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="space-y-2 pt-2">
+                <input
+                    type="text"
+                    placeholder="Search label by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                    {(['All', 'Top', 'Mid-high', 'Mid-Low', 'Low', 'Petty'] as const).map((tier) => (
+                        <button
+                            key={tier}
+                            onClick={() => setTierFilter(tier)}
+                            className={`text-xs px-2.5 py-1 rounded-md font-semibold transition-colors border ${
+                                tierFilter === tier
+                                    ? 'bg-red-600 text-white border-red-500'
+                                    : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800 hover:text-white'
+                            }`}
+                        >
+                            {tier === 'Petty' ? '⚠️ Petty Labels' : `${tier} ${tier !== 'All' ? 'Tier' : 'Tiers'}`}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Labels Table / Cards */}
+            <div className="space-y-3 pt-1">
+                {filteredLabels.map((label: Label) => {
+                    const isPetty = label.contractType === 'petty';
+                    const effectiveMinQuality = isPetty ? Math.max(label.minQuality || 0, 70) : (label.minQuality || 0);
+
+                    return (
+                        <div
+                            key={label.id}
+                            className="bg-zinc-900/90 border border-zinc-700/80 rounded-lg p-3.5 space-y-2 hover:border-zinc-500 transition-colors"
+                        >
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <img
+                                        src={label.logo}
+                                        alt={label.name}
+                                        className="w-10 h-10 rounded-md object-contain bg-black/40 p-1 border border-zinc-800 flex-shrink-0"
+                                    />
+                                    <div className="min-w-0">
+                                        <h4 className="font-bold text-white truncate text-base">{label.name}</h4>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${getTierBadgeColor(label.tier, isPetty)}`}>
+                                                {label.tier} Tier
+                                            </span>
+                                            {isPetty && (
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-700">
+                                                    Petty Label
+                                                </span>
+                                            )}
+                                            {label.isDistributionOnly && (
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-700">
+                                                    Distribution Only
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="text-right flex-shrink-0">
+                                    <div className={`px-2.5 py-1 rounded-md border text-xs font-bold ${getQualityBadgeColor(effectiveMinQuality, isPetty)}`}>
+                                        ⭐️ Min Quality: {effectiveMinQuality}+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 pt-1 text-xs border-t border-zinc-800/80">
+                                <div className="bg-zinc-950/60 p-2 rounded border border-zinc-800">
+                                    <span className="text-zinc-500 block text-[10px] uppercase font-bold">Signing Requirement</span>
+                                    <span className="font-semibold text-zinc-200">{formatStreams(label.streamRequirement)}</span>
+                                </div>
+                                <div className="bg-zinc-950/60 p-2 rounded border border-zinc-800">
+                                    <span className="text-zinc-500 block text-[10px] uppercase font-bold">Promo Multiplier</span>
+                                    <span className="font-semibold text-emerald-400">{label.promotionMultiplier}x Boost</span>
+                                </div>
+                                <div className="bg-zinc-950/60 p-2 rounded border border-zinc-800">
+                                    <span className="text-zinc-500 block text-[10px] uppercase font-bold">Creative Control</span>
+                                    <span className="font-semibold text-blue-400">{label.creativeControl}% Control</span>
+                                </div>
+                            </div>
+
+                            {(isPetty || label.activeFromYear || label.activeUntilYear || label.isDistributionOnly) && (
+                                <div className="text-xs bg-zinc-950/40 p-2 rounded border border-zinc-800/60 text-zinc-400 space-y-1">
+                                    {isPetty && (
+                                        <p className="text-red-400">
+                                            ⚠️ <strong>Petty Clause:</strong> Requires strictly 70+ quality for all project submissions. Retains all master rights upon contract termination.
+                                        </p>
+                                    )}
+                                    {label.activeFromYear && (
+                                        <p className="text-zinc-400">
+                                            📅 <strong>Era Availability:</strong> Active starting in {label.activeFromYear}{label.activeUntilYear ? ` until ${label.activeUntilYear}` : '+'}.
+                                        </p>
+                                    )}
+                                    {label.isDistributionOnly && (
+                                        <p className="text-blue-300">
+                                            📦 <strong>Distribution Deal:</strong> Provides direct distribution pipeline with maximum artistic autonomy.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 const guideSections: GuideSection[] = [
     {
@@ -230,7 +410,7 @@ const guideSections: GuideSection[] = [
                 <p>Perform live shows in the 'Gigs' app to earn quick cash and hype. As your popularity grows, you'll unlock bigger venues. In the 'Ticketmaster' app, you can plan multi-city tours, which are a massive source of income.</p>
                 
                 <h3 className="font-bold text-red-400 mt-4">Record Labels & Custom Labels</h3>
-                <p>Use the 'Labels' app to seek a record deal. You'll need to meet their stream requirements. Once signed, they handle releases and provide a huge promotional multiplier.</p>
+                <p>Use the 'Labels' app to seek a record deal. You'll need to meet their stream requirements. Once signed, they handle releases and provide a huge promotional multiplier. (Check out the <strong>Record Labels & Quality</strong> section below for all label thresholds!)</p>
                 <p>Beware of <strong>"Petty Labels"</strong>. If you leave their contract, they will take down all music you released with them. You can later re-record these songs to reclaim your masters.</p>
                 <p>If you are wealthy and popular enough, you can <strong>Create Your Own Custom Label</strong>. You can sign upcoming artists (like your children), handle their releases, and earn a percentage of their revenue.</p>
                 
@@ -238,6 +418,12 @@ const guideSections: GuideSection[] = [
                 <p>Hire staff in the 'Management' and 'Security' apps. Managers automatically book gigs and unlock higher-tier opportunities. Security teams reduce the chance of your unreleased music leaking.</p>
             </>
         )
+    },
+    {
+        id: 'record-labels',
+        title: 'Record Labels & Quality Requirements',
+        icon: <BuildingOfficeIcon className="w-5 h-5 text-yellow-400" />,
+        content: <RecordLabelsGuideContent />
     },
     {
         id: 'fame-and-image',

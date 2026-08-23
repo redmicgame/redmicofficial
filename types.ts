@@ -2632,6 +2632,7 @@ export type GameAction =
   | { type: "DELETE_SONG"; payload: { songId: string } }
   | { type: "TOGGLE_VAULT_SONG"; payload: { songId: string } }
   | { type: "CANCEL_SCHEDULED_RELEASE"; payload: { submissionId: string } }
+  | { type: "DISMISS_LABEL_SUBMISSION"; payload: { submissionId: string } }
   | { type: "GO_TO_ALBUM_PROMO"; payload: { submissionId: string } }
   | {
       type: "LAUNCH_COUNTDOWN_PAGE";

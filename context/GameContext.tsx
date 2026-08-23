@@ -19386,6 +19386,44 @@ Thank you for trusting X.`,
         },
       };
     }
+    case "DISMISS_LABEL_SUBMISSION": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const submissionToDismiss = activeData.labelSubmissions.find(
+        (sub) => sub.id === action.payload.submissionId,
+      );
+
+      if (!submissionToDismiss) return state;
+
+      // Ensure songs in the dismissed submission remain or revert to unreleased
+      const releaseSongIds = submissionToDismiss.release.songIds || [];
+      const updatedSongs = activeData.songs.map((song) => {
+        if (releaseSongIds.includes(song.id) && !song.dateReleased) {
+          return {
+            ...song,
+            isReleased: false,
+            releaseId: undefined,
+          };
+        }
+        return song;
+      });
+
+      const updatedSubmissions = activeData.labelSubmissions.filter(
+        (sub) => sub.id !== action.payload.submissionId,
+      );
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: updatedSongs,
+            labelSubmissions: updatedSubmissions,
+          },
+        },
+      };
+    }
     case "GO_TO_ALBUM_PROMO":
       return {
         ...state,

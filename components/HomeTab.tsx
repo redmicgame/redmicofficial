@@ -126,15 +126,22 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({
     });
   };
 
+  const handleDismiss = () => {
+    dispatch({
+      type: "DISMISS_LABEL_SUBMISSION",
+      payload: { submissionId: submission.id },
+    });
+  };
+
   return (
     <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
       <img
         src={submission.release.coverArt}
         alt={submission.release.title}
-        className="w-16 h-16 rounded-md object-cover"
+        className="w-16 h-16 rounded-md object-cover flex-shrink-0"
       />
-      <div className="flex-grow">
-        <p className="font-bold">{submission.release.title}</p>
+      <div className="flex-grow min-w-0">
+        <p className="font-bold truncate">{submission.release.title}</p>
         <p className="text-sm text-zinc-400">
           {submission.release.type.replace(" (Deluxe)", "")}
         </p>
@@ -144,13 +151,18 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({
             {submission.projectReleaseDate.year}
           </p>
         )}
+        {submission.status === "rejected" && submission.feedback && (
+          <p className="text-xs text-red-400 mt-1 line-clamp-2">
+            {submission.feedback}
+          </p>
+        )}
       </div>
-      <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
         <SubmissionStatusBadge status={submission.status} />
         {submission.status === "awaiting_player_input" && (
           <button
             onClick={handlePlanRelease}
-            className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600"
+            className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600 transition-colors"
           >
             Plan Release
           </button>
@@ -163,9 +175,17 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({
                 payload: { submissionId: submission.id },
               })
             }
-            className="text-xs bg-red-600/20 text-red-400 font-semibold px-2 py-1 rounded hover:bg-red-600/40"
+            className="text-xs bg-red-600/20 text-red-400 font-semibold px-2 py-1 rounded hover:bg-red-600/40 transition-colors"
           >
             Cancel
+          </button>
+        )}
+        {submission.status === "rejected" && (
+          <button
+            onClick={handleDismiss}
+            className="text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-semibold px-3 py-1 rounded transition-colors"
+          >
+            Dismiss
           </button>
         )}
       </div>
@@ -941,7 +961,26 @@ const HomeTab: React.FC = () => {
       </div>
       {contract && labelSubmissions.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold">Submitted to Label</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Submitted to Label</h2>
+            {labelSubmissions.some((s) => s.status === "rejected") && (
+              <button
+                onClick={() => {
+                  labelSubmissions
+                    .filter((s) => s.status === "rejected")
+                    .forEach((s) =>
+                      dispatch({
+                        type: "DISMISS_LABEL_SUBMISSION",
+                        payload: { submissionId: s.id },
+                      })
+                    );
+                }}
+                className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors underline"
+              >
+                Dismiss All Rejected
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
             {labelSubmissions.map((sub) => (
               <SubmissionItem key={sub.id} submission={sub} />
