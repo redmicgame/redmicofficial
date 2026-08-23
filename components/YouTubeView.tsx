@@ -66,7 +66,7 @@ const VideoItem: React.FC<{
 
 const YouTubeHome: React.FC = () => {
     const { gameState, allPlayerArtists } = useGame();
-    const { artistsData, group, careerMode } = gameState;
+    const { artistsData, group, careerMode, date } = gameState;
     const [activeFilter, setActiveFilter] = useState('All');
 
     const channelsMap = useMemo(() => {
@@ -94,7 +94,7 @@ const YouTubeHome: React.FC = () => {
     
     const filteredVideos = useMemo(() => {
         let allVideos = Object.values(artistsData).flatMap(data => data.videos);
-        allVideos = allVideos.filter(v => !(v.channelId === 'mtv' && date.year < 2010));
+        allVideos = allVideos.filter(v => !((v.channelId === 'mtv' || v.isMtv) && date.year < 2008));
         const sortedByDate = [...allVideos].sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
 
         if (activeFilter === 'All') {
@@ -122,7 +122,7 @@ const YouTubeHome: React.FC = () => {
         }
         
         return [...allVideos].sort(() => Math.random() - 0.5);
-    }, [artistsData, activeFilter, allPlayerArtists]);
+    }, [artistsData, activeFilter, allPlayerArtists, date.year]);
 
     return (
         <>
@@ -188,6 +188,19 @@ const YouTubeChannelView: React.FC = () => {
     const isLabelView = (activeYoutubeChannel === 'label' && canSwitchToLabelChannel) || isViewingPastLabel;
 
     const channelData = useMemo(() => {
+        if (activeYoutubeChannel === 'mtv' || viewingPastLabelId === 'mtv') {
+            return {
+                name: 'MTV',
+                handle: '@MTV',
+                avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/MTV_Logo.svg/1200px-MTV_Logo.svg.png',
+                banner: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=80',
+                subscribers: 15800000,
+                isVerified: true,
+                isPersonal: false,
+                bio: 'The official YouTube channel for MTV. Music Television premieres, TRL classics, and music culture.',
+            };
+        }
+
         let labelToShow;
         if (isViewingPastLabel) {
             labelToShow = LABELS.find(l => l.id === viewingPastLabelId);
@@ -258,9 +271,15 @@ const YouTubeChannelView: React.FC = () => {
         }
     };
     
-    const channelIdToShow = isViewingPastLabel ? viewingPastLabelId : (isLabelView && contract ? contract.labelId : activeArtistId!);
+    const isMtvView = activeYoutubeChannel === 'mtv' || viewingPastLabelId === 'mtv';
+    const channelIdToShow = isViewingPastLabel ? viewingPastLabelId : (isMtvView ? 'mtv' : (isLabelView && contract ? contract.labelId : activeArtistId!));
     const displayedVideos = useMemo(() => {
-         const filtered = videos.filter(v => v.channelId === channelIdToShow && !v.isFeatureVideo);
+         const filtered = videos.filter(v => {
+            if (channelIdToShow === 'mtv') {
+                return (v.channelId === 'mtv' || v.isMtv) && date.year >= 2008;
+            }
+            return v.channelId === channelIdToShow && !v.isFeatureVideo && !v.isMtv;
+         });
          switch (filter) {
             case 'Popular':
                 return filtered.sort((a, b) => b.views - a.views);
@@ -269,7 +288,7 @@ const YouTubeChannelView: React.FC = () => {
             case 'Oldest':
                 return filtered.sort((a, b) => (a.releaseDate.year * 52 + a.releaseDate.week) - (b.releaseDate.year * 52 + a.releaseDate.week));
         }
-    }, [videos, filter, channelIdToShow]);
+    }, [videos, filter, channelIdToShow, date.year]);
 
     const handleVideoClick = (videoId: string) => {
         dispatch({ type: 'SELECT_VIDEO', payload: videoId });
@@ -339,10 +358,15 @@ const YouTubeChannelView: React.FC = () => {
                     <p className="text-zinc-400 text-sm mt-1">{channelData.bio}</p>
                 </div>
 
-                {canSwitchToLabelChannel && !isViewingPastLabel && (
-                    <div className="mt-4 p-1 bg-zinc-800 rounded-full flex">
-                        <button onClick={() => dispatch({type: 'SWITCH_YOUTUBE_CHANNEL', payload: 'artist'})} className={`flex-1 py-1.5 rounded-full text-sm font-semibold ${!isLabelView ? 'bg-zinc-600' : 'hover:bg-zinc-700'}`}>Personal</button>
-                        <button onClick={() => dispatch({type: 'SWITCH_YOUTUBE_CHANNEL', payload: 'label'})} className={`flex-1 py-1.5 rounded-full text-sm font-semibold ${isLabelView ? 'bg-zinc-600' : 'hover:bg-zinc-700'}`}>Label</button>
+                {((canSwitchToLabelChannel || (date.year >= 2008 && videos.some(v => v.isMtv || v.channelId === 'mtv'))) && !isViewingPastLabel) && (
+                    <div className="mt-4 p-1 bg-zinc-800 rounded-full flex gap-1">
+                        <button onClick={() => dispatch({type: 'SWITCH_YOUTUBE_CHANNEL', payload: 'artist'})} className={`flex-1 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-colors ${activeYoutubeChannel === 'artist' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>Personal</button>
+                        {canSwitchToLabelChannel && (
+                            <button onClick={() => dispatch({type: 'SWITCH_YOUTUBE_CHANNEL', payload: 'label'})} className={`flex-1 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-colors ${activeYoutubeChannel === 'label' ? 'bg-zinc-600 text-white' : 'text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>Label</button>
+                        )}
+                        {date.year >= 2008 && videos.some(v => v.isMtv || v.channelId === 'mtv') && (
+                            <button onClick={() => dispatch({type: 'SWITCH_YOUTUBE_CHANNEL', payload: 'mtv'})} className={`flex-1 py-1.5 rounded-full text-xs md:text-sm font-semibold transition-colors ${activeYoutubeChannel === 'mtv' ? 'bg-red-600 text-white font-bold' : 'text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>MTV</button>
+                        )}
                     </div>
                 )}
 

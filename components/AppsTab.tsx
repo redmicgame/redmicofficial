@@ -176,7 +176,7 @@ const AppsTab: React.FC = () => {
         if (appName === 'MySpace') return eraConfig.myspaceAvailable;
         if (appName === 'YouTube' || appName === 'YT Studio') return eraConfig.youtubeAvailable;
         if (appName === 'YT Music') return eraConfig.youtubeAvailable && gameState.date.year >= 2015;
-        if (appName === 'MTV') return gameState.date.year >= 1975 && gameState.date.year <= 2007;
+        if (appName === 'MTV') return gameState.date.year >= 1975 && gameState.date.year <= 2009;
         if (appName === 'OnlyFans') return eraConfig.onlyfansAvailable;
         if (appName === 'Reddit') return gameState.date.year >= 2012;
         if (appName === 'Piracy') return gameState.date.year >= 1999 && gameState.date.year <= 2008;

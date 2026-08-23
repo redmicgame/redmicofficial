@@ -342,6 +342,13 @@ export interface Video {
   spotifyDailyViews?: number[];
   isFeatureVideo?: boolean;
   isMtv?: boolean;
+  mtvViews?: number;
+  mtvWeeklyViews?: number;
+  mtvRotation?: "heavy" | "buzzworthy" | "medium" | "retired";
+  trlPeak?: number;
+  trlWeeks?: number;
+  director?: string;
+  budgetTier?: string;
 }
 
 export interface MerchProduct {
@@ -2035,7 +2042,7 @@ export interface GameState {
   date: GameDate;
   currentView: GameView;
   activeTab: Tab;
-  activeYoutubeChannel: "artist" | "label";
+  activeYoutubeChannel: "artist" | "label" | "mtv";
 
   npcs: NpcSong[];
   npcAlbums: NpcAlbum[];
@@ -2310,8 +2317,10 @@ export type GameAction =
   | { type: "SUBMIT_COACHELLA"; payload: { emailId: string } }
   | { type: "SET_COACHELLA_SETLIST"; payload: { songIds: string[]; emailId?: string } }
   | { type: "CHANGE_TAB"; payload: Tab }
-  | { type: "SWITCH_YOUTUBE_CHANNEL"; payload: "artist" | "label" }
+  | { type: "SWITCH_YOUTUBE_CHANNEL"; payload: "artist" | "label" | "mtv" }
   | { type: "APPLY_YOUTUBE_PARTNER" }
+  | { type: "SUBMIT_MTV_VIDEO"; payload: { video: Video; cost: number; rotation?: "heavy" | "buzzworthy" | "medium" } }
+  | { type: "VOTE_TRL_VIDEO"; payload: { videoId: string } }
   | { type: "CHANGE_ACTIVE_ARTIST"; payload: string }
   | {
       type: "TRANSFER_MONEY";

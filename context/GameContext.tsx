@@ -3278,6 +3278,23 @@ The Red Mic Team`,
 
           // 3. Process daily views for videos
           artistData.videos = artistData.videos.map((video) => {
+            const isMtvPre2008 = video.isMtv && newDate.year < 2008;
+
+            if (isMtvPre2008) {
+              const baseRate = video.mtvWeeklyViews && video.mtvWeeklyViews > 0
+                ? Math.floor(video.mtvWeeklyViews / 7)
+                : Math.max(100, Math.floor((artistData.popularity * 450) / 7));
+              const rotMult = video.mtvRotation === 'heavy' ? 2.5 : video.mtvRotation === 'buzzworthy' ? 1.8 : 1.2;
+              const dayTvViews = Math.floor(baseRate * rotMult * (0.88 + Math.random() * 0.24));
+              const tvIncome = Math.floor(dayTvViews * 0.002);
+              artistData.money += tvIncome;
+
+              return {
+                ...video,
+                mtvViews: (video.mtvViews || 0) + dayTvViews,
+              };
+            }
+
             const baseRate = video.lastWeekViews && video.lastWeekViews > 0
               ? Math.floor(video.lastWeekViews / 7)
               : Math.max(50, Math.floor((artistData.popularity * 300) / 7));
@@ -6349,6 +6366,30 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             weeklyViews = Math.floor(weeklyViews * videoPromo.boostMultiplier);
           }
 
+          const isMtvPre2008 = video.isMtv && newDate.year < 2008;
+
+          if (isMtvPre2008) {
+            const rotMult = video.mtvRotation === 'heavy' ? 3.2 : video.mtvRotation === 'buzzworthy' ? 2.2 : 1.4;
+            const mtvTvWeekly = Math.floor(weeklyViews * rotMult * 1.5);
+            const updatedTrlWeeks = (video.trlWeeks || 0) + 1;
+            
+            // Boost song hype and sales from TV rotation
+            song.hype = Math.min(100, (song.hype || 0) + (video.mtvRotation === 'heavy' ? 8 : 4));
+
+            return {
+              ...video,
+              mtvWeeklyViews: mtvTvWeekly,
+              mtvViews: (video.mtvViews || 0) + mtvTvWeekly,
+              trlWeeks: updatedTrlWeeks,
+            };
+          }
+
+          // In 2008-2009, if MTV video is uploaded to YouTube for the first time
+          let initialArchiveBoost = 0;
+          if (video.isMtv && newDate.year >= 2008 && video.views === 0 && (video.mtvViews || 0) > 0) {
+            initialArchiveBoost = Math.floor((video.mtvViews || 100000) * 0.15);
+          }
+
           let firstWeekViewsData = {};
           if (
             newDate.year * 52 +
@@ -6378,7 +6419,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           
           return {
             ...video,
-            views: video.views + weeklyViews,
+            views: video.views + weeklyViews + initialArchiveBoost,
             lastWeekViews: weeklyViews,
             ...firstWeekViewsData,
             ...spotifyViewsData,
@@ -15639,6 +15680,73 @@ The Tonight Show Team`;
               getHypeCap(activeData),
               activeData.hype + hypeIncrease,
             ),
+          },
+        },
+      };
+    }
+    case "SUBMIT_MTV_VIDEO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { video, cost, rotation } = action.payload;
+
+      const rot = rotation || 'buzzworthy';
+      const hypeIncrease = rot === 'heavy' ? 35 : rot === 'buzzworthy' ? 25 : 15;
+      const popularityIncrease = rot === 'heavy' ? 4 : rot === 'buzzworthy' ? 2 : 1;
+
+      const updatedSongs = activeData.songs.map(s => {
+        if (s.id === video.songId) {
+          return {
+            ...s,
+            hype: Math.min(100, (s.hype || 0) + (rot === 'heavy' ? 25 : 15)),
+          };
+        }
+        return s;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - cost,
+            songs: updatedSongs,
+            videos: [...activeData.videos, video],
+            hype: Math.min(
+              getHypeCap(activeData),
+              activeData.hype + hypeIncrease,
+            ),
+            popularity: Math.min(
+              100,
+              activeData.popularity + popularityIncrease,
+            ),
+          },
+        },
+      };
+    }
+    case "VOTE_TRL_VIDEO": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { videoId } = action.payload;
+
+      const updatedVideos = activeData.videos.map(v => {
+        if (v.id === videoId) {
+          return {
+            ...v,
+            mtvViews: (v.mtvViews || 0) + 5000,
+          };
+        }
+        return v;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            videos: updatedVideos,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 2),
           },
         },
       };
