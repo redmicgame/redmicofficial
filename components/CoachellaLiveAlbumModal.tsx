@@ -22,12 +22,9 @@ export const CoachellaLiveAlbumModal: React.FC<CoachellaLiveAlbumModalProps> = (
   const { gameState, dispatch, activeArtistData } = useGame();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen || !activeArtistData) return null;
-
-  const currentYear = year || gameState.date.year;
-  const artistName = activeArtistData.name || "Artist";
-
-  const defaultCover = activeArtistData.artistImages?.[0] || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80';
+  const currentYear = year || gameState?.date?.year || new Date().getFullYear();
+  const artistName = activeArtistData?.name || "Artist";
+  const defaultCover = activeArtistData?.artistImages?.[0] || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80';
 
   const [title, setTitle] = useState(`${artistName} - Live From Coachella ${currentYear}`);
   const [uploadedCover, setUploadedCover] = useState<string | null>(null);
@@ -36,8 +33,21 @@ export const CoachellaLiveAlbumModal: React.FC<CoachellaLiveAlbumModalProps> = (
 
   // Eligible songs: all released songs or setlist songs
   const availableSongs = useMemo(() => {
+    if (!activeArtistData?.songs) return [];
     return (activeArtistData.songs || []).filter(s => s.isReleased || s.isRecorded || s.status === 'completed');
-  }, [activeArtistData.songs]);
+  }, [activeArtistData?.songs]);
+
+  // Sync state when modal opens
+  React.useEffect(() => {
+    if (isOpen && activeArtistData) {
+      setTitle(`${activeArtistData.name || 'Artist'} - Live From Coachella ${year || gameState.date.year}`);
+      setUploadedCover(null);
+      setSelectedSongIds([]);
+      setError('');
+    }
+  }, [isOpen, activeArtistData, year, gameState?.date?.year]);
+
+  if (!isOpen || !activeArtistData) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

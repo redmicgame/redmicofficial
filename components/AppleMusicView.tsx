@@ -837,6 +837,7 @@ const AppleMusicView: React.FC = () => {
                                     >
                                         <AppleMusicPlaylistCover
                                             type={pl.type}
+                                            badgeText={pl.badgeText}
                                             artistImage={activeArtist.image || ''}
                                             bannerColor={pl.bannerColor}
                                             customCoverUrl={pl.customCoverUrl}

@@ -16,10 +16,6 @@ interface CoachellaSetlistModalProps {
 const CoachellaSetlistModal: React.FC<CoachellaSetlistModalProps> = ({ isOpen, onClose, slot, stage, emailId }) => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
 
-    if (!isOpen || !activeArtistData) return null;
-
-    const existingSetlist = activeArtistData.coachella?.setlist || [];
-
     const minMax = useMemo(() => {
         switch (slot) {
             case 'opener': return { min: 1, max: 1, label: '1 song' };
@@ -30,13 +26,24 @@ const CoachellaSetlistModal: React.FC<CoachellaSetlistModalProps> = ({ isOpen, o
         }
     }, [slot]);
 
-    const [selectedSongIds, setSelectedSongIds] = useState<string[]>(existingSetlist);
+    const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
     const [error, setError] = useState<string>('');
 
     // Both released and unreleased songs
     const allAvailableSongs = useMemo(() => {
+        if (!activeArtistData?.songs) return [];
         return activeArtistData.songs.filter(s => s.status !== 'written' || s.isRecorded || s.isReleased || true);
-    }, [activeArtistData.songs]);
+    }, [activeArtistData?.songs]);
+
+    // Keep selectedSongIds in sync when modal opens or active artist changes
+    React.useEffect(() => {
+        if (isOpen && activeArtistData) {
+            setSelectedSongIds(activeArtistData.coachella?.setlist || []);
+            setError('');
+        }
+    }, [isOpen, activeArtistData]);
+
+    if (!isOpen || !activeArtistData) return null;
 
     const handleToggleSong = (songId: string) => {
         setError('');

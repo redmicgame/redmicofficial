@@ -540,6 +540,7 @@ const MiscTab: React.FC = () => {
                         >
                             <option value="normal">Normal Snapshot</option>
                             <option value="ugly">Ugly Snapshot</option>
+                            <option value="simplistic">Simplistic Snapshot</option>
                         </select>
                     </div>
 

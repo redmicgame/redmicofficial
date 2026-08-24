@@ -44,6 +44,11 @@ export const AppleMusicPlaylistModal: React.FC<AppleMusicPlaylistModalProps> = (
         playlist?.title || (activeArtist ? `${activeArtist.name}'s Tour Set List` : 'My Tour Set List')
     );
     const [playlistType, setPlaylistType] = useState<'setlist' | 'playlist'>(playlist?.type || 'setlist');
+    const [badgeText, setBadgeText] = useState<string>(
+        playlist?.badgeText !== undefined 
+            ? playlist.badgeText 
+            : (playlist?.type === 'playlist' ? 'Playlist' : 'Set List')
+    );
     const [curatorText, setCuratorText] = useState(playlist?.curatorText || 'Apple Music Pop');
     const [bannerColor, setBannerColor] = useState(playlist?.bannerColor || '#93c5fd');
     const [selectedSongIds, setSelectedSongIds] = useState<string[]>(playlist?.songIds || []);
@@ -109,6 +114,7 @@ export const AppleMusicPlaylistModal: React.FC<AppleMusicPlaylistModalProps> = (
                     playlistId: playlist.id,
                     title: title.trim(),
                     playlistType,
+                    badgeText: badgeText.trim() || (playlistType === 'setlist' ? 'Set List' : 'Playlist'),
                     curatorText,
                     bannerColor,
                     songIds: selectedSongIds,
@@ -120,6 +126,7 @@ export const AppleMusicPlaylistModal: React.FC<AppleMusicPlaylistModalProps> = (
                 payload: {
                     title: title.trim(),
                     playlistType,
+                    badgeText: badgeText.trim() || (playlistType === 'setlist' ? 'Set List' : 'Playlist'),
                     curatorText,
                     bannerColor,
                     songIds: selectedSongIds,
@@ -164,6 +171,7 @@ export const AppleMusicPlaylistModal: React.FC<AppleMusicPlaylistModalProps> = (
                     <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row items-center gap-5">
                         <AppleMusicPlaylistCover 
                             type={playlistType} 
+                            badgeText={badgeText}
                             artistImage={artistImg} 
                             bannerColor={bannerColor}
                             className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl shrink-0" 
@@ -171,39 +179,41 @@ export const AppleMusicPlaylistModal: React.FC<AppleMusicPlaylistModalProps> = (
                         <div className="flex-1 w-full space-y-3">
                             <div>
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
-                                    Playlist Type
+                                    Cover Header / Badge Name
                                 </label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setPlaylistType('setlist')}
-                                        className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all ${
-                                            playlistType === 'setlist'
-                                                ? 'bg-[#fa243c] border-transparent text-white shadow-lg'
-                                                : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
-                                        }`}
-                                    >
-                                        <span>🎤</span>
-                                        <span>Set List</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPlaylistType('playlist')}
-                                        className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all ${
-                                            playlistType === 'playlist'
-                                                ? 'bg-[#fa243c] border-transparent text-white shadow-lg'
-                                                : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
-                                        }`}
-                                    >
-                                        <span>🎵</span>
-                                        <span>Playlist</span>
-                                    </button>
+                                <div className="flex gap-2 mb-2">
+                                    <input 
+                                        type="text"
+                                        value={badgeText}
+                                        onChange={(e) => setBadgeText(e.target.value)}
+                                        placeholder="e.g. Set List, Playlist, Tour, Live, Deluxe"
+                                        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2 text-white font-bold text-sm focus:outline-none focus:border-[#fa243c]"
+                                    />
                                 </div>
-                                <p className="text-[11px] text-zinc-400 mt-1">
-                                    {playlistType === 'setlist' 
-                                        ? 'Displays "Set List" on top header banner (for tours & concerts).'
-                                        : 'Displays "Playlist" on top header banner (for curated collections).'}
-                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    <span className="text-[11px] text-zinc-400 self-center mr-1">Quick presets:</span>
+                                    {['Set List', 'Playlist', 'Tour', 'Live', 'Favorites', 'Essential'].map((preset) => (
+                                        <button
+                                            key={preset}
+                                            type="button"
+                                            onClick={() => {
+                                                setBadgeText(preset);
+                                                if (preset === 'Set List' || preset === 'Tour' || preset === 'Live') {
+                                                    setPlaylistType('setlist');
+                                                } else {
+                                                    setPlaylistType('playlist');
+                                                }
+                                            }}
+                                            className={`text-[11px] px-2.5 py-1 rounded-lg font-bold border transition-colors ${
+                                                badgeText.toLowerCase() === preset.toLowerCase()
+                                                    ? 'bg-[#fa243c] border-[#fa243c] text-white'
+                                                    : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                                            }`}
+                                        >
+                                            {preset}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Banner Color Options */}

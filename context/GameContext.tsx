@@ -10722,6 +10722,14 @@ It is now available on your Spotify profile.
             !r.soundtrackInfo,
         )
         .filter((r) => !(r.standardEditionId))
+        .filter((r) => {
+          if (!r.releaseDate) return true;
+          const weeksSinceRelease =
+            newDate.year * 52 +
+            newDate.week -
+            (r.releaseDate.year * 52 + r.releaseDate.week);
+          return weeksSinceRelease >= 1;
+        })
         .map((release) => {
           const artist = allPlayerArtistsAndGroups.find(
             (a) => a.id === release.artistId,
@@ -11023,6 +11031,14 @@ It is now available on your Spotify profile.
             !r.soundtrackInfo &&
             !r.standardEditionId,
         )
+        .filter((r) => {
+          if (!r.releaseDate) return true;
+          const weeksSinceRelease =
+            newDate.year * 52 +
+            newDate.week -
+            (r.releaseDate.year * 52 + r.releaseDate.week);
+          return weeksSinceRelease >= 1;
+        })
         .map((release) => {
           const artistData = updatedArtistsData[release.artistId];
           const artistObj = allPlayerArtistsAndGroups.find(
@@ -16578,7 +16594,19 @@ The Tonight Show Team`;
           [state.activeArtistId]: {
             ...activeData,
             songs: activeData.songs.map((s) =>
-              s.id === action.payload.songId ? { ...s, isTakenDown: true } : s,
+              s.id === action.payload.songId
+                ? {
+                    ...s,
+                    isTakenDown: true,
+                    isAvailableOnStreaming: false,
+                    lastWeekStreams: 0,
+                    actualLastWeekStreams: 0,
+                    prevWeekStreams: 0,
+                    actualPrevWeekStreams: 0,
+                    lastDayStreams: 0,
+                    prevDayStreams: 0,
+                  }
+                : s,
             ),
           },
         },
@@ -16811,6 +16839,7 @@ The Tonight Show Team`;
         id: `amp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         title: action.payload.title,
         type: action.payload.playlistType,
+        badgeText: action.payload.badgeText,
         curatorText: action.payload.curatorText || 'Apple Music Pop',
         bannerColor: action.payload.bannerColor || '#93c5fd',
         customCoverUrl: action.payload.customCoverUrl,
@@ -16845,6 +16874,7 @@ The Tonight Show Team`;
                   ...p,
                   ...(action.payload.title !== undefined ? { title: action.payload.title } : {}),
                   ...(action.payload.playlistType !== undefined ? { type: action.payload.playlistType } : {}),
+                  ...(action.payload.badgeText !== undefined ? { badgeText: action.payload.badgeText } : {}),
                   ...(action.payload.curatorText !== undefined ? { curatorText: action.payload.curatorText } : {}),
                   ...(action.payload.bannerColor !== undefined ? { bannerColor: action.payload.bannerColor } : {}),
                   ...(action.payload.customCoverUrl !== undefined ? { customCoverUrl: action.payload.customCoverUrl } : {}),
@@ -16891,7 +16921,19 @@ The Tonight Show Team`;
                 : r,
             ),
             songs: activeData.songs.map((s) =>
-              release.songIds.includes(s.id) ? { ...s, isTakenDown: true } : s,
+              release.songIds.includes(s.id)
+                ? {
+                    ...s,
+                    isTakenDown: true,
+                    isAvailableOnStreaming: false,
+                    lastWeekStreams: 0,
+                    actualLastWeekStreams: 0,
+                    prevWeekStreams: 0,
+                    actualPrevWeekStreams: 0,
+                    lastDayStreams: 0,
+                    prevDayStreams: 0,
+                  }
+                : s,
             ),
           },
         },
@@ -19316,52 +19358,75 @@ We saw your recent endorsement and would love for you to perform at our upcoming
     case "REVEAL_TRACKLIST": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
+      const submission = activeData.labelSubmissions.find(
+        (s) => s.id === action.payload.submissionId,
+      );
+      const tracklistUrl = action.payload.tracklistImageUrl;
+      
       const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
         if (sub.id === action.payload.submissionId) {
-          const newRelease = { ...sub.release, isTracklistRevealed: true };
-          if (action.payload.tracklistImageUrl) {
-            newRelease.tracklistImageUrl = action.payload.tracklistImageUrl;
-          }
-          return { ...sub, release: newRelease };
+          const newRelease = { 
+            ...sub.release, 
+            isTracklistRevealed: true,
+            ...(tracklistUrl ? { tracklistImageUrl: tracklistUrl } : {}),
+          };
+          return { 
+            ...sub, 
+            isTracklistRevealed: true,
+            tracklistImageUrl: tracklistUrl || sub.tracklistImageUrl,
+            release: newRelease 
+          };
         }
         return sub;
       });
-      // If pop base post is needed, we could add an X post here
-      let newXPosts = activeData.xPosts;
-      if (action.payload.tracklistImageUrl || action.payload.tracklist) {
-        const popBaseUser = activeData.xUsers.find(
-          (u) => u.id === "popbase" || u.username === "PopBase",
-        );
-        const submission = activeData.labelSubmissions.find(
-          (s) => s.id === action.payload.submissionId,
-        );
-        if (popBaseUser && submission) {
-          const postContent = action.payload.tracklistImageUrl
-            ? `Tracklist for ${state.artists.find((a) => a.id === state.activeArtistId)?.name}'s new album '${submission.release.title}'
 
-Out Week ${submission.projectReleaseDate?.week || "Soon"}.`
-            : `Tracklist for ${state.artists.find((a) => a.id === state.activeArtistId)?.name}'s new album '${submission.release.title}':
+      const updatedReleases = (activeData.releases || []).map((rel) => {
+        if (submission && rel.id === submission.release.id) {
+          return {
+            ...rel,
+            isTracklistRevealed: true,
+            ...(tracklistUrl ? { tracklistImageUrl: tracklistUrl } : {}),
+          };
+        }
+        return rel;
+      });
+
+      let newXPosts = activeData.xPosts || [];
+      const artistName =
+        state.artists.find((a) => a.id === state.activeArtistId)?.name ||
+        state.soloArtist?.name ||
+        state.group?.name ||
+        activeData.name ||
+        "Artist";
+      
+      const albumTitle = submission?.release?.title || action.payload.albumTitle || "New Album";
+      const weekRelease = submission?.projectReleaseDate?.week || "Soon";
+
+      const postContent = tracklistUrl
+        ? `Tracklist for ${artistName}'s new album '${albumTitle}' 💿
+
+Out Week ${weekRelease}.`
+        : `Tracklist for ${artistName}'s new album '${albumTitle}':
 
 ` +
-              (action.payload.tracklist
-                ?.map((t, i) => `#${i + 1}. ${t}`)
-                .join("\n") || "") +
-              `
+          (action.payload.tracklist
+            ?.map((t: string, i: number) => `#${i + 1}. ${t}`)
+            .join("\n") || "") +
+          `
 
-Show more`;
-          const newPost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: popBaseUser.id,
-            content: postContent,
-            image: action.payload.tracklistImageUrl,
-            likes: Math.floor(Math.random() * 50000) + 10000,
-            retweets: Math.floor(Math.random() * 5000) + 1000,
-            views: Math.floor(Math.random() * 1000000) + 200000,
-            date: state.date,
-          };
-          newXPosts = [newPost, ...newXPosts];
-        }
-      }
+Out Week ${weekRelease}.`;
+
+      const newPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: postContent,
+        image: tracklistUrl,
+        likes: Math.floor(Math.random() * 50000) + 18000,
+        retweets: Math.floor(Math.random() * 8000) + 2500,
+        views: Math.floor(Math.random() * 1500000) + 400000,
+        date: state.date,
+      };
+      newXPosts = [newPost, ...newXPosts];
 
       return {
         ...state,
@@ -19369,7 +19434,9 @@ Show more`;
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
+            hype: Math.min(100, (activeData.hype || 50) + 10),
             labelSubmissions: updatedSubmissions,
+            releases: updatedReleases,
             xPosts: newXPosts,
           },
         },

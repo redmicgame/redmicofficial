@@ -50,7 +50,7 @@ const formatNumber = (num: number) => {
   return num.toString();
 };
 
-export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal' | 'ugly' }> = ({
+export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal' | 'ugly' | 'simplistic' }> = ({
   style,
   dataString,
 }) => {
@@ -337,6 +337,171 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
     ) {
 
 
+      if (effectiveStyle === 'simplistic') {
+          const displayTracks = (data.tracks && data.tracks.length > 0)
+            ? data.tracks
+            : [{
+                title: data.songName || data.title || "Track 1",
+                weekly: data.streams || 0,
+                dailyStreams: Math.floor((data.streams || 0) / 7),
+                streams: data.totalStreams || data.streams || 0,
+                changeVal: data.changeVal || 0,
+                changePct: data.changePct || 0,
+              }];
+
+          const overallChangeVal = displayTracks.reduce((acc: number, t: any) => acc + (t.isTakenDown ? 0 : (t.changeVal || 0)), 0) || 0;
+          const overallPrev = displayTracks.reduce((acc: number, t: any) => acc + (t.isTakenDown ? 0 : (((t.weekly !== undefined ? t.weekly : (t.dailyStreams || 0))) - (t.changeVal || 0))), 0) || 0;
+          const overallPct = overallPrev > 0 ? (overallChangeVal / overallPrev) * 100 : 0;
+          const isOverallPos = overallChangeVal >= 0;
+          
+          const yearNum = data.date?.year || gameState?.date?.year || 2026;
+          const weekNum = data.date?.week || gameState?.date?.week || 1;
+          const dayVal = data.date?.day !== undefined ? data.date.day : (gameState?.date?.day !== undefined ? gameState.date.day : 7);
+          const dateObj = new Date(yearNum, 0, (weekNum - 1) * 7 + dayVal);
+          const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+          const day = dateObj.getDate();
+          const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+
+          const albumTitle = (data.songName || data.albumName || data.title || "RELEASE").toUpperCase();
+          const artistName = (data.artistName || "ARTIST").toUpperCase();
+          const totalStreams = data.totalStreams || data.streams || 0;
+          const displayStreams = (cardIsDaily ? (data.dailyStreams || data.streams) : (data.weeklyStreams || data.streams)) || 0;
+
+          return (
+            <ScaledCardWrapper targetWidth={520}>
+              <div className="w-full bg-[#101114] border border-zinc-800 p-4 sm:p-6 text-white font-sans shadow-2xl rounded-2xl flex flex-col my-auto">
+                {/* Header Area */}
+                <div className="flex gap-4 sm:gap-6 items-start mb-5 border-b border-zinc-800 pb-5 shrink-0">
+                  {/* Left: Cover Art & Artist Name */}
+                  <div className="w-24 sm:w-28 flex flex-col items-center shrink-0">
+                    <div className="relative w-full aspect-square shadow-xl rounded-xl overflow-hidden border border-zinc-800">
+                      <img src={data.coverArt} className="w-full h-full object-cover" alt="Cover" />
+                    </div>
+                    <div className="text-zinc-300 font-extrabold text-[10px] sm:text-xs mt-2 uppercase tracking-wider text-center truncate w-full">
+                      {artistName}
+                    </div>
+                  </div>
+
+                  {/* Right: Album Title, Date, 3 Stat Columns */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight uppercase mb-1 truncate">
+                        {albumTitle}
+                      </h1>
+                      <div className="text-zinc-400 text-[10px] sm:text-xs font-bold flex items-center gap-1.5 uppercase tracking-wide mb-3">
+                        <span>📅</span> {monthName} {day} • {weekdayName}
+                      </div>
+                    </div>
+
+                    {/* 3 Stat Cards */}
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-2.5 flex flex-col justify-center">
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
+                          WEEKLY STREAMS
+                        </span>
+                        <span className="text-base sm:text-lg font-black text-white tracking-tight tabular-nums truncate">
+                          {displayStreams.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className={`rounded-xl p-2.5 flex flex-col justify-center items-center text-center shadow-md ${
+                        isOverallPos ? "bg-[#10b981]" : "bg-[#e11d48]"
+                      }`}>
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-white/80 mb-0.5">
+                          CHANGE
+                        </span>
+                        <span className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-0.5 tabular-nums">
+                          <span>{isOverallPos ? "↑" : "↓"}</span>
+                          <span>{Math.abs(overallPct).toFixed(2)}%</span>
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-2.5 flex flex-col justify-center">
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
+                          TOTAL STREAMS
+                        </span>
+                        <span className="text-base sm:text-lg font-black text-white tracking-tight tabular-nums truncate">
+                          {totalStreams.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table Section */}
+                {displayTracks.length > 0 && (
+                  <div className="w-full flex flex-col flex-1 min-h-0">
+                    <div className="grid grid-cols-[1.5rem_1fr_5.5rem_4.5rem_4.5rem_5.5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5.5rem_6.5rem] gap-1.5 pb-2 text-[10px] sm:text-xs font-bold text-zinc-400 border-b border-zinc-800 uppercase tracking-wider shrink-0">
+                      <div className="col-span-2">TRACK</div>
+                      <div className="text-right">WEEKLY STREAMS</div>
+                      <div className="text-right">CHANGE</div>
+                      <div className="text-right">% CHG</div>
+                      <div className="text-right">TOTAL</div>
+                    </div>
+
+                    <div className="overflow-y-auto max-h-[220px] scrollbar-thin">
+                      {displayTracks.map((t: any, i: number) => {
+                        const isTakenDown = !!t.isTakenDown;
+                        const trackStreams = isTakenDown ? 0 : (cardIsDaily ? (t.dailyStreams !== undefined ? t.dailyStreams : t.weekly) : (t.weekly !== undefined ? t.weekly : t.dailyStreams)) || 0;
+                        const cVal = isTakenDown ? 0 : (t.changeVal || 0);
+                        const pct = isTakenDown ? 0 : (t.changePct !== undefined ? t.changePct : 0);
+                        const isPos = !isTakenDown && cVal >= 0;
+                        const totalCount = t.streams || t.totalStreams || 0;
+
+                        return (
+                          <div
+                            key={i}
+                            className="grid grid-cols-[1.5rem_1fr_5.5rem_4.5rem_4.5rem_5.5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5.5rem_6.5rem] gap-1.5 py-2 text-[10px] sm:text-xs items-center border-b border-zinc-900/60 hover:bg-zinc-800/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-1.5 col-span-2 min-w-0">
+                              <span className="text-zinc-500 font-bold text-[10px] shrink-0 w-3">
+                                {i + 1}
+                              </span>
+                              <span className="truncate font-bold text-white uppercase tracking-tight">
+                                {t.title}
+                              </span>
+                            </div>
+                            <div className="text-right font-medium text-white tabular-nums">
+                              {trackStreams.toLocaleString()}
+                            </div>
+                            <div className={`text-right font-semibold tabular-nums ${isTakenDown ? "text-zinc-400" : isPos ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isTakenDown ? "+0" : `${cVal > 0 ? "+" : ""}${cVal.toLocaleString()}`}
+                            </div>
+                            <div className={`text-right font-bold tabular-nums ${isTakenDown ? "text-zinc-400" : isPos ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isTakenDown ? "+0.00%" : `${isPos ? "↑" : "↓"} ${Math.abs(pct).toFixed(2)}%`}
+                            </div>
+                            <div className="text-right font-medium text-white tabular-nums">
+                              {totalCount.toLocaleString()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-[1.5rem_1fr_5.5rem_4.5rem_4.5rem_5.5rem] sm:grid-cols-[2rem_1fr_6.5rem_5.5rem_5.5rem_6.5rem] gap-1.5 pt-2.5 border-t border-zinc-800 text-[10px] sm:text-xs font-extrabold items-center">
+                      <div className="col-span-2 text-white uppercase tracking-wider">
+                        TOTAL
+                      </div>
+                      <div className="text-right text-white tabular-nums">
+                        {displayStreams.toLocaleString()}
+                      </div>
+                      <div className={`text-right tabular-nums ${isOverallPos ? "text-emerald-400" : "text-rose-400"}`}>
+                        {overallChangeVal > 0 ? "+" : ""}{overallChangeVal.toLocaleString()}
+                      </div>
+                      <div className={`text-right tabular-nums ${isOverallPos ? "text-emerald-400" : "text-rose-400"}`}>
+                        {isOverallPos ? "↑" : "↓"} {Math.abs(overallPct).toFixed(2)}%
+                      </div>
+                      <div className="text-right text-white tabular-nums">
+                        {totalStreams.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScaledCardWrapper>
+          );
+      }
+
       if (effectiveStyle === 'ugly') {
           const displayTracks = (data.tracks && data.tracks.length > 0)
             ? data.tracks
@@ -418,7 +583,7 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
                   <div className="w-full">
                     <div className="grid grid-cols-[1.8rem_1fr_6.5rem_5.5rem_5rem_6.5rem] gap-2 pb-2 text-xs font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider">
                       <div className="col-span-2">TRACK</div>
-                      <div className="text-right">{cardIsDaily ? "DAILY STREAMS" : "WEEKLY STREAMS"}</div>
+                      <div className="text-right">WEEKLY STREAMS</div>
                       <div className="text-right">CHANGE</div>
                       <div className="text-right">%CHANGE</div>
                       <div className="text-right">TOTAL</div>

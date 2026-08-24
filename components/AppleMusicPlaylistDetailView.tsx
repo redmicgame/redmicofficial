@@ -6,13 +6,14 @@ import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import PlusIcon from './icons/PlusIcon';
 
 export const AppleMusicPlaylistCover: React.FC<{
-    type: 'setlist' | 'playlist';
+    type?: 'setlist' | 'playlist';
+    badgeText?: string;
     artistImage: string;
     bannerColor?: string;
     customCoverUrl?: string;
     className?: string;
-}> = ({ type, artistImage, bannerColor = '#93c5fd', customCoverUrl, className = 'w-44 h-44' }) => {
-    const displayLabel = type === 'setlist' ? 'Set List' : 'Playlist';
+}> = ({ type = 'playlist', badgeText, artistImage, bannerColor = '#93c5fd', customCoverUrl, className = 'w-44 h-44' }) => {
+    const displayLabel = badgeText && badgeText.trim() ? badgeText.trim() : (type === 'setlist' ? 'Set List' : 'Playlist');
     const coverImage = customCoverUrl || artistImage;
 
     return (
@@ -130,6 +131,7 @@ export const AppleMusicPlaylistDetailView: React.FC<{
                 <div className="my-2 group relative">
                     <AppleMusicPlaylistCover 
                         type={playlist.type} 
+                        badgeText={playlist.badgeText}
                         artistImage={artistImg} 
                         bannerColor={playlist.bannerColor}
                         customCoverUrl={playlist.customCoverUrl}

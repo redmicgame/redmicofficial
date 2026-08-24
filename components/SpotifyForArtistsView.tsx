@@ -38,6 +38,9 @@ const S4AUpcomingReleaseDetailView: React.FC<{
   const isLaunched = submission.hasCountdownPage;
   const hasEnoughListeners = activeArtistData.monthlyListeners >= 10000;
 
+  const isTracklistRevealed = !!(release.isTracklistRevealed || submission.isTracklistRevealed);
+  const currentTracklistImage = tracklistImageUrl || release.tracklistImageUrl || submission.tracklistImageUrl;
+
   const handleLaunch = () => {
     if (hasEnoughListeners && !isLaunched) {
       dispatch({
@@ -57,6 +60,7 @@ const S4AUpcomingReleaseDetailView: React.FC<{
       type: "REVEAL_TRACKLIST",
       payload: {
         submissionId: submission.id,
+        albumTitle: submission.release.title,
         tracklistImageUrl: tracklistImageUrl || undefined,
         tracklist: tracktitles,
       },
@@ -203,7 +207,7 @@ const S4AUpcomingReleaseDetailView: React.FC<{
                   </p>
                 )}
               </div>
-              {!release.isTracklistRevealed ? (
+              {!isTracklistRevealed ? (
                 <div>
                   <h3 className="font-bold text-lg mb-2">Reveal Tracklist</h3>
                   <input
@@ -218,30 +222,43 @@ const S4AUpcomingReleaseDetailView: React.FC<{
                     className="w-full bg-zinc-700 p-2 rounded mb-2 text-sm text-white focus:outline-none hover:bg-zinc-600"
                   >
                     {tracklistImageUrl
-                      ? "Image Selected"
+                      ? "Tracklist Image Selected (Tap to change)"
                       : "Upload Tracklist Image (Optional)"}
                   </button>
                   {tracklistImageUrl && (
                     <img
                       src={tracklistImageUrl}
-                      className="mb-2 w-full h-24 object-cover rounded-md"
+                      className="mb-2 w-full h-28 object-cover rounded-md border border-zinc-750"
+                      alt="Tracklist Preview"
                     />
                   )}
                   <button
                     onClick={handleRevealTracklist}
-                    className="w-full bg-green-600 font-bold p-2 rounded text-sm hover:bg-green-500"
+                    className="w-full bg-green-600 font-bold p-2.5 rounded text-sm hover:bg-green-500 transition-colors shadow-lg active:scale-98"
                   >
                     Reveal Tracklist
                   </button>
                   <p className="text-xs text-zinc-400 mt-2">
-                    Track names will be revealed on your launch page, and Pop
-                    Base will post.
+                    Track names will be revealed on your countdown page, and Pop
+                    Base will post on X.
                   </p>
                 </div>
               ) : (
-                <p className="text-green-400 font-bold p-2 bg-green-900/30 rounded border border-green-500/50 text-center">
-                  Tracklist Revealed!
-                </p>
+                <div className="space-y-2">
+                  <p className="text-green-400 font-bold p-2.5 bg-green-900/30 rounded border border-green-500/50 text-center text-sm">
+                    ✓ Tracklist Revealed!
+                  </p>
+                  {currentTracklistImage && (
+                    <img
+                      src={currentTracklistImage}
+                      className="w-full h-28 object-cover rounded-md border border-zinc-800"
+                      alt="Tracklist"
+                    />
+                  )}
+                  <p className="text-xs text-zinc-400 text-center">
+                    Pop Base announced your tracklist on X!
+                  </p>
+                </div>
               )}
             </div>
           )}

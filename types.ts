@@ -576,6 +576,7 @@ export interface AppleMusicPlaylist {
   id: string;
   title: string;
   type: 'setlist' | 'playlist';
+  badgeText?: string;
   curatorText?: string;
   bannerColor?: string;
   customCoverUrl?: string;
@@ -2095,7 +2096,7 @@ export interface GameState {
   timeMode?: "weekly" | "daily";
   disableEncounters?: boolean;
   disableLoadingScreens?: boolean;
-  spotifySnapshotStyle?: "normal" | "ugly";
+  spotifySnapshotStyle?: "normal" | "ugly" | "simplistic";
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
