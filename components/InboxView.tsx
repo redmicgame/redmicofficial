@@ -22,6 +22,7 @@ import OnTheRadarIcon from './icons/OnTheRadarIcon';
 import TrshdIcon from './icons/TrshdIcon';
 import OscarAwardIcon from './icons/OscarAwardIcon';
 import AmaAwardIcon from './icons/AmaAwardIcon';
+import BritAwardIcon from './icons/BritAwardIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import TrashIcon from './icons/TrashIcon';
 
@@ -91,6 +92,13 @@ const SenderAvatar: React.FC<{ email: Email }> = ({ email }) => {
         return (
             <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
                 <AmaAwardIcon className="w-6 h-6 text-white" />
+            </div>
+        )
+    }
+    if (senderIcon === 'brits' || sender?.toLowerCase().includes('brit awards') || sender?.toLowerCase().includes('the brits')) {
+        return (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-900 via-red-600 to-red-700 flex items-center justify-center p-2 shadow-md">
+                <BritAwardIcon className="w-full h-full text-white" />
             </div>
         )
     }
@@ -231,6 +239,17 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 break;
             case 'amaRedCarpet':
                 dispatch({ type: 'ACCEPT_AMA_RED_CARPET', payload: { emailId: email.id, lookUrl: '' } }); 
+                break;
+            case 'britSubmission':
+                dispatch({ type: 'GO_TO_BRIT_SUBMISSIONS', payload: { emailId: email.id } });
+                break;
+            case 'britNominations':
+                if (email.offer.hasPerformanceOffer) {
+                    dispatch({ type: 'ACCEPT_BRIT_PERFORMANCE', payload: { emailId: email.id } });
+                }
+                break;
+            case 'britRedCarpet':
+                dispatch({ type: 'ACCEPT_BRIT_RED_CARPET', payload: { emailId: email.id, lookUrl: '' } });
                 break;
             case 'goldenGlobeNominations':
                 dispatch({ type: 'ACCEPT_GOLDEN_GLOBE_INVITE', payload: { emailId: email.id } });
@@ -581,6 +600,28 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                 buttonText = "Attend Red Carpet";
                 buttonClass = "bg-red-600 hover:bg-red-700 text-white shadow-red-600/20";
                 acceptedText = "You are attending the AMAs";
+                isAccepted = !!email.offer.isAttending;
+                break;
+            case 'britSubmission':
+                buttonText = "Submit For The BRITs";
+                buttonClass = "bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-500 hover:to-blue-500 text-white shadow-red-600/20";
+                acceptedText = "BRITs Submissions Sent";
+                isAccepted = email.offer.isSubmitted;
+                break;
+            case 'britNominations':
+                if (email.offer.hasPerformanceOffer) {
+                    buttonText = "Accept BRITs Live Performance";
+                    buttonClass = "bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-500 hover:to-blue-500 text-white shadow-red-600/20";
+                    acceptedText = "Performance Accepted";
+                    isAccepted = !!email.offer.isPerformanceAccepted;
+                } else {
+                    isActionable = false;
+                }
+                break;
+            case 'britRedCarpet':
+                buttonText = "Attend BRITs Red Carpet";
+                buttonClass = "bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-500 hover:to-blue-500 text-white shadow-red-600/20";
+                acceptedText = "Attending The BRIT Awards Red Carpet";
                 isAccepted = !!email.offer.isAttending;
                 break;
             case 'goldenGlobeNominations':

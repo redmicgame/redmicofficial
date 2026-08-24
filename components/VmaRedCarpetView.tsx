@@ -27,15 +27,15 @@ const VmaRedCarpetView: React.FC = () => {
     };
     
     return (
-        <div className="h-full w-full bg-zinc-900 flex flex-col">
-             <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
+        <div className="h-full w-full bg-zinc-900 flex flex-col overflow-y-auto">
+             <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50 shrink-0">
                 <button onClick={() => dispatch({type: 'DECLINE_VMA_RED_CARPET', payload: {emailId: activeVmaRedCarpetOffer.emailId}})} className="p-2 rounded-full hover:bg-white/10">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
                 <h1 className="text-xl font-bold">VMAs Red Carpet</h1>
             </header>
-            <main className="flex-grow p-4 flex flex-col justify-center items-center text-center space-y-4">
-                <h2 className="text-3xl font-bold">Upload Your Look</h2>
+            <main className="flex-grow p-4 md:p-6 flex flex-col justify-start items-center text-center space-y-4 max-w-sm mx-auto w-full pb-28">
+                <h2 className="text-3xl font-bold mt-2">Upload Your Look</h2>
                 <p className="text-zinc-400 max-w-sm">Pop Base wants to post your red carpet arrival. Upload an image or video still.</p>
                 <label htmlFor="look-upload" className="cursor-pointer w-full max-w-sm">
                     <div className="w-full aspect-square rounded-lg bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center hover:border-zinc-400 transition-colors">
@@ -50,7 +50,7 @@ const VmaRedCarpetView: React.FC = () => {
                     </div>
                 </label>
                 <input id="look-upload" type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
-                 <button onClick={handleAttend} disabled={!lookUrl} className="w-full max-w-sm h-12 bg-zinc-300 hover:bg-zinc-400 text-black font-bold rounded-lg disabled:bg-zinc-600">
+                 <button onClick={handleAttend} disabled={!lookUrl} className="w-full max-w-sm h-12 bg-zinc-300 hover:bg-zinc-400 text-black font-bold rounded-lg disabled:bg-zinc-600 shrink-0">
                     Attend & Post Look
                 </button>
             </main>

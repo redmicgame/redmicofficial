@@ -54,6 +54,20 @@ const AwardsTab: React.FC = () => {
                 </button>
 
                 <button 
+                    onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'brits' })}
+                    className="w-full bg-gradient-to-r from-blue-950/60 via-zinc-800 to-red-950/60 border border-red-600/30 p-4 rounded-xl text-left hover:border-red-500 transition-all flex justify-between items-center group shadow-md"
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl p-2 bg-red-500/10 rounded-lg">🇬🇧</span>
+                        <div>
+                            <h3 className="font-bold text-lg text-red-200 group-hover:text-red-400 transition-colors">The BRIT Awards</h3>
+                            <p className="text-xs text-zinc-400">British music industry honors, Rising Star & genre acts.</p>
+                        </div>
+                    </div>
+                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 group-hover:text-red-400 transition-colors" />
+                </button>
+
+                <button 
                     onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'amas' })}
                     className="w-full bg-zinc-800/80 border border-zinc-700/60 p-4 rounded-xl text-left hover:bg-zinc-800 transition-all flex justify-between items-center group"
                 >

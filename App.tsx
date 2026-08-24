@@ -71,6 +71,10 @@ import AmasView from './components/AmasView';
 import SubmitForAmasView from './components/SubmitForAmasView';
 import CreateAmaPerformanceView from './components/CreateAmaPerformanceView';
 import AmaRedCarpetView from './components/AmaRedCarpetView';
+import BritsView from './components/BritsView';
+import SubmitForBritsView from './components/SubmitForBritsView';
+import CreateBritPerformanceView from './components/CreateBritPerformanceView';
+import BritRedCarpetView from './components/BritRedCarpetView';
 import ContractRenewalView from './components/ContractRenewalView';
 import ITunesView from './components/ITunesView';
 import OnlyFansSetupView from './components/OnlyFansSetupView';
@@ -327,6 +331,14 @@ const AppContent: React.FC = () => {
                 return <CreateAmaPerformanceView />;
             case 'amaRedCarpet':
                 return <AmaRedCarpetView />;
+            case 'brits':
+                return <BritsView />;
+            case 'submitForBrits':
+                return <SubmitForBritsView />;
+            case 'createBritPerformance':
+                return <CreateBritPerformanceView />;
+            case 'britRedCarpet':
+                return <BritRedCarpetView />;
             case 'oscars':
                 return <OscarsView />;
             case 'submitForOscars':

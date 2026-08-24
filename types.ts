@@ -434,6 +434,25 @@ export interface AmaRedCarpetOffer {
   isAttending?: boolean;
 }
 
+export interface BritSubmissionOffer {
+  type: "britSubmission";
+  emailId: string;
+  isSubmitted: boolean;
+}
+
+export interface BritNominationOffer {
+  type: "britNominations";
+  emailId: string;
+  hasPerformanceOffer?: boolean;
+  isPerformanceAccepted?: boolean;
+}
+
+export interface BritRedCarpetOffer {
+  type: "britRedCarpet";
+  emailId: string;
+  isAttending?: boolean;
+}
+
 export interface EventInvitationOffer {
   type: "eventInvitation";
   eventName: string;
@@ -698,6 +717,7 @@ export interface Email {
   | "submit_for_golden_globes"
     | "coachella"
     | "amas"
+    | "brits"
     | "imdb"
   | "spotifyPodcasts"
   | "spotifyForCreators"
@@ -737,6 +757,9 @@ export interface Email {
     | AmaSubmissionOffer
     | AmaNominationOffer
     | AmaRedCarpetOffer
+    | BritSubmissionOffer
+    | BritNominationOffer
+    | BritRedCarpetOffer
     | CheatingScandalEmail
     | GiveBirthEmail
     | EventInvitationOffer
@@ -1354,6 +1377,41 @@ export interface AmaCategory {
   winner?: AmaContender;
 }
 
+export type BritCategoryName =
+  | "Artist of the Year"
+  | "British Album of the Year"
+  | "Song of the Year"
+  | "BRITs Rising Star"
+  | "BRITs Best New Artist"
+  | "Best Pop Act"
+  | "Best Rap Act"
+  | "Best R&B Act"
+  | "Best Electronic Act";
+
+export interface BritAward {
+  year: number;
+  category: BritCategoryName;
+  itemId: string; // releaseId, songId, or artistId
+  itemName: string;
+  artistName: string;
+  isWinner: boolean;
+}
+
+export interface BritContender {
+  artistId: string;
+  artistName: string;
+  itemId: string; // releaseId, songId, or artistId
+  itemName: string;
+  score: number;
+  coverArt?: string;
+}
+
+export interface BritCategory {
+  name: BritCategoryName;
+  nominees: BritContender[];
+  winner?: BritContender;
+}
+
 export interface OscarCategory {
   name: "Best Original Song" | "Best Actor/Actress" | "Best Supporting Actor/Actress" | "Best Voice Actor/Actress";
   nominees: OscarContender[];
@@ -1457,6 +1515,10 @@ export type GameView =
   | "submitForAmas"
   | "createAmaPerformance"
   | "amaRedCarpet"
+  | "brits"
+  | "submitForBrits"
+  | "createBritPerformance"
+  | "britRedCarpet"
   | "dating"
   | "moviePremiereRedCarpet"
   | "goldenGlobeRedCarpet"
@@ -1475,7 +1537,8 @@ export type GameView =
   | "ascap"
   | "kalshi"
   | "ukChart"
-  | "ukAlbumsChart";
+  | "ukAlbumsChart"
+  | "kaiStreamSetup";
 
 export type Tab = "Home" | "Apps" | "Charts" | "Misc" | "Business";
 
@@ -1976,6 +2039,12 @@ export interface ArtistData {
   // AMAs
   amaHistory: AmaAward[];
   hasSubmittedForAmaNewArtist: boolean;
+  // BRITs
+  britHistory: BritAward[];
+  hasWonBritRisingStar?: boolean;
+  hasSubmittedForBritNewArtist?: boolean;
+  hasSubmittedForBritRisingStar?: boolean;
+  britBanner?: string;
   // GRAMMYs
   grammyHistory: GrammyAward[];
   hasSubmittedForBestNewArtist: boolean;
@@ -2011,7 +2080,8 @@ export interface ArtistData {
   yearlyIncomeForTax?: number;
   taxPaidYear?: number;
   activeActingOffer?: ActingOffer | null;
-  filmingGig?: (ActingRole & { remainingWeeks: number; weeklyEvents?: string[] }) | null;
+  filmingGig?: (ActingRole & { remainingWeeks: number; weeklyEvents?: string[]; soundtrackCover?: string; soundtrackSongId?: string; pay?: number }) | null;
+  twitchStreams?: TwitchStreamSchedule[];
 }
 
 export interface RedCarpetLook {
@@ -2185,6 +2255,16 @@ export interface GameState {
   amaCurrentYearNominations: AmaCategory[] | null;
   activeAmaPerformanceOffer: { emailId: string } | null;
   activeAmaRedCarpetOffer: { emailId: string } | null;
+  // BRITs
+  britSubmissions: {
+    artistId: string;
+    category: BritCategoryName;
+    itemId: string;
+    itemName: string;
+  }[];
+  britCurrentYearNominations: BritCategory[] | null;
+  activeBritPerformanceOffer: { emailId: string } | null;
+  activeBritRedCarpetOffer: { emailId: string } | null;
   activePromoInterviewOffer: {
     emailId: string;
     source: PromoInterviewSource;
@@ -2736,6 +2816,20 @@ export type GameAction =
       payload: { emailId: string; lookUrl: string };
     }
   | { type: "DECLINE_AMA_RED_CARPET"; payload: { emailId: string } }
+  | { type: "GO_TO_BRIT_SUBMISSIONS"; payload: { emailId: string } }
+  | {
+      type: "SUBMIT_FOR_BRITS";
+      payload: { submissions: GameState["britSubmissions"]; emailId: string };
+    }
+  | { type: "ACCEPT_BRIT_PERFORMANCE"; payload: { emailId: string } }
+  | { type: "CREATE_BRIT_PERFORMANCE"; payload: { video: Video } }
+  | { type: "DECLINE_BRIT_PERFORMANCE"; payload: { emailId: string } }
+  | {
+      type: "ACCEPT_BRIT_RED_CARPET";
+      payload: { emailId: string; lookUrl: string };
+    }
+  | { type: "DECLINE_BRIT_RED_CARPET"; payload: { emailId: string } }
+  | { type: "UPDATE_BRIT_BANNER"; payload: string }
   | {
       type: "ACCEPT_VMA_RED_CARPET";
       payload: { emailId: string; lookUrl: string };
@@ -3008,6 +3102,27 @@ export type GameAction =
         streamBoostPercent: number;
         durationWeeks: number;
       };
+    }
+  | {
+      type: "GO_TO_KAI_STREAM_SETUP";
+      payload: { emailId: string };
+    }
+  | {
+      type: "SUBMIT_KAI_STREAM_DETAILS";
+      payload: {
+        emailId: string;
+        songId: string;
+        location: StreamLocation;
+        promoBanner: string;
+        ytThumbnail: string;
+      };
+    }
+  | {
+      type: "REQUEST_KAI_CENAT_STREAM";
+    }
+  | {
+      type: "QUIT_FILMING_GIG";
+      payload: { roleId: string };
     };
 export interface PodcastEpisode {
   id: string;

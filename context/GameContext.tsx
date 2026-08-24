@@ -35,6 +35,14 @@ import type {
   GrammyCategory,
   GrammyAward,
   GrammyContender,
+  AmaCategory,
+  AmaAward,
+  AmaContender,
+  AmaCategoryName,
+  BritCategory,
+  BritAward,
+  BritContender,
+  BritCategoryName,
   OscarCategory,
   OscarAward,
   OscarContender,
@@ -1063,6 +1071,12 @@ const initialArtistData: ArtistData = {
   },
   salesBoost: 0,
   isGoldTheme: false,
+  amaHistory: [],
+  hasSubmittedForAmaNewArtist: false,
+  britHistory: [],
+  hasWonBritRisingStar: false,
+  hasSubmittedForBritNewArtist: false,
+  hasSubmittedForBritRisingStar: false,
   grammyHistory: [],
   hasSubmittedForBestNewArtist: false,
   oscarHistory: [],
@@ -1627,6 +1641,14 @@ const initialState: GameState = {
   activeTourId: null,
   viewingPastLabelId: null,
   activeVogueOffer: null,
+  amaSubmissions: [],
+  amaCurrentYearNominations: null,
+  activeAmaPerformanceOffer: null,
+  activeAmaRedCarpetOffer: null,
+  britSubmissions: [],
+  britCurrentYearNominations: null,
+  activeBritPerformanceOffer: null,
+  activeBritRedCarpetOffer: null,
   grammySubmissions: [],
   grammyCurrentYearNominations: null,
   activeGrammyPerformanceOffer: null,
@@ -2840,6 +2862,7 @@ The Red Mic Team`,
       const isDailyMode = state.timeMode === "daily";
       let autoGrammySubmissions: GameState["grammySubmissions"] = [];
       let autoAmaSubmissions: any[] = [];
+      let autoBritSubmissions: GameState["britSubmissions"] = [];
       let newDay = state.date.day || (isDailyMode ? 1 : 7);
       let newWeek = state.date.week;
       let newYear = state.date.year;
@@ -7985,6 +8008,164 @@ Submissions close in week 23.
           }
         }
 
+        // --- BRITs Submission Email (Week 10) ---
+        const hasBritEmailThisYear = artistData.inbox.some(
+          (e) =>
+            e.offer?.type === "britSubmission" && e.date.year === newDate.year,
+        );
+
+        if (
+          newDate.week === 10 &&
+          artistProfileForEmail &&
+          !hasBritEmailThisYear
+        ) {
+          const autoSubmit = !!artistData.manager?.autoSubmitAwards;
+          const emailId = crypto.randomUUID();
+          newEmails.push({
+            id: emailId,
+            sender: "The BRIT Awards",
+            senderIcon: "brits",
+            subject: `Submit Your Music for the ${newDate.year} BRIT Awards`,
+            body: autoSubmit
+              ? `Hi ${artistProfileForEmail.name},
+
+The submission window for the ${newDate.year} BRIT Awards is now officially open. Your management team has automatically submitted your eligible recordings and artist entries for voting academy consideration.
+
+- The BRIT Awards Committee`
+              : `Hi ${artistProfileForEmail.name},
+
+The official submission window for the ${newDate.year} BRIT Awards is now open. Submit your eligible releases from this year for consideration by the British Phonographic Industry academy.
+
+Categories include Artist of the Year, British Album of the Year, Song of the Year, BRITs Rising Star, BRITs Best New Artist, Best Pop Act, Best Rap Act, Best R&B Act, and Best Electronic Act.
+
+Nominations will be revealed in Week 13.
+
+- The BRIT Awards Committee`,
+            date: newDate,
+            isRead: autoSubmit,
+            offer: {
+              type: "britSubmission",
+              emailId: emailId,
+              isSubmitted: autoSubmit,
+            },
+          });
+
+          if (autoSubmit) {
+            const thisYearReleases = artistData.releases.filter(
+              (r) => r.releaseDate.year === newDate.year,
+            );
+            const eligibleAlbums = thisYearReleases.filter((r) =>
+              ["Album", "EP", "Album (Deluxe)", "Compilation", "Live Album"].includes(r.type),
+            );
+            const songIds = new Set(thisYearReleases.flatMap((r) => r.songIds));
+            const eligibleSongs = artistData.songs.filter((s) =>
+              songIds.has(s.id),
+            );
+
+            const bestAlbum = [...eligibleAlbums].sort(
+              (a, b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0),
+            )[0];
+            const bestSong = [...eligibleSongs].sort(
+              (a, b) => (b.streams || 0) - (a.streams || 0),
+            )[0];
+
+            const firstReleaseYear = Math.min(
+              ...artistData.releases.map((r) => r.releaseDate.year),
+              newDate.year,
+            );
+            const isNewArtistEligible =
+              !artistData.hasSubmittedForBritNewArtist &&
+              firstReleaseYear === newDate.year;
+
+            const isRisingStarEligible = !artistData.hasWonBritRisingStar;
+
+            const submissions: any[] = [];
+            submissions.push({
+              artistId: artistId,
+              category: "Artist of the Year",
+              itemId: artistId,
+              itemName: artistProfileForEmail.name,
+            });
+
+            if (isRisingStarEligible) {
+              submissions.push({
+                artistId: artistId,
+                category: "BRITs Rising Star",
+                itemId: artistId,
+                itemName: artistProfileForEmail.name,
+              });
+            }
+
+            if (isNewArtistEligible) {
+              submissions.push({
+                artistId: artistId,
+                category: "BRITs Best New Artist",
+                itemId: artistId,
+                itemName: artistProfileForEmail.name,
+              });
+            }
+            if (bestAlbum) {
+              submissions.push({
+                artistId: artistId,
+                category: "British Album of the Year",
+                itemId: bestAlbum.id,
+                itemName: bestAlbum.title,
+              });
+            }
+            if (bestSong) {
+              submissions.push({
+                artistId: artistId,
+                category: "Song of the Year",
+                itemId: bestSong.id,
+                itemName: bestSong.title,
+              });
+            }
+
+            // Genre Acts
+            const popSong = eligibleSongs.find(s => s.genre === 'Pop');
+            if (popSong) {
+              submissions.push({
+                artistId: artistId,
+                category: "Best Pop Act",
+                itemId: popSong.id,
+                itemName: popSong.title,
+              });
+            }
+            const rapSong = eligibleSongs.find(s => s.genre === 'Hip Hop' || s.genre === 'Rap');
+            if (rapSong) {
+              submissions.push({
+                artistId: artistId,
+                category: "Best Rap Act",
+                itemId: rapSong.id,
+                itemName: rapSong.title,
+              });
+            }
+            const rnbSong = eligibleSongs.find(s => s.genre === 'R&B');
+            if (rnbSong) {
+              submissions.push({
+                artistId: artistId,
+                category: "Best R&B Act",
+                itemId: rnbSong.id,
+                itemName: rnbSong.title,
+              });
+            }
+            const elecSong = eligibleSongs.find(s => s.genre === 'Dance/Electronic' || s.genre === 'Electronic' || s.genre === 'Dance');
+            if (elecSong) {
+              submissions.push({
+                artistId: artistId,
+                category: "Best Electronic Act",
+                itemId: elecSong.id,
+                itemName: elecSong.title,
+              });
+            }
+
+            autoBritSubmissions.push(...submissions);
+            artistData.hasSubmittedForBritNewArtist = isNewArtistEligible
+              ? true
+              : artistData.hasSubmittedForBritNewArtist;
+          }
+        }
+
         if (artistData.fanWarStatus) {
           artistData.fanWarStatus.weeksRemaining -= 1;
           if (artistData.fanWarStatus.weeksRemaining <= 0) {
@@ -13087,6 +13268,400 @@ Congrats ${category.name} winner - '${winner.itemName}' @${winner.artistName.rep
         finalState.amaCurrentYearNominations = null;
       }
 
+      // --- BRITS LOGIC ---
+      let newBritNominations: GameState["britCurrentYearNominations"] =
+        state.britCurrentYearNominations;
+
+      // Week 13: Determine BRITs Nominations
+      if (
+        newDate.week === 13 &&
+        state.britSubmissions &&
+        state.britSubmissions.length > 0
+      ) {
+        const newNominations: BritCategory[] = [];
+        const britCategories: BritCategoryName[] = [
+          "Artist of the Year",
+          "British Album of the Year",
+          "Song of the Year",
+          "BRITs Rising Star",
+          "BRITs Best New Artist",
+          "Best Pop Act",
+          "Best Rap Act",
+          "Best R&B Act",
+          "Best Electronic Act",
+        ];
+
+        // Authentic UK & international music contenders for BRITs
+        const ukNpcArtists = [
+          "Dua Lipa", "Harry Styles", "Adele", "Stormzy", "Dave", "Central Cee",
+          "Fred again..", "Calvin Harris", "Charli XCX", "Raye", "Sam Smith",
+          "Ed Sheeran", "Coldplay", "Arctic Monkeys", "PinkPantheress",
+          "Lewis Capaldi", "Olivia Dean", "Little Simz", "Disclosure", "Arlo Parks"
+        ];
+
+        for (const categoryName of britCategories) {
+          const contenders: BritContender[] = [];
+          const isAlbumCategory = categoryName === "British Album of the Year";
+          const isSongCategory = categoryName === "Song of the Year";
+          const isArtistCategory = categoryName === "Artist of the Year";
+          const isRisingStar = categoryName === "BRITs Rising Star";
+          const isNewArtist = categoryName === "BRITs Best New Artist";
+          const isPopAct = categoryName === "Best Pop Act";
+          const isRapAct = categoryName === "Best Rap Act";
+          const isRnbAct = categoryName === "Best R&B Act";
+          const isElectronicAct = categoryName === "Best Electronic Act";
+
+          const playerSubmissions = state.britSubmissions.filter(
+            (s) => s.category === categoryName,
+          );
+
+          for (const sub of playerSubmissions) {
+            const artistData = updatedArtistsData[sub.artistId];
+            const artistProfile = allPlayerArtistsAndGroups.find(
+              (a) => a.id === sub.artistId,
+            );
+            if (!artistData || !artistProfile) continue;
+
+            let score = 0;
+            let isValid = false;
+
+            if (isRisingStar) {
+              // Can only be considered if haven't won before
+              if (!artistData.hasWonBritRisingStar) {
+                const totalYearStreams = artistData.songs
+                  .filter((s) => s.releaseDate?.year === newDate.year)
+                  .reduce((acc, s) => acc + (s.streams || 0), 0);
+                const hasHotSong = artistData.songs.some(
+                  (s) => s.releaseDate?.year === newDate.year && (s.streams || 0) > 1000000,
+                );
+                
+                // If you had a great year -> much higher chance of winning!
+                const greatYearBonus = hasHotSong || totalYearStreams > 2000000 ? 50 : 20;
+                score = (totalYearStreams / 40000) + artistData.popularity + (artistData.hype * 1.5) + greatYearBonus;
+                score = score * 1.8 + 30; // High probability multiplier for breakout talent
+                isValid = true;
+              }
+            } else if (isNewArtist) {
+              score = artistData.popularity + (artistData.hype * 1.2) + Math.random() * 20;
+              isValid = true;
+            } else if (isAlbumCategory) {
+              const release = artistData.releases.find(
+                (r) => r.id === sub.itemId,
+              );
+              if (release) {
+                score = ((release.firstWeekStreams || 0) / 30000) + ((release.quality || 80) / 2) + Math.random() * 15;
+                isValid = true;
+              }
+            } else if (isArtistCategory) {
+              score = artistData.popularity * 1.2 + artistData.hype + (artistData.followers / 50000) + Math.random() * 20;
+              isValid = true;
+            } else if (isSongCategory) {
+              const song = artistData.songs.find((s) => s.id === sub.itemId);
+              if (song) {
+                score = (song.streams / 60000) + ((song.quality || 80) / 2) + Math.random() * 15;
+                isValid = true;
+              }
+            } else {
+              // Genre Acts
+              const song = artistData.songs.find((s) => s.id === sub.itemId);
+              const release = artistData.releases.find((r) => r.id === sub.itemId);
+              if (song) {
+                score = (song.streams / 50000) + artistData.popularity / 2 + Math.random() * 20;
+                isValid = true;
+              } else if (release) {
+                score = ((release.firstWeekStreams || 0) / 35000) + artistData.popularity / 2 + Math.random() * 20;
+                isValid = true;
+              } else {
+                score = artistData.popularity + artistData.hype + Math.random() * 15;
+                isValid = true;
+              }
+            }
+
+            if (isValid) {
+              contenders.push({
+                artistId: sub.artistId,
+                artistName: artistProfile.name,
+                itemId: sub.itemId,
+                itemName: sub.itemName,
+                score,
+              });
+            }
+          }
+
+          // Generate NPC Contenders
+          const numNpcContenders = 12;
+          if (isAlbumCategory) {
+            newNpcAlbums
+              .slice(0, numNpcContenders)
+              .forEach((album) =>
+                contenders.push({
+                  artistId: `npc_${album.artist}`,
+                  artistName: album.artist,
+                  itemId: album.uniqueId,
+                  itemName: album.title,
+                  score: Math.random() * 70 + 20,
+                }),
+              );
+            // Add top UK artists if not already in list
+            ukNpcArtists.slice(0, 4).forEach((ukArtist) => {
+              if (!contenders.some((c) => c.artistName === ukArtist)) {
+                contenders.push({
+                  artistId: `npc_${ukArtist}`,
+                  artistName: ukArtist,
+                  itemId: `npc_album_${ukArtist}`,
+                  itemName: `${ukArtist}'s Studio Album`,
+                  score: Math.random() * 65 + 30,
+                });
+              }
+            });
+          } else if (isSongCategory) {
+            newNpcsWithReleases
+              .slice(0, numNpcContenders)
+              .forEach((song) =>
+                contenders.push({
+                  artistId: `npc_${song.artist}`,
+                  artistName: song.artist,
+                  itemId: song.uniqueId,
+                  itemName: song.title,
+                  score: Math.random() * 70 + 20,
+                }),
+              );
+            ukNpcArtists.slice(0, 4).forEach((ukArtist) => {
+              if (!contenders.some((c) => c.artistName === ukArtist)) {
+                contenders.push({
+                  artistId: `npc_${ukArtist}`,
+                  artistName: ukArtist,
+                  itemId: `npc_song_${ukArtist}`,
+                  itemName: `Hit Single (${ukArtist})`,
+                  score: Math.random() * 65 + 30,
+                });
+              }
+            });
+          } else if (isRisingStar) {
+            // Rising star NPC contenders (younger/breakout UK acts)
+            const risingStarNpcs = ["Olivia Dean", "PinkPantheress", "Cat Burns", "FLO", "Nia Archives", "Caity Baser", "Sekou", "The Last Dinner Party"];
+            risingStarNpcs.forEach((name) => {
+              contenders.push({
+                artistId: `npc_${name}`,
+                artistName: name,
+                itemId: `npc_${name}`,
+                itemName: name,
+                score: Math.random() * 55 + 15,
+              });
+            });
+          } else if (isPopAct) {
+            const popNpcs = ["Dua Lipa", "Harry Styles", "Charli XCX", "Raye", "Ed Sheeran", "Sam Smith"];
+            popNpcs.forEach((name) => {
+              contenders.push({
+                artistId: `npc_${name}`,
+                artistName: name,
+                itemId: `npc_${name}`,
+                itemName: name,
+                score: Math.random() * 65 + 25,
+              });
+            });
+          } else if (isRapAct) {
+            const rapNpcs = ["Stormzy", "Dave", "Central Cee", "Little Simz", "AJ Tracey", "Loyle Carner", "Headie One"];
+            rapNpcs.forEach((name) => {
+              contenders.push({
+                artistId: `npc_${name}`,
+                artistName: name,
+                itemId: `npc_${name}`,
+                itemName: name,
+                score: Math.random() * 65 + 25,
+              });
+            });
+          } else if (isRnbAct) {
+            const rnbNpcs = ["Jorja Smith", "Mahalia", "Cleo Sol", "Samm Henshaw", "Bellah", "Raye"];
+            rnbNpcs.forEach((name) => {
+              contenders.push({
+                artistId: `npc_${name}`,
+                artistName: name,
+                itemId: `npc_${name}`,
+                itemName: name,
+                score: Math.random() * 65 + 25,
+              });
+            });
+          } else if (isElectronicAct) {
+            const elecNpcs = ["Fred again..", "Calvin Harris", "Disclosure", "Bicep", "Overmono", "Four Tet"];
+            elecNpcs.forEach((name) => {
+              contenders.push({
+                artistId: `npc_${name}`,
+                artistName: name,
+                itemId: `npc_${name}`,
+                itemName: name,
+                score: Math.random() * 65 + 25,
+              });
+            });
+          } else {
+            // General Artist / Best New Artist
+            ukNpcArtists.slice(0, 6).forEach((artistName) => {
+              contenders.push({
+                artistId: `npc_${artistName}`,
+                artistName,
+                itemId: `npc_${artistName}`,
+                itemName: artistName,
+                score: Math.random() * 75 + 25,
+              });
+            });
+          }
+
+          contenders.sort((a, b) => b.score - a.score);
+          const nominees = contenders.slice(0, 5);
+          if (nominees.length > 0) {
+            newNominations.push({
+              name: categoryName,
+              nominees,
+              winner: nominees[0],
+            });
+          }
+        }
+
+        newBritNominations = newNominations;
+        finalState.britCurrentYearNominations = newNominations;
+
+        // Post official BRITs nominations announcement on X / PopBase
+        Object.values(updatedArtistsData).forEach((d) =>
+          d.xPosts.unshift({
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `The nominations for the ${newDate.year} BRIT Awards have officially been announced in London! 🇬🇧🏆 #BRITs`,
+            likes: Math.floor(Math.random() * 65000) + 20000,
+            retweets: Math.floor(Math.random() * 15000) + 6000,
+            views: Math.floor(Math.random() * 4500000) + 1500000,
+            date: newDate,
+          }),
+        );
+
+        // Process player nominations & notifications
+        for (const artistId in updatedArtistsData) {
+          const artistData = updatedArtistsData[artistId];
+          const artistProfile = allPlayerArtistsAndGroups.find(
+            (a) => a.id === artistId,
+          );
+          const artistNominations = newNominations
+            .flatMap((cat) => cat.nominees)
+            .filter((nom) => nom.artistName === artistProfile?.name);
+
+          if (artistNominations.length > 0 && artistProfile) {
+            artistData.popularity = Math.min(
+              100,
+              artistData.popularity + artistNominations.length * 3,
+            );
+            const hasPerformanceOffer = Math.random() < 0.6 || artistNominations.length >= 2;
+            let body = `Dear ${artistProfile.name},
+
+Congratulations! We are delighted to announce that you have officially been nominated for the ${newDate.year} BRIT Awards:
+
+`;
+            artistNominations.forEach((nom) => {
+              const category = newNominations.find((c) =>
+                c.nominees.includes(nom),
+              );
+              body += `• ${category?.name} - "${nom.itemName}"\n`;
+            });
+            if (hasPerformanceOffer) {
+              body += `\nIn recognition of your outstanding year in music, the BRITs committee would be thrilled to invite you to perform live on stage during the award broadcast at The O2 Arena in London. Please confirm your performance.\n`;
+            }
+            body += `\nBest regards,\nThe BRIT Awards Organizing Committee`;
+
+            const emailId = crypto.randomUUID();
+            artistData.inbox.push({
+              id: emailId,
+              sender: "The BRIT Awards",
+              senderIcon: "brits",
+              subject: `Congratulations! You're a BRIT Awards ${newDate.year} Nominee!`,
+              body,
+              date: newDate,
+              isRead: false,
+              offer: { type: "britNominations", emailId, hasPerformanceOffer },
+            });
+
+            // Red Carpet invitation
+            const redCarpetEmailId = crypto.randomUUID();
+            artistData.inbox.push({
+              id: redCarpetEmailId,
+              sender: "The BRIT Awards",
+              senderIcon: "brits",
+              subject: "Invitation: The BRIT Awards Red Carpet (London)",
+              body: `Hi ${artistProfile.name},
+
+You are warmly invited to walk the red carpet at The O2 Arena for the ${newDate.year} BRIT Awards. International press and Pop Base will be documenting your arrival.
+
+Submit your red carpet outfit photo to showcase your look.
+
+- The BRIT Awards`,
+              date: newDate,
+              isRead: false,
+              offer: { type: "britRedCarpet", emailId: redCarpetEmailId },
+            });
+          }
+        }
+      }
+
+      // Week 15: BRIT Awards Ceremony & Winner Reveals
+      if (newDate.week === 15 && state.britCurrentYearNominations) {
+        for (const category of state.britCurrentYearNominations) {
+          if (category.winner) {
+            const winner = category.winner;
+            const content = `The BRIT Awards 🏆\n\nCongratulations to ${category.name} winner — '${winner.itemName}' @${winner.artistName.replace(/\s/g, "")}! 🇬🇧 #BRITs`;
+            Object.values(updatedArtistsData).forEach((d) =>
+              d.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content,
+                likes: Math.floor(Math.random() * 50000) + 18000,
+                retweets: Math.floor(Math.random() * 12000) + 4500,
+                views: Math.floor(Math.random() * 3000000) + 1000000,
+                date: newDate,
+              }),
+            );
+          }
+        }
+
+        for (const artistId in updatedArtistsData) {
+          const artistData = updatedArtistsData[artistId];
+          const artistProfile = allPlayerArtistsAndGroups.find(
+            (a) => a.id === artistId,
+          );
+
+          for (const category of state.britCurrentYearNominations) {
+            const nomination = category.nominees.find(
+              (n) => n.artistName === artistProfile?.name,
+            );
+            if (nomination) {
+              const isWinner =
+                category.winner?.artistName === nomination.artistName;
+              if (isWinner) {
+                artistData.popularity = Math.min(
+                  100,
+                  artistData.popularity + 6,
+                );
+                artistData.hype = Math.min(
+                  100,
+                  artistData.hype + 8,
+                );
+                if (category.name === "BRITs Rising Star") {
+                  artistData.hasWonBritRisingStar = true;
+                }
+              }
+              artistData.britHistory = artistData.britHistory || [];
+              artistData.britHistory.push({
+                year: newDate.year,
+                category: category.name,
+                itemId: nomination.itemId,
+                itemName: nomination.itemName,
+                artistName: artistProfile?.name || "Unknown",
+                isWinner,
+              });
+            }
+          }
+        }
+
+        finalState.britSubmissions = [];
+        finalState.britCurrentYearNominations = null;
+      }
+
       // --- CUSTOM AWARD SHOW LOGIC ---
       if (state.customAwardShow) {
         // Handle Submissions
@@ -14598,6 +15173,12 @@ Keep up the great work!
         finalState.amaSubmissions = [
           ...(finalState.amaSubmissions || []),
           ...autoAmaSubmissions,
+        ];
+      }
+      if (autoBritSubmissions.length > 0) {
+        finalState.britSubmissions = [
+          ...(finalState.britSubmissions || []),
+          ...autoBritSubmissions,
         ];
       }
 
@@ -21088,6 +21669,255 @@ Let us know if you accept.`,
         },
         currentView: "inbox",
         activeAmaRedCarpetOffer: null,
+      };
+    }
+    case "GO_TO_BRIT_SUBMISSIONS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (email.id === action.payload.emailId) {
+          return { ...email, isRead: true };
+        }
+        return email;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
+        },
+        currentView: "submitForBrits",
+      };
+    }
+    case "SUBMIT_FOR_BRITS": {
+      if (!state.activeArtistId) return state;
+      const { submissions, emailId } = action.payload;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (email.id === emailId && email.offer?.type === "britSubmission") {
+          return { ...email, offer: { ...email.offer, isSubmitted: true } };
+        }
+        return email;
+      });
+
+      const newArtistSubmission = submissions.find(
+        (s) => s.category === "BRITs Best New Artist",
+      );
+      const hasSubmittedNewArtist = newArtistSubmission
+        ? true
+        : activeData.hasSubmittedForBritNewArtist;
+
+      const risingStarSubmission = submissions.find(
+        (s) => s.category === "BRITs Rising Star",
+      );
+      const hasSubmittedRisingStar = risingStarSubmission
+        ? true
+        : activeData.hasSubmittedForBritRisingStar;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: updatedInbox,
+            hasSubmittedForBritNewArtist: hasSubmittedNewArtist,
+            hasSubmittedForBritRisingStar: hasSubmittedRisingStar,
+          },
+        },
+        britSubmissions: [...(state.britSubmissions || []), ...submissions],
+        currentView: "game",
+      };
+    }
+    case "ACCEPT_BRIT_PERFORMANCE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          email.id === action.payload.emailId &&
+          email.offer?.type === "britNominations"
+        ) {
+          return {
+            ...email,
+            offer: { ...email.offer, isPerformanceAccepted: true },
+          };
+        }
+        return email;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
+        },
+        activeBritPerformanceOffer: { emailId: action.payload.emailId },
+        currentView: "createBritPerformance",
+      };
+    }
+    case "CREATE_BRIT_PERFORMANCE": {
+      if (!state.activeArtistId || !state.activeBritPerformanceOffer)
+        return state;
+
+      const { video } = action.payload;
+      const artistName = state.soloArtist?.name || state.group?.name;
+      const performancePost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `${artistName} delivers a live showstopper performing "${video.title}" at The #BRITs in London! 🇬🇧✨`,
+        image: video.thumbnail,
+        likes: Math.floor(Math.random() * 850000) + 120000,
+        retweets: Math.floor(Math.random() * 160000) + 25000,
+        views: Math.floor(Math.random() * 11000000) + 2500000,
+        date: state.date,
+      };
+
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          email.id === state.activeBritPerformanceOffer!.emailId &&
+          email.offer?.type === "britNominations"
+        ) {
+          return {
+            ...email,
+            offer: { ...email.offer, isPerformanceAccepted: true },
+          };
+        }
+        return email;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            videos: [video, ...(activeData.videos || [])],
+            hype: Math.min(100, activeData.hype + 8),
+            popularity: Math.min(100, activeData.popularity + 5),
+            inbox: updatedInbox,
+            xPosts: [performancePost, ...activeData.xPosts],
+          },
+        },
+        activeBritPerformanceOffer: null,
+        currentView: "game",
+      };
+    }
+    case "DECLINE_BRIT_PERFORMANCE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          email.id === action.payload.emailId &&
+          email.offer?.type === "britNominations"
+        ) {
+          return {
+            ...email,
+            offer: { ...email.offer, isPerformanceAccepted: false },
+          };
+        }
+        return email;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
+        },
+        currentView: "inbox",
+        activeBritPerformanceOffer: null,
+      };
+    }
+    case "ACCEPT_BRIT_RED_CARPET": {
+      if (!state.activeArtistId) return state;
+      const { emailId, lookUrl } = action.payload;
+
+      if (lookUrl) {
+        const artistName = state.soloArtist?.name || state.group?.name;
+        const popBasePost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: "popbase",
+          content: `${artistName} stuns on the red carpet at The #BRITs in London. 🇬🇧📸`,
+          image: lookUrl,
+          likes: Math.floor(Math.random() * 105000) + 20000,
+          retweets: Math.floor(Math.random() * 18000) + 8000,
+          views: Math.floor(Math.random() * 3500000) + 1400000,
+          date: state.date,
+        };
+        const activeData = state.artistsData[state.activeArtistId];
+        const updatedInbox = activeData.inbox.map((email) => {
+          if (email.id === emailId && email.offer?.type === "britRedCarpet") {
+            return { ...email, offer: { ...email.offer, isAttending: true } };
+          }
+          return email;
+        });
+
+        const newLook = {
+          id: crypto.randomUUID(),
+          awardShow: "BRITs",
+          year: state.date.year,
+          imageUrl: lookUrl,
+        };
+
+        return {
+          ...state,
+          artistsData: {
+            ...state.artistsData,
+            [state.activeArtistId]: {
+              ...activeData,
+              inbox: updatedInbox,
+              xPosts: [popBasePost, ...activeData.xPosts],
+              pastRedCarpetLooks: [
+                newLook,
+                ...(activeData.pastRedCarpetLooks || []),
+              ],
+            },
+          },
+          activeBritRedCarpetOffer: null,
+          currentView: "game",
+        };
+      } else {
+        return {
+          ...state,
+          activeBritRedCarpetOffer: { emailId },
+          currentView: "britRedCarpet",
+        };
+      }
+    }
+    case "DECLINE_BRIT_RED_CARPET": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const updatedInbox = activeData.inbox.map((email) => {
+        if (
+          email.id === action.payload.emailId &&
+          email.offer?.type === "britRedCarpet"
+        ) {
+          return { ...email, offer: { ...email.offer, isAttending: false } };
+        }
+        return email;
+      });
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
+        },
+        currentView: "inbox",
+        activeBritRedCarpetOffer: null,
+      };
+    }
+    case "UPDATE_BRIT_BANNER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            britBanner: action.payload.bannerUrl,
+          },
+        },
       };
     }
     case "ACCEPT_VMA_RED_CARPET": {
