@@ -653,7 +653,7 @@ const StarRating: React.FC<{ rating: number, count: number }> = ({ rating, count
 };
 
 const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function; onPriceClick: (song: ITunesSong) => void }> = ({ data, navigateTo, onPriceClick }) => {
-    const { gameState, activeArtist, artistsData, allPlayerArtists } = useGame();
+    const { gameState, activeArtist, allPlayerArtists } = useGame();
     const featuredAlbums = data.allAlbums.slice(0, 5);
     const preorders = data.allAlbums.filter(a => a.isPreorder);
     const bestNewReleases = data.allAlbums.filter(a => !a.isPreorder).slice(5, 15);

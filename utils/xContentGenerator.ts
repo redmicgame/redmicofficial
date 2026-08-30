@@ -121,7 +121,7 @@ export const generateWeeklyXContent = (
   newTrends: XTrend[];
   newChats: XChat[];
   newMessages: { chatId: string; message: XMessage }[];
-  newComments?: { postId: string; comment: XPost }[];
+  newComments?: { postId: string; comment: XComment }[];
   newKalshiChance: number;
 } => {
   const newPosts: XPost[] = [];

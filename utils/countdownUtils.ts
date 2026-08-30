@@ -1,4 +1,4 @@
-import { GameDate, GameState, Artist } from '../types';
+import { GameDate, GameState, Artist, Group } from '../types';
 
 export interface CountdownItem {
     id: string;
@@ -14,7 +14,7 @@ export interface CountdownItem {
 
 export const getSpotifyTopCountdowns = (
     gameState: GameState,
-    allPlayerArtists: Artist[]
+    allPlayerArtists: (Artist | Group | any)[]
 ): CountdownItem[] => {
     const countdowns: CountdownItem[] = [];
 

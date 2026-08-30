@@ -1,7 +1,6 @@
 
 
 import React, { useState } from 'react';
-import LoadingScreen from './LoadingScreen';
 import { useGame } from '../context/GameContext';
 import HomeTab from './HomeTab';
 import AppsTab from './AppsTab';

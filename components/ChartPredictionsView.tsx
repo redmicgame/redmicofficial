@@ -1,6 +1,6 @@
 import { NPC_ARTIST_IMAGES } from "../constants";
 import React, { useMemo } from 'react';
-import { useGame, formatNumber, formatDuration } from '../context/GameContext';
+import { useGame, formatNumber } from '../context/GameContext';
 import { getEraConfiguration } from '../utils/eraUtils';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';

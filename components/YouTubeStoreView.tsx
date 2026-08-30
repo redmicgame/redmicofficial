@@ -155,23 +155,8 @@ const AddMerchModal: React.FC<{
 
     return (
         <>
-            {showDatePicker && (
-                <CalendarDatePicker
-                    title="Schedule Physical Shipment"
-                    subtitle="Vinyls and CDs must be scheduled at least 8 weeks in advance for pressing and manufacturing."
-                    currentDate={gameState.date}
-                    selectedDate={shippingDate}
-                    minDate={minShipmentDate}
-                    minDateErrorMessage="Physical shipments must be scheduled at least 8 weeks in advance."
-                    onSelectDate={(newDate) => {
-                        setShippingDate(newDate);
-                        setShowDatePicker(false);
-                    }}
-                    onClose={() => setShowDatePicker(false)}
-                />
-            )}
             <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-                <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto" onClick={e => e.stopPropagation()}>
+                <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto relative" onClick={e => e.stopPropagation()}>
                     <h2 className="text-xl font-bold">Add New {merchType === 'Ringtone' ? 'Digital Item' : 'Product'}</h2>
                     <select value={releaseId} onChange={e => { setReleaseId(e.target.value); setImage(availableReleases.find(r=>r.id===e.target.value)?.coverArt || null); }} className="w-full bg-zinc-700 p-2 rounded">
                         <option value="">Select a Release...</option>
@@ -301,6 +286,27 @@ const AddMerchModal: React.FC<{
                     </button>
                 </div>
             </div>
+
+            {/* Modal Calendar Date Picker to avoid overlay collisions */}
+            {showDatePicker && (
+                <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4" onClick={() => setShowDatePicker(false)}>
+                    <div className="max-w-md w-full" onClick={e => e.stopPropagation()}>
+                        <CalendarDatePicker
+                            title="Schedule Physical Shipment"
+                            subtitle="Vinyls and CDs must be scheduled at least 8 weeks in advance for pressing and manufacturing."
+                            currentDate={gameState.date}
+                            selectedDate={shippingDate}
+                            minDate={minShipmentDate}
+                            minDateErrorMessage="Physical shipments must be scheduled at least 8 weeks in advance."
+                            onSelectDate={(newDate) => {
+                                setShippingDate(newDate);
+                                setShowDatePicker(false);
+                            }}
+                            onClose={() => setShowDatePicker(false)}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     );
 };
@@ -398,23 +404,8 @@ const EditShipmentModal: React.FC<{
 
     return (
         <>
-            {showPicker && (
-                <CalendarDatePicker
-                    title="Reschedule Physical Shipment"
-                    subtitle="Shipments must be scheduled at least 8 weeks in advance for manufacturing."
-                    currentDate={gameState.date}
-                    selectedDate={selectedDate}
-                    minDate={minShipmentDate}
-                    minDateErrorMessage="Physical shipments must be scheduled at least 8 weeks in advance."
-                    onSelectDate={(newDate) => {
-                        setSelectedDate(newDate);
-                        setShowPicker(false);
-                    }}
-                    onClose={() => setShowPicker(false)}
-                />
-            )}
             <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-                <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto" onClick={e => e.stopPropagation()}>
+                <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto relative" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-bold">Manage Shipment</h2>
                         <button onClick={onClose} className="text-zinc-400 hover:text-white text-sm">✕</button>
@@ -462,6 +453,27 @@ const EditShipmentModal: React.FC<{
                     </button>
                 </div>
             </div>
+
+            {/* Modal Calendar Date Picker to avoid overlay collisions */}
+            {showPicker && (
+                <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4" onClick={() => setShowPicker(false)}>
+                    <div className="max-w-md w-full" onClick={e => e.stopPropagation()}>
+                        <CalendarDatePicker
+                            title="Reschedule Physical Shipment"
+                            subtitle="Shipments must be scheduled at least 8 weeks in advance for manufacturing."
+                            currentDate={gameState.date}
+                            selectedDate={selectedDate}
+                            minDate={minShipmentDate}
+                            minDateErrorMessage="Physical shipments must be scheduled at least 8 weeks in advance."
+                            onSelectDate={(newDate) => {
+                                setSelectedDate(newDate);
+                                setShowPicker(false);
+                            }}
+                            onClose={() => setShowPicker(false)}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     );
 };
