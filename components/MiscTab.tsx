@@ -545,6 +545,19 @@ const MiscTab: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
+                        <div className="flex-grow pr-4">
+                            <p className="font-bold">Auto Update Certifications</p>
+                            <p className="text-xs text-zinc-400">Automatically update RIAA certifications on milestone achievements. If off, manage them manually in the Manager tab.</p>
+                        </div>
+                        <button
+                            onClick={() => dispatch({ type: 'TOGGLE_AUTO_UPDATE_CERTIFICATIONS' })}
+                            className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${gameState.autoUpdateCertifications !== false ? 'bg-green-500 justify-end' : 'bg-zinc-600 justify-start'}`}
+                        >
+                            <span className="w-4 h-4 rounded-full bg-white block shadow-md"></span>
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
                         <div>
                             <p className="font-bold">Live Leaderboard</p>
                             <p className="text-xs text-zinc-400">Compete with other players worldwide in different categories.</p>

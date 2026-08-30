@@ -5,6 +5,7 @@ import { useGame } from '../context/GameContext';
 import SpotifyIcon from './icons/SpotifyIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import { ChartEntry, AlbumChartEntry, GameDate } from '../types';
+import { getSpotifyTopCountdowns } from '../utils/countdownUtils';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlusIcon from './icons/PlusIcon';
 import ArrowUpTrayIcon from './icons/ArrowUpTrayIcon';
@@ -27,79 +28,16 @@ const SpotifyChartView: React.FC = () => {
     const [activeSlide, setActiveSlide] = useState(0);
 
     const upcomingCountdowns = useMemo(() => {
-        const countdowns: { id: string, title: string, artistName: string, coverArt: string, releaseDate: GameDate, preSaves: number, isExplicit: boolean }[] = [];
-
-        // Player countdowns
-        if (gameState.artistsData) {
-            Object.entries(gameState.artistsData).forEach(([artistId, data]) => {
-                if (data.labelSubmissions) {
-                    data.labelSubmissions.forEach(sub => {
-                        if (sub.status === 'scheduled' && sub.hasCountdownPage && sub.projectReleaseDate) {
-                            const artistProfile = allPlayerArtists.find(a => a.id === artistId);
-                            
-                            let isExplicit = false;
-                            if (sub.release && sub.release.songIds) {
-                               sub.release.songIds.forEach(id => {
-                                   const song = data.songs.find(s => s.id === id);
-                                   if (song && song.explicit) isExplicit = true;
-                               });
-                            } else {
-                               const song = data.songs.find(s => s.id === sub.itemId);
-                               if (song && song.explicit) isExplicit = true;
-                            }
-
-                            const preSaves = sub.preSaves || 0;
-                            
-                            countdowns.push({
-                                id: sub.itemId || sub.id,
-                                title: sub.release?.title || sub.itemName || 'Untitled Album',
-                                artistName: artistProfile?.name || 'Unknown',
-                                coverArt: sub.release?.coverArt || 'https://ui-avatars.com/api/?name=Unknown',
-                                releaseDate: sub.projectReleaseDate,
-                                preSaves: preSaves,
-                                isExplicit,
-                            });
-                        }
-                    });
-                }
-            });
-        }
-
-        // Add some fake NPC countdowns if we don't have enough
-        const fakeNpcCountdowns = 10 - countdowns.length;
-        if (fakeNpcCountdowns > 0 && gameState.npcAlbums) {
-            const upcomingNpcs = gameState.npcAlbums.slice(0, fakeNpcCountdowns);
-            upcomingNpcs.forEach((album, index) => {
-                const w = (gameState.date.week + 1 + index) % 52 || 52;
-                const y = gameState.date.year + (gameState.date.week + 1 + index > 52 ? 1 : 0);
-                const releaseDate = { year: y, week: w };
-                const albumSongs = album.songIds.map(id => gameState.npcs.find(s => s.uniqueId === id)).filter(Boolean);
-                const avgPop = albumSongs.length > 0 ? albumSongs.reduce((sum, s) => sum + (s?.basePopularity || 0), 0) / albumSongs.length : 50;
-                
-                let npcWeekly = 3000;
-                if (avgPop < 10) npcWeekly = 3000;
-                else if (avgPop < 20) npcWeekly = 5000;
-                else if (avgPop < 50) npcWeekly = 10000;
-                else if (avgPop < 75) npcWeekly = 25000;
-                else npcWeekly = 50000;
-
-                const simulatedWeeks = Math.max(1, 4 - index);
-                const npcPreSaves = Math.round(npcWeekly * simulatedWeeks * (0.9 + Math.random() * 0.2));
-
-                countdowns.push({
-                    id: `fake_${album.uniqueId}`,
-                    title: album.title,
-                    artistName: album.artist,
-                    coverArt: album.coverArt || `https://ui-avatars.com/api/?name=${encodeURIComponent(album.artist)}`,
-                    releaseDate: releaseDate,
-                    preSaves: npcPreSaves, 
-                    isExplicit: Math.random() > 0.5
-                });
-            });
-        }
-
-        return countdowns.sort((a, b) => b.preSaves - a.preSaves).slice(0, 10);
-    }, [gameState.artistsData, gameState.npcAlbums, allPlayerArtists, gameState.date]);
+        return getSpotifyTopCountdowns(gameState, allPlayerArtists).map(c => ({
+            id: c.id,
+            title: c.title,
+            artistName: c.artist,
+            coverArt: c.coverArt,
+            releaseDate: c.releaseDate,
+            preSaves: c.preSaves,
+            isExplicit: c.isExplicit,
+        }));
+    }, [gameState, allPlayerArtists]);
 
     const slides = useMemo(() => {
         const facts = [];

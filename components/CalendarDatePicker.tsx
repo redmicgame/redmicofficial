@@ -11,6 +11,8 @@ interface CalendarDatePickerProps {
   minDate?: GameDate;
   labelName?: string;
   title?: string;
+  minDateErrorMessage?: string;
+  subtitle?: string;
   onClose?: () => void;
 }
 
@@ -48,6 +50,8 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
   minDate,
   labelName,
   title = "Select Release Date",
+  minDateErrorMessage,
+  subtitle,
   onClose,
 }) => {
   // Start view at selectedDate's month or currentDate's month
@@ -97,7 +101,7 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
     const targetTotalDays = viewYear * 364 + (calculatedWeek - 1) * 7 + calculatedDay;
 
     if (targetTotalDays <= minGameTotalDays) {
-      setErrorNotice("Release date must be scheduled in the future.");
+      setErrorNotice(minDateErrorMessage || "Date must be scheduled in the future.");
       return;
     }
 
@@ -122,11 +126,17 @@ export const CalendarDatePicker: React.FC<CalendarDatePickerProps> = ({
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 w-full shadow-2xl">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="font-bold text-white text-base">{title}</h3>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Current Date: <span className="text-emerald-400 font-semibold">{formatFullDateString(currentDate)}</span> (Week {currentDate.week})
+          </p>
+          {subtitle && (
+            <p className="text-[11px] text-amber-400 font-medium mt-0.5">{subtitle}</p>
+          )}
           {isSigned && (
-            <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-600/40 px-2 py-0.5 rounded-full inline-block mt-0.5">
+            <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-600/40 px-2 py-0.5 rounded-full inline-block mt-1">
               Friday Releases Only (Label Policy)
             </span>
           )}

@@ -1565,6 +1565,7 @@ export const DEFAULT_PODCASTS: Podcast[] = [
 const initialState: GameState = {
   offlineMode: true,
   difficultyMode: "normal",
+  autoUpdateCertifications: true,
   careerMode: null,
   soloArtist: null,
   group: null,
@@ -6517,17 +6518,66 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
 
             // Cap sales to available stock
             const actualSales = Math.min(weeklySales, item.stock);
+            merchIncome += actualSales * item.price;
+
+            const isPhysical = item.type === 'Vinyl' || item.type === 'CD' || item.type === 'Cassette' || item.type === 'T-Shirt' || item.type === 'Hoodie' || item.type === 'Tour Exclusive Merch';
+            
+            if (isPhysical && item.shippingDate && !item.isShipped) {
+              const shipTotalWeeks = item.shippingDate.year * 52 + item.shippingDate.week;
+              const currentTotalWeeks = newDate.year * 52 + newDate.week;
+              
+              const prevPreorders = item.preorderUnitsSold || 0;
+              const newPreorders = prevPreorders + actualSales;
+
+              if (currentTotalWeeks >= shipTotalWeeks) {
+                // Shipment dispatches this week!
+                const totalDelivered = newPreorders;
+
+                const sub = artistData.labelSubmissions?.find(
+                  (s) => s.release?.id === item.releaseId,
+                );
+                const rel = artistData.releases?.find(
+                  (r) => r.id === item.releaseId,
+                );
+
+                if (sub && sub.status === 'scheduled') {
+                  sub.preorderSales = (sub.preorderSales || 0) + totalDelivered;
+                } else if (rel && rel.releaseDate) {
+                  const relTotalWeeks = rel.releaseDate.year * 52 + rel.releaseDate.week;
+                  if (currentTotalWeeks <= relTotalWeeks + 1) {
+                    rel.preorderSales = (rel.preorderSales || 0) + totalDelivered;
+                  }
+                }
+
+                return {
+                  ...item,
+                  stock: item.stock - actualSales,
+                  unitsSold: (item.unitsSold || 0) + actualSales,
+                  preorderUnitsSold: newPreorders,
+                  isShipped: true,
+                  isPreorder: false,
+                  _actualWeeklySales: totalDelivered,
+                  shippedWeekSales: totalDelivered,
+                };
+              } else {
+                return {
+                  ...item,
+                  stock: item.stock - actualSales,
+                  unitsSold: (item.unitsSold || 0) + actualSales,
+                  preorderUnitsSold: newPreorders,
+                  _actualWeeklySales: 0,
+                };
+              }
+            }
 
             if (item.isPreorder) {
-              const sub = artistData.labelSubmissions.find(
-                (s) => s.release.id === item.releaseId,
+              const sub = artistData.labelSubmissions?.find(
+                (s) => s.release?.id === item.releaseId,
               );
               if (sub) {
                 sub.preorderSales = (sub.preorderSales || 0) + actualSales;
               }
             }
-
-            merchIncome += actualSales * item.price;
 
             return {
               ...item,
@@ -8175,6 +8225,7 @@ Nominations will be revealed in Week 13.
 
         // --- CERTIFICATION POSTS ---
         if (artistProfile) {
+          const shouldAutoCertify = state.autoUpdateCertifications !== false;
           const newCertificationPosts: XPost[] = [];
           const albumsWithNewCerts = new Set<string>();
 
@@ -8186,6 +8237,7 @@ Nominations will be revealed in Week 13.
             const currentCertString = formatCertification(currentCert);
 
             if (
+              shouldAutoCertify &&
               currentCertString &&
               currentCertString !== song.lastCertification
             ) {
@@ -8261,6 +8313,7 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             const currentCertString = formatCertification(currentCert);
 
             if (
+              shouldAutoCertify &&
               currentCertString &&
               currentCertString !== release.lastCertification
             ) {
@@ -12038,6 +12091,8 @@ HFPA`,
             const weeklyPreSavesGain = isDailyMode ? Math.max(1, Math.round(randomizedGain / 7)) : randomizedGain;
 
             sub.preSaves = oldPreSaves + weeklyPreSavesGain;
+            const itunesWeeklyPreorders = Math.max(1, Math.round(weeklyPreSavesGain * 0.06 * (0.8 + Math.random() * 0.4)));
+            sub.preorderSales = (sub.preorderSales || 0) + itunesWeeklyPreorders;
 
             const preSaves = sub.preSaves;
             const milestones = [10000, 25000, 50000, 100000, 250000, 500000, 1000000, 3000000, 5000000, 10000000];
@@ -12972,13969 +13027,291 @@ Please select your setlist below. Selected setlist songs will receive a 10% boos
               likes: Math.floor(Math.random() * 15000) + 2500,
               comments: [],
               releaseDate: { ...newDate },
-              channelId: "coachella",
-              budget: 0,
-              quality: 90,
-            };
-
-            artistData.videos = [coachellaVideo, ...(artistData.videos || [])];
-          }
-        }
-      }
-
-      // --- AMAs LOGIC ---
-      let newAmaNominations: GameState["amaCurrentYearNominations"] =
-        state.amaCurrentYearNominations;
-
-      // Week 23: Determine AMA Nominations
-      if (
-        newDate.week === 23 &&
-        state.amaSubmissions &&
-        state.amaSubmissions.length > 0
-      ) {
-        const newNominations: AmaCategory[] = [];
-        const amaCategories: AmaCategoryName[] = [
-          "Artist of the Year",
-          "New Artist of the Year",
-          "Album of the Year",
-          "Song of the Year",
-          "Music Video of the Year",
-          "Favorite Pop Artist",
-          "Favorite Pop Album",
-          "Favorite Pop Song",
-          "Favorite Hip-Hop Artist",
-          "Favorite Hip-Hop Album",
-          "Favorite Hip-Hop Song",
-          "Favorite R&B Artist",
-          "Favorite R&B Album",
-          "Favorite R&B Song",
-          "Favorite Latin Artist",
-          "Favorite Latin Album",
-          "Favorite Latin Song",
-          "Favorite Country Artist",
-          "Favorite Country Album",
-          "Favorite Country Song",
-          "Favorite Rock Artist",
-          "Favorite Rock Album",
-          "Favorite Rock Song",
-          "Favorite Dance/Electronic Artist",
-        ];
-
-        for (const categoryName of amaCategories) {
-          const contenders: AmaContender[] = [];
-          let genreFilter: string | null = null;
-          let isAlbumCategory = false;
-          let isSongCategory = false;
-          let isArtistCategory = false;
-
-          if (
-            categoryName.includes("Album of the Year") ||
-            (categoryName.includes("Favorite") &&
-              categoryName.includes("Album"))
-          )
-            isAlbumCategory = true;
-          if (
-            categoryName.includes("Song of the Year") ||
-            (categoryName.includes("Favorite") &&
-              categoryName.includes("Song")) ||
-            categoryName.includes("Music Video")
-          )
-            isSongCategory = true;
-          if (
-            categoryName.includes("Artist of the Year") ||
-            (categoryName.includes("Favorite") &&
-              categoryName.includes("Artist"))
-          )
-            isArtistCategory = true;
-
-          if (categoryName.includes("Pop")) genreFilter = "Pop";
-          if (categoryName.includes("Hip-Hop")) genreFilter = "Hip Hop";
-          if (categoryName.includes("R&B")) genreFilter = "R&B";
-          if (categoryName.includes("Latin")) genreFilter = "Latin";
-          if (categoryName.includes("Country")) genreFilter = "Country";
-          if (categoryName.includes("Rock")) genreFilter = "Rock";
-          if (categoryName.includes("Dance/Electronic"))
-            genreFilter = "Dance/Electronic";
-
-          const playerSubmissions = state.amaSubmissions.filter(
-            (s) => s.category === categoryName,
-          );
-          for (const sub of playerSubmissions) {
-            const artistData = updatedArtistsData[sub.artistId];
-            const artistProfile = allPlayerArtistsAndGroups.find(
-              (a) => a.id === sub.artistId,
-            );
-            if (!artistData || !artistProfile) continue;
-
-            let score = 0;
-            let isValid = false;
-
-            if (isAlbumCategory) {
-              const release = artistData.releases.find(
-                (r) => r.id === sub.itemId,
-              );
-              if (release) {
-                score = (release.firstWeekStreams || 0) / 50000;
-                isValid = true;
-              }
-            } else if (isArtistCategory) {
-              score = artistData.popularity + artistData.hype;
-              isValid = true;
-            } else {
-              const song = artistData.songs.find((s) => s.id === sub.itemId);
-              if (song) {
-                score = song.streams / 100000;
-                isValid = true;
-              }
-            }
-
-            if (isValid) {
-              contenders.push({
-                artistId: sub.artistId,
-                artistName: artistProfile.name,
-                itemId: sub.itemId,
-                itemName: sub.itemName,
-                score,
-              });
-            }
-          }
-
-          const numNpcContenders = 15;
-          if (isAlbumCategory) {
-            newNpcAlbums
-              .slice(0, numNpcContenders * 5)
-              .slice(0, numNpcContenders)
-              .forEach((album) =>
-                contenders.push({
-                  artistId: `npc_${album.artist}`,
-                  artistName: album.artist,
-                  itemId: album.uniqueId,
-                  itemName: album.title,
-                  score: Math.random() * 50,
-                }),
-              );
-          } else if (isSongCategory) {
-            newNpcsWithReleases
-              .slice(0, numNpcContenders * 5)
-              .slice(0, numNpcContenders)
-              .forEach((song) =>
-                contenders.push({
-                  artistId: `npc_${song.artist}`,
-                  artistName: song.artist,
-                  itemId: song.uniqueId,
-                  itemName: song.title,
-                  score: Math.random() * 50,
-                }),
-              );
-          } else {
-            [
-              ...new Set(
-                newNpcAlbums.slice(0, numNpcContenders).map((a) => a.artist),
-              ),
-            ]
-              .slice(0, 5)
-              .forEach((artistName) => {
-                contenders.push({
-                  artistId: `npc_${artistName}`,
-                  artistName,
-                  itemId: `npc_${artistName}`,
-                  itemName: artistName,
-                  score: Math.random() * 100 + 50,
-                });
-              });
-          }
-
-          contenders.sort((a, b) => b.score - a.score);
-          const nominees = contenders.slice(0, 5);
-          if (nominees.length > 0) {
-            newNominations.push({
-              name: categoryName,
-              nominees,
-              winner: nominees[0],
-            });
-          }
-        }
-
-        newAmaNominations = newNominations;
-        finalState.amaCurrentYearNominations = newNominations;
-
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-          const artistNominations = newNominations
-            .flatMap((cat) => cat.nominees)
-            .filter((nom) => nom.artistName === artistProfile?.name);
-
-          if (artistNominations.length > 0 && artistProfile) {
-            artistData.popularity = Math.min(
-              100,
-              artistData.popularity + artistNominations.length * 3,
-            );
-            const hasPerformanceOffer = Math.random() < 0.5;
-            let body = `Dear ${artistProfile.name},
-
-Congratulations! We are pleased to announce your nomination(s) for the ${newDate.year} American Music Awards:
-
-`;
-            artistNominations.forEach((nom) => {
-              const category = newNominations.find((c) =>
-                c.nominees.includes(nom),
-              );
-              body += `‚Ä¢ ${category?.name} - "${nom.itemName}"
-`;
-            });
-            if (hasPerformanceOffer)
-              body += `
-Additionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.
-
-`;
-            body += `
-Sincerely,
-AMAs`;
-            const emailId = crypto.randomUUID();
-            artistData.inbox.push({
-              id: emailId,
-              sender: "American Music Awards",
-              senderIcon: "amas",
-              subject: "Congratulations! You're an AMA Nominee!",
-              body,
-              date: newDate,
-              isRead: false,
-              offer: { type: "amaNominations", emailId, hasPerformanceOffer },
-            });
-
-            const redCarpetEmailId = crypto.randomUUID();
-            artistData.inbox.push({
-              id: redCarpetEmailId,
-              sender: "American Music Awards",
-              senderIcon: "amas",
-              subject: "Invitation: AMAs Red Carpet",
-              body: `Hi ${artistProfile.name},
-
-We're excited to invite you to walk the red carpet at this year's AMAs. Pop Base and other outlets will be covering the event.
-
-Please let us know if you'll be attending by sharing your look.
-
-- AMAs`,
-              date: newDate,
-              isRead: false,
-              offer: { type: "amaRedCarpet", emailId: redCarpetEmailId },
-            });
-          }
-        }
-      }
-
-      // Week 25: AMA Awards Ceremony
-      if (newDate.week === 25 && state.amaCurrentYearNominations) {
-        for (const category of state.amaCurrentYearNominations) {
-          if (category.winner) {
-            const winner = category.winner;
-            const content = `American Music Awards üèÜ
-
-Congrats ${category.name} winner - '${winner.itemName}' @${winner.artistName.replace(/\s/g, "")} #AMAs`;
-            Object.values(updatedArtistsData).forEach((d) =>
-              d.xPosts.unshift({
-                id: crypto.randomUUID(),
-                authorId: "popbase",
-                content,
-                likes: Math.floor(Math.random() * 40000) + 15000,
-                retweets: Math.floor(Math.random() * 10000) + 5000,
-                views: Math.floor(Math.random() * 2000000) + 1000000,
-                date: newDate,
-              }),
-            );
-          }
-        }
-
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-
-          for (const category of state.amaCurrentYearNominations) {
-            const nomination = category.nominees.find(
-              (n) => n.artistName === artistProfile?.name,
-            );
-            if (nomination) {
-              const isWinner =
-                category.winner?.artistName === nomination.artistName;
-              if (isWinner) {
-                artistData.popularity = Math.min(
-                  100,
-                  artistData.popularity + 5,
-                );
-              }
-              artistData.amaHistory = artistData.amaHistory || [];
-              artistData.amaHistory.push({
-                year: newDate.year,
-                category: category.name,
-                itemId: nomination.itemId,
-                itemName: nomination.itemName,
-                artistName: artistProfile?.name || "Unknown",
-                isWinner,
-              });
-            }
-          }
-        }
-
-        finalState.amaSubmissions = [];
-        finalState.amaCurrentYearNominations = null;
-      }
-
-      // --- BRITS LOGIC ---
-      let newBritNominations: GameState["britCurrentYearNominations"] =
-        state.britCurrentYearNominations;
-
-      // Week 13: Determine BRITs Nominations
-      if (
-        newDate.week === 13 &&
-        state.britSubmissions &&
-        state.britSubmissions.length > 0
-      ) {
-        const newNominations: BritCategory[] = [];
-        const britCategories: BritCategoryName[] = [
-          "Artist of the Year",
-          "British Album of the Year",
-          "Song of the Year",
-          "BRITs Rising Star",
-          "BRITs Best New Artist",
-          "Best Pop Act",
-          "Best Rap Act",
-          "Best R&B Act",
-          "Best Electronic Act",
-        ];
-
-        // Authentic UK & international music contenders for BRITs
-        const ukNpcArtists = [
-          "Dua Lipa", "Harry Styles", "Adele", "Stormzy", "Dave", "Central Cee",
-          "Fred again..", "Calvin Harris", "Charli XCX", "Raye", "Sam Smith",
-          "Ed Sheeran", "Coldplay", "Arctic Monkeys", "PinkPantheress",
-          "Lewis Capaldi", "Olivia Dean", "Little Simz", "Disclosure", "Arlo Parks"
-        ];
-
-        for (const categoryName of britCategories) {
-          const contenders: BritContender[] = [];
-          const isAlbumCategory = categoryName === "British Album of the Year";
-          const isSongCategory = categoryName === "Song of the Year";
-          const isArtistCategory = categoryName === "Artist of the Year";
-          const isRisingStar = categoryName === "BRITs Rising Star";
-          const isNewArtist = categoryName === "BRITs Best New Artist";
-          const isPopAct = categoryName === "Best Pop Act";
-          const isRapAct = categoryName === "Best Rap Act";
-          const isRnbAct = categoryName === "Best R&B Act";
-          const isElectronicAct = categoryName === "Best Electronic Act";
-
-          const playerSubmissions = state.britSubmissions.filter(
-            (s) => s.category === categoryName,
-          );
-
-          for (const sub of playerSubmissions) {
-            const artistData = updatedArtistsData[sub.artistId];
-            const artistProfile = allPlayerArtistsAndGroups.find(
-              (a) => a.id === sub.artistId,
-            );
-            if (!artistData || !artistProfile) continue;
-
-            let score = 0;
-            let isValid = false;
-
-            if (isRisingStar) {
-              // Can only be considered if haven't won before
-              if (!artistData.hasWonBritRisingStar) {
-                const totalYearStreams = artistData.songs
-                  .filter((s) => s.releaseDate?.year === newDate.year)
-                  .reduce((acc, s) => acc + (s.streams || 0), 0);
-                const hasHotSong = artistData.songs.some(
-                  (s) => s.releaseDate?.year === newDate.year && (s.streams || 0) > 1000000,
-                );
-                
-                // If you had a great year -> much higher chance of winning!
-                const greatYearBonus = hasHotSong || totalYearStreams > 2000000 ? 50 : 20;
-                score = (totalYearStreams / 40000) + artistData.popularity + (artistData.hype * 1.5) + greatYearBonus;
-                score = score * 1.8 + 30; // High probability multiplier for breakout talent
-                isValid = true;
-              }
-            } else if (isNewArtist) {
-              score = artistData.popularity + (artistData.hype * 1.2) + Math.random() * 20;
-              isValid = true;
-            } else if (isAlbumCategory) {
-              const release = artistData.releases.find(
-                (r) => r.id === sub.itemId,
-              );
-              if (release) {
-                score = ((release.firstWeekStreams || 0) / 30000) + ((release.quality || 80) / 2) + Math.random() * 15;
-                isValid = true;
-              }
-            } else if (isArtistCategory) {
-              score = artistData.popularity * 1.2 + artistData.hype + (artistData.followers / 50000) + Math.random() * 20;
-              isValid = true;
-            } else if (isSongCategory) {
-              const song = artistData.songs.find((s) => s.id === sub.itemId);
-              if (song) {
-                score = (song.streams / 60000) + ((song.quality || 80) / 2) + Math.random() * 15;
-                isValid = true;
-              }
-            } else {
-              // Genre Acts
-              const song = artistData.songs.find((s) => s.id === sub.itemId);
-              const release = artistData.releases.find((r) => r.id === sub.itemId);
-              if (song) {
-                score = (song.streams / 50000) + artistData.popularity / 2 + Math.random() * 20;
-                isValid = true;
-              } else if (release) {
-                score = ((release.firstWeekStreams || 0) / 35000) + artistData.popularity / 2 + Math.random() * 20;
-                isValid = true;
-              } else {
-                score = artistData.popularity + artistData.hype + Math.random() * 15;
-                isValid = true;
-              }
-            }
-
-            if (isValid) {
-              contenders.push({
-                artistId: sub.artistId,
-                artistName: artistProfile.name,
-                itemId: sub.itemId,
-                itemName: sub.itemName,
-                score,
-              });
-            }
-          }
-
-          // Generate NPC Contenders
-          const numNpcContenders = 12;
-          if (isAlbumCategory) {
-            newNpcAlbums
-              .slice(0, numNpcContenders)
-              .forEach((album) =>
-                contenders.push({
-                  artistId: `npc_${album.artist}`,
-                  artistName: album.artist,
-                  itemId: album.uniqueId,
-                  itemName: album.title,
-                  score: Math.random() * 70 + 20,
-                }),
-              );
-            // Add top UK artists if not already in list
-            ukNpcArtists.slice(0, 4).forEach((ukArtist) => {
-              if (!contenders.some((c) => c.artistName === ukArtist)) {
-                contenders.push({
-                  artistId: `npc_${ukArtist}`,
-                  artistName: ukArtist,
-                  itemId: `npc_album_${ukArtist}`,
-                  itemName: `${ukArtist}'s Studio Album`,
-                  score: Math.random() * 65 + 30,
-                });
-              }
-            });
-          } else if (isSongCategory) {
-            newNpcsWithReleases
-              .slice(0, numNpcContenders)
-              .forEach((song) =>
-                contenders.push({
-                  artistId: `npc_${song.artist}`,
-                  artistName: song.artist,
-                  itemId: song.uniqueId,
-                  itemName: song.title,
-                  score: Math.random() * 70 + 20,
-                }),
-              );
-            ukNpcArtists.slice(0, 4).forEach((ukArtist) => {
-              if (!contenders.some((c) => c.artistName === ukArtist)) {
-                contenders.push({
-                  artistId: `npc_${ukArtist}`,
-                  artistName: ukArtist,
-                  itemId: `npc_song_${ukArtist}`,
-                  itemName: `Hit Single (${ukArtist})`,
-                  score: Math.random() * 65 + 30,
-                });
-              }
-            });
-          } else if (isRisingStar) {
-            // Rising star NPC contenders (younger/breakout UK acts)
-            const risingStarNpcs = ["Olivia Dean", "PinkPantheress", "Cat Burns", "FLO", "Nia Archives", "Caity Baser", "Sekou", "The Last Dinner Party"];
-            risingStarNpcs.forEach((name) => {
-              contenders.push({
-                artistId: `npc_${name}`,
-                artistName: name,
-                itemId: `npc_${name}`,
-                itemName: name,
-                score: Math.random() * 55 + 15,
-              });
-            });
-          } else if (isPopAct) {
-            const popNpcs = ["Dua Lipa", "Harry Styles", "Charli XCX", "Raye", "Ed Sheeran", "Sam Smith"];
-            popNpcs.forEach((name) => {
-              contenders.push({
-                artistId: `npc_${name}`,
-                artistName: name,
-                itemId: `npc_${name}`,
-                itemName: name,
-                score: Math.random() * 65 + 25,
-              });
-            });
-          } else if (isRapAct) {
-            const rapNpcs = ["Stormzy", "Dave", "Central Cee", "Little Simz", "AJ Tracey", "Loyle Carner", "Headie One"];
-            rapNpcs.forEach((name) => {
-              contenders.push({
-                artistId: `npc_${name}`,
-                artistName: name,
-                itemId: `npc_${name}`,
-                itemName: name,
-                score: Math.random() * 65 + 25,
-              });
-            });
-          } else if (isRnbAct) {
-            const rnbNpcs = ["Jorja Smith", "Mahalia", "Cleo Sol", "Samm Henshaw", "Bellah", "Raye"];
-            rnbNpcs.forEach((name) => {
-              contenders.push({
-                artistId: `npc_${name}`,
-                artistName: name,
-                itemId: `npc_${name}`,
-                itemName: name,
-                score: Math.random() * 65 + 25,
-              });
-            });
-          } else if (isElectronicAct) {
-            const elecNpcs = ["Fred again..", "Calvin Harris", "Disclosure", "Bicep", "Overmono", "Four Tet"];
-            elecNpcs.forEach((name) => {
-              contenders.push({
-                artistId: `npc_${name}`,
-                artistName: name,
-                itemId: `npc_${name}`,
-                itemName: name,
-                score: Math.random() * 65 + 25,
-              });
-            });
-          } else {
-            // General Artist / Best New Artist
-            ukNpcArtists.slice(0, 6).forEach((artistName) => {
-              contenders.push({
-                artistId: `npc_${artistName}`,
-                artistName,
-                itemId: `npc_${artistName}`,
-                itemName: artistName,
-                score: Math.random() * 75 + 25,
-              });
-            });
-          }
-
-          contenders.sort((a, b) => b.score - a.score);
-          const nominees = contenders.slice(0, 5);
-          if (nominees.length > 0) {
-            newNominations.push({
-              name: categoryName,
-              nominees,
-              winner: nominees[0],
-            });
-          }
-        }
-
-        newBritNominations = newNominations;
-        finalState.britCurrentYearNominations = newNominations;
-
-        // Post official BRITs nominations announcement on X / PopBase
-        Object.values(updatedArtistsData).forEach((d) =>
-          d.xPosts.unshift({
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `The nominations for the ${newDate.year} BRIT Awards have officially been announced in London! üá¨üáßüèÜ #BRITs`,
-            likes: Math.floor(Math.random() * 65000) + 20000,
-            retweets: Math.floor(Math.random() * 15000) + 6000,
-            views: Math.floor(Math.random() * 4500000) + 1500000,
-            date: newDate,
-          }),
-        );
-
-        // Process player nominations & notifications
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-          const artistNominations = newNominations
-            .flatMap((cat) => cat.nominees)
-            .filter((nom) => nom.artistName === artistProfile?.name);
-
-          if (artistNominations.length > 0 && artistProfile) {
-            artistData.popularity = Math.min(
-              100,
-              artistData.popularity + artistNominations.length * 3,
-            );
-            const hasPerformanceOffer = Math.random() < 0.6 || artistNominations.length >= 2;
-            let body = `Dear ${artistProfile.name},
-
-Congratulations! We are delighted to announce that you have officially been nominated for the ${newDate.year} BRIT Awards:
-
-`;
-            artistNominations.forEach((nom) => {
-              const category = newNominations.find((c) =>
-                c.nominees.includes(nom),
-              );
-              body += `‚Ä¢ ${category?.name} - "${nom.itemName}"\n`;
-            });
-            if (hasPerformanceOffer) {
-              body += `\nIn recognition of your outstanding year in music, the BRITs committee would be thrilled to invite you to perform live on stage during the award broadcast at The O2 Arena in London. Please confirm your performance.\n`;
-            }
-            body += `\nBest regards,\nThe BRIT Awards Organizing Committee`;
-
-            const emailId = crypto.randomUUID();
-            artistData.inbox.push({
-              id: emailId,
-              sender: "The BRIT Awards",
-              senderIcon: "brits",
-              subject: `Congratulations! You're a BRIT Awards ${newDate.year} Nominee!`,
-              body,
-              date: newDate,
-              isRead: false,
-              offer: { type: "britNominations", emailId, hasPerformanceOffer },
-            });
-
-            // Red Carpet invitation
-            const redCarpetEmailId = crypto.randomUUID();
-            artistData.inbox.push({
-              id: redCarpetEmailId,
-              sender: "The BRIT Awards",
-              senderIcon: "brits",
-              subject: "Invitation: The BRIT Awards Red Carpet (London)",
-              body: `Hi ${artistProfile.name},
-
-You are warmly invited to walk the red carpet at The O2 Arena for the ${newDate.year} BRIT Awards. International press and Pop Base will be documenting your arrival.
-
-Submit your red carpet outfit photo to showcase your look.
-
-- The BRIT Awards`,
-              date: newDate,
-              isRead: false,
-              offer: { type: "britRedCarpet", emailId: redCarpetEmailId },
-            });
-          }
-        }
-      }
-
-      // Week 15: BRIT Awards Ceremony & Winner Reveals
-      if (newDate.week === 15 && state.britCurrentYearNominations) {
-        for (const category of state.britCurrentYearNominations) {
-          if (category.winner) {
-            const winner = category.winner;
-            const content = `The BRIT Awards üèÜ\n\nCongratulations to ${category.name} winner ‚Äî '${winner.itemName}' @${winner.artistName.replace(/\s/g, "")}! üá¨üáß #BRITs`;
-            Object.values(updatedArtistsData).forEach((d) =>
-              d.xPosts.unshift({
-                id: crypto.randomUUID(),
-                authorId: "popbase",
-                content,
-                likes: Math.floor(Math.random() * 50000) + 18000,
-                retweets: Math.floor(Math.random() * 12000) + 4500,
-                views: Math.floor(Math.random() * 3000000) + 1000000,
-                date: newDate,
-              }),
-            );
-          }
-        }
-
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-
-          for (const category of state.britCurrentYearNominations) {
-            const nomination = category.nominees.find(
-              (n) => n.artistName === artistProfile?.name,
-            );
-            if (nomination) {
-              const isWinner =
-                category.winner?.artistName === nomination.artistName;
-              if (isWinner) {
-                artistData.popularity = Math.min(
-                  100,
-                  artistData.popularity + 6,
-                );
-                artistData.hype = Math.min(
-                  100,
-                  artistData.hype + 8,
-                );
-                if (category.name === "BRITs Rising Star") {
-                  artistData.hasWonBritRisingStar = true;
-                }
-              }
-              artistData.britHistory = artistData.britHistory || [];
-              artistData.britHistory.push({
-                year: newDate.year,
-                category: category.name,
-                itemId: nomination.itemId,
-                itemName: nomination.itemName,
-                artistName: artistProfile?.name || "Unknown",
-                isWinner,
-              });
-            }
-          }
-        }
-
-        finalState.britSubmissions = [];
-        finalState.britCurrentYearNominations = null;
-      }
-
-      // --- CUSTOM AWARD SHOW LOGIC ---
-      if (state.customAwardShow) {
-        // Handle Submissions
-        if (newDate.week === state.customAwardShow.submissionWeek) {
-           const allSubmissions: NonNullable<GameState['customAwardSubmissions']> = [];
-           Object.keys(updatedArtistsData).forEach(artistId => {
-              const aData = updatedArtistsData[artistId];
-              state.customAwardShow!.categories.forEach(cat => {
-                 let bestItem: any = null;
-                 if (cat.eligibility === 'song') {
-                    bestItem = aData.songs.filter(s => s.releaseDate && s.releaseDate.year === newDate.year).sort((a,b) => (b.streams || 0) - (a.streams || 0))[0];
-                    if (bestItem) allSubmissions.push({ artistId, categoryId: cat.id, itemId: bestItem.id, itemName: bestItem.title });
-                 } else if (cat.eligibility === 'album') {
-                    bestItem = aData.releases.filter(r => r.releaseDate && r.releaseDate.year === newDate.year && (r.type === 'Album' || r.type === 'EP')).sort((a,b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0))[0];
-                    if (bestItem) allSubmissions.push({ artistId, categoryId: cat.id, itemId: bestItem.id, itemName: bestItem.title });
-                 } else if (cat.eligibility === 'artist') {
-                    allSubmissions.push({ artistId, categoryId: cat.id, itemId: artistId, itemName: "Artist" });
-                 }
-              });
-           });
-           finalState.customAwardSubmissions = allSubmissions;
-           
-           if (state.activeArtistId) {
-             const aData = updatedArtistsData[state.activeArtistId];
-             if (aData) {
-               aData.inbox.push({
-                 id: crypto.randomUUID(),
-                 sender: state.customAwardShow.name,
-                 senderIcon: "trophy",
-                 subject: `Submissions processed`,
-                 body: `Your submissions for the ${state.customAwardShow.name} have been processed!`,
-                 date: newDate,
-                 isRead: false,
-               });
-             }
-           }
-        }
-
-        // Handle Nominations
-        if (newDate.week === state.customAwardShow.nominationWeek && state.customAwardSubmissions && state.customAwardSubmissions.length > 0) {
-          const nominations = state.customAwardShow.categories.map(cat => {
-            const subs = state.customAwardSubmissions!.filter(s => s.categoryId === cat.id);
-            const nominees = subs.map(s => {
-               const aData = updatedArtistsData[s.artistId];
-               const artistProfile = allPlayerArtistsAndGroups.find(a => a.id === s.artistId);
-               const points = aData?.songs.find(so => so.id === s.itemId)?.streams || aData?.releases.find(r => r.id === s.itemId)?.firstWeekStreams || (Math.random() * 100000);
-               return { itemId: s.itemId, itemName: s.itemName, artistName: artistProfile?.name || 'Unknown', points };
-            }).sort((a,b) => (b.points || 0) - (a.points || 0)).slice(0, 5).map(n => ({ ...n, isWinner: false }));
-            return { categoryId: cat.id, nominees };
-          });
-          finalState.customAwardNominations = nominations;
-          
-          if (state.activeArtistId) {
-             const aData = updatedArtistsData[state.activeArtistId];
-             if (aData) {
-               aData.inbox.push({
-                 id: crypto.randomUUID(),
-                 sender: state.customAwardShow.name,
-                 senderIcon: "trophy",
-                 subject: `Nominations are out!`,
-                 body: `The nominations for the ${state.customAwardShow.name} have been announced! Check the Red Mic Pro dashboard to see the nominees and pick the winners before Week ${state.customAwardShow.ceremonyWeek}.`,
-                 date: newDate,
-                 isRead: false,
-               });
-             }
-          }
-        }
-
-        // Handle Ceremony
-        if (newDate.week === state.customAwardShow.ceremonyWeek && state.customAwardNominations) {
-           const showName = state.customAwardShow.name;
-           
-           // Ensure at least one winner is picked per category if missing (auto-pick highest points)
-           const finalizedNoms = state.customAwardNominations.map(catNoms => {
-              if (catNoms.nominees.length > 0 && !catNoms.nominees.some(n => n.isWinner)) {
-                 catNoms.nominees[0].isWinner = true; // auto-pick top points
-              }
-              return catNoms;
-           });
-
-           let winText = `${showName} üèÜ
-
-The winners for the ${newDate.year} ${showName} have been announced!`;
-           finalizedNoms.forEach(catNom => {
-              const cat = state.customAwardShow!.categories.find(c => c.id === catNom.categoryId);
-              const winner = catNom.nominees.find(n => n.isWinner);
-              if (cat && winner) {
-                  winText += `
-${cat.name}: ${winner.itemName} - ${winner.artistName}`;
-              }
-           });
-
-           Object.values(updatedArtistsData).forEach((d) =>
-              d.xPosts.unshift({
-                id: crypto.randomUUID(),
-                authorId: "popbase",
-                content: winText,
-                likes: Math.floor(Math.random() * 80000) + 15000,
-                retweets: Math.floor(Math.random() * 20000) + 5000,
-                views: Math.floor(Math.random() * 2000000) + 1000000,
-                date: newDate,
-              }),
-            );
-
-           // reset
-           finalState.customAwardNominations = null;
-           finalState.customAwardSubmissions = [];
-        }
-      }
-
-      // --- GRAMMYS LOGIC ---
-      let newGrammyNominations: GameState["grammyCurrentYearNominations"] =
-        state.grammyCurrentYearNominations;
-
-      // Week 45: Determine Grammy Nominations
-      if (newDate.week === 45 && (state.grammySubmissions?.length || 0) > 0) {
-        const newNominations: GrammyCategory[] = [];
-        const categories: GrammyAward["category"][] = [
-          "Record of the Year",
-          "Song of the Year",
-          "Album of the Year",
-          "Best New Artist",
-          "Best Pop Song",
-          "Best Rap Song",
-          "Best R&B Song",
-          "Pop Album",
-          "Rap Album",
-          "R&B Album",
-        ];
-
-        for (const categoryName of categories) {
-          const contenders: GrammyContender[] = [];
-
-          let genreFilter: string | null = null;
-          let isAlbumCategory = false;
-          let isSongCategory = false;
-
-          switch (categoryName) {
-            case "Pop Album":
-              genreFilter = "Pop";
-              isAlbumCategory = true;
-              break;
-            case "Rap Album":
-              genreFilter = "Hip Hop";
-              isAlbumCategory = true;
-              break;
-            case "R&B Album":
-              genreFilter = "R&B";
-              isAlbumCategory = true;
-              break;
-            case "Best Pop Song":
-              genreFilter = "Pop";
-              isSongCategory = true;
-              break;
-            case "Best Rap Song":
-              genreFilter = "Hip Hop";
-              isSongCategory = true;
-              break;
-            case "Best R&B Song":
-              genreFilter = "R&B";
-              isSongCategory = true;
-              break;
-            case "Album of the Year":
-              isAlbumCategory = true;
-              break;
-            case "Record of the Year":
-            case "Song of the Year":
-              isSongCategory = true;
-              break;
-          }
-
-          const playerSubmissions = (state.grammySubmissions || []).filter(
-            (s) => s.category === categoryName,
-          );
-          for (const sub of playerSubmissions) {
-            const artistData = updatedArtistsData[sub.artistId];
-            const artistProfile = allPlayerArtistsAndGroups.find(
-              (a) => a.id === sub.artistId,
-            );
-            if (!artistData || !artistProfile) continue;
-
-            let score = 0;
-            let coverArt: string | undefined = undefined;
-            let isValid = false;
-
-            if (isAlbumCategory) {
-              const release = artistData.releases.find(
-                (r) => r.id === sub.itemId,
-              );
-              if (release) {
-                const releaseSongs = release.songIds
-                  .map((id) => artistData.songs.find((s) => s.id === id))
-                  .filter((s): s is Song => !!s);
-                if (releaseSongs.length > 0) {
-                  let genreMatch = !genreFilter;
-                  if (genreFilter) {
-                    const genreCounts = releaseSongs.reduce(
-                      (acc, song) => {
-                        acc[song.genre] = (acc[song.genre] || 0) + 1;
-                        return acc;
-                      },
-                      {} as { [genre: string]: number },
-                    );
-                    const majorGenre = Object.keys(genreCounts).reduce(
-                      (a, b) => (genreCounts[a] > genreCounts[b] ? a : b),
-                    );
-                    if (majorGenre === genreFilter) genreMatch = true;
-                  }
-                  if (genreMatch) {
-                    const avgQuality =
-                      releaseSongs.reduce((sum, s) => sum + s.quality, 0) /
-                      releaseSongs.length;
-                    score =
-                      avgQuality * 2 + (release.firstWeekStreams || 0) / 100000;
-                    coverArt = release.coverArt;
-                    isValid = true;
-                  }
-                }
-              }
-            } else if (categoryName === "Best New Artist") {
-              const totalStreamsThisYear = artistData.songs.reduce((sum, s) => {
-                const release = artistData.releases.find(
-                  (r) => r.id === s.releaseId,
-                );
-                return release && release.releaseDate?.year === newDate.year
-                  ? sum + s.streams
-                  : sum;
-              }, 0);
-              score = artistData.hype + totalStreamsThisYear / 1000000;
-              coverArt = artistProfile.image;
-              isValid = true;
-            } else {
-              // Song categories
-              const song = artistData.songs.find((s) => s.id === sub.itemId);
-              if (song) {
-                if (!genreFilter || song.genre === genreFilter) {
-                  score =
-                    song.quality * 2 + (song.firstWeekStreams || 0) / 25000;
-                  coverArt = song.coverArt;
-                  isValid = true;
-                }
-              }
-            }
-
-            if (isValid) {
-              if (artistData.isBlacklistedByLabel) {
-                 score = score * 0.1; // Extremely hard to secure nominations
-              }
-              contenders.push({
-                id: sub.itemId,
-                name: sub.itemName,
-                artistName: artistProfile.name,
-                isPlayer: true,
-                score,
-                coverArt,
-              });
-            }
-          }
-
-          const numNpcContenders = 15;
-          if (isAlbumCategory) {
-            newNpcAlbums
-              .slice(0, numNpcContenders * 5)
-              .filter((album) => {
-                if (!genreFilter) return true;
-                const albumSongs = album.songIds
-                  .map((id) =>
-                    newNpcsWithReleases.find((s) => s.uniqueId === id),
-                  )
-                  .filter((s): s is NpcSong => !!s);
-                if (albumSongs.length === 0) return false;
-                const genreCounts = albumSongs.reduce(
-                  (acc, song) => {
-                    acc[song.genre] = (acc[song.genre] || 0) + 1;
-                    return acc;
-                  },
-                  {} as { [genre: string]: number },
-                );
-                const majorGenre = Object.keys(genreCounts).reduce((a, b) =>
-                  genreCounts[a] > genreCounts[b] ? a : b,
-                );
-                return majorGenre === genreFilter;
-              })
-              .slice(0, numNpcContenders)
-              .forEach((album) => {
-                const albumSongs = album.songIds
-                  .map((id) =>
-                    newNpcsWithReleases.find((s) => s.uniqueId === id),
-                  )
-                  .filter(Boolean);
-                const avgPopularity =
-                  albumSongs.reduce(
-                    (sum, s) => sum + (s?.basePopularity || 0),
-                    0,
-                  ) / (albumSongs.length || 1);
-                contenders.push({
-                  id: album.uniqueId,
-                  name: album.title,
-                  artistName: album.artist,
-                  isPlayer: false,
-                  score: (avgPopularity / 100000) * 1.5,
-                  coverArt: album.coverArt,
-                });
-              });
-          } else if (categoryName !== "Best New Artist") {
-            newNpcsWithReleases
-              .slice(0, numNpcContenders * 5)
-              .filter((song) => !genreFilter || song.genre === genreFilter)
-              .slice(0, numNpcContenders)
-              .forEach((song) => {
-                contenders.push({
-                  id: song.uniqueId,
-                  name: song.title,
-                  artistName: song.artist,
-                  isPlayer: false,
-                  score: song.basePopularity / 100000,
-                  coverArt:
-                    song.coverArt ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250`,
-                });
-              });
-          } else {
-            [
-              ...new Set(
-                newNpcAlbums.slice(0, numNpcContenders).map((a) => a.artist),
-              ),
-            ]
-              .slice(0, 5)
-              .forEach((artistName) => {
-                contenders.push({
-                  id: `npc_${artistName}`,
-                  name: artistName,
-                  artistName,
-                  isPlayer: false,
-                  score: Math.random() * 100 + 50,
-                });
-              });
-          }
-
-          contenders.sort((a, b) => b.score - a.score);
-          const nominees = contenders.slice(0, 5);
-          if (nominees.length > 0) {
-            newNominations.push({
-              name: categoryName,
-              nominees,
-              winner: nominees[0],
-            });
-          }
-        }
-
-        newGrammyNominations = newNominations;
-        finalState.grammyCurrentYearNominations = newNominations;
-
-        const majorCatsForPosts: GrammyAward["category"][] = [
-          "Album of the Year",
-          "Record of the Year",
-          "Song of the Year",
-          "Best New Artist",
-        ];
-        const nominationPosts: XPost[] = [];
-        newNominations.forEach((category) => {
-          if (majorCatsForPosts.includes(category.name)) {
-            const playerNominee = category.nominees.find((n) => n.isPlayer);
-            let content = `The nominees for ${category.name} at the ${newDate.year + 1} #GRAMMYs have been announced:
-
-`;
-            content += category.nominees
-              .map((n) => `‚Ä¢ ${n.isPlayer ? `**${n.name}**` : n.name}`)
-              .join("\n");
-
-            const image =
-              playerNominee?.coverArt ||
-              category.nominees[0]?.coverArt ||
-              undefined;
-
-            nominationPosts.push({
-              id: crypto.randomUUID(),
-              authorId: "popbase",
-              content,
-              image,
-              likes: Math.floor(Math.random() * 50000) + 25000,
-              retweets: Math.floor(Math.random() * 12000) + 5000,
-              views: Math.floor(Math.random() * 1500000) + 500000,
-              date: newDate,
-            });
-          }
-        });
-
-        if (nominationPosts.length > 0) {
-          for (const artistId in updatedArtistsData) {
-            updatedArtistsData[artistId].xPosts.unshift(...nominationPosts);
-          }
-        }
-
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-          const artistNominations = newNominations
-            .flatMap((cat) => cat.nominees)
-            .filter(
-              (nom) => nom.isPlayer && nom.artistName === artistProfile?.name,
-            );
-
-          if (artistNominations.length > 0 && artistProfile) {
-            artistData.popularity = Math.min(
-              100,
-              artistData.popularity + artistNominations.length * 3,
-            );
-            const hasPerformanceOffer = Math.random() < 0.5;
-            let body = `Dear ${artistProfile.name},
-
-Congratulations! The Recording Academy is pleased to announce your nomination(s) for the ${newDate.year + 1} GRAMMY Awards:
-
-`;
-            artistNominations.forEach((nom) => {
-              const category = newNominations.find((c) =>
-                c.nominees.includes(nom),
-              );
-              body += `‚Ä¢ ${category?.name} - "${nom.name}"
-`;
-            });
-            if (hasPerformanceOffer)
-              body += `
-Additionally, we would be honored to have you perform at the ceremony. Please respond to this email to accept or decline the offer.
-
-`;
-            body += `
-Sincerely,
-The Recording Academy`;
-            const emailId = crypto.randomUUID();
-            artistData.inbox.push({
-              id: emailId,
-              sender: "Recording Academy",
-              senderIcon: "grammys",
-              subject: "Congratulations! You're a GRAMMY Nominee!",
-              body,
-              date: newDate,
-              isRead: false,
-              offer: {
-                type: "grammyNominations",
-                emailId,
-                hasPerformanceOffer,
-              },
-            });
-
-            const redCarpetEmailId = crypto.randomUUID();
-            artistData.inbox.push({
-              id: redCarpetEmailId,
-              sender: "Recording Academy",
-              senderIcon: "grammys",
-              subject: "Invitation: GRAMMYs Red Carpet",
-              body: `Hi ${artistProfile.name},
-
-We're excited to invite you to walk the red carpet at this year's GRAMMY Awards ceremony. Pop Base and other outlets will be covering the event.
-
-Please let us know if you'll be attending by sharing your look.
-
-- The Recording Academy`,
-              date: newDate,
-              isRead: false,
-              offer: { type: "grammyRedCarpet", emailId: redCarpetEmailId },
-            });
-          }
-        }
-      }
-
-      // Week 52: Grammy Awards Ceremony
-      if (newDate.week === 52 && state.grammyCurrentYearNominations) {
-        for (const category of state.grammyCurrentYearNominations) {
-          if (category.winner) {
-            const winner = category.winner;
-            const content = `Recording Academy / GRAMMYS üèÜ
-
-Congrats ${category.name} winner - \'${winner.name}\' @${winner.artistName.replace(/\\s/g, "")} #GRAMMYs`;
-            Object.values(updatedArtistsData).forEach((d) =>
-              d.xPosts.unshift({
-                id: crypto.randomUUID(),
-                authorId: "popbase",
-                content,
-                image: winner.coverArt,
-                likes: Math.floor(Math.random() * 40000) + 15000,
-                retweets: Math.floor(Math.random() * 10000) + 5000,
-                views: Math.floor(Math.random() * 2000000) + 1000000,
-                date: newDate,
-              }),
-            );
-          }
-        }
-
-        for (const artistId in updatedArtistsData) {
-          const artistData = updatedArtistsData[artistId];
-          const artistProfile = allPlayerArtistsAndGroups.find(
-            (a) => a.id === artistId,
-          );
-
-          for (const category of state.grammyCurrentYearNominations) {
-            const nomination = category.nominees.find(
-              (n) => n.isPlayer && n.artistName === artistProfile?.name,
-            );
-            if (nomination) {
-              const isWinner =
-                category.winner?.id === nomination.id &&
-                category.winner.artistName === nomination.artistName;
-              if (isWinner) {
-                artistData.popularity = Math.min(
-                  100,
-                  artistData.popularity + 5,
-                );
-              }
-              artistData.grammyHistory.push({
-                year: newDate.year,
-                category: category.name,
-                itemId: nomination.id,
-                itemName: nomination.name,
-                artistName: artistProfile?.name || "Unknown",
-                isWinner,
-              });
-            }
-          }
-        }
-
-        finalState.grammySubmissions = [];
-        finalState.grammyCurrentYearNominations = null;
-      }
-
-      // --- ADD CHART EMAILS TO INBOX ---
-      // This is done last, after all other logic for the week.
-      for (const artistId in updatedArtistsData) {
-        const artistData = updatedArtistsData[artistId];
-        const artistProfileForEmail = allPlayerArtistsAndGroups.find(
-          (a) => a.id === artistId,
-        );
-        const newChartEmails: Email[] = [];
-
-        // --- CHART UPDATE EMAILS ---
-        if (artistProfileForEmail) {
-          // Billboard Chart Email
-          const playerHot100Entries = newBillboardHot100.filter(
-            (e) =>
-              e.isPlayerSong &&
-              allPlayerSongsFlat.find((s) => s.id === e.songId)?.artistId ===
-                artistId,
-          );
-          const playerAlbumEntries = newBillboardTopAlbums.filter(
-            (e) =>
-              e.isPlayerAlbum &&
-              allPlayerReleases.find((r) => r.id === e.albumId)?.artistId ===
-                artistId,
-          );
-
-          if (playerHot100Entries.length > 0 || playerAlbumEntries.length > 0) {
-            let body = `Hi ${artistProfileForEmail.name},
-
-Here's your weekly recap of your performance on the Billboard charts.
-`;
-
-            if (playerHot100Entries.length > 0) {
-              body += `
-**Billboard Hot 100**
-`;
-              playerHot100Entries.forEach((entry) => {
-                body += `#${entry.rank} "${entry.title}"
-`;
-              });
-            }
-
-            if (playerAlbumEntries.length > 0) {
-              body += `
-**Billboard 200**
-`;
-              playerAlbumEntries.forEach((entry) => {
-                body += `#${entry.rank} "${entry.title}"
-`;
-              });
-            }
-
-            body += `
-Congratulations on your chart success!
-- The Billboard Team`;
-
-            newChartEmails.push({
-              id: crypto.randomUUID(),
-              sender: "Billboard",
-              subject: "Your Weekly Billboard Chart Recap",
-              body: body,
-              date: newDate,
-              isRead: false,
-              senderIcon: "default",
-            });
-          }
-
-          // Spotify Chart Email
-          const isStreamingActive = getEraConfiguration(
-            newDate.year,
-          ).streamingActive;
-          const playerSpotifyEntries = newSpotifyGlobal.filter(
-            (e) =>
-              e.isPlayerSong &&
-              allPlayerSongsFlat.find((s) => s.id === e.songId)?.artistId ===
-                artistId,
-          );
-
-          if (isStreamingActive && playerSpotifyEntries.length > 0) {
-            let body = `Hi ${artistProfileForEmail.name},
-
-Here are your current entries on the Spotify Global Top 100 chart this week.
-
-**Global Top 100**
-`;
-            playerSpotifyEntries.forEach((entry) => {
-              body += `#${entry.rank} "${entry.title}" - ${formatNumber(entry.weeklyStreams)} streams
-`;
-            });
-            body += `
-Keep up the great work!
-- Spotify Charts Team`;
-
-            newChartEmails.push({
-              id: crypto.randomUUID(),
-              sender: "Spotify Charts",
-              subject: "Your Spotify Charts Update",
-              body: body,
-              date: newDate,
-              isRead: false,
-              senderIcon: "spotify",
-            });
-          }
-        }
-        artistData.inbox.push(...newChartEmails);
-      }
-
-      const newSpotifyPlaylists = (
-        state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS
-      ).map((playlist) => {
-        const newBannedTrackIds = new Set(playlist.bannedTrackIds || []);
-        
-        let playlistContenders = allContenders.filter((c) => {
-             if (newBannedTrackIds.has(c.uniqueId)) return false;
-             
-             const existingTrack = playlist.tracks.find(t => t.songId === c.uniqueId);
-             if (existingTrack && existingTrack.addedDate) {
-                  const weeksInPlaylist = (newDate.year - existingTrack.addedDate.year) * 52 + (newDate.week - existingTrack.addedDate.week);
-                  
-                  const limits: Record<string, number> = {
-                      "tth": 12,
-                      "global50": 52,
-                      "rapcaviar": 14,
-                      "latin": 14,
-                      "megahit": 16,
-                      "rockclassics": 16,
-                      "bailareggaeton": 16,
-                      "singcar": 18,
-                      "allout00s": 18,
-                      "beastmode": 20,
-                      "hiphopcentral": 20,
-                      "throwback": 20,
-                      "pophits": 22,
-                      "hotcountry": 22,
-                      "allout90s": 22,
-                      "getturnt": 24,
-                      "mint": 24,
-                      "rnb": 24,
-                      "workout": 24,
-                      "chillhits": 24,
-                      "moodbooster": 26,
-                      "rockthis": 26,
-                      "kpop": 26,
-                      "christmas": 26,
-                      "teenparty": 28,
-                      "newmusicfriday": 1,
-                      "danceparty": 28,
-                      "bighit": 28,
-                      "goodvibes": 28,
-                      "justhits": 30,
-                      "essentialindie": 30,
-                      "poprising": 12,
-                      "chilledrnb": 12,
-                      "viralhits": 10,
-                      "afrobeats": 12,
-                      "countrycoffeehouse": 15,
-                      "viral50": 10,
-                      "indie": 12,
-                      "coffeetable": 20,
-                      "reggae": 20
-                  };
-                  
-                  let maxWeeks = limits[playlist.id] !== undefined ? limits[playlist.id] : Infinity;
-                  
-                  if (weeksInPlaylist >= maxWeeks) {
-                      newBannedTrackIds.add(c.uniqueId);
-                      return false;
-                  }
-             }
-             return true;
-        });
-        if (playlist.type === "genre" && playlist.genre) {
-          playlistContenders = playlistContenders.filter((c) => {
-            if (playlist.genre === "Pop" && c.genre === "Pop") return true;
-            if (playlist.genre === "Hip Hop/Rap" && c.genre === "Hip Hop")
-              return true;
-            if (
-              playlist.genre === "Dance/Electronic" &&
-              ["Electronic", "EDM", "House"].includes(c.genre)
-            )
-              return true;
-            if (playlist.genre === "Country" && c.genre === "Country")
-              return true;
-            if (playlist.genre === "R&B" && c.genre === "R&B") return true;
-            if (playlist.genre === "Rock" && c.genre === "Rock") return true;
-            if (playlist.genre === "Christmas" && c.genre === "Christmas")
-              return true;
-            if (playlist.genre === "K-Pop" && c.genre === "K-Pop") return true;
-            if (playlist.genre === "Latin" && c.genre === "Latin") return true;
-            if (playlist.genre === "Indie" && c.genre === "Indie") return true;
-            if (playlist.genre === "Afrobeats" && c.genre === "Afrobeats")
-              return true;
-            if (playlist.genre === "Reggae" && c.genre === "Reggae")
-              return true;
-            return false;
-          });
-        }
-
-        if (
-          playlist.id === "newmusicfriday" ||
-          playlist.name.toLowerCase().includes("new music friday")
-        ) {
-          playlistContenders = playlistContenders.filter((c) => {
-            if (c.isPlayerSong && c.songId) {
-              const artistDataForSong = Object.values(updatedArtistsData).find((d) =>
-                d.songs.some((s) => s.id === c.songId),
-              );
-              const songObj = artistDataForSong?.songs.find((s) => s.id === c.songId);
-              if (!songObj || !songObj.releaseDate) return false;
-              // Must be released this week
-              const isThisWeek =
-                songObj.releaseDate.year === newDate.year &&
-                songObj.releaseDate.week === newDate.week;
-              if (!isThisWeek) return false;
-              // Must be released on Friday (day 1 or isFriday or day undefined)
-              const isFridayRelease =
-                songObj.releaseDate.day === 1 ||
-                songObj.releaseDate.day === undefined ||
-                (songObj as any).isFriday === true;
-              return isFridayRelease;
-            }
-            // For NPC songs: must be new this week
-            const isNpcNewThisWeek =
-              newlyGeneratedNpcs.some((npc) => npc.uniqueId === c.uniqueId) ||
-              (c.debutWeek === newDate.week && c.debutYear === newDate.year);
-            return isNpcNewThisWeek;
-          });
-        }
-
-        const scoredContenders = playlistContenders
-          .map((c) => {
-            let score = c.weeklyStreams + Math.random() * 5000; // add a little randomness to the playlist curation
-
-            if (c.isPlayerSong && c.songId) {
-              const artistDataForBoost = Object.values(updatedArtistsData).find(
-                (d) => d.songs.some((s) => s.id === c.songId),
-              );
-              const actualSong = artistDataForBoost?.songs.find(
-                (s) => s.id === c.songId,
-              );
-              if (
-                actualSong &&
-                actualSong.playlistBoostWeeks &&
-                actualSong.playlistBoostWeeks > 0
-              ) {
-                score *= PLAYLIST_BOOST_MULTIPLIER; // High chance to hit playlists
-              }
-
-              // Independent penalty / Label boost for big playlists
-              if (playlist.followers > 10000000) {
-                if (!artistDataForBoost?.contract) {
-                  score *= 0.5; // Harder for independent artists
-                } else if (!artistDataForBoost.contract.isCustom) {
-                  const label = LABELS.find(
-                    (l) => l.id === artistDataForBoost.contract?.labelId,
-                  );
-                  if (label?.contractType === "petty")
-                    score *= 3.0; // Major labels push harder
-                  else if (label?.contractType === "major") score *= 2.0;
-                }
-              }
-            }
-            return { ...c, score };
-          })
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 50);
-
-        let newTracks: SpotifyPlaylistTrack[] = scoredContenders.map(
-          (c, index) => {
-            const existingTrack = playlist.tracks.find(
-              (t) => t.songId === c.uniqueId,
-            );
-            return {
-              songId: c.uniqueId,
-              artistName: c.artist,
-              artistId: c.isPlayerSong
-                ? allPlayerSongsFlat.find((s) => s.id === c.songId)?.artistId ||
-                  "unknown"
-                : "unknown",
-              title: c.title || "Unknown Title",
-              coverArt: c.coverArt,
-              position: index + 1,
-              addedDate: (existingTrack && existingTrack.addedDate) ? existingTrack.addedDate : newDate,
-            };
-          },
-        );
-
-        // Apply purchased playlist positions
-        allPlayerSongsFlat.forEach((playerSong) => {
-          const artistData = updatedArtistsData[playerSong.artistId];
-          if (artistData) {
-            const songWithData = artistData.songs.find(
-              (s) => s.id === playerSong.id,
-            );
-            if (songWithData && songWithData.purchasedPlaylists) {
-              const purchased = songWithData.purchasedPlaylists.find(
-                (p) => p.playlistId === playlist.id && p.weeksRemaining > 0,
-              );
-              if (purchased) {
-                const contender = allContendersRaw.find(
-                  (c) => c.isPlayerSong && c.songId === playerSong.id,
-                );
-                if (contender) {
-                  const existingIdx = newTracks.findIndex(
-                    (t) => t.songId === contender.uniqueId,
-                  );
-                  if (existingIdx !== -1) {
-                    newTracks.splice(existingIdx, 1);
-                  }
-
-                  const insertIdx = Math.max(
-                    0,
-                    Math.min(newTracks.length, purchased.position - 1),
-                  );
-                  const trackEntry: SpotifyPlaylistTrack = {
-                    songId: contender.uniqueId,
-                    artistName: contender.artist,
-                    artistId: playerSong.artistId,
-                    title: contender.title,
-                    coverArt: contender.coverArt,
-                    position: insertIdx + 1,
-                    addedDate: newDate,
-                  };
-                  newTracks.splice(insertIdx, 0, trackEntry);
-                }
-              }
-            }
-          }
-        });
-
-        newTracks = newTracks
-          .slice(0, 50)
-          .map((t, i) => ({ ...t, position: i + 1 }));
-
-        return { ...playlist, tracks: newTracks, bannedTrackIds: Array.from(newBannedTrackIds) };
-      });
-
-      // Generate "This Is [Artist]" playlists for any player artists with >= 10 songs
-      allPlayerArtistsAndGroups.forEach((artist) => {
-        const artistData = updatedArtistsData[artist.id];
-        if (artistData) {
-          const releasedSongs = artistData.songs.filter(
-            (s) => s.isReleased && !s.remixOfSongId,
-          );
-          if (releasedSongs.length >= 10) {
-            // Sort by total streams (biggest hits)
-            const biggestHits = [...releasedSongs]
-              .sort(
-                (a, b) =>
-                  (b.streams || 0) +
-                  (b.sales || 0) * 150 -
-                  ((a.streams || 0) + (a.sales || 0) * 150),
-              )
-              .slice(0, 50);
-
-            const playlistId = `this_is_${artist.id}`;
-            const existingPlaylist = newSpotifyPlaylists.find(
-              (p) => p.id === playlistId,
-            );
-
-            const tracks: SpotifyPlaylistTrack[] = biggestHits.map(
-              (song, index) => {
-                const existingTrack = existingPlaylist?.tracks.find(
-                  (t) => t.songId === song.id,
-                );
-                return {
-                  songId: song.id,
-                  artistName: artist.name,
-                  artistId: artist.id,
-                  title: song.title,
-                  coverArt: song.coverArt,
-                  position: index + 1,
-                  addedDate: (existingTrack && existingTrack.addedDate) ? existingTrack.addedDate : newDate,
-                  explicit: song.explicit || false,
-                };
-              },
-            );
-
-            const thisIsPlaylist: SpotifyPlaylist = {
-              id: playlistId,
-              name: `This Is ${artist.name}`,
-              description: `This is ${artist.name}. The essential tracks, all in one playlist.`,
-              followers: existingPlaylist
-                ? existingPlaylist.followers
-                : artistData.spotifyFollowers || 0,
-              coverArt: artist.image,
-              artistPosition: 1,
-              type: "this_is",
-              tracks: tracks,
-            };
-
-            if (existingPlaylist) {
-              const index = newSpotifyPlaylists.findIndex(
-                (p) => p.id === playlistId,
-              );
-              newSpotifyPlaylists[index] = thisIsPlaylist;
-            } else {
-              newSpotifyPlaylists.push(thisIsPlaylist);
-            }
-          }
-        }
-      });
-
-      if (contractRenewalForActivePlayer) {
-        return {
-          ...finalState,
-          date: newDate,
-          artistsData: updatedArtistsData,
-          spotifyPlaylists: newSpotifyPlaylists,
-          billboardHot100: newBillboardHot100,
-          billboardBubblingUnder25: newBillboardBubblingUnder25,
-          bubblingUnderHistory: newBubblingUnderHistory,
-          billboardTopAlbums: newBillboardTopAlbums,
-          chartHistory: newChartHistory,
-          albumChartHistory: newAlbumChartHistory,
-          spotifyGlobal: newSpotifyGlobal,
-          spotifyGlobalMusicVideos: newSpotifyGlobalMusicVideos,
-          videoChartHistory: newVideoChartHistory,
-          spotifyUS: newSpotifyUS,
-          spotifyCanada: newSpotifyCanada,
-          spotifyUK: newSpotifyUK,
-          spotifyLatin: newSpotifyLatin,
-          spotifyAsia: newSpotifyAsia,
-          spotifyAfrica: newSpotifyAfrica,
-          ukSinglesChart: newUkSinglesChart,
-          ukSinglesChartHistory: newUkSinglesChartHistory,
-          ukAlbumsChart: newUkAlbumsChart,
-          ukAlbumsChartHistory: newUkAlbumsChartHistory,
-          radioOverallChart,
-          radioFormatCharts,
-          radioUrbanChart,
-          radioPopChart,
-          radioChrChart,
-          radioAcChart,
-          radioHotAcChart,
-          radioCountryChart,
-          radioClassicHitsChart,
-          radioClassicRockChart,
-          radioActiveRockChart,
-          radioAltRockChart,
-          radioAaaChart,
-          radioUrbanAcChart,
-          radioRhythmicChart,
-          radioAdultHitsChart,
-          radioLatinChart,
-          radioChristmasChart,
-          hotPopSongs: newHotPopSongs,
-          hotRapRnb: newHotRapRnb,
-          electronicChart: newElectronicChart,
-          countryChart: newCountryChart,
-          hotPopSongsHistory: newHotPopSongsHistory,
-          hotRapRnbHistory: newHotRapRnbHistory,
-          electronicChartHistory: newElectronicChartHistory,
-          countryChartHistory: newCountryChartHistory,
-          spotifyNewEntries: newEntriesCount,
-          npcs: newNpcsWithReleases,
-          npcAlbums: newNpcAlbums,
-        soundtrackAlbums: state.soundtrackAlbums,
-        fifaSingleScheduled: state.fifaSingleScheduled,
-          contractRenewalOffer: contractRenewalForActivePlayer,
-          currentView: "contractRenewal",
-        };
-      }
-
-      // --- DYNAMIC TMZ RELATIONSHIP & GOSSIP POSTS ---
-      for (const artistId in updatedArtistsData) {
-        const aData = updatedArtistsData[artistId];
-        const aProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
-        if (!aProfile) continue;
-        
-        const isFemale = aProfile.pronouns === "she/her";
-        
-        // 2% chance per week per artist for a juicy TMZ event if they have relationships
-        if (aData.relationships && aData.relationships.length > 0 && Math.random() < 0.02) {
-           const activeRels = aData.relationships.filter(r => r.status === "dating" || r.status === "engaged" || r.status === "married");
-           const marriedRels = aData.relationships.filter(r => r.status === "married");
-           const exRels = aData.relationships.filter(r => r.status === "ex");
-           const kids = aData.kids || [];
-           
-           const possibleEvents = [];
-           
-           if (kids.length > 0 && newDate.week >= 15 && newDate.week <= 17) {
-               possibleEvents.push("coachella_kids");
-           }
-           if (exRels.length > 0) {
-               possibleEvents.push("ex_thinking");
-               possibleEvents.push("reignite_ex");
-           }
-           if (activeRels.length > 0) {
-               possibleEvents.push("cheated");
-               if (isFemale) possibleEvents.push("cheated_pregnant");
-           }
-           if (activeRels.length > 0 && kids.length > 0) {
-               possibleEvents.push("expecting_baby");
-           }
-           
-           if (possibleEvents.length > 0) {
-               const ev = possibleEvents[Math.floor(Math.random() * possibleEvents.length)];
-               let tmzContent = "";
-               
-               if (ev === "coachella_kids") {
-                   const kid = kids[Math.floor(Math.random() * kids.length)];
-                   tmzContent = `${kid.name} Turns Coachella Into Their Own Meet and Greet. tmz.me/${crypto.randomUUID().substring(0,6)}`;
-               } else if (ev === "ex_thinking") {
-                   const ex = exRels[Math.floor(Math.random() * exRels.length)];
-                   tmzContent = `üò¨ EXCLUSIVE: ${aProfile.name}'s ex ${ex.partnerName} thought they were still in a relationship. tmz.com/${newDate.year}/${newDate.week}/ex`;
-               } else if (ev === "reignite_ex") {
-                   const ex = exRels[Math.floor(Math.random() * exRels.length)];
-                   tmzContent = `ü©∑ ${aProfile.name} reignites romance with ex ${ex.partnerName}! tmz.com/${newDate.year}/${newDate.week}/${aProfile.name.toLowerCase().replace(/\s/g, "")}`;
-               } else if (ev === "cheated") {
-                   const rel = activeRels[Math.floor(Math.random() * activeRels.length)];
-                   tmzContent = `${aProfile.name} was brazenly cheating on ${rel.partnerName} with not one but two people. #TMZ`;
-               } else if (ev === "cheated_pregnant") {
-                   const rel = activeRels[Math.floor(Math.random() * activeRels.length)];
-                   tmzContent = `${rel.partnerName} was brazenly cheating on a pregnant ${aProfile.name} with not one but two women. #TMZ`;
-               } else if (ev === "expecting_baby") {
-                   const rel = activeRels[Math.floor(Math.random() * activeRels.length)];
-                   const sharedKids = kids.filter(k => k.parentName === rel.partnerName).length;
-                   if (sharedKids > 0) {
-                      tmzContent = `${aProfile.name} Pregnant, Expecting Baby Number ${sharedKids + 1} with ${rel.partnerName}.`;
-                   } else {
-                      tmzContent = `${aProfile.name} Pregnant, Expecting Baby with ${rel.partnerName}.`;
-                   }
-               }
-               
-               if (tmzContent) {
-                   const newTmzPost = {
-                       id: crypto.randomUUID(),
-                       authorId: "tmz",
-                       content: tmzContent,
-                       likes: Math.floor(Math.random() * 50000) + 10000,
-                       retweets: Math.floor(Math.random() * 10000) + 2000,
-                       views: Math.floor(Math.random() * 2000000) + 500000,
-                       date: newDate,
-                   };
-                   aData.xPosts.unshift(newTmzPost);
-               }
-           }
-        }
-      }
-      // --- END TMZ LOGIC ---
-
-      // --- WEEKLY DIVORCE PROGRESSION & LEAKS LOGIC ---
-      for (const artistId in updatedArtistsData) {
-        const aData = updatedArtistsData[artistId];
-        const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
-        if (!aProfile) continue;
-
-        if (aData.relationships && aData.relationships.length > 0) {
-          const updatedRels = aData.relationships.map((rel) => {
-            // 1. Ongoing Divorce Legal Battle
-            if (rel.status === "divorcing" && rel.divorceCase && !rel.divorceCase.isFinalized) {
-              let updatedCase = { ...rel.divorceCase };
-              updatedCase.weeksInBattle = (updatedCase.weeksInBattle || 1) + 1;
-
-              // Fan Support on X if Public Image >= 75
-              if ((aData.publicImage ?? 80) >= 75 && Math.random() < 0.70) {
-                const fanSupportOptions = [
-                  `We stand with @${aProfile.name} through this tough divorce! Stay strong üëë‚ù§Ô∏è`,
-                  `Sending so much love to @${aProfile.name} during this legal battle üôè‚ú®`,
-                  `Hoping for a fair court ruling for @${aProfile.name}! We love you so much üíñ`,
-                  `The media needs to leave @${aProfile.name} alone while they navigate this divorce ‚úä`
-                ];
-                const fanTweet = {
-                  id: crypto.randomUUID(),
-                  authorId: "fan_support_" + crypto.randomUUID().substring(0, 4),
-                  content: fanSupportOptions[Math.floor(Math.random() * fanSupportOptions.length)],
-                  likes: Math.floor(Math.random() * 20000) + 3000,
-                  retweets: Math.floor(Math.random() * 4000) + 600,
-                  views: Math.floor(Math.random() * 150000) + 30000,
-                  date: newDate,
-                };
-                aData.xPosts.unshift(fanTweet);
-              }
-
-              // Evaluate pending proposal or create partner proposal
-              if (updatedCase.currentProposal && updatedCase.currentProposal.status === "pending_judge") {
-                const prop = updatedCase.currentProposal;
-                const judgeAccepted = Math.random() < 0.5; // 50% chance
-
-                if (!judgeAccepted) {
-                  const declinedProp: DivorceProposal = {
-                    ...prop,
-                    status: "declined",
-                    declinedReason: "Judge Marcus ruled that the requested settlement terms do not satisfy state equitable distribution standards.",
-                  };
-                  updatedCase.currentProposal = declinedProp;
-                  updatedCase.history = [declinedProp, ...updatedCase.history];
-
-                  aData.xPosts.unshift({
-                    id: crypto.randomUUID(),
-                    authorId: "tmz",
-                    content: `‚öñÔ∏è COURT UPDATE: Judge Marcus has rejected the proposed divorce settlement between ${aProfile.name} and ${rel.partnerName}.`,
-                    likes: Math.floor(Math.random() * 40000) + 10000,
-                    retweets: Math.floor(Math.random() * 8000) + 2000,
-                    views: Math.floor(Math.random() * 800000) + 150000,
-                    date: newDate,
-                  });
-                } else {
-                  // Finalized!
-                  const acceptedProp: DivorceProposal = {
-                    ...prop,
-                    status: "accepted",
-                  };
-                  const settlement = {
-                    custody: prop.custody,
-                    alimonyPayor: prop.alimonyPayor,
-                    alimonyAmount: prop.alimonyAmount,
-                    childSupportPayor: prop.childSupportPayor,
-                    childSupportAmount: prop.childSupportAmount,
-                  };
-                  updatedCase.currentProposal = acceptedProp;
-                  updatedCase.history = [acceptedProp, ...updatedCase.history];
-                  updatedCase.isFinalized = true;
-                  updatedCase.finalizedDate = newDate;
-                  updatedCase.agreedSettlement = settlement;
-
-                  if (!aData.inbox) aData.inbox = [];
-                  const hasKids = (aData.kids || []).some((k) => k.parentName === rel.partnerName);
-                  aData.inbox.unshift(
-                    createGovernmentDivorceEmail(
-                      aProfile.name,
-                      rel.partnerName,
-                      rel.id,
-                      settlement,
-                      hasKids,
-                      newDate
-                    )
-                  );
-
-                  if (prop.alimonyPayor === "player" && prop.alimonyAmount > 0) {
-                    if (!aData.recurringExpenses) aData.recurringExpenses = [];
-                    aData.recurringExpenses.push({
-                      id: `alimony_${rel.id}`,
-                      name: `Alimony (${rel.partnerName})`,
-                      cost: prop.alimonyAmount,
-                      type: "monthly",
-                    });
-                  }
-                  if (prop.childSupportPayor === "player" && prop.childSupportAmount > 0) {
-                    if (!aData.recurringExpenses) aData.recurringExpenses = [];
-                    aData.recurringExpenses.push({
-                      id: `child_support_${rel.id}`,
-                      name: `Child Support (${rel.partnerName})`,
-                      cost: prop.childSupportAmount,
-                      type: "monthly",
-                    });
-                  }
-
-                  aData.xPosts.unshift({
-                    id: crypto.randomUUID(),
-                    authorId: "tmz",
-                    content: `‚öñÔ∏è OFFICIAL: ${aProfile.name} is officially divorced from ${rel.partnerName}.`,
-                    likes: Math.floor(Math.random() * 400000) + 150000,
-                    retweets: Math.floor(Math.random() * 100000) + 25000,
-                    views: Math.floor(Math.random() * 6000000) + 2000000,
-                    date: newDate,
-                  });
-
-                  return {
-                    ...rel,
-                    status: "ex" as const,
-                    endYear: newDate.year,
-                    endWeek: newDate.week,
-                    divorceCase: updatedCase,
-                  };
-                }
-              } else if (
-                (!updatedCase.currentProposal || updatedCase.currentProposal.status === "declined") &&
-                updatedCase.weeksInBattle < 52 &&
-                Math.random() < 0.40
-              ) {
-                // Partner submits a counter-proposal to judge
-                const partnerCustodyOptions: ("player" | "joint" | "partner")[] = ["joint", "partner", "player"];
-                const partnerCustody = partnerCustodyOptions[Math.floor(Math.random() * partnerCustodyOptions.length)];
-                const partnerAlimonyAmt = [2500, 5000, 10000, 25000][Math.floor(Math.random() * 4)];
-                const hasKids = (aData.kids || []).some((k) => k.parentName === rel.partnerName);
-                const partnerChildSupportAmt = hasKids ? [1500, 3000, 5000, 10000][Math.floor(Math.random() * 4)] : 0;
-
-                const partnerProposal: DivorceProposal = {
-                  id: crypto.randomUUID(),
-                  proposedBy: "partner",
-                  custody: partnerCustody,
-                  alimonyPayor: "player",
-                  alimonyAmount: partnerAlimonyAmt,
-                  childSupportPayor: hasKids ? "player" : "none",
-                  childSupportAmount: partnerChildSupportAmt,
-                  status: "pending_judge",
-                  dateProposed: newDate,
-                };
-                updatedCase.currentProposal = partnerProposal;
-
-                aData.xPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: "tmz",
-                  content: `‚öñÔ∏è COURT UPDATE: ${rel.partnerName} has submitted a counter-settlement demand to the judge in their divorce with ${aProfile.name}.`,
-                  likes: Math.floor(Math.random() * 30000) + 8000,
-                  retweets: Math.floor(Math.random() * 6000) + 1500,
-                  views: Math.floor(Math.random() * 500000) + 100000,
-                  date: newDate,
-                });
-              } else if (updatedCase.weeksInBattle >= 52) {
-                // 1 Year Max Battle Reached -> Judge issues final forced decree!
-                const forcedSettlement = {
-                  custody: "joint" as const,
-                  alimonyPayor: "player" as const,
-                  alimonyAmount: 5000,
-                  childSupportPayor: (aData.kids || []).some((k) => k.parentName === rel.partnerName) ? ("player" as const) : ("none" as const),
-                  childSupportAmount: (aData.kids || []).some((k) => k.parentName === rel.partnerName) ? 2500 : 0,
-                };
-                updatedCase.isFinalized = true;
-                updatedCase.finalizedDate = newDate;
-                updatedCase.agreedSettlement = forcedSettlement;
-
-                if (!aData.inbox) aData.inbox = [];
-                const hasKidsForced = (aData.kids || []).some((k) => k.parentName === rel.partnerName);
-                aData.inbox.unshift(
-                  createGovernmentDivorceEmail(
-                    aProfile.name,
-                    rel.partnerName,
-                    rel.id,
-                    forcedSettlement,
-                    hasKidsForced,
-                    newDate
-                  )
-                );
-
-                if (!aData.recurringExpenses) aData.recurringExpenses = [];
-                aData.recurringExpenses.push({
-                  id: `alimony_${rel.id}`,
-                  name: `Alimony (${rel.partnerName})`,
-                  cost: 5000,
-                  type: "monthly",
-                });
-                if (forcedSettlement.childSupportAmount > 0) {
-                  aData.recurringExpenses.push({
-                    id: `child_support_${rel.id}`,
-                    name: `Child Support (${rel.partnerName})`,
-                    cost: forcedSettlement.childSupportAmount,
-                    type: "monthly",
-                  });
-                }
-
-                aData.xPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: "tmz",
-                  content: `‚öñÔ∏è OFFICIAL: After a 1-year legal battle, Judge Marcus has issued a final divorce decree for ${aProfile.name} and ${rel.partnerName}.`,
-                  likes: Math.floor(Math.random() * 500000) + 200000,
-                  retweets: Math.floor(Math.random() * 120000) + 30000,
-                  views: Math.floor(Math.random() * 8000000) + 3000000,
-                  date: newDate,
-                });
-
-                return {
-                  ...rel,
-                  status: "ex" as const,
-                  endYear: newDate.year,
-                  endWeek: newDate.week,
-                  divorceCase: updatedCase,
-                };
-              }
-
-              return {
-                ...rel,
-                divorceCase: updatedCase,
-              };
-            }
-
-            // 2. Leaking Divorce Agreement 1 Week Later (75% chance)
-            if (
-              rel.divorceCase &&
-              rel.divorceCase.isFinalized &&
-              !rel.divorceCase.isLeaked &&
-              rel.divorceCase.finalizedDate
-            ) {
-              const absFinal = rel.divorceCase.finalizedDate.year * 52 + rel.divorceCase.finalizedDate.week;
-              const absCurrent = newDate.year * 52 + newDate.week;
-              if (absCurrent - absFinal === 1) {
-                if (Math.random() < 0.75) {
-                  const updatedCase = {
-                    ...rel.divorceCase,
-                    isLeaked: true,
-                    leakedDate: newDate,
-                  };
-                  const setl = rel.divorceCase.agreedSettlement;
-                  const custodyStr = setl?.custody === "player" ? "Full (Artist)" : setl?.custody === "partner" ? "Full (Ex)" : "Joint (50/50)";
-                  const alimonyStr = setl?.alimonyAmount ? `$${setl.alimonyAmount.toLocaleString()}/mo` : "$0";
-                  const childStr = setl?.childSupportAmount ? `$${setl.childSupportAmount.toLocaleString()}/mo` : "$0";
-
-                  const leakContent = `üö® LEAKED COURT DOCUMENTS: Details of ${aProfile.name}'s divorce agreement with ${rel.partnerName} have leaked online! Custody: ${custodyStr} | Alimony: ${alimonyStr} | Child Support: ${childStr}.`;
-                  aData.xPosts.unshift({
-                    id: crypto.randomUUID(),
-                    authorId: "tmz",
-                    content: leakContent,
-                    likes: Math.floor(Math.random() * 600000) + 200000,
-                    retweets: Math.floor(Math.random() * 150000) + 40000,
-                    views: Math.floor(Math.random() * 9000000) + 3000000,
-                    date: newDate,
-                  });
-
-                  return {
-                    ...rel,
-                    divorceCase: updatedCase,
-                  };
-                }
-              }
-            }
-
-            return rel;
-          });
-
-          aData.relationships = updatedRels;
-        }
-      }
-
-      // --- DYNAMIC GENERAL TWEETS ---
-      for (const artistId in updatedArtistsData) {
-        const aData = updatedArtistsData[artistId];
-        const aProfile = allPlayerArtistsAndGroups.find(a => a.id === artistId);
-        if (!aProfile) continue;
-        
-        // 20% chance per week per artist for generic tweets
-        if (Math.random() < 0.20) {
-            let tweetContent = "";
-            let authorId = "popbase";
-            
-            const pop = aData.popularity || 0;
-            const r = Math.random();
-            
-            let possibleUsers = aData.xUsers.filter(u => !["tmz", "popbase", "popcrave", "chartdata"].includes(u.id));
-            if (possibleUsers.length === 0) possibleUsers = aData.xUsers;
-            const randomFan = possibleUsers[Math.floor(Math.random() * possibleUsers.length)]?.id || "popbase";
-            
-            if (pop < 20) {
-                const options = [
-                    `Who is ${aProfile.name}? Kept seeing them on my timeline.`,
-                    `Honestly ${aProfile.name} has some good songs, y'all sleeping on them.`,
-                    `Local artist ${aProfile.name} is performing at a mall near me lol`,
-                    `${aProfile.name} needs a better PR team...`,
-                    `I actually really like ${aProfile.name}'s vibe.`,
-                    `Does anyone actually listen to ${aProfile.name}?`
-                ];
-                tweetContent = options[Math.floor(Math.random() * options.length)];
-                authorId = randomFan;
-            } else if (pop >= 20 && pop < 50) {
-                const options = [
-                    `${aProfile.name} is definitely the next big thing. Mark my words.`,
-                    `I'm obsessed with ${aProfile.name}'s style lately.`,
-                    `Did anyone see ${aProfile.name}'s latest look? üòç`,
-                    `${aProfile.name} could totally crossover into acting.`,
-                    `Can we talk about ${aProfile.name} for a second??`,
-                    `${aProfile.name} spotted leaving a recording studio in LA üëÄ`,
-                    `I feel like ${aProfile.name} is about to drop the song of the summer.`,
-                    `Is ${aProfile.name} dating anyone right now? Asking for a friend.`
-                ];
-                tweetContent = options[Math.floor(Math.random() * options.length)];
-                authorId = r < 0.2 ? "popbase" : randomFan;
-            } else if (pop >= 50 && pop < 80) {
-                const options = [
-                    `Everyone is talking about ${aProfile.name} right now!`,
-                    `Pop Crave: ${aProfile.name} has officially surpassed 10 Million monthly listeners!`,
-                    `BREAKING: ${aProfile.name} spotted in Paris for Fashion Week.`,
-                    `${aProfile.name} is literally the music industry right now.`,
-                    `Why does ${aProfile.name} look so good in EVERYTHING?`,
-                    `Stan Twitter is currently at war over ${aProfile.name}'s latest chart position.`,
-                    `I met ${aProfile.name} today and they were so sweet üò≠`,
-                    `${aProfile.name} just posted a new selfie on IG and the internet is breaking.`,
-                    `Imagine going to a ${aProfile.name} concert and not knowing all the words... couldn't be me.`
-                ];
-                tweetContent = options[Math.floor(Math.random() * options.length)];
-                
-                if (tweetContent.startsWith("Pop Crave")) {
-                     tweetContent = tweetContent.replace("Pop Crave: ", "");
-                     authorId = "popcrave";
-                } else if (tweetContent.startsWith("BREAKING")) {
-                     authorId = "popbase";
-                } else {
-                     authorId = r < 0.5 ? "popbase" : randomFan;
-                }
-            } else {
-                const options = [
-                    `${aProfile.name} breaks the internet once again!`,
-                    `TMZ: ${aProfile.name} buys a new $20 Million mansion in Beverly Hills.`,
-                    `${aProfile.name} is a global icon at this point.`,
-                    `You can't go anywhere without hearing ${aProfile.name}!`,
-                    `Is ${aProfile.name} the biggest artist in the world right now?`,
-                    `ChartData: ${aProfile.name} remains at the top of the charts for another week!`,
-                    `I literally named my child after ${aProfile.name}.`,
-                    `${aProfile.name} spotted at an exclusive VIP party with A-list actors.`,
-                    `The grip ${aProfile.name} has on pop culture needs to be studied.`
-                ];
-                tweetContent = options[Math.floor(Math.random() * options.length)];
-                
-                if (tweetContent.startsWith("TMZ")) {
-                    tweetContent = tweetContent.replace("TMZ: ", "");
-                    authorId = "tmz";
-                }
-                else if (tweetContent.startsWith("ChartData")) {
-                    tweetContent = tweetContent.replace("ChartData: ", "");
-                    authorId = "chartdata";
-                }
-                else {
-                    authorId = r < 0.4 ? "popbase" : randomFan;
-                }
-            }
-            
-            if (tweetContent) {
-                 let postImage = undefined;
-                 if (Math.random() < 0.25) { // 25% chance of image
-                     // Try to grab a recent album or single cover, or artist avatar
-                     const recentReleases = aData.releases || [];
-                     const recentSingles = aData.songs || [];
-                     if (recentReleases.length > 0 && Math.random() < 0.5) {
-                         postImage = recentReleases[0].coverArt;
-                     } else if (recentSingles.length > 0 && Math.random() < 0.5) {
-                         postImage = recentSingles[recentSingles.length - 1].coverArt;
-                     } else {
-                         postImage = aProfile.image;
-                     }
-                 }
-
-                 const newGenPost = {
-                     id: crypto.randomUUID(),
-                     authorId: authorId,
-                     content: tweetContent,
-                     image: postImage,
-                     likes: Math.floor(Math.random() * (pop * 1000)) + 500,
-                     retweets: Math.floor(Math.random() * (pop * 200)) + 100,
-                     views: Math.floor(Math.random() * (pop * 50000)) + 10000,
-                     date: newDate,
-                 };
-                 aData.xPosts.unshift(newGenPost);
-            }
-        }
-      }
-      // --- END DYNAMIC GENERAL TWEETS ---
-
-      if (tourArrestEncounter && !finalState.disableEncounters) {
-        finalState.activeEncounter = tourArrestEncounter;
-      } else if (tourDynamicPricingEncounter && !finalState.disableEncounters) {
-        finalState.activeEncounter = tourDynamicPricingEncounter;
-      } else if (tiktokEncounterThisWeek && !finalState.disableEncounters) {
-        finalState.activeEncounter = tiktokEncounterThisWeek;
-      } else if (leakEncounterThisWeek && !finalState.disableEncounters) {
-        finalState.activeEncounter = leakEncounterThisWeek;
-      } else if (
-        !finalState.disableEncounters &&
-        finalState.currentView !== "contractRenewal" &&
-        !finalState.activeEncounter &&
-        !finalState.contractOffer
-      ) {
-        const updatedActiveData = updatedArtistsData[state.activeArtistId];
-        if (updatedActiveData) {
-          const artist = allPlayerArtistsAndGroups.find(
-            (a) => a.id === state.activeArtistId,
-          );
-          if (
-            artist &&
-            Math.random() < (updatedActiveData.popularity / 100) * 0.33
-          ) {
-            const possibleEncounters = getPossibleEncounters(
-              artist,
-              updatedActiveData,
-              newDate.year,
-            );
-            if (possibleEncounters.length > 0) {
-              finalState.activeEncounter =
-                possibleEncounters[
-                  Math.floor(Math.random() * possibleEncounters.length)
-                ];
-            }
-          }
-        }
-      }
-
-      if (autoGrammySubmissions.length > 0) {
-        finalState.grammySubmissions = [
-          ...(finalState.grammySubmissions || []),
-          ...autoGrammySubmissions,
-        ];
-      }
-      if (autoAmaSubmissions.length > 0) {
-        finalState.amaSubmissions = [
-          ...(finalState.amaSubmissions || []),
-          ...autoAmaSubmissions,
-        ];
-      }
-      if (autoBritSubmissions.length > 0) {
-        finalState.britSubmissions = [
-          ...(finalState.britSubmissions || []),
-          ...autoBritSubmissions,
-        ];
-      }
-
-
-      // Podcast Simulation
-      let newPodcasts = [...(finalState.podcasts || [])];
-      let newPodcastCharts = [...(finalState.podcastCharts || [])];
-
-      if (isWeeklyUpdate) {
-          newPodcasts = newPodcasts.map(podcast => {
-              if (podcast.episodes.length === 0) return podcast;
-
-              // Generate plays for all episodes
-              let updatedEpisodes = podcast.episodes.map(ep => {
-                  // Older episodes get less plays
-                  const weeksOld = (newDate.year - ep.releaseDate.year) * 52 + (newDate.week - ep.releaseDate.week);
-                  
-                  let newPlays = 0;
-                  if (weeksOld === 0) {
-                      newPlays = podcast.followers * (Math.random() * 0.5 + 0.3); // 30-80% of followers listen week 1
-                  } else {
-                      newPlays = podcast.followers * (Math.random() * 0.1) * Math.pow(0.8, weeksOld); // Decay
-                  }
-                  
-                  newPlays = Math.floor(newPlays);
-                  
-                  // Guest boost
-                  if (ep.guestId) {
-                      newPlays *= (1 + Math.random() * 2); 
-                  }
-                  
-                  const rpm = 0.005; // $5 per 1000 plays
-                  const newRev = newPlays * rpm;
-                  
-                  return {
-                      ...ep,
-                      plays: ep.plays + newPlays,
-                      revenue: ep.revenue + newRev
-                  };
-              });
-              
-              const newTotalPlays = updatedEpisodes.reduce((sum, ep) => sum + ep.plays, 0);
-              
-              // Follower growth
-              let newFollowers = podcast.followers;
-              if (updatedEpisodes.length > 0) {
-                  const latestEpPlays = updatedEpisodes[updatedEpisodes.length - 1].plays;
-                  const newFolls = Math.floor(latestEpPlays * (Math.random() * 0.05));
-                  newFollowers += newFolls;
-              }
-              
-              return {
-                  ...podcast,
-                  episodes: updatedEpisodes,
-                  totalPlays: newTotalPlays,
-                  followers: newFollowers
-              };
-          });
-          
-          // NPC Podcasts automatically release episodes
-          newPodcasts = newPodcasts.map(podcast => {
-              if (podcast.isNpc) {
-                  // 20% chance per week
-                  if (Math.random() < 0.2) {
-                      const newEp = {
-                          id: `ep_npc_${Date.now()}_${Math.random()}`,
-                          title: `Episode ${podcast.episodes.length + 1}`,
-                          description: `A new episode of ${podcast.name}.`,
-                          duration: Math.floor(Math.random() * 60) + 40,
-                          releaseDate: newDate,
-                          plays: 0,
-                          revenue: 0,
-                          hasVideo: Math.random() > 0.5
-                      };
-                      return {
-                          ...podcast,
-                          episodes: [...podcast.episodes, newEp]
-                      };
-                  }
-              }
-              return podcast;
-          });
-          
-          newPodcastCharts = [...newPodcasts].sort((a, b) => b.followers - a.followers).slice(0, 50);
-          
-          // Payout to active artist for their podcasts
-          const activeData = finalState.artistsData[state.activeArtistId];
-          if (activeData) {
-              const myPods = newPodcasts.filter(p => !p.isNpc && p.host === (state.soloArtist?.name || state.group?.name));
-              let totalRev = 0;
-              myPods.forEach(p => {
-                  p.episodes.forEach(ep => {
-                      if (ep.releaseDate.year === newDate.year && ep.releaseDate.week === newDate.week) {
-                           // This is new rev from this week, wait, the revenue was already calculated and added to total.
-                           // Actually, let's just pay the difference.
-                      }
-                  });
-              });
-              
-              // Let's do a simpler payout: sum all episode revenue from this week.
-              totalRev = myPods.reduce((sum, p) => {
-                  return sum + p.episodes.reduce((epSum, ep) => {
-                      const weeksOld = (newDate.year - ep.releaseDate.year) * 52 + (newDate.week - ep.releaseDate.week);
-                      if (weeksOld === 0) return epSum + ep.revenue; // roughly
-                      return epSum;
-                  }, 0);
-              }, 0);
-              // Wait, revenue in ep.revenue is ALL TIME.
-              // We need to calculate just this week's revenue. 
-          }
-      }
-      
-
-         // --- FIFA WORLD CUP ALBUM RELEASE ---
-         var updatedSoundtrackAlbums = [...state.soundtrackAlbums];
-         var newFifaScheduled = state.fifaSingleScheduled;
-         if (state.fifaSingleScheduled && newDate.week === 25 && newDate.year === state.fifaSingleScheduled.year) {
-             const { title, coverArt, collabs } = state.fifaSingleScheduled;
-             
-             const playerTracks = [{
-                isPlayerSong: true,
-                songId: crypto.randomUUID(), 
-                title: title,
-                artist: (state.soloArtist?.name || state.group?.name || "Artist") + ", " + collabs.join(", ") + ", FIFA Sound",
-                streams: 0,
-                lastWeekStreams: 0,
-                prevWeekStreams: 0,
-                duration: 180 + Math.floor(Math.random() * 60),
-                explicit: false
-             }];
-             
-             const npcTracks = state.npcs
-                .slice(0, 10)
-                .map((npc) => ({
-                  isPlayerSong: false,
-                  songId: npc.uniqueId,
-                  title: [
-                      "Goals", "Game Time", "Illuminate", "Victory", "Champion", 
-                      "Rise Up", "The World is Yours", "We Are One", "Glory", "Unstoppable"
-                  ][Math.floor(Math.random() * 10)],
-                  artist: npc.artist + ", FIFA Sound",
-                  streams: 0,
-                  lastWeekStreams: 0,
-                  prevWeekStreams: 0,
-                  duration: 180 + Math.floor(Math.random() * 60),
-                  explicit: false,
-                }));
-                
-             const allTracks = [...playerTracks, ...npcTracks].sort(
-                () => Math.random() - 0.5,
-             );
-             
-             updatedSoundtrackAlbums.push({
-                id: crypto.randomUUID(),
-                title: `Official FIFA World Cup ${newDate.year} Soundtrack`,
-                coverArt: coverArt,
-                releaseDate: newDate,
-                tracks: allTracks,
-                firstWeekStreams: 0,
-                weeksOnChart: 0,
-                peakPosition: 0,
-             });
-             
-             newFifaScheduled = undefined;
-         }
-
-      // Update podcast offers expiration
-      if (isWeeklyUpdate) {
-         for (const [artistId, aData] of Object.entries(updatedArtistsData)) {
-            if (aData.podcastPitchOffers) {
-                // Remove older than 2 weeks
-                aData.podcastPitchOffers = aData.podcastPitchOffers.filter(o => {
-                    const weeksOld = (newDate.year - o.date.year) * 52 + (newDate.week - o.date.week);
-                    return weeksOld <= 2;
-                });
-            }
-         }
-      }
-
-      return {
-        ...finalState,
-        soundtrackAlbums: typeof updatedSoundtrackAlbums !== "undefined" ? updatedSoundtrackAlbums : state.soundtrackAlbums,
-        fifaSingleScheduled: typeof newFifaScheduled !== "undefined" ? newFifaScheduled : undefined,
-        podcasts: newPodcasts,
-        podcastCharts: newPodcastCharts,
-        date: newDate,
-        artistsData: updatedArtistsData,
-        spotifyPlaylists: newSpotifyPlaylists,
-        billboardHot100: newBillboardHot100,
-        billboardBubblingUnder25: newBillboardBubblingUnder25,
-        bubblingUnderHistory: newBubblingUnderHistory,
-        billboardTopAlbums: newBillboardTopAlbums,
-        chartHistory: newChartHistory,
-        albumChartHistory: newAlbumChartHistory,
-        spotifyGlobal: newSpotifyGlobal,
-          spotifyGlobalMusicVideos: newSpotifyGlobalMusicVideos,
-          videoChartHistory: newVideoChartHistory,
-        spotifyUS: newSpotifyUS,
-        spotifyCanada: newSpotifyCanada,
-        spotifyUK: newSpotifyUK,
-        spotifyLatin: newSpotifyLatin,
-        spotifyAsia: newSpotifyAsia,
-        spotifyAfrica: newSpotifyAfrica,
-        ukSinglesChart: newUkSinglesChart,
-        ukSinglesChartHistory: newUkSinglesChartHistory,
-        ukAlbumsChart: newUkAlbumsChart,
-        ukAlbumsChartHistory: newUkAlbumsChartHistory,
-        radioOverallChart,
-        radioFormatCharts,
-        radioUrbanChart,
-        radioPopChart,
-        radioChrChart,
-        radioAcChart,
-        radioHotAcChart,
-        radioCountryChart,
-        radioClassicHitsChart,
-        radioClassicRockChart,
-        radioActiveRockChart,
-        radioAltRockChart,
-        radioAaaChart,
-        radioUrbanAcChart,
-        radioRhythmicChart,
-        radioAdultHitsChart,
-        radioLatinChart,
-        radioChristmasChart,
-        hotPopSongs: newHotPopSongs,
-        hotRapRnb: newHotRapRnb,
-        electronicChart: newElectronicChart,
-        countryChart: newCountryChart,
-        hotPopSongsHistory: newHotPopSongsHistory,
-        hotRapRnbHistory: newHotRapRnbHistory,
-        electronicChartHistory: newElectronicChartHistory,
-        countryChartHistory: newCountryChartHistory,
-        spotifyNewEntries: newEntriesCount,
-        npcs: newNpcsWithReleases,
-        npcAlbums: newNpcAlbums,
-      };
-    }
-    case "UPDATE_CUSTOM_IMAGES": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            customContributorImages: {
-              ...(activeData.customContributorImages || {}),
-              ...action.payload
-            }
-          }
-        }
-      }
-    }
-    case "RECORD_SONG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      let rightsSoldPercent = 0;
-      let rightsOwnerLabelId = undefined;
-      if (activeData.contract) {
-        rightsOwnerLabelId = activeData.contract.labelId;
-        if (activeData.contract.mastersOwnership === "Label") {
-          rightsSoldPercent = 100;
-        } else if (activeData.contract.mastersOwnership === "Split") {
-          rightsSoldPercent = 100 - activeData.contract.mastersSplitPercent;
-        } else {
-          rightsSoldPercent = 0;
-          rightsOwnerLabelId = undefined;
-        }
-      }
-
-      let safeQuality = action.payload.song.quality;
-      if (typeof safeQuality !== 'number' || Number.isNaN(safeQuality)) safeQuality = 50;
-      action.payload.song.quality = safeQuality;
-      const newSong: Song = {
-        ...action.payload.song,
-        trait: generateSongTrait(action.payload.song.quality, state.difficultyMode || "normal"), traitGenerated: true,
-        dailyStreams: [],
-        rightsSoldPercent:
-          rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
-        rightsOwnerLabelId: rightsOwnerLabelId,
-      };
-      const updatedData = {
-        ...activeData,
-        money: activeData.money - action.payload.cost,
-        songs: [...activeData.songs, newSong],
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "COMBINE_REMIXES": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const originalSongId = action.payload.originalSongId;
-
-      let updatedSongs = [...activeData.songs];
-      let originalSong = updatedSongs.find((s) => s.id === originalSongId);
-      if (!originalSong) return state;
-
-      const remixes = updatedSongs.filter(
-        (s) => s.remixOfSongId === originalSongId && s.isReleased,
-      );
-
-      let combinedStreams = 0;
-      let combinedSales = 0;
-      let combinedLastWeekStreams = 0;
-      let combinedPrevWeekStreams = 0;
-      let combinedRevenue = 0;
-      let combinedNetRevenue = 0;
-
-      const remixReleaseIds = new Set<string>();
-
-      remixes.forEach((remix) => {
-        combinedStreams += remix.streams || 0;
-        combinedSales += remix.sales || 0;
-        combinedLastWeekStreams += remix.lastWeekStreams || 0;
-        combinedPrevWeekStreams += remix.prevWeekStreams || 0;
-        combinedRevenue += remix.revenue || 0;
-        combinedNetRevenue += remix.netRevenue || 0;
-        if (remix.releaseId) {
-          remixReleaseIds.add(remix.releaseId);
-        }
-      });
-
-      // Delete the remix songs
-      updatedSongs = updatedSongs.filter(
-        (s) => !(s.remixOfSongId === originalSongId && s.isReleased),
-      );
-
-      // Add streams to the original song
-      updatedSongs = updatedSongs.map((s) => {
-        if (s.id === originalSongId) {
-          return {
-            ...s,
-            streams: (s.streams || 0) + combinedStreams,
-            sales: (s.sales || 0) + combinedSales,
-            lastWeekStreams: (s.lastWeekStreams || 0) + combinedLastWeekStreams,
-            prevWeekStreams: (s.prevWeekStreams || 0) + combinedPrevWeekStreams,
-            revenue: (s.revenue || 0) + combinedRevenue,
-            netRevenue: (s.netRevenue || 0) + combinedNetRevenue,
-          };
-        }
-        return s;
-      });
-
-      const updatedReleases = activeData.releases.filter((r) => {
-        if (remixReleaseIds.has(r.id)) {
-          // Check if it's purely a remix release
-          const hasNonRemix = r.songIds.some(
-            (id) =>
-              id !== originalSongId &&
-              !remixes.find((remix) => remix.id === id),
-          );
-          if (!hasNonRemix) return false; // Delete it
-        }
-        return true;
-      });
-
-      const artistProfile = allPlayerArtistsAndGroups.find(
-        (a) => a.id === state.activeArtistId,
-      );
-      const username =
-        artistProfile?.name.replace(/\s/g, "").toLowerCase() || "artist";
-      const newXPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "user_hater",
-        content: `not @${username} combining the remix EP with the original because it flopped üòÇ desperate for streams much??`,
-        likes: Math.floor(Math.random() * 50000) + 10000,
-        retweets: Math.floor(Math.random() * 5000) + 1000,
-        views: Math.floor(Math.random() * 1000000) + 200000,
-        date: state.date,
-      };
-
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistProfile?.name} has combined all remixes of "${originalSong.title}" into the original track.`,
-        likes: Math.floor(Math.random() * 80000) + 30000,
-        retweets: Math.floor(Math.random() * 20000) + 5000,
-        views: Math.floor(Math.random() * 1500000) + 500000,
-        date: state.date,
-      };
-
-      const updatedData = {
-        ...activeData,
-        songs: updatedSongs,
-        releases: updatedReleases,
-        xPosts: [popBasePost, newXPost, ...activeData.xPosts],
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "CREATE_REMIX_PACK": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const newSongs: Song[] = action.payload.songs.map((song) => ({
-        ...song,
-        trait: generateSongTrait(song.quality, state.difficultyMode || "normal"), traitGenerated: true,
-        dailyStreams: [],
-      }));
-      const updatedData = {
-        ...activeData,
-        money: activeData.money - action.payload.cost,
-        songs: [...activeData.songs, ...newSongs],
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "RELEASE_TOUR_DOCUMENTARY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const tour = activeData.tours.find(t => t.id === action.payload.tourId);
-      if (!tour) return state;
-
-      const newRole = {
-          id: crypto.randomUUID(),
-          title: `${tour.name}: The Documentary`,
-          type: "Tour Documentary",
-          roleName: "Self",
-          year: state.date.year,
-          status: "Released",
-          coverUrl: action.payload.coverUrl,
-          rating: 80 + Math.floor(Math.random() * 15) // Good rating
-      };
-
-      const existingRoles = activeData.actingRoles || [];
-      // Don't release twice
-      if (existingRoles.some(r => r.title === newRole.title)) {
-          return state;
-      }
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  actingRoles: [...existingRoles, newRole],
-                  hype: Math.min(100, (activeData.hype || 0) + 20),
-                  popularity: Math.min(100, (activeData.popularity || 0) + 5)
-              }
-          }
-      };
-    }
-    case "CREATE_LIVE_ALBUM": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { tourId, coverArt } = action.payload;
-      const tour = activeData.tours.find(t => t.id === tourId);
-      if (!tour) return state;
-
-      const newSongs = [];
-      const newSongIds = [];
-      
-      for (const originalSongId of tour.setlist) {
-          const originalSong = activeData.songs.find(s => s.id === originalSongId);
-          if (originalSong) {
-              const liveSongId = crypto.randomUUID();
-              newSongs.push({
-                  ...originalSong,
-                  id: liveSongId,
-                  title: `${originalSong.title} (Live from ${tour.name})`,
-                  streams: 0,
-                  lastWeekStreams: 0,
-                  prevWeekStreams: 0,
-                  isReleased: true,
-                  releaseId: undefined,
-                  sales: 0,
-                  isAvailableOnStreaming: true,
-                  coverArt: coverArt
-              });
-              newSongIds.push(liveSongId);
-          }
-      }
-
-      const releaseId = crypto.randomUUID();
-      const newRelease = {
-          id: releaseId,
-          title: `${tour.name} (Live)`,
-          type: "Album",
-          coverArt: coverArt,
-          songIds: newSongIds,
-          releaseDate: state.date,
-          artistId: state.activeArtistId,
-          firstWeekStreams: 0,
-          firstWeekSales: 0,
-          weeksOnChart: 0,
-          peakPosition: 0,
-          isAvailableOnStreaming: true
-      };
-
-      for (const song of newSongs) {
-          song.releaseId = releaseId;
-      }
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  songs: [...activeData.songs, ...newSongs],
-                  releases: [...activeData.releases, newRelease]
-              }
-          }
-      };
-    }
-    case "CREATE_COACHELLA_LIVE_ALBUM": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { emailId, title, coverArt, selectedSongIds } = action.payload;
-      if (!selectedSongIds || selectedSongIds.length === 0) return state;
-
-      const newSongs: any[] = [];
-      const newSongIds: string[] = [];
-      const releaseId = crypto.randomUUID();
-
-      for (const songId of selectedSongIds) {
-        const originalSong = activeData.songs.find(s => s.id === songId);
-        if (originalSong) {
-          const liveSongId = crypto.randomUUID();
-          const cleanTitle = originalSong.title.replace(/\s*\(Live From Coachella\)$/i, '');
-          const liveTitle = `${cleanTitle} (Live From Coachella)`;
-
-          const initialStreams = Math.floor(Math.random() * 30000) + 15000;
-          newSongs.push({
-            ...originalSong,
-            id: liveSongId,
-            title: liveTitle,
-            streams: initialStreams,
-            lastWeekStreams: initialStreams,
-            prevWeekStreams: 0,
-            isReleased: true,
-            releaseId: releaseId,
-            sales: Math.floor(Math.random() * 600) + 200,
-            isAvailableOnStreaming: true,
-            coverArt: coverArt || originalSong.coverArt || activeData.artistImages?.[0] || getArtistImage(activeData.name),
-            isLive: true,
-            releaseDate: { ...state.date }
-          });
-          newSongIds.push(liveSongId);
-        }
-      }
-
-      const activeProfile = state.soloArtist || state.groupArtist;
-      const artistName = activeProfile?.name || "Artist";
-
-      const finalAlbumTitle = title?.trim() || `${artistName} - Live From Coachella ${state.date.year}`;
-      const finalCoverArt = coverArt || activeData.artistImages?.[0] || getArtistImage(artistName);
-
-      const newRelease = {
-        id: releaseId,
-        title: finalAlbumTitle,
-        type: "Album",
-        coverArt: finalCoverArt,
-        songIds: newSongIds,
-        releaseDate: { ...state.date },
-        artistId: state.activeArtistId,
-        firstWeekStreams: 0,
-        firstWeekSales: 0,
-        weeksOnChart: 0,
-        peakPosition: 0,
-        isAvailableOnStreaming: true,
-        isLive: true
-      };
-
-      const updatedInbox = (activeData.inbox || []).map(e => {
-        if (e.id === emailId) {
-          return {
-            ...e,
-            read: true,
-            offer: {
-              ...e.offer,
-              isReleased: true,
-              albumId: releaseId
-            }
-          };
-        }
-        return e;
-      });
-
-      const popBasePost: any = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistName} has officially released their live album "${finalAlbumTitle}" recorded at Coachella ${state.date.year}!`,
-        image: finalCoverArt,
-        likes: Math.floor(Math.random() * 120000) + 40000,
-        retweets: Math.floor(Math.random() * 20000) + 5000,
-        views: Math.floor(Math.random() * 1200000) + 300000,
-        date: { ...state.date }
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: [...activeData.songs, ...newSongs],
-            releases: [...activeData.releases, newRelease],
-            inbox: updatedInbox,
-            xPosts: [popBasePost, ...(activeData.xPosts || [])],
-            hype: Math.min(100, (activeData.hype || 0) + 15),
-            popularity: Math.min(100, (activeData.popularity || 0) + 5)
-          }
-        }
-      };
-    }
-    case "RELEASE_PROJECT": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      if (activeData.contract) return state;
-
-      const preReleaseStreams = action.payload.release.songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.streams || 0), 0);
-      const preReleaseSales = action.payload.release.songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.sales || 0), 0);
-
-      const releaseWithLabel = {
-        ...action.payload.release,
-        releasingLabel: null,
-        preReleaseStreams,
-        preReleaseSales,
-      };
-
-      let hypeIncrease = 0;
-      switch (releaseWithLabel.type) {
-        case "Single":
-          hypeIncrease = 15;
-          break;
-        case "EP":
-          hypeIncrease = 25;
-          break;
-        case "Album":
-          hypeIncrease = 40;
-          break;
-      }
-
-      let newEmails: Email[] = [];
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-      const artistName = artistProfile?.name || "Artist";
-      const pronounPossessive =
-        artistProfile?.pronouns === "he/him"
-          ? "his"
-          : artistProfile?.pronouns === "she/her"
-            ? "her"
-            : "their";
-
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistName} has surprise released ${pronounPossessive} new ${releaseWithLabel.type} "${releaseWithLabel.title}".`,
-        image: releaseWithLabel.coverArt,
-        likes: Math.floor(Math.random() * 80000) + 30000,
-        retweets: Math.floor(Math.random() * 20000) + 5000,
-        views: Math.floor(Math.random() * 1500000) + 500000,
-        date: state.date,
-      };
-
-      const tmzPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content: `${artistName} just secret-dropped ${releaseWithLabel.type === "Single" ? "a new track" : "another project"}. Desperation for streams or a genuine surprise? You be the judge. üìâü§≠`,
-        image:
-          activeData.paparazziPhotos.length > 0
-            ? activeData.paparazziPhotos[
-                Math.floor(Math.random() * activeData.paparazziPhotos.length)
-              ].url
-            : undefined,
-        likes: Math.floor(Math.random() * 40000) + 10000,
-        retweets: Math.floor(Math.random() * 8000) + 2000,
-        views: Math.floor(Math.random() * 900000) + 300000,
-        date: state.date,
-      };
-
-      if (releaseWithLabel.type === "Single") {
-        const song = activeData.songs.find(
-          (s) => s.id === releaseWithLabel.songIds[0],
-        );
-        if (song) {
-          if (
-            song.controversialContributors &&
-            song.controversialContributors.length > 0
-          ) {
-            const badName = song.controversialContributors[0];
-            activeData.publicImage = Math.max(
-              0,
-              (activeData.publicImage || 80) - 20,
-            );
-
-            const controversialTmzPost: XPost = {
-              id: crypto.randomUUID(),
-              authorId: "tmz",
-              content: `${artistName} has worked with controversial producer ${badName} on their new song "${song.title}". Are they desperate for a hit? Yikes. üò¨`,
-              image:
-                activeData.paparazziPhotos.length > 0
-                  ? activeData.paparazziPhotos[
-                      Math.floor(
-                        Math.random() * activeData.paparazziPhotos.length,
-                      )
-                    ].url
-                  : undefined,
-              likes: Math.floor(Math.random() * 60000) + 20000,
-              retweets: Math.floor(Math.random() * 15000) + 5000,
-              views: Math.floor(Math.random() * 2000000) + 800000,
-              date: state.date,
-            };
-            const controversialFanPost1: XPost = {
-              id: crypto.randomUUID(),
-              authorId: `hater_${Math.floor(Math.random() * 1000)}`,
-              content: `Ew why is ${artistName} working with ${badName}?? Cancelled.`,
-              likes: Math.floor(Math.random() * 5000) + 1000,
-              retweets: Math.floor(Math.random() * 1000) + 100,
-              views: Math.floor(Math.random() * 100000) + 10000,
-              date: state.date,
-            };
-            const controversialFanPost2: XPost = {
-              id: crypto.randomUUID(),
-              authorId: `hater_${Math.floor(Math.random() * 1000)}`,
-              content: `I'm actually shocked ${artistName} would sink this low. The new song is tainted.`,
-              likes: Math.floor(Math.random() * 8000) + 2000,
-              retweets: Math.floor(Math.random() * 2000) + 200,
-              views: Math.floor(Math.random() * 150000) + 20000,
-              date: state.date,
-            };
-            activeData.xPosts = [
-              controversialTmzPost,
-              controversialFanPost1,
-              controversialFanPost2,
-              ...activeData.xPosts,
-            ];
-
-            // Spawn a 4-week backlash buff
-            // Let's just drop public image, the game already uses public image to reduce fans growth and stream growth
-          }
-
-          if (releaseWithLabel.releaseDate?.year >= 2020) {
-            const emailIdGenius = crypto.randomUUID();
-            newEmails.push({
-              id: emailIdGenius,
-              sender: "Genius",
-              subject: `Verified Interview for "${song.title}"?`,
-              body: `Hey ${artistName},
-
-We're big fans of your new single "${song.title}" over at Genius. We'd love to have you for our 'Verified' series to break down the lyrics and meaning behind the track.
-
-Let us know if you're interested.
-
-Best,
-The Genius Team`,
-              date: releaseWithLabel.releaseDate,
-              isRead: false,
-              senderIcon: "genius",
-              offer: {
-                type: "geniusInterview",
-                songId: song.id,
-                isAccepted: false,
-                emailId: emailIdGenius,
-              },
-            });
-          }
-
-          // On The Radar / TRSH'D offer for Hip Hop singles
-          if (
-            song.genre === "Hip Hop" &&
-            releaseWithLabel.releaseDate?.year >= 2020 &&
-            Math.random() < 0.75
-          ) {
-            // 75% chance
-            const platform = Math.random() < 0.5 ? "On The Radar" : "TRSH'D";
-            const emailIdPlatform = crypto.randomUUID();
-            if (platform === "On The Radar") {
-              newEmails.push({
-                id: emailIdPlatform,
-                sender: "On The Radar",
-                senderIcon: "ontheradar",
-                subject: `Performance Invite for "${song.title}"`,
-                body: `Yo ${artistName},
-
-We've been hearing the buzz around your new single "${song.title}". We'd like to invite you to our studio for an "On The Radar" freestyle performance.
-
-This is a huge look. Let us know.
-
-- On The Radar Team`,
-                date: releaseWithLabel.releaseDate,
-                isRead: false,
-                offer: {
-                  type: "onTheRadarOffer",
-                  songId: song.id,
-                  isAccepted: false,
-                  emailId: emailIdPlatform,
-                },
-              });
-            } else {
-              // TRSH'D
-              newEmails.push({
-                id: emailIdPlatform,
-                sender: "TRSH'D",
-                senderIcon: "trshd",
-                subject: `TRSH'D Performance: ${song.title}`,
-                body: `What's good ${artistName},
-
-Your new track "${song.title}" is making waves. We want you to come through and lay down a performance for TRSH'D.
-
-Hit us back if you're down.
-
-- TRSH'D`,
-                date: releaseWithLabel.releaseDate,
-                isRead: false,
-                offer: {
-                  type: "trshdOffer",
-                  songId: song.id,
-                  isAccepted: false,
-                  emailId: emailIdPlatform,
-                },
-              });
-            }
-          }
-        }
-      }
-
-      if (releaseWithLabel.type === "EP" || releaseWithLabel.type === "Album") {
-        const emailId = crypto.randomUUID();
-        const offerTypes: Array<"performance" | "interview" | "both"> = [
-          "performance",
-          "interview",
-          "both",
-        ];
-        const selectedOfferType =
-          offerTypes[Math.floor(Math.random() * offerTypes.length)];
-
-        let subject = "";
-        let body = "";
-        switch (selectedOfferType) {
-          case "performance":
-            subject = `Performance on The Tonight Show Starring Jimmy Fallon?`;
-            body = `Hey ${artistName},
-
-Huge fans of the new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}"! We'd be thrilled to have you on the show to perform a song from it.
-
-Let us know if you're interested.
-
-Best,
-The Tonight Show Team`;
-            break;
-          case "interview":
-            subject = `Interview on The Tonight Show Starring Jimmy Fallon?`;
-            body = `Hey ${artistName},
-
-The new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}" is all anyone's talking about! Jimmy would love to have you on the show for an interview to discuss the project.
-
-Let us know if you're interested.
-
-Best,
-The Tonight Show Team`;
-            break;
-          case "both":
-            subject = `Appearance on The Tonight Show Starring Jimmy Fallon?`;
-            body = `Hey ${artistName},
-
-Congratulations on the new ${releaseWithLabel.type.toLowerCase()} "${releaseWithLabel.title}"! The whole office has it on repeat. Jimmy would love to have you on the show for an interview AND a performance.
-
-Let us know if you're interested.
-
-Best,
-The Tonight Show Team`;
-            break;
-        }
-
-        newEmails.push({
-          id: emailId,
-          sender: "The Tonight Show",
-          subject,
-          body,
-          date: releaseWithLabel.releaseDate,
-          isRead: false,
-          senderIcon: "fallon",
-          offer: {
-            type: "fallonOffer",
-            releaseId: releaseWithLabel.id,
-            offerType: selectedOfferType,
-            isAccepted: false,
-            emailId: emailId,
-          },
-        });
-      }
-
-      const newSongs = activeData.songs.map((song) =>
-        releaseWithLabel.songIds.includes(song.id)
-          ? { ...song, isReleased: true, releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id }
-          : song,
-      );
-
-      let releaseHiatusPosts: XPost[] = [];
-      if (state.group && state.group.members) {
-        const currentAbsWeek = state.date.year * 52 + state.date.week;
-        const groupName = state.group.name;
-        const groupTag = groupName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-        let fanPool: string[] = [];
-        if (activeData.xUsers) {
-          fanPool.push(...activeData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
-        }
-        state.group.members.forEach((m) => {
-          const mData = state.artistsData[m.id];
-          if (mData?.xUsers) {
-            fanPool.push(...mData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
-          }
-          fanPool.push(`addiction_fan_${m.id}`);
-          fanPool.push(`charts_${m.id}`);
-          fanPool.push(`stats_${m.id}`);
-        });
-        fanPool = Array.from(new Set(fanPool));
-
-        state.group.members.forEach((member, idx) => {
-          const mData = state.artistsData[member.id];
-          if (mData && mData.isHiatus && mData.hiatusStartYear !== undefined && mData.hiatusStartWeek !== undefined) {
-            const startAbs = mData.hiatusStartYear * 52 + mData.hiatusStartWeek;
-            const hiatusWeeks = currentAbsWeek - startAbs;
-            const memberTag = member.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-            if (hiatusWeeks >= 30) {
-              const boycottMessages = [
-                `BOYCOTT THIS RELEASE! WE WANT ${member.name.toUpperCase()} BACK! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK üõë`,
-                `DO NOT STREAM THIS UNTIL ${member.name} RETURNS TO ${groupName}! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
-                `Releasing new music after ${hiatusWeeks} weeks of ${member.name} being on hiatus?! ABSOLUTELY NOT. #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
-                `No ${member.name} = ZERO STREAMS FROM US! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`
-              ];
-              boycottMessages.forEach((msg, mIdx) => {
-                const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
-                releaseHiatusPosts.push({
-                  id: crypto.randomUUID(),
-                  authorId,
-                  content: msg,
-                  likes: Math.floor(Math.random() * 60000) + 12000,
-                  retweets: Math.floor(Math.random() * 18000) + 3500,
-                  views: Math.floor(Math.random() * 700000) + 100000,
-                  date: state.date,
-                });
-              });
-            } else {
-              const angryMessages = [
-                `How can you release new music while ${member.name} is still on hiatus?! üò°`,
-                `Dropping new stuff without ${member.name}?? This feels so wrong üò≠`,
-                `No way you guys are releasing this while ${member.name} is absent! Unbelievable üò§`,
-                `Where is ${member.name}?! You guys are acting like nothing happened üò§`
-              ];
-              angryMessages.forEach((msg, mIdx) => {
-                const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
-                releaseHiatusPosts.push({
-                  id: crypto.randomUUID(),
-                  authorId,
-                  content: msg,
-                  likes: Math.floor(Math.random() * 40000) + 8000,
-                  retweets: Math.floor(Math.random() * 10000) + 2000,
-                  views: Math.floor(Math.random() * 450000) + 60000,
-                  date: state.date,
-                });
-              });
-            }
-          }
-        });
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: [...activeData.releases, releaseWithLabel],
-            songs: newSongs,
-            hype: Math.min(
-              getHypeCap(activeData),
-              activeData.hype + hypeIncrease,
-            ),
-            inbox: [...activeData.inbox, ...newEmails],
-            xPosts: [popBasePost, tmzPost, ...releaseHiatusPosts, ...activeData.xPosts],
-          },
-        },
-      };
-    }
-    case "ADD_REVIEW": {
-      const { releaseId, review, cost, artistId } = action.payload;
-      const artistData = state.artistsData[artistId];
-      if (!artistData) return state;
-
-      let songsWithBoost = [...artistData.songs];
-      let hypeIncrease = 0;
-      let popularityIncrease = 0;
-      if (review.score >= 8.5) {
-        hypeIncrease = 20;
-        popularityIncrease = 5;
-      } else if (review.score >= 7.0) {
-        popularityIncrease = 2;
-      }
-
-      if (review.score >= 7) {
-        const release = artistData.releases.find((r) => r.id === releaseId);
-        if (release) {
-          const songIdsToBoost = new Set(release.songIds);
-          songsWithBoost = artistData.songs.map((song) =>
-            songIdsToBoost.has(song.id)
-              ? { ...song, pitchforkBoost: true }
-              : song,
-          );
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [artistId]: {
-            ...artistData,
-            money: artistData.money - cost,
-            songs: songsWithBoost,
-            releases: artistData.releases.map((r) =>
-              r.id === releaseId ? { ...r, review } : r,
-            ),
-            hype: Math.min(
-              getHypeCap(artistData),
-              artistData.hype + hypeIncrease,
-            ),
-            popularity: Math.min(
-              100,
-              artistData.popularity + popularityIncrease,
-            ),
-          },
-        },
-      };
-    }
-    case "CREATE_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { video, cost } = action.payload;
-
-      let hypeIncrease = 0;
-      switch (video.type) {
-        case "Music Video":
-          hypeIncrease = 20;
-          break;
-        case "Lyric Video":
-          hypeIncrease = 10;
-          break;
-        case "Visualizer":
-          hypeIncrease = 5;
-          break;
-      }
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - cost,
-            videos: [...activeData.videos, video],
-            hype: Math.min(
-              getHypeCap(activeData),
-              activeData.hype + hypeIncrease,
-            ),
-          },
-        },
-      };
-    }
-    case "SUBMIT_MTV_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { video, cost, rotation } = action.payload;
-
-      const rot = rotation || 'buzzworthy';
-      const hypeIncrease = rot === 'heavy' ? 35 : rot === 'buzzworthy' ? 25 : 15;
-      const popularityIncrease = rot === 'heavy' ? 4 : rot === 'buzzworthy' ? 2 : 1;
-
-      const updatedSongs = activeData.songs.map(s => {
-        if (s.id === video.songId) {
-          return {
-            ...s,
-            hype: Math.min(100, (s.hype || 0) + (rot === 'heavy' ? 25 : 15)),
-          };
-        }
-        return s;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - cost,
-            songs: updatedSongs,
-            videos: [...activeData.videos, video],
-            hype: Math.min(
-              getHypeCap(activeData),
-              activeData.hype + hypeIncrease,
-            ),
-            popularity: Math.min(
-              100,
-              activeData.popularity + popularityIncrease,
-            ),
-          },
-        },
-      };
-    }
-    case "VOTE_TRL_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { videoId } = action.payload;
-
-      const updatedVideos = activeData.videos.map(v => {
-        if (v.id === videoId) {
-          return {
-            ...v,
-            mtvViews: (v.mtvViews || 0) + 5000,
-          };
-        }
-        return v;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: updatedVideos,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 2),
-          },
-        },
-      };
-    }
-    case "ADD_MERCH": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const item = action.payload.item;
-
-      const artistProfile =
-        state.soloArtist?.id === state.activeArtistId
-          ? state.soloArtist
-          : state.group?.id === state.activeArtistId
-            ? state.group
-            : state.group?.members.find((m) => m.id === state.activeArtistId) ||
-              (state.extraPlayableArtists || []).find((a) => a.id === state.activeArtistId);
-      const artistName = artistProfile?.name || "Artist";
-      const artistImage = artistProfile?.image || item.image;
-
-      let newPosts: XPost[] = [];
-      if (item.bonusSongTitles && item.bonusSongTitles.length > 0) {
-        const release = activeData.releases.find(r => r.id === item.releaseId);
-        const releaseTitle = release?.title || item.name;
-        const regionTag = item.regionExclusive && item.regionExclusive !== 'Global' ? `${item.regionExclusive} ` : '';
-        const bonusList = item.bonusSongTitles.map(t => `"${t}"`).join(', ');
-
-        const authorChoice = Math.random() < 0.5 ? "popcrave" : "popbase";
-        const popPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: authorChoice,
-          content: `${artistName}'s '${releaseTitle}' ${regionTag}exclusive ${item.type.toLowerCase()} variant will feature bonus track${item.bonusSongTitles.length > 1 ? 's' : ''}, ${bonusList}.`,
-          image: artistImage,
-          image2: item.image || release?.coverArt,
-          likes: Math.floor(Math.random() * 45000) + 15000,
-          retweets: Math.floor(Math.random() * 12000) + 3000,
-          views: Math.floor(Math.random() * 1800000) + 500000,
-          date: state.date,
-        };
-        newPosts.push(popPost);
-      } else if (item.regionExclusive && item.regionExclusive !== 'Global' && (item.type === 'Vinyl' || item.type === 'CD' || item.type === 'Cassette')) {
-        const release = activeData.releases.find(r => r.id === item.releaseId);
-        const releaseTitle = release?.title || item.name;
-
-        const authorChoice = Math.random() < 0.5 ? "popcrave" : "popbase";
-        const popPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: authorChoice,
-          content: `${artistName} announces a ${item.regionExclusive} exclusive ${item.type.toLowerCase()} edition for '${releaseTitle}'.`,
-          image: artistImage,
-          image2: item.image || release?.coverArt,
-          likes: Math.floor(Math.random() * 35000) + 10000,
-          retweets: Math.floor(Math.random() * 9000) + 2000,
-          views: Math.floor(Math.random() * 1200000) + 300000,
-          date: state.date,
-        };
-        newPosts.push(popPost);
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - (action.payload.cost || 0),
-            merch: [...activeData.merch, item],
-            xPosts: [...newPosts, ...(activeData.xPosts || [])],
-          },
-        },
-      };
-    }
-    case "RESTOCK_MERCH": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedMerch = activeData.merch.map((m) =>
-        m.id === action.payload.id
-          ? { ...m, stock: m.stock + action.payload.amount }
-          : m,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - (action.payload.cost || 0),
-            merch: updatedMerch,
-          },
-        },
-      };
-    }
-    case "UPDATE_MERCH_PRICE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedMerch = activeData.merch.map((m) =>
-        m.id === action.payload.id ? { ...m, price: action.payload.price } : m,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            merch: updatedMerch,
-          },
-        },
-      };
-    }
-    case "REMOVE_MERCH": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            merch: activeData.merch.filter(
-              (item) => item.id !== action.payload.id,
-            ),
-          },
-        },
-      };
-    }
-    case "UPDATE_SNAPSHOT_BANNER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: activeData.releases.map(r => r.id === action.payload.releaseId ? { ...r, snapshotBanner: action.payload.bannerUrl } : r)
-          }
-        }
-      };
-    }
-    case "UPDATE_MERCH_BANNER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            merchStoreBanner: action.payload,
-          },
-        },
-      };
-    }
-    case "UPDATE_GRAMMY_BANNER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            grammyBanner: action.payload,
-          },
-        },
-      };
-    }
-    
-    case "UPDATE_GOLDEN_GLOBE_BANNER": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            goldenGlobeBanner: action.payload,
-          },
-        },
-      };
-    }
-
-    case "UPDATE_OSCAR_BANNER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            oscarBanner: action.payload,
-          },
-        },
-      };
-    }
-    case "UPDATE_YOUTUBE_BANNER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            youtubeBanner: action.payload.banner,
-          },
-        },
-      };
-    }
-    case "DELETE_ALL_EMAILS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: [],
-          },
-        },
-      };
-    }
-    case "MARK_INBOX_READ": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: activeData.inbox.map((email) => ({
-              ...email,
-              isRead: true,
-            })),
-          },
-        },
-      };
-    }
-    case "TAKE_DOWN_SONG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: activeData.songs.map((s) =>
-              s.id === action.payload.songId
-                ? {
-                    ...s,
-                    isTakenDown: true,
-                    isAvailableOnStreaming: false,
-                    lastWeekStreams: 0,
-                    actualLastWeekStreams: 0,
-                    prevWeekStreams: 0,
-                    actualPrevWeekStreams: 0,
-                    lastDayStreams: 0,
-                    prevDayStreams: 0,
-                  }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "BUY_BACK_SONG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < action.payload.cost) return state;
-      
-      const song = activeData.songs.find(s => s.id === action.payload.songId);
-      
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - action.payload.cost,
-            releases: activeData.releases.map((r) =>
-              r.id === song?.releaseId
-                ? {
-                    ...r,
-                    isTakenDown: false,
-                    rightsSoldPercent: 0,
-                    rightsOwnerLabelId: undefined,
-                  }
-                : r,
-            ),
-            songs: activeData.songs.map((s) =>
-              s.id === action.payload.songId
-                ? {
-                    ...s,
-                    isTakenDown: false,
-                    isAvailableOnStreaming: true,
-                    rightsSoldPercent: 0,
-                    rightsOwnerLabelId: undefined,
-                  }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "UPLOAD_TO_STREAMING": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < action.payload.cost) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - action.payload.cost,
-            songs: activeData.songs.map((s) =>
-              s.id === action.payload.songId
-                ? { ...s, isAvailableOnStreaming: true }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "REMASTER_SONG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < action.payload.cost) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - action.payload.cost,
-            songs: activeData.songs.map((s) =>
-              s.id === action.payload.songId
-                ? {
-                    ...s,
-                    quality: Math.min(100, (s.quality || 50) + action.payload.qualityBoost),
-                    isReleased: false,
-                    releaseDate: undefined,
-                    releaseId: undefined,
-                    isAvailableOnStreaming: undefined,
-                    isTakenDown: false
-                  }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "BUY_BACK_RELEASE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < action.payload.cost) return state;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - action.payload.cost,
-            releases: activeData.releases.map((r) =>
-              r.id === action.payload.releaseId
-                ? {
-                    ...r,
-                    isTakenDown: false,
-                    rightsSoldPercent: 0,
-                    rightsOwnerLabelId: undefined,
-                  }
-                : r,
-            ),
-            songs: activeData.songs.map((s) =>
-              s.releaseId === action.payload.releaseId
-                ? {
-                    ...s,
-                    isTakenDown: false,
-                    isAvailableOnStreaming: true,
-                    rightsSoldPercent: 0,
-                    rightsOwnerLabelId: undefined,
-                  }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "UPDATE_ITUNES_PRICE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: activeData.songs.map((s) =>
-              s.id === action.payload.songId
-                ? { ...s, itunesPrice: action.payload.newPriceStr }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "TOGGLE_APPLE_MUSIC_EXPANDED_COVER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: activeData.releases.map((r) =>
-              r.id === action.payload.releaseId
-                ? { ...r, isAppleMusicExpandedCover: action.payload.enabled }
-                : r,
-            ),
-          },
-        },
-      };
-    }
-    case "SET_APPLE_MUSIC_ANIMATED_COVER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: activeData.releases.map((r) =>
-              r.id === action.payload.releaseId
-                ? { ...r, appleMusicAnimatedCoverUrl: action.payload.animatedCoverUrl }
-                : r,
-            ),
-          },
-        },
-      };
-    }
-    case "MARK_APPLE_MUSIC_ESSENTIAL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { releaseId, reviewText, isEssential } = action.payload;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: activeData.releases.map((r) => {
-              if (r.id === releaseId) {
-                const settingEssential = isEssential !== undefined ? isEssential : (reviewText !== "");
-                return {
-                  ...r,
-                  isAppleMusicEssential: settingEssential,
-                  appleMusicEssentialReview: settingEssential ? (reviewText || r.appleMusicEssentialReview || `${r.title} is a standout album for ${activeData.songs.find(s => s.releaseId === r.id)?.title ? 'the artist' : 'the catalog'}.`) : undefined,
-                };
-              }
-              return r;
-            }),
-          },
-        },
-      };
-    }
-    case "UPDATE_APPLE_MUSIC_ARTIST_SETTINGS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            appleMusicBgColor: action.payload.bgColor !== undefined ? action.payload.bgColor : activeData.appleMusicBgColor,
-            appleMusicNameFont: action.payload.nameFont !== undefined ? action.payload.nameFont : activeData.appleMusicNameFont,
-            appleMusicNameStyle: action.payload.nameStyle !== undefined ? action.payload.nameStyle : activeData.appleMusicNameStyle,
-            appleMusicProfileVideoUrl: action.payload.profileVideoUrl !== undefined ? action.payload.profileVideoUrl : activeData.appleMusicProfileVideoUrl,
-          },
-        },
-      };
-    }
-    case "CREATE_APPLE_MUSIC_PLAYLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const newPlaylist: AppleMusicPlaylist = {
-        id: `amp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        title: action.payload.title,
-        type: action.payload.playlistType,
-        badgeText: action.payload.badgeText,
-        curatorText: action.payload.curatorText || 'Apple Music Pop',
-        bannerColor: action.payload.bannerColor || '#93c5fd',
-        customCoverUrl: action.payload.customCoverUrl,
-        songIds: action.payload.songIds || [],
-        createdAt: { ...state.date },
-      };
-      const existingPlaylists = activeData.appleMusicPlaylists || [];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            appleMusicPlaylists: [newPlaylist, ...existingPlaylists],
-          },
-        },
-      };
-    }
-    case "UPDATE_APPLE_MUSIC_PLAYLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const existingPlaylists = activeData.appleMusicPlaylists || [];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            appleMusicPlaylists: existingPlaylists.map((p) => {
-              if (p.id === action.payload.playlistId) {
-                return {
-                  ...p,
-                  ...(action.payload.title !== undefined ? { title: action.payload.title } : {}),
-                  ...(action.payload.playlistType !== undefined ? { type: action.payload.playlistType } : {}),
-                  ...(action.payload.badgeText !== undefined ? { badgeText: action.payload.badgeText } : {}),
-                  ...(action.payload.curatorText !== undefined ? { curatorText: action.payload.curatorText } : {}),
-                  ...(action.payload.bannerColor !== undefined ? { bannerColor: action.payload.bannerColor } : {}),
-                  ...(action.payload.customCoverUrl !== undefined ? { customCoverUrl: action.payload.customCoverUrl } : {}),
-                  ...(action.payload.songIds !== undefined ? { songIds: action.payload.songIds } : {}),
-                };
-              }
-              return p;
-            }),
-          },
-        },
-      };
-    }
-    case "DELETE_APPLE_MUSIC_PLAYLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const existingPlaylists = activeData.appleMusicPlaylists || [];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            appleMusicPlaylists: existingPlaylists.filter((p) => p.id !== action.payload.playlistId),
-          },
-        },
-      };
-    }
-    case "TAKE_DOWN_RELEASE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const release = activeData.releases.find(
-        (r) => r.id === action.payload.releaseId,
-      );
-      if (!release) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: activeData.releases.map((r) =>
-              r.id === action.payload.releaseId
-                ? { ...r, isTakenDown: true }
-                : r,
-            ),
-            songs: activeData.songs.map((s) =>
-              release.songIds.includes(s.id)
-                ? {
-                    ...s,
-                    isTakenDown: true,
-                    isAvailableOnStreaming: false,
-                    lastWeekStreams: 0,
-                    actualLastWeekStreams: 0,
-                    prevWeekStreams: 0,
-                    actualPrevWeekStreams: 0,
-                    lastDayStreams: 0,
-                    prevDayStreams: 0,
-                  }
-                : s,
-            ),
-          },
-        },
-      };
-    }
-    case "START_PROMOTION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { promotion } = action.payload;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - promotion.weeklyCost,
-            promotions: [...activeData.promotions, promotion],
-          },
-        },
-      };
-    }
-    case "CANCEL_PROMOTION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            promotions: activeData.promotions.filter(
-              (p) => p.id !== action.payload.promotionId,
-            ),
-          },
-        },
-      };
-    }
-    case "SELECT_VIDEO": {
-      return { ...state, selectedVideoId: action.payload };
-    }
-    case "SELECT_RELEASE": {
-      return { ...state, selectedReleaseId: action.payload };
-    }
-    case "PERFORM_GIG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      let gigCash = action.payload.cash;
-      const contract = activeData.contract;
-      if (contract && !contract.isCustom) {
-        const label = LABELS.find((l) => l.id === contract.labelId);
-        if (label) {
-          let playerCut = 1.0;
-          if (label.contractType === "petty") playerCut = 0.1;
-          else if (label.id === "umg") playerCut = 0.2;
-          else if (
-            label.tier === "Mid-high" ||
-            label.tier === "Mid-Low" ||
-            label.tier === "Top"
-          )
-            playerCut = 0.4;
-          else if (label.tier === "Low") playerCut = 0.5;
-          gigCash = gigCash * playerCut;
-        }
-      }
-
-      return {
-        ...state,
-        currentView: "game",
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + gigCash,
-            hype: Math.min(
-              getHypeCap(activeData),
-              activeData.hype + action.payload.hype,
-            ),
-            popularity: Math.min(100, (activeData.popularity || 0) + 1),
-            regionalPopularity: {
-              ...(activeData.regionalPopularity || {
-                "US": activeData.popularity || 0,
-                "Canada": 0,
-                "UK": 0,
-                "Latin America": 0,
-                "Asia": 0,
-                "Africa": 0
-              }),
-              [action.payload.region || "US"]: Math.min(100, ((activeData.regionalPopularity || {
-                "US": activeData.popularity || 0,
-                "Canada": 0,
-                "UK": 0,
-                "Latin America": 0,
-                "Asia": 0,
-                "Africa": 0
-              })[action.payload.region || "US"] || 0) + 1)
-            },
-            performedGigThisWeek: true,
-          },
-        },
-      };
-    }
-    case "SIGN_CONTRACT": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const allCustomLabels: CustomLabel[] = Object.values(
-        state.artistsData,
-      ).flatMap((d) => d.customLabels);
-      const { contract } = action.payload;
-
-      const label = contract.isCustom
-        ? allCustomLabels.find((l) => l.id === contract.labelId)
-        : LABELS.find((l) => l.id === contract.labelId);
-
-      const artist = allPlayerArtistsAndGroups.find(
-        (a) => a.id === contract.artistId,
-      );
-
-      const advance = contract.advance || 0;
-
-      let newPosts: XPost[] = [];
-      if (label && artist) {
-        const playerUser = activeData.selectedPlayerXUserId
-          ? activeData.xUsers.find(
-              (u) => u.id === activeData.selectedPlayerXUserId,
-            )
-          : activeData.xUsers.find((u) => u.isPlayer);
-        if (playerUser) {
-          newPosts.push({
-            id: crypto.randomUUID(),
-            authorId: "tmz",
-            content: `${artist.name} has officially signed a record deal with ${label.name}. Sources say it's a multi-album deal.`,
-            image: playerUser.avatar,
-            likes: Math.floor(Math.random() * 5000) + 1000,
-            retweets: Math.floor(Math.random() * 1000) + 200,
-            views: Math.floor(Math.random() * 400000) + 150000,
-            date: state.date,
-          });
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + advance,
-            contract: action.payload.contract,
-            isBlacklistedByLabel: false,
-            xPosts: [...newPosts, ...activeData.xPosts],
-          },
-        },
-      };
-    }
-    case "END_CONTRACT": {
-      if (!state.activeArtistId) return state;
-      const activeData = { ...state.artistsData[state.activeArtistId], isBlacklistedByLabel: false };
-      if (!activeData.contract) {
-        return state;
-      }
-
-      const label = LABELS.find((l) => l.id === activeData.contract!.labelId);
-      if (label && label.contractType === "petty") {
-        const fine = Math.floor(Math.random() * 750001) + 250000;
-        activeData.money -= fine;
-
-        const takenDownReleaseIds = new Set<string>();
-        activeData.releases = activeData.releases.map((release) => {
-          if (release.releasingLabel?.name === label.name) {
-            takenDownReleaseIds.add(release.id);
-            return { ...release, isTakenDown: true };
-          }
-          return release;
-        });
-
-        activeData.songs = activeData.songs.map((song) => {
-          if (song.releaseId && takenDownReleaseIds.has(song.releaseId)) {
-            return { ...song, isTakenDown: true };
-          }
-          return song;
-        });
-
-        const artistProfile = allPlayerArtistsAndGroups.find(
-          (a) => a.id === state.activeArtistId,
-        );
-        if (artistProfile) {
-          activeData.inbox.push({
-            id: crypto.randomUUID(),
-            sender: label.name,
-            senderIcon: "label",
-            subject: "Regarding Your Departure",
-            body: `Hi ${artistProfile.name},
-
-We've processed your departure from the label. As per our agreement, a fine of $${formatNumber(fine)} has been deducted from your account.
-
-Furthermore, all projects released under our name have been removed from streaming services and digital storefronts.
-
-We wish you the best in your future endeavors.
-
-- ${label.name}`,
-            date: state.date,
-            isRead: false,
-          });
-        }
-      }
-
-      const updatedData = {
-        ...activeData,
-        contractHistory: [
-          ...(activeData.contractHistory || []),
-          activeData.contract,
-        ],
-        contract: null,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "SIGN_NPC_TO_LABEL": {
-      if (!state.activeArtistId) return state;
-      const activeData = { ...state.artistsData[state.activeArtistId] };
-      if (!activeData.customLabels || activeData.customLabels.length === 0)
-        return state;
-
-      const { npcName, advance, royaltyRate, durationWeeks } = action.payload;
-
-      // Find custom label
-      const labelIndex = 0; // assuming single label owner
-      const customLabel = { ...activeData.customLabels[labelIndex] };
-      const signedNpcs = [...(customLabel.signedNpcs || [])];
-
-      const existingIndex = signedNpcs.findIndex((n) => n.name === npcName);
-      if (existingIndex >= 0) {
-        // Renegotiating
-        signedNpcs[existingIndex] = {
-          ...signedNpcs[existingIndex],
-          status: "active",
-          contract: {
-            advance,
-            royaltyRate,
-            durationWeeks,
-            startDate: state.date,
-          },
-        };
-      } else {
-        signedNpcs.push({
-          id: crypto.randomUUID(),
-          name: npcName,
-          contract: {
-            advance,
-            royaltyRate,
-            durationWeeks,
-            startDate: state.date,
-          },
-          revenueGenerated: 0,
-          expenses: advance,
-          status: "active",
-        });
-      }
-
-      customLabel.signedNpcs = signedNpcs;
-      const updatedLabels = [...activeData.customLabels];
-      updatedLabels[labelIndex] = customLabel;
-
-      const updatedData = {
-        ...activeData,
-        money: activeData.money - advance,
-        customLabels: updatedLabels,
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "RELEASE_NPC_FROM_LABEL": {
-      if (!state.activeArtistId) return state;
-      const activeData = { ...state.artistsData[state.activeArtistId] };
-      if (!activeData.customLabels || activeData.customLabels.length === 0)
-        return state;
-
-      const { npcName } = action.payload;
-
-      const labelIndex = 0;
-      const customLabel = { ...activeData.customLabels[labelIndex] };
-      const signedNpcs = [...(customLabel.signedNpcs || [])].map((npc) => {
-        if (npc.name === npcName) {
-          return { ...npc, status: "dropped" as const };
-        }
-        return npc;
-      });
-
-      customLabel.signedNpcs = signedNpcs;
-      const updatedLabels = [...activeData.customLabels];
-      updatedLabels[labelIndex] = customLabel;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            customLabels: updatedLabels,
-          },
-        },
-      };
-    }
-    case "EDIT_SUBMISSION_DATE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const updatedSubmissions = activeData.labelSubmissions.map((s) => {
-        if (s.id === action.payload.submissionId) {
-          return { ...s, projectReleaseDate: action.payload.newDate };
-        }
-        return s;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "SUBMIT_TO_LABEL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: [
-              ...activeData.labelSubmissions,
-              action.payload.submission,
-            ],
-          },
-        },
-      };
-    }
-    case "GO_TO_LABEL_PLAN":
-      return {
-        ...state,
-        activeSubmissionId: action.payload.submissionId,
-        currentView: "labelReleasePlan",
-      };
-    case "PLAN_LABEL_RELEASE": {
-      if (!state.activeArtistId) return state;
-      const { submissionId, singles, projectReleaseDate } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const allCustomLabels: CustomLabel[] = [];
-      for (const artistId in state.artistsData) {
-        allCustomLabels.push(...state.artistsData[artistId].customLabels);
-      }
-
-      let labelMultiplier = 1;
-      let avgQuality = 0;
-
-      const submission = activeData.labelSubmissions.find(
-        (s) => s.id === submissionId,
-      );
-      if (submission) {
-        avgQuality =
-          submission.release.songIds.reduce((sum, id) => {
-            const song = activeData.songs.find((s) => s.id === id);
-            return sum + (song?.quality || 0);
-          }, 0) / (submission.release.songIds.length || 1);
-      }
-
-      if (activeData.contract) {
-        if (activeData.contract.isCustom) {
-          const customLabelInfo = allCustomLabels.find(
-            (l) => l.id === activeData.contract!.labelId,
-          );
-          if (customLabelInfo) {
-            labelMultiplier = customLabelInfo.promotionMultiplier;
-            if (customLabelInfo.exclusiveLicenseId) {
-              const exclusiveLabel = LABELS.find(
-                (l) => l.id === customLabelInfo.exclusiveLicenseId,
-              );
-              if (exclusiveLabel) {
-                labelMultiplier = Math.max(
-                  labelMultiplier,
-                  exclusiveLabel.promotionMultiplier,
-                );
-              }
-            }
-          }
-        } else {
-          const label = LABELS.find(
-            (l) => l.id === activeData.contract!.labelId,
-          );
-          if (label) {
-            labelMultiplier = activeData.isBlacklistedByLabel ? 1.0 : label.promotionMultiplier;
-          }
-        }
-      }
-
-      const releaseTypeMultiplier =
-        submission?.release.type === "Album" ? 2 : 1.25;
-      const promoBudget = activeData.isBlacklistedByLabel ? 0 : Math.floor(
-        avgQuality * 5000 * labelMultiplier * releaseTypeMultiplier,
-      );
-
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-
-      const isFirstRelease = !activeData.releases || activeData.releases.length === 0;
-      const isActorTransitioning = activeData.actingRoles && activeData.actingRoles.length > 0;
-      
-      const newPosts = [...(activeData.xPosts || [])];
-
-      if (isFirstRelease && isActorTransitioning && submission?.release.type === 'Single') {
-          const pronounLabel = artistProfile?.pronouns === "she/her" ? "Actress" : "Actor";
-          const popBasePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `Famous ${pronounLabel} ${artistProfile?.name} will debut in music soon.`,
-            image: artistProfile?.image,
-            likes: Math.floor(Math.random() * 80000) + 30000,
-            retweets: Math.floor(Math.random() * 20000) + 5000,
-            views: Math.floor(Math.random() * 1500000) + 500000,
-            date: state.date,
-          };
-          newPosts.unshift(popBasePost);
-      }
-
-
-      const pronoun = artistProfile?.pronouns === "he/him" ? "HE" : (artistProfile?.pronouns === "they/them" ? "THEY" : "SHE");
-      const pronounLower = artistProfile?.pronouns === "he/him" ? "he" : (artistProfile?.pronouns === "they/them" ? "they" : "she");
-      
-      const newRedditPosts = [...(activeData.redditPosts || [])];
-
-      for (const single of singles) {
-          const songIndex = activeData.songs.findIndex(s => s.id === single.songId);
-          if (songIndex === -1) continue;
-          
-          const song = activeData.songs[songIndex];
-          const updatedSongs = [...activeData.songs];
-          updatedSongs[songIndex] = {
-              ...song,
-              isInterlude: single.singleType === 'interlude',
-              singleType: single.singleType
-          };
-          activeData.songs = updatedSongs;
-
-          // X Posts
-          if (single.eraImages && single.eraImages.length > 0) {
-              const fanImage = single.eraImages[0];
-              const haterImage = single.eraImages[1] || single.eraImages[0];
-              const popbaseImage = single.eraImages[2] || single.eraImages[0];
-
-              newPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: "fan_acc1",
-                  content: `IM SO EXCITED FOR ${song.title} ${pronoun} ATE THIS LOOK SO BADDD üò≠üî•`,
-                  image: fanImage,
-                  likes: Math.floor(Math.random() * 20000) + 5000,
-                  retweets: Math.floor(Math.random() * 5000) + 1000,
-                  views: Math.floor(Math.random() * 300000) + 50000,
-                  date: state.date,
-              });
-
-              newPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: "hater_acc",
-                  content: `This looks so cheap and basic... what happened to real aesthetics? ${song.title} better be good because this is giving nothing.`,
-                  image: haterImage,
-                  likes: Math.floor(Math.random() * 5000) + 500,
-                  retweets: Math.floor(Math.random() * 1000) + 100,
-                  views: Math.floor(Math.random() * 100000) + 10000,
-                  date: state.date,
-              });
-
-              const typeText = single.singleType === 'lead' ? 'lead single' : (single.singleType === 'interlude' ? 'interlude' : 'standalone single');
-              newPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: "popbase",
-                  content: `${artistProfile?.name} officially announces their upcoming ${typeText} "${song.title}".`,
-                  image: popbaseImage,
-                  likes: Math.floor(Math.random() * 80000) + 20000,
-                  retweets: Math.floor(Math.random() * 20000) + 5000,
-                  views: Math.floor(Math.random() * 1000000) + 200000,
-                  date: state.date,
-              });
-          }
-
-          // Reddit Post
-          let redditComments = [];
-          if (single.singleType === 'lead') {
-              redditComments = [
-                  { id: crypto.randomUUID(), author: 'popstan', timeAgo: '1h', content: 'OMG the new era is coming!! We are so back!', upvotes: 450 },
-                  { id: crypto.randomUUID(), author: 'musiclover', timeAgo: '2h', content: 'The images look insane. Cannot wait.', upvotes: 320 }
-              ];
-          } else if (single.singleType === 'interlude') {
-              redditComments = [
-                  { id: crypto.randomUUID(), author: 'chartwatcher', timeAgo: '1h', content: `Why are ${pronounLower} releasing an interlude as a single?`, upvotes: 500 },
-                  { id: crypto.randomUUID(), author: 'sadfan', timeAgo: '2h', content: 'We lost... this better be a long interlude at least.', upvotes: 420 }
-              ];
-          } else {
-              redditComments = [
-                  { id: crypto.randomUUID(), author: 'user99', timeAgo: '1h', content: 'Just a standalone? I wanted an album era.', upvotes: 300 },
-                  { id: crypto.randomUUID(), author: 'casualfan', timeAgo: '2h', content: 'Looks cute but I need the album to be announced soon.', upvotes: 210 }
-              ];
-          }
-
-          const typeTag = single.singleType === 'lead' ? 'Lead Single' : (single.singleType === 'interlude' ? 'Interlude' : 'Standalone Single');
-          newRedditPosts.unshift({
-              id: crypto.randomUUID(),
-              author: "AutoModerator",
-              timeAgo: "Just now",
-              title: `[FRESH ANNOUNCEMENT] ${artistProfile?.name} - ${song.title} (${typeTag})`,
-              content: `Official announcement for the new ${single.singleType} "${song.title}". Discuss here!`,
-              upvotes: Math.floor(Math.random() * 2000) + 500,
-              commentCount: redditComments.length + Math.floor(Math.random() * 50),
-              image: single.eraImages && single.eraImages.length > 0 ? single.eraImages[0] : null,
-              comments: redditComments
-          });
-      }
-
-
-      // Process main project if it's a single
-      if (submission?.release.type === 'Single' && action.payload.projectSingleType) {
-          const songIndex = activeData.songs.findIndex(s => s.id === submission.release.songIds[0]);
-          const song = activeData.songs[songIndex];
-          if (songIndex !== -1 && song) {
-              // Create a new array for songs to ensure immutable update
-              const updatedSongs = [...activeData.songs];
-              updatedSongs[songIndex] = {
-                  ...song,
-                  isInterlude: action.payload.projectSingleType === 'interlude',
-                  singleType: action.payload.projectSingleType
-              };
-              activeData.songs = updatedSongs; // We will attach this updated array below
-
-              // X Posts
-              if (action.payload.projectEraImages && action.payload.projectEraImages.length > 0) {
-                  const fanImage = action.payload.projectEraImages[0];
-                  const haterImage = action.payload.projectEraImages[1] || action.payload.projectEraImages[0];
-                  const popbaseImage = action.payload.projectEraImages[2] || action.payload.projectEraImages[0];
-
-                  newPosts.unshift({
-                      id: crypto.randomUUID(),
-                      authorId: "fan_acc1",
-                      content: `IM SO EXCITED FOR ${song.title} ${pronoun} ATE THIS LOOK SO BADDD üò≠üî•`,
-                      image: fanImage,
-                      likes: Math.floor(Math.random() * 20000) + 5000,
-                      retweets: Math.floor(Math.random() * 5000) + 1000,
-                      views: Math.floor(Math.random() * 300000) + 50000,
-                      date: state.date,
-                  });
-
-                  newPosts.unshift({
-                      id: crypto.randomUUID(),
-                      authorId: "hater_acc",
-                      content: `This looks so cheap and basic... what happened to real aesthetics? ${song.title} better be good because this is giving nothing.`,
-                      image: haterImage,
-                      likes: Math.floor(Math.random() * 5000) + 500,
-                      retweets: Math.floor(Math.random() * 1000) + 100,
-                      views: Math.floor(Math.random() * 100000) + 10000,
-                      date: state.date,
-                  });
-
-                  const typeText = action.payload.projectSingleType === 'lead' ? 'lead single' : (action.payload.projectSingleType === 'interlude' ? 'interlude' : 'standalone single');
-                  newPosts.unshift({
-                      id: crypto.randomUUID(),
-                      authorId: "popbase",
-                      content: `${artistProfile?.name} officially announces their upcoming ${typeText} "${song.title}".`,
-                      image: popbaseImage,
-                      likes: Math.floor(Math.random() * 80000) + 20000,
-                      retweets: Math.floor(Math.random() * 20000) + 5000,
-                      views: Math.floor(Math.random() * 1000000) + 200000,
-                      date: state.date,
-                  });
-              }
-
-              // Reddit Post
-              let redditComments = [];
-              if (action.payload.projectSingleType === 'lead') {
-                  redditComments = [
-                      { id: crypto.randomUUID(), author: 'popstan', timeAgo: '1h', content: 'OMG the new era is coming!! We are so back!', upvotes: 450 },
-                      { id: crypto.randomUUID(), author: 'musiclover', timeAgo: '2h', content: 'The images look insane. Cannot wait.', upvotes: 320 }
-                  ];
-              } else if (action.payload.projectSingleType === 'interlude') {
-                  redditComments = [
-                      { id: crypto.randomUUID(), author: 'chartwatcher', timeAgo: '1h', content: `Why are ${pronounLower} releasing an interlude as a single?`, upvotes: 500 },
-                      { id: crypto.randomUUID(), author: 'sadfan', timeAgo: '2h', content: 'We lost... this better be a long interlude at least.', upvotes: 420 }
-                  ];
-              } else {
-                  redditComments = [
-                      { id: crypto.randomUUID(), author: 'user99', timeAgo: '1h', content: 'Just a standalone? I wanted an album era.', upvotes: 300 },
-                      { id: crypto.randomUUID(), author: 'casualfan', timeAgo: '2h', content: 'Looks cute but I need the album to be announced soon.', upvotes: 210 }
-                  ];
-              }
-
-              const typeTag = action.payload.projectSingleType === 'lead' ? 'Lead Single' : (action.payload.projectSingleType === 'interlude' ? 'Interlude' : 'Standalone Single');
-              newRedditPosts.unshift({
-                  id: crypto.randomUUID(),
-                  author: "AutoModerator",
-                  timeAgo: "Just now",
-                  title: `[FRESH ANNOUNCEMENT] ${artistProfile?.name} - ${song.title} (${typeTag})`,
-                  content: `Official announcement for the new ${action.payload.projectSingleType} "${song.title}". Discuss here!`,
-                  upvotes: Math.floor(Math.random() * 2000) + 500,
-                  commentCount: redditComments.length + Math.floor(Math.random() * 50),
-                  image: action.payload.projectEraImages && action.payload.projectEraImages.length > 0 ? action.payload.projectEraImages[0] : null,
-                  comments: redditComments
-              });
-          }
-      }
-
-      const updatedSubmissions = activeData.labelSubmissions.map(
-        (sub): LabelSubmission => {
-          if (sub.id === submissionId) {
-            return {
-              ...sub,
-              status: "scheduled",
-              singlesToRelease: singles,
-              projectReleaseDate: projectReleaseDate,
-              projectSingleType: action.payload.projectSingleType,
-              projectEraImages: action.payload.projectEraImages,
-              promoBudget: promoBudget,
-              promoBudgetSpent: 0,
-            };
-          }
-          return sub;
-        },
-      );
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-            xPosts: newPosts,
-            redditPosts: newRedditPosts,
-          },
-        },
-        activeSubmissionId: null,
-        currentView: "game",
-      };
-    }
-    case "CREATE_INSTAGRAM_POST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const followers = activeData.instagramFollowers || 0;
-      const popFactor = Math.pow(activeData.popularity || 0, 1.5) * 50;
-      const hypeFactor = ((activeData.hype || 0) / 100) * 0.2 + 1;
-
-      // Base engagement metrics based on followers and popularity
-      const baseLikes = (500 + followers * 0.1 + popFactor) * hypeFactor;
-      const viewVariance = baseLikes * 0.5 * (Math.random() - 0.5);
-      let likes = Math.floor(Math.max(10, baseLikes + viewVariance));
-      const comments = Math.floor(likes * (Math.random() * 0.05 + 0.01)); // 1% to 6% of likes
-
-      const newPost: InstagramPost = {
-        id: crypto.randomUUID(),
-        imageUrls: action.payload.imageUrls,
-        caption: action.payload.caption,
-        likes,
-        comments,
-        date: state.date,
-      };
-
-      const hypeGained = Math.floor(likes / 200000);
-      
-      let artistName = "";
-      if (state.soloArtist?.id === state.activeArtistId) {
-        artistName = state.soloArtist.name;
-      } else if (state.group?.id === state.activeArtistId) {
-        artistName = state.group.name;
-      } else if (state.group?.members.some(m => m.id === state.activeArtistId)) {
-        artistName = state.group.members.find(m => m.id === state.activeArtistId)?.name || "";
-      } else if (state.extraPlayableArtists?.some(a => a.id === state.activeArtistId)) {
-        artistName = state.extraPlayableArtists.find(a => a.id === state.activeArtistId)?.name || "";
-      }
-
-      const actionWord = Math.random() > 0.5 ? 'stuns in' : 'shares';
-      const popBaseXPost: any = {
-         id: crypto.randomUUID(),
-         authorId: "popbase",
-         content: `${artistName} ${actionWord} new photo.`,
-         image: action.payload.imageUrls?.[0],
-         likes: Math.floor(Math.random() * 150000) + 15000,
-         retweets: Math.floor(Math.random() * 40000) + 5000,
-         views: Math.floor(Math.random() * 3000000) + 500000,
-         date: state.date,
-      };
-
-      const gainedFollowers = Math.floor(likes * 0.05);
-      const updatedArtistsData = { ...state.artistsData };
-      updatedArtistsData[state.activeArtistId] = {
-        ...activeData,
-        instagramPosts: [newPost, ...(activeData.instagramPosts || [])],
-        hype: Math.min(100, activeData.hype + hypeGained),
-        instagramFollowers: followers + gainedFollowers,
-      };
-
-      if (
-        state.group &&
-        (state.activeArtistId === state.group.id || state.group.members.some((m) => m.id === state.activeArtistId))
-      ) {
-        state.group.members.forEach((m) => {
-          if (updatedArtistsData[m.id] && m.id !== state.activeArtistId) {
-            updatedArtistsData[m.id] = {
-              ...updatedArtistsData[m.id],
-              instagramFollowers: (updatedArtistsData[m.id].instagramFollowers || 0) + gainedFollowers,
-            };
-          }
-        });
-        if (state.activeArtistId !== state.group.id && updatedArtistsData[state.group.id]) {
-          updatedArtistsData[state.group.id] = {
-            ...updatedArtistsData[state.group.id],
-            instagramFollowers: (updatedArtistsData[state.group.id].instagramFollowers || 0) + gainedFollowers,
-          };
-        }
-      }
-
-      return {
-        ...state,
-        xPosts: [popBaseXPost, ...(state.xPosts || [])],
-        artistsData: updatedArtistsData,
-      };
-    }
-    case "CREATE_INSTAGRAM_STORY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const newStory: InstagramStory = {
-        id: crypto.randomUUID(),
-        imageUrl: action.payload.imageUrl,
-        date: state.date,
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            instagramStories: [newStory, ...(activeData.instagramStories || [])],
-          },
-        },
-      };
-    }
-    case "CREATE_INSTAGRAM_REEL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const followers = activeData.instagramFollowers || 0;
-      const popFactor = Math.pow(activeData.popularity || 0, 1.5) * 100;
-      const hypeFactor = ((activeData.hype || 0) / 100) * 0.3 + 1;
-
-      const baseViews = (1000 + followers * 0.5 + popFactor) * hypeFactor;
-      const viewVariance = baseViews * 0.8 * (Math.random() - 0.5);
-      let views = Math.floor(Math.max(100, baseViews + viewVariance));
-      const likes = Math.floor(views * (Math.random() * 0.1 + 0.05)); // 5% to 15% of views
-      const comments = Math.floor(likes * (Math.random() * 0.05 + 0.01));
-
-      const newReel: InstagramReel = {
-        id: crypto.randomUUID(),
-        videoUrl: action.payload.videoUrl,
-        caption: action.payload.caption,
-        views,
-        likes,
-        comments,
-        date: state.date,
-      };
-      
-      const hypeGained = Math.floor((views / 100000) * 1.2);
-      const gainedFollowers = Math.floor(views * 0.02);
-      const updatedArtistsData = { ...state.artistsData };
-      updatedArtistsData[state.activeArtistId] = {
-        ...activeData,
-        instagramReels: [newReel, ...(activeData.instagramReels || [])],
-        hype: Math.min(100, activeData.hype + hypeGained),
-        instagramFollowers: followers + gainedFollowers,
-      };
-
-      if (
-        state.group &&
-        (state.activeArtistId === state.group.id || state.group.members.some((m) => m.id === state.activeArtistId))
-      ) {
-        state.group.members.forEach((m) => {
-          if (updatedArtistsData[m.id] && m.id !== state.activeArtistId) {
-            updatedArtistsData[m.id] = {
-              ...updatedArtistsData[m.id],
-              instagramFollowers: (updatedArtistsData[m.id].instagramFollowers || 0) + gainedFollowers,
-            };
-          }
-        });
-        if (state.activeArtistId !== state.group.id && updatedArtistsData[state.group.id]) {
-          updatedArtistsData[state.group.id] = {
-            ...updatedArtistsData[state.group.id],
-            instagramFollowers: (updatedArtistsData[state.group.id].instagramFollowers || 0) + gainedFollowers,
-          };
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: updatedArtistsData,
-      };
-    }
-    case "EDIT_INSTAGRAM_PROFILE": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            instagramBio: action.payload.bio,
-            instagramLink: action.payload.link,
-          },
-        },
-      };
-    }
-    case "CREATE_INSTAGRAM_COMMUNITY": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            instagramCommunityName: action.payload.name,
-            instagramCommunityMembers: Math.floor((state.artistsData[state.activeArtistId].instagramFollowers || 0) * 0.02)
-          },
-        },
-      };
-    }
-    case "FOLLOW_INSTAGRAM_NPC": {
-      if (!state.activeArtistId) return state;
-      const npcName = action.payload.npcName;
-      const activeData = { ...state.artistsData[state.activeArtistId] };
-      const instagramFollowing = Array.isArray(activeData.instagramFollowing) ? activeData.instagramFollowing : [];
-      if (instagramFollowing.includes(npcName)) return state;
-
-      const newFollowing = [...instagramFollowing, npcName];
-      activeData.instagramFollowing = newFollowing;
-
-      const npcFollowers = Array.isArray(activeData.instagramNpcFollowers) ? activeData.instagramNpcFollowers : [];
-      const followedBackEvents = Array.isArray(activeData.instagramFollowedBackEvents) ? activeData.instagramFollowedBackEvents : [];
-
-      let newXPosts = Array.isArray(state.xPosts) ? [...state.xPosts] : [];
-      let newArtistXPosts = Array.isArray(activeData.xPosts) ? [...activeData.xPosts] : [];
-
-      if (npcFollowers.includes(npcName) && !followedBackEvents.includes(npcName)) {
-        activeData.instagramFollowedBackEvents = [...followedBackEvents, npcName];
-        
-        let artistName = "";
-        if (state.soloArtist?.id === state.activeArtistId) {
-          artistName = state.soloArtist.name;
-        } else if (state.group?.id === state.activeArtistId) {
-          artistName = state.group.name;
-        } else if (state.group?.members.some(m => m.id === state.activeArtistId)) {
-          artistName = state.group.members.find(m => m.id === state.activeArtistId)?.name || "Artist";
-        } else {
-          artistName = state.soloArtist?.name || "Artist";
-        }
-
-        const userImg = state.soloArtist?.image || activeData.avatar || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470";
-        const npcImg = getArtistImage(npcName);
-
-        const popBaseTweet: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${artistName} has followed ${npcName} back on Instagram.`,
-          image: npcImg,
-          image2: userImg,
-          likes: Math.floor(Math.random() * 250000) + 80000,
-          retweets: Math.floor(Math.random() * 40000) + 12000,
-          views: Math.floor(Math.random() * 4000000) + 1000000,
-          date: state.date,
-        };
-
-        newXPosts = [popBaseTweet, ...newXPosts];
-        newArtistXPosts = [popBaseTweet, ...newArtistXPosts];
-        activeData.hype = (activeData.hype || 0) + 3;
-        activeData.instagramFollowers = (activeData.instagramFollowers || 0) + Math.floor(Math.random() * 15000) + 5000;
-      }
-
-      activeData.xPosts = newArtistXPosts;
-
-      return {
-        ...state,
-        xPosts: newXPosts,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: activeData,
-        },
-      };
-    }
-    case "UNFOLLOW_INSTAGRAM_NPC": {
-      if (!state.activeArtistId) return state;
-      const npcName = action.payload.npcName;
-      const activeData = { ...state.artistsData[state.activeArtistId] };
-      const instagramFollowing = Array.isArray(activeData.instagramFollowing) ? activeData.instagramFollowing : [];
-      activeData.instagramFollowing = instagramFollowing.filter(n => n !== npcName);
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: activeData,
-        },
-      };
-    }
-    case "UPLOAD_CANVAS": {
-      if (!state.activeArtistId) return state;
-      const updatedArtistsData = { ...state.artistsData };
-      const activeData = { ...updatedArtistsData[state.activeArtistId] };
-
-      const songIndex = activeData.songs.findIndex(
-        (s) => s.id === action.payload.songId,
-      );
-      if (songIndex >= 0) {
-        const updatedSongs = [...activeData.songs];
-        updatedSongs[songIndex] = {
-          ...updatedSongs[songIndex],
-          canvasVideo: action.payload.videoUrl,
-          canvasHashtags: action.payload.hashtags,
-        };
-        activeData.songs = updatedSongs;
-        updatedArtistsData[state.activeArtistId] = activeData;
-      }
-
-      return {
-        ...state,
-        artistsData: updatedArtistsData,
-      };
-    }
-    case "UPLOAD_ALBUM_CANVAS": {
-      if (!state.activeArtistId) return state;
-      const updatedArtistsData = { ...state.artistsData };
-      const activeData = { ...updatedArtistsData[state.activeArtistId] };
-
-      const release = activeData.releases.find(r => r.id === action.payload.releaseId);
-      if (release) {
-        const updatedSongs = [...activeData.songs];
-        release.songIds.forEach(songId => {
-          const songIndex = updatedSongs.findIndex((s) => s.id === songId);
-          if (songIndex >= 0) {
-            updatedSongs[songIndex] = {
-              ...updatedSongs[songIndex],
-              canvasVideo: action.payload.videoUrl,
-              canvasHashtags: action.payload.hashtags,
-            };
-          }
-        });
-        activeData.songs = updatedSongs;
-        updatedArtistsData[state.activeArtistId] = activeData;
-      }
-
-      return {
-        ...state,
-        artistsData: updatedArtistsData,
-      };
-    }
-    case "CREATE_TIKTOK": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const followers = activeData.tiktokFollowers || 0;
-      const popFactor = Math.pow(activeData.popularity || 0, 1.5) * 50;
-      const hypeFactor = ((activeData.hype || 0) / 100) * 0.2 + 1;
-      const baseViews = (1000 + followers * 0.2 + popFactor) * hypeFactor;
-
-      const viewVariance = baseViews * 0.5 * (Math.random() - 0.5);
-      let views = Math.floor(Math.max(10, baseViews + viewVariance));
-
-      // Ensure tiktok video views are always more than followers
-      views = Math.max(views, followers + Math.floor(followers * (Math.random() * 0.5 + 0.1)));
-
-      // 5-10% chance for viral video (1M-75M views)
-      if (Math.random() < 0.08) {
-        views = Math.floor(Math.random() * (75000000 - 1000000)) + 1000000;
-      }
-
-      let songNameForPost = "";
-      let isNpcSong = false;
-      let generatePopCorePost = false;
-      
-      if (action.payload.songId) {
-        if (action.payload.songId.startsWith("npc_")) {
-          isNpcSong = true;
-          const npcId = action.payload.songId.replace("npc_", "");
-          const npcSong = state.npcs.find((s: any) => s.uniqueId === npcId);
-          if (npcSong) {
-              songNameForPost = npcSong.title;
-              generatePopCorePost = true;
-              views *= 2;
-          }
-        } else {
-          const song = activeData.songs.find(s => s.id === action.payload.songId);
-          if (song && song.trait === "TikTok Hit") {
-            views *= 3;
-          }
-        }
-      }
-
-      const likes = Math.floor(views * (0.05 + Math.random() * 0.05));
-      const comments = Math.floor(views * (0.005 + Math.random() * 0.01));
-
-      const newTiktok: TikTokVideo = {
-        id: crypto.randomUUID(),
-        authorId: state.activeArtistId,
-        content: action.payload.content,
-        songId: action.payload.songId,
-        thumbnail: action.payload.thumbnail,
-        views,
-        likes,
-        comments,
-        createdAt: state.date,
-      };
-
-      const hypeGained = Math.floor((views / 100000) * 1.5); // reduced hype gain
-
-      let updatedSongs = activeData.songs;
-      if (action.payload.songId) {
-        const addedStreams = Math.floor(views * 0.05); // 5% of views become streams
-        updatedSongs = updatedSongs.map((s) =>
-          s.id === action.payload.songId
-            ? { ...s, streams: (s.streams || 0) + addedStreams }
-            : s,
-        );
-      }
-
-      let updatedXPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-      if (generatePopCorePost && songNameForPost) {
-        const actorOrSinger = (activeData.actingRoles?.length || 0) > (activeData.songs?.length || 0) ? "actor" : "singer";
-        const artistName = state.soloArtist?.name || state.group?.name || "Unknown";
-        
-        updatedXPosts.unshift({
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `${artistName}, a famous ${actorOrSinger} joins the viral '${songNameForPost}' TikTok trend.`,
-            likes: Math.floor(Math.random() * 50000) + 10000,
-            retweets: Math.floor(Math.random() * 10000) + 1000,
-            views: Math.floor(Math.random() * 1000000) + 500000,
-            date: state.date,
-            comments: [],
-        });
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-            xPosts: updatedXPosts,
-            tiktokVideos: [newTiktok, ...(activeData.tiktokVideos || [])],
-            hype: Math.min(100, activeData.hype + hypeGained),
-            tiktokFollowers: followers + Math.floor(views * 0.01),
-          },
-        },
-      };
-    }
-    case "PURCHASE_TIKTOK_PROMOTE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { 
-        goal, 
-        goalTypeCategory, 
-        targetType, 
-        videoId, 
-        adCost, 
-        currencySymbol, 
-        originalCurrencyCost, 
-        estimatedResultsMin, 
-        estimatedResultsMax, 
-        durationDays 
-      } = action.payload;
-
-      if ((activeData.money || 0) < adCost) return state;
-
-      const avgResult = Math.floor((estimatedResultsMin + estimatedResultsMax) / 2);
-      
-      const targetVideo = videoId ? (activeData.tiktokVideos || []).find((v: any) => v.id === videoId) : null;
-      const soloName = state.soloArtist?.name || state.group?.name || "Artist";
-
-      // Immediate boost (25% upfront)
-      const immediateRatio = 0.25;
-      const immediateViews = goal === 'views' ? Math.floor(avgResult * immediateRatio) : Math.floor(avgResult * 0.3);
-      const immediateLikes = goal === 'likes' ? Math.floor(avgResult * immediateRatio) : Math.floor(immediateViews * 0.08);
-      const immediateComments = Math.floor(immediateLikes * 0.08);
-      const immediateFollowers = goal === 'followers' ? Math.floor(avgResult * immediateRatio) : Math.floor(immediateViews * 0.005);
-      const immediateProfileViews = goal === 'profile_views' ? Math.floor(avgResult * immediateRatio) : Math.floor(immediateViews * 0.03);
-
-      const newOrder: any = {
-        id: `tiktok_promote_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        goal,
-        goalTypeCategory: goalTypeCategory || 'boost_account',
-        targetType: targetType || (videoId ? 'video' : 'account'),
-        videoId,
-        videoThumbnail: targetVideo?.thumbnail || state.soloArtist?.image || state.group?.image || "",
-        videoTitle: targetVideo ? targetVideo.content : soloName,
-        status: 'active',
-        adCost,
-        currencySymbol: currencySymbol || 'CA$',
-        originalCurrencyCost: originalCurrencyCost || adCost,
-        estimatedResultsMin,
-        estimatedResultsMax,
-        viewsGained: immediateViews,
-        likesGained: immediateLikes,
-        commentsGained: immediateComments,
-        followersGained: immediateFollowers,
-        profileViewsGained: immediateProfileViews,
-        targetViews: goal === 'views' ? avgResult : Math.floor(avgResult * 2),
-        targetLikes: goal === 'likes' ? avgResult : Math.floor(avgResult * 0.1),
-        targetFollowers: goal === 'followers' ? avgResult : Math.floor(avgResult * 0.02),
-        targetProfileViews: goal === 'profile_views' ? avgResult : Math.floor(avgResult * 0.05),
-        durationDays: durationDays || 7,
-        remainingDays: durationDays || 7,
-        startDate: new Date().toLocaleDateString('en-US'),
-        createdAtDate: state.date,
-      };
-
-      // Update target video if present
-      let updatedVideos = activeData.tiktokVideos || [];
-      if (videoId) {
-        updatedVideos = updatedVideos.map((v: any) => v.id === videoId ? {
-          ...v,
-          views: v.views + immediateViews,
-          likes: v.likes + immediateLikes,
-          comments: v.comments + immediateComments
-        } : v);
-      }
-
-      const updatedFollowers = (activeData.tiktokFollowers || 0) + immediateFollowers;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - adCost,
-            tiktokFollowers: updatedFollowers,
-            tiktokVideos: updatedVideos,
-            tiktokPromotes: [newOrder, ...(activeData.tiktokPromotes || [])],
-          },
-        },
-      };
-    }
-    case "UPLOAD_BILLIONS_CLUB_IMAGE": {
-      if (!state.activeArtistId) return state;
-      const { emailId, songId, imageUrl } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-      const song = activeData.songs.find((s) => s.id === songId);
-
-      if (!artistProfile || !song) return state;
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "billionsClub") {
-          return {
-            ...email,
-            offer: { ...email.offer, hasUploadedImage: true, image: imageUrl },
-          };
-        }
-        return email;
-      });
-
-      updatedInbox.unshift({
-        id: crypto.randomUUID(),
-        sender: "Spotify",
-        senderIcon: "spotify",
-        subject: `Your Billions Club Plaque & Concert Details`,
-        body: `Hi ${artistProfile.name},
-
-We have successfully received your image and generated your Billions Club plaque for "${song.title}"!
-
-The concert in Paris was an absolute success, and the fans loved your performance. The plaque has been shipped to your management team.
-
-Keep breaking records.
-
-- Spotify Team`,
-        date: state.date,
-        isRead: false,
-      });
-
-      // Pop Crave / Pop Base Posts
-      const newPosts: XPost[] = [];
-
-      newPosts.push({
-        id: crypto.randomUUID(),
-        authorId: "popcrave",
-        content: `${artistProfile.name} delivers gorgeous performance of "${song.title}" at their Spotify Billions Club concert in Paris.`,
-        image: imageUrl,
-        likes: Math.floor(Math.random() * 50000) + 20000,
-        retweets: Math.floor(Math.random() * 10000) + 5000,
-        views: Math.floor(Math.random() * 2000000) + 500000,
-        date: state.date,
-      });
-
-      newPosts.push({
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistProfile.name} receives their Spotify Billions Club plaque for "${song.title}" surpassing 1 BILLION streams on the platform.`,
-        image: imageUrl,
-        likes: Math.floor(Math.random() * 60000) + 25000,
-        retweets: Math.floor(Math.random() * 12000) + 6000,
-        views: Math.floor(Math.random() * 3000000) + 800000,
-        date: state.date,
-      });
-
-      // Update song to track performance done
-      const updatedSongs = activeData.songs.map((s) =>
-        s.id === songId ? { ...s, hasBillionsClubPerformance: true } : s,
-      );
-
-      const tmzPostToSet: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content: `BILLIONS CLUB: ${artistProfile.name.toUpperCase()} is officially a Spotify Billions Club member as "${song.title}" crosses 1B streams!`,
-        image: imageUrl, // we'll use a template UI for TMZ article with profile pic in the component
-        likes: Math.floor(Math.random() * 10000) + 5000,
-        retweets: Math.floor(Math.random() * 2000) + 1000,
-        views: Math.floor(Math.random() * 1000000) + 200000,
-        date: state.date,
-        billionsClubSongTitle: song.title, // add some extra info
-      };
-
-      return {
-        ...state,
-        activeTmzPost: tmzPostToSet,
-        currentView: "tmzArticle",
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            xPosts: [...newPosts, tmzPostToSet, ...activeData.xPosts],
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-    case "ACCEPT_GENIUS_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { songId, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "geniusInterview") {
-          return {
-            ...email,
-            offer: { ...email.offer, isAccepted: true },
-          };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + 100000,
-            inbox: updatedInbox,
-          },
-        },
-        activeGeniusOffer: { songId, emailId },
-        currentView: "createGeniusInterview",
-      };
-    }
-    case "CREATE_GENIUS_INTERVIEW": {
-      if (!state.activeArtistId || !state.activeGeniusOffer) return state;
-      const { video } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSongs = activeData.songs.map((song) => {
-        if (song.id === state.activeGeniusOffer!.songId) {
-          return { ...song, interviewBoost: true };
-        }
-        return song;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: [...activeData.videos, video],
-            songs: updatedSongs,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 15),
-          },
-        },
-        activeGeniusOffer: null,
-        currentView: "youtube",
-      };
-    }
-    case "CANCEL_GENIUS_OFFER": {
-      return {
-        ...state,
-        activeGeniusOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "ACCEPT_ONTHERADAR_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { songId, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "onTheRadarOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 10),
-            inbox: updatedInbox,
-          },
-        },
-        activeOnTheRadarOffer: { songId, emailId },
-        currentView: "createOnTheRadarPerformance",
-      };
-    }
-    case "CREATE_ONTHERADAR_PERFORMANCE": {
-      if (!state.activeArtistId || !state.activeOnTheRadarOffer) return state;
-      const { video } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSongs = activeData.songs.map((song) => {
-        if (song.id === state.activeOnTheRadarOffer!.songId) {
-          return { ...song, interviewBoost: true }; // Re-using for generic boost
-        }
-        return song;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: [...activeData.videos, video],
-            songs: updatedSongs,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 20),
-          },
-        },
-        activeOnTheRadarOffer: null,
-        currentView: "youtube",
-      };
-    }
-    case "CANCEL_ONTHERADAR_OFFER": {
-      return {
-        ...state,
-        activeOnTheRadarOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "ACCEPT_TRSHD_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { songId, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "trshdOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 10),
-            inbox: updatedInbox,
-          },
-        },
-        activeTrshdOffer: { songId, emailId },
-        currentView: "createTrshdPerformance",
-      };
-    }
-    case "CREATE_TRSHD_PERFORMANCE": {
-      if (!state.activeArtistId || !state.activeTrshdOffer) return state;
-      const { video } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSongs = activeData.songs.map((song) => {
-        if (song.id === state.activeTrshdOffer!.songId) {
-          return { ...song, interviewBoost: true }; // Re-using for generic boost
-        }
-        return song;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: [...activeData.videos, video],
-            songs: updatedSongs,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 20),
-          },
-        },
-        activeTrshdOffer: null,
-        currentView: "youtube",
-      };
-    }
-    case "CANCEL_TRSHD_OFFER": {
-      return {
-        ...state,
-        activeTrshdOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "ACCEPT_FALLON_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { releaseId, offerType, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "fallonOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      const firstStepView =
-        offerType === "interview"
-          ? "createFallonInterview"
-          : "createFallonPerformance";
-      const firstStep = offerType === "interview" ? "interview" : "performance";
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        activeFallonOffer: { releaseId, offerType, emailId, step: firstStep },
-        currentView: firstStepView,
-      };
-    }
-    case "CREATE_FALLON_VIDEO": {
-      if (!state.activeArtistId || !state.activeFallonOffer) return state;
-
-      const { video, songId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
-      if (!artistProfile) return state;
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        videos: [...activeData.videos, video],
-        hype: Math.min(getHypeCap(activeData), activeData.hype + 25),
-      };
-
-      let postContent = "";
-      let postImage: string | undefined = video.thumbnail;
-
-      if (video.type === "Live Performance" && songId) {
-        const song = activeData.songs.find((s) => s.id === songId);
-        if (song) {
-          postContent = `${artistProfile.name} delivers an incredible performance of '${song.title}' on Jimmy Fallon.
-
-Watch: youtu.be/sIdlL8V83Cc`;
-        }
-      } else if (video.type === "Interview") {
-        const release = activeData.releases.find(
-          (r) => r.id === state.activeFallonOffer!.releaseId,
-        );
-        const pronounNominative =
-          artistProfile.pronouns === "he/him"
-            ? "he"
-            : artistProfile.pronouns === "she/her"
-              ? "she"
-              : "they";
-        const pronounPossessive =
-          artistProfile.pronouns === "he/him"
-            ? "his"
-            : artistProfile.pronouns === "she/her"
-              ? "her"
-              : "their";
-        const interviewTropes = [
-          `reveals on Jimmy Fallon that ${pronounNominative} want${artistProfile.pronouns === "they/them" ? "" : "s"} to do more acting: "I'm very scared to freak my fans out... but I really do love acting. I'd love for that."`,
-          `teases a new sound for ${pronounPossessive} next project on Jimmy Fallon: "I'm experimenting a lot right now, it's very different."`,
-          `talks about the meaning behind ${pronounPossessive} new album '${release?.title || ""}' on Jimmy Fallon: "It's my most personal work yet, I poured everything into it."`,
-        ];
-        postContent = `${artistProfile.name} ${interviewTropes[Math.floor(Math.random() * interviewTropes.length)]}`;
-      }
-
-      if (postContent) {
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: postContent,
-          image: postImage,
-          likes: Math.floor(Math.random() * 30000) + 15000,
-          retweets: Math.floor(Math.random() * 7000) + 2000,
-          views: Math.floor(Math.random() * 800000) + 200000,
-          date: state.date,
-        };
-        updatedData.xPosts.unshift(newPost);
-      }
-
-      let newState = { ...state };
-      if (
-        state.activeFallonOffer.offerType === "both" &&
-        state.activeFallonOffer.step === "performance"
-      ) {
-        newState.activeFallonOffer = {
-          ...state.activeFallonOffer,
-          step: "interview",
-        };
-        newState.currentView = "createFallonInterview";
-      } else {
-        newState.activeFallonOffer = null;
-        newState.currentView = "youtube";
-      }
-
-      newState.artistsData = {
-        ...state.artistsData,
-        [state.activeArtistId]: updatedData,
-      };
-      return newState;
-    }
-    case "CANCEL_FALLON_OFFER": {
-      return {
-        ...state,
-        activeFallonOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "ADD_ARTIST_IMAGE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.artistImages.length >= 100) return state;
-
-      const newMedia = {
-        id: crypto.randomUUID(),
-        url: action.payload,
-        year: state.date.year,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            artistImages: [...activeData.artistImages, newMedia],
-          },
-        },
-      };
-    }
-    case "ADD_ARTIST_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.artistVideoThumbnails.length >= 10) return state;
-      
-      const newMedia = {
-        id: crypto.randomUUID(),
-        url: action.payload,
-        year: state.date.year,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            artistVideoThumbnails: [
-              ...activeData.artistVideoThumbnails,
-              newMedia,
-            ],
-          },
-        },
-      };
-    }
-    case "ADD_PAPARAZZI_PHOTO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const newPhoto = {
-        ...action.payload.photo,
-        year: state.date.year,
-      };
-      
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            paparazziPhotos: [
-              ...activeData.paparazziPhotos,
-              newPhoto,
-            ],
-          },
-        },
-      };
-    }
-    case "DELETE_INSTAGRAM_POST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            instagramPosts: (activeData.instagramPosts || []).filter(post => post.id !== action.payload.postId),
-          }
-        }
-      };
-    }
-    case "DELETE_INSTAGRAM_REEL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            instagramReels: (activeData.instagramReels || []).filter(reel => reel.id !== action.payload.reelId),
-          }
-        }
-      };
-    }
-    case "DELETE_TIKTOK_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tiktokVideos: (activeData.tiktokVideos || []).filter(video => video.id !== action.payload.videoId),
-          }
-        }
-      };
-    }
-    case "SET_APP_ORDER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            redMicPro: {
-              ...activeData.redMicPro,
-              appOrder: action.payload.appOrder
-            }
-          }
-        }
-      };
-    }
-    case "DELETE_ARTIST_IMAGE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            artistImages: activeData.artistImages.filter(img => typeof img === 'string' ? img !== action.payload : img.id !== action.payload),
-          }
-        }
-      };
-    }
-    case "DELETE_ARTIST_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            artistVideoThumbnails: activeData.artistVideoThumbnails.filter(vid => typeof vid === 'string' ? vid !== action.payload : vid.id !== action.payload),
-          }
-        }
-      };
-    }
-    case "DELETE_PAPARAZZI_PHOTO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            paparazziPhotos: activeData.paparazziPhotos.filter(p => p.id !== action.payload),
-          }
-        }
-      };
-    }
-    case "ANSWER_POPBASE_QUESTION": {
-      if (!state.activeArtistId) return state;
-      const { emailId, answer } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerUser = activeData.selectedPlayerXUserId
-        ? activeData.xUsers.find(
-            (u) => u.id === activeData.selectedPlayerXUserId,
-          )
-        : activeData.xUsers.find((u) => u.isPlayer);
-
-      if (!playerUser) return state;
-
-      const email = activeData.inbox.find((e) => e.id === emailId);
-      const offer = email?.offer as PopBaseOffer | undefined;
-
-      if (!offer) return state;
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type.startsWith("popBase")) {
-          return { ...email, offer: { ...email.offer, isAnswered: true } };
-        }
-        return email;
-      });
-
-      let popBaseContent = "";
-      if (offer.type === "popBaseClarification") {
-        popBaseContent = `${playerUser.name} addresses recent controversy regarding ${offer.originalPostContent}:
-
-"${answer}"`;
-      } else if (offer.type === "popBaseInterview") {
-        popBaseContent = `${playerUser.name} on ${offer.question?.toLowerCase()}:
-
-"${answer}"`;
-      }
-
-      if (!popBaseContent) return state;
-
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: popBaseContent,
-        likes: Math.floor(Math.random() * 40000) + 20000,
-        retweets: Math.floor(Math.random() * 8000) + 3000,
-        views: Math.floor(Math.random() * 1000000) + 400000,
-        date: state.date,
-      };
-      const hypeBoost = offer.isControversial ? 10 : 5;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            xPosts: [newPost, ...activeData.xPosts],
-            hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
-          },
-        },
-        currentView: "inbox",
-      };
-    }
-    case "POST_ON_MYSPACE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      let hypeBoost = 0;
-      let popBoost = 0;
-      const newMySpaceData = activeData.mySpaceData
-        ? { ...activeData.mySpaceData }
-        : { blogPosts: [], bulletins: [] };
-
-      if (action.payload.type === "bulletin") {
-        hypeBoost = 2;
-        popBoost = 0.5;
-        if (action.payload.content) {
-          newMySpaceData.bulletins = [
-            {
-              content: action.payload.content,
-              year: state.date.year,
-              week: state.date.week,
-            },
-            ...newMySpaceData.bulletins,
-          ].slice(0, 10);
-        }
-      } else if (action.payload.type === "blog") {
-        hypeBoost = 3;
-        popBoost = 1;
-        if (action.payload.content) {
-          newMySpaceData.blogPosts = [
-            {
-              title: "New Blog Post",
-              content: action.payload.content,
-              year: state.date.year,
-              week: state.date.week,
-            },
-            ...newMySpaceData.blogPosts,
-          ].slice(0, 5);
-        }
-      } else if (
-        action.payload.type === "profile_song" &&
-        action.payload.songId
-      ) {
-        hypeBoost = 5;
-        popBoost = 2;
-        newMySpaceData.profileSongId = action.payload.songId;
-        // Add tiny streams to target song
-        const song = activeData.songs.find(
-          (s) => s.id === action.payload.songId,
-        );
-        if (song) {
-          const streamsBoost = Math.floor(Math.random() * 5000) + 1000;
-          activeData.songs = activeData.songs.map((s) =>
-            s.id === song.id
-              ? {
-                  ...s,
-                  streams: (s.streams || 0) + streamsBoost,
-                  sales: s.sales || 0,
-                }
-              : s,
-          );
-        }
-      } else if (action.payload.type === "push" && action.payload.songId) {
-        hypeBoost = 2;
-        activeData.lastPushToItunesWeek =
-          state.date.year * 52 + state.date.week;
-        activeData.lastPushedSongId = action.payload.songId;
-        newMySpaceData.bulletins = [
-          {
-            content: action.payload.content || "Buy my new song on iTunes!",
-            year: state.date.year,
-            week: state.date.week,
-          },
-          ...newMySpaceData.bulletins,
-        ].slice(0, 10);
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            mySpaceData: newMySpaceData,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
-            popularity: Math.min(100, activeData.popularity + popBoost),
-          },
-        },
-      };
-    }
-    case "UPDATE_MYSPACE_PROFILE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const newMySpaceData = activeData.mySpaceData
-        ? { ...activeData.mySpaceData }
-        : { blogPosts: [], bulletins: [] };
-
-      if (action.payload.mood !== undefined)
-        newMySpaceData.mood = action.payload.mood;
-      if (action.payload.generalInterests !== undefined)
-        newMySpaceData.generalInterests = action.payload.generalInterests;
-      if (action.payload.musicInterests !== undefined)
-        newMySpaceData.musicInterests = action.payload.musicInterests;
-      if (action.payload.top8Friends !== undefined)
-        newMySpaceData.top8Friends = action.payload.top8Friends;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            mySpaceData: newMySpaceData,
-          },
-        },
-      };
-    }
-    case "POST_ON_X": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const playerUser = activeData.selectedPlayerXUserId
-        ? activeData.xUsers.find(
-            (u) => u.id === activeData.selectedPlayerXUserId,
-          )
-        : activeData.xUsers.find((u) => u.isPlayer);
-      if (!playerUser) return state;
-
-      const baseFollowers = playerUser.followersCount || 1000;
-      const popularityMultiplier = 1 + activeData.popularity / 100;
-      const views = Math.floor(
-        baseFollowers * (Math.random() * 0.8 + 0.4) * popularityMultiplier +
-          activeData.hype * 1000,
-      );
-      const likes = Math.floor(views * (Math.random() * 0.08 + 0.02)); // 2-10% of views
-      const retweets = Math.floor(likes * (Math.random() * 0.15 + 0.05)); // 5-20% of likes
-
-      const { content, image, postType, targetId, songId, quoteOf } =
-        action.payload;
-      let postContent = content;
-      if (postType === "market_crypto" && !postContent.trim() && activeData.cryptoCoin) {
-          postContent = "Buy $" + activeData.cryptoCoin.ticker + " now!";
-      }
-
-      let newActiveDeals = activeData.activeBrandDeals;
-      if (activeData.activeBrandDeals && activeData.activeBrandDeals.length > 0) {
-        newActiveDeals = activeData.activeBrandDeals.map(deal => {
-            if (content.toLowerCase().includes(deal.hashtag.toLowerCase())) {
-                return { ...deal, lastPostedWeek: state.date.week + (state.date.year * 52) };
-            }
-            return deal;
-        });
-      }
-      if (postType === "push" && songId) {
-        const song = activeData.songs.find((s) => s.id === songId);
-        if (song) {
-          postContent = content.trim()
-            ? content
-            : `push ${song.title} to top 10 on iTunes`;
-        }
-      }
-
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: playerUser.id,
-        content: postContent,
-        image: image,
-        likes: likes,
-        retweets: retweets,
-        views: views,
-        date: state.date,
-        quoteOf: quoteOf,
-      };
-
-      const updatedPosts = [newPost, ...activeData.xPosts];
-
-      if (postType === "announce" && action.payload.announceItem) {
-        const { type, submissionId, songId } = action.payload.announceItem;
-        const submission = activeData.labelSubmissions.find(
-          (s) => s.id === submissionId,
-        );
-        const artistName =
-          state.soloArtist?.name || state.group?.name || "Artist";
-
-        if (submission) {
-          let projectTypeStr = submission.release.type;
-          let projectTitle = submission.release.title;
-          let releaseDateStr = "soon";
-
-          if (type === "project") {
-            submission.isProjectAnnounced = true;
-            if (submission.projectReleaseDate) {
-              releaseDateStr = `Week ${submission.projectReleaseDate.week}, ${submission.projectReleaseDate.year}`;
-            }
-          } else if (type === "single" && songId) {
-            const single = submission.singlesToRelease?.find(
-              (s) => s.songId === songId,
-            );
-            if (single) {
-              single.isAnnounced = true;
-              if (single.releaseDate) {
-                releaseDateStr = `Week ${single.releaseDate?.week}, ${single.releaseDate?.year}`;
-              }
-            }
-            const song = activeData.songs.find((s) => s.id === songId);
-            if (song) {
-              projectTitle = song.title;
-              projectTypeStr = "Single";
-            }
-          }
-
-          // Pop Base Tweet
-          let missingMembersStr = "";
-          if (state.group) {
-              const missingMembers = state.group.members.filter(m => state.artistsData[m.id]?.isHiatus).map(m => m.name);
-              if (missingMembers.length > 0) {
-                  missingMembersStr = ` (Note: ${missingMembers.join(', ')} will not participate in this release due to hiatus)`;
-              }
-          }
-          const popBasePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `${artistName} announces a new ${projectTypeStr} "${projectTitle}" out ${releaseDateStr}.${missingMembersStr}`,
-            image: submission.release.coverArt,
-            likes: Math.floor(Math.random() * 80000) + 30000,
-            retweets: Math.floor(Math.random() * 20000) + 5000,
-            views: Math.floor(Math.random() * 1500000) + 500000,
-            date: state.date,
-          };
-          updatedPosts.unshift(popBasePost);
-
-          const activeArtist = allPlayerArtistsAndGroups.find(
-            (a) => a.id === state.activeArtistId,
-          );
-          const pronounPossessive =
-            activeArtist && "pronouns" in activeArtist
-              ? activeArtist.pronouns === "he/him"
-                ? "his"
-                : activeArtist.pronouns === "she/her"
-                  ? "her"
-                  : "their"
-              : "their";
-          const pronounNominative =
-            activeArtist && "pronouns" in activeArtist
-              ? activeArtist.pronouns === "he/him"
-                ? "he"
-                : activeArtist.pronouns === "she/her"
-                  ? "she"
-                  : "they"
-              : "they";
-          const isAre =
-            activeArtist &&
-            "pronouns" in activeArtist &&
-            activeArtist.pronouns === "they/them"
-              ? "are"
-              : "is";
-          const addsS =
-            activeArtist &&
-            "pronouns" in activeArtist &&
-            activeArtist.pronouns === "they/them"
-              ? ""
-              : "s";
-          const tmzPost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "tmz",
-            content: `${artistName} is dropping ${projectTypeStr === "Single" ? "a new track" : "another project"} soon... let's hope ${pronounNominative} actually put${addsS} effort into this one, unlike ${pronounPossessive} tragic outfit choices lately. üò¨üëÄ`,
-            image:
-              activeData.paparazziPhotos.length > 0
-                ? activeData.paparazziPhotos[
-                    Math.floor(
-                      Math.random() * activeData.paparazziPhotos.length,
-                    )
-                  ].url
-                : undefined,
-            likes: Math.floor(Math.random() * 40000) + 10000,
-            retweets: Math.floor(Math.random() * 8000) + 2000,
-            views: Math.floor(Math.random() * 900000) + 300000,
-            date: state.date,
-          };
-          updatedPosts.unshift(tmzPost);
-
-          // Check if group members are on hiatus to generate angry/boycott tweets on new announcement (Group releases only)
-          let hiatusAnnouncePosts: XPost[] = [];
-          if (state.group && state.group.members && state.activeArtistId === state.group.id) {
-            const currentAbsWeek = state.date.year * 52 + state.date.week;
-            const groupName = state.group.name;
-            const groupTag = groupName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            let fanPool: string[] = [];
-            if (activeData.xUsers) {
-              fanPool.push(...activeData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
-            }
-            state.group.members.forEach((m) => {
-              const mData = state.artistsData[m.id];
-              if (mData?.xUsers) {
-                fanPool.push(...mData.xUsers.filter(u => !u.isPlayer && !u.isVerified && !["tmz", "popbase", "chartdata", "spotifysnapshot"].includes(u.id)).map(u => u.id));
-              }
-              fanPool.push(`addiction_fan_${m.id}`);
-              fanPool.push(`charts_${m.id}`);
-              fanPool.push(`stats_${m.id}`);
-            });
-            fanPool = Array.from(new Set(fanPool));
-
-            state.group.members.forEach((member, idx) => {
-              const mData = state.artistsData[member.id];
-              if (mData && mData.isHiatus && mData.hiatusStartYear !== undefined && mData.hiatusStartWeek !== undefined) {
-                const startAbs = mData.hiatusStartYear * 52 + mData.hiatusStartWeek;
-                const hiatusWeeks = currentAbsWeek - startAbs;
-                const memberTag = member.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-                if (hiatusWeeks >= 30) {
-                  // Boycott tweets flooding X with exact hashtags!
-                  const boycottMessages = [
-                    `BOYCOTT THIS RELEASE! WE WANT ${member.name.toUpperCase()} BACK! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK üõë`,
-                    `DO NOT STREAM THIS UNTIL ${member.name} RETURNS TO ${groupName}! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
-                    `Releasing new music after ${hiatusWeeks} weeks of ${member.name} being on hiatus?! ABSOLUTELY NOT. #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`,
-                    `No ${member.name} = ZERO STREAMS FROM US! #BOYCOTT${groupTag} #FREE${memberTag} #BRING${memberTag}BACK`
-                  ];
-                  boycottMessages.forEach((msg, mIdx) => {
-                    const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
-                    hiatusAnnouncePosts.push({
-                      id: crypto.randomUUID(),
-                      authorId,
-                      content: msg,
-                      likes: Math.floor(Math.random() * 60000) + 12000,
-                      retweets: Math.floor(Math.random() * 18000) + 3500,
-                      views: Math.floor(Math.random() * 700000) + 100000,
-                      date: state.date,
-                    });
-                  });
-                } else {
-                  // Angry fan tweets
-                  const angryMessages = [
-                    `How can you announce new music while ${member.name} is still on hiatus?! üò°`,
-                    `Promoting new stuff without ${member.name}?? This feels so wrong üò≠`,
-                    `No way you guys are dropping this while ${member.name} is absent! Unbelievable üò§`,
-                    `Where is ${member.name}?! You guys are acting like nothing happened üò§`
-                  ];
-                  angryMessages.forEach((msg, mIdx) => {
-                    const authorId = fanPool.length > 0 ? fanPool[(idx * 4 + mIdx) % fanPool.length] : `addiction_fan_${member.id}`;
-                    hiatusAnnouncePosts.push({
-                      id: crypto.randomUUID(),
-                      authorId,
-                      content: msg,
-                      likes: Math.floor(Math.random() * 40000) + 8000,
-                      retweets: Math.floor(Math.random() * 10000) + 2000,
-                      views: Math.floor(Math.random() * 450000) + 60000,
-                      date: state.date,
-                    });
-                  });
-                }
-              }
-            });
-          }
-
-          if (hiatusAnnouncePosts.length > 0) {
-            updatedPosts.unshift(...hiatusAnnouncePosts);
-          } else {
-            // Add Fan Excitement Quote when no members are on hiatus
-            const fanContent1 = [
-              `we prayed for times like these üò≠`,
-              `oh my god ${pronounNominative}'${isAre === "is" ? "s" : "re"} actually dropping!!`,
-              `${pronounNominative} ${isAre} finally coming to save pop music`,
-              `wait ${pronounNominative} ${isAre} dropping ${projectTypeStr === "Single" ? "a single" : "an album"}? IM SHAKING`,
-              `i literally just screamed. ${pronounPossessive} new era ${isAre} going to end everyone`,
-            ][Math.floor(Math.random() * 5)];
-
-            const fanFanUser =
-              activeData.xUsers.find((u) => u.id.startsWith("addiction_fan_")) ||
-              activeData.xUsers.find(
-                (u) =>
-                  !u.isPlayer &&
-                  !u.isVerified &&
-                  !["popbase", "tmz", "chartdata", "spotifysnapshot"].includes(
-                    u.id,
-                  ),
-              );
-
-            if (fanFanUser) {
-              const fanPost: XPost = {
-                id: crypto.randomUUID(),
-                authorId: fanFanUser.id,
-                quoteOf: popBasePost,
-                content: fanContent1,
-                likes: Math.floor(Math.random() * 50000) + 10000,
-                retweets: Math.floor(Math.random() * 10000) + 2000,
-                views: Math.floor(Math.random() * 500000) + 100000,
-                date: state.date,
-              };
-              updatedPosts.unshift(fanPost);
-            }
-          }
-        }
-      }
-
-      let updatedData: ArtistData = {
-        ...activeData,
-        xPosts: updatedPosts,
-      };
-
-      if (updatedData.cryptoCoin && postContent.includes("$" + updatedData.cryptoCoin.ticker)) {
-          updatedData.cryptoCoin = {
-              ...updatedData.cryptoCoin,
-              reputation: {
-                  ...updatedData.cryptoCoin.reputation,
-                  hype: Math.min(100, updatedData.cryptoCoin.reputation.hype + 10)
-              },
-              currentPrice: updatedData.cryptoCoin.currentPrice * 1.05
-          };
-      }
-
-      if (postType === "market_crypto" && updatedData.cryptoCoin) {
-        if (updatedData.money >= 50000) {
-            updatedData.money -= 50000;
-            updatedData.cryptoCoin = {
-                ...updatedData.cryptoCoin,
-                reputation: {
-                    ...updatedData.cryptoCoin.reputation,
-                    hype: Math.min(100, updatedData.cryptoCoin.reputation.hype + 15)
-                }
-            };
-        } else {
-            // Not enough money
-            return state;
-        }
-      }
-      if (postType === "endorse") {
-        if (updatedData.lastEndorsementYear !== state.date.year) {
-          updatedData.lastEndorsementYear = state.date.year;
-          updatedData.endorsementCountThisYear = 0;
-        }
-        updatedData.endorsementCountThisYear =
-          (updatedData.endorsementCountThisYear || 0) + 1;
-
-        updatedData.endorsedParty = targetId as "democrat" | "republican";
-
-        let publicImageDrop = 5;
-        if (updatedData.endorsementCountThisYear > 3) {
-          publicImageDrop = 25; // larger penalty
-        } else if (targetId === "republican") {
-          publicImageDrop = 15;
-        }
-
-        updatedData.publicImage = Math.max(
-          0,
-          activeData.publicImage - publicImageDrop,
-        );
-        const artistName =
-          state.soloArtist?.name || state.group?.name || "Artist";
-
-        const tmzPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "tmz",
-          content: `${artistName} officially endorses the ${targetId === "democrat" ? "Democratic" : "Republican"} candidate for President. Fans are divided!`,
-          likes: Math.floor(Math.random() * 50000) + 10000,
-          retweets: Math.floor(Math.random() * 10000) + 2000,
-          views: Math.floor(Math.random() * 900000) + 300000,
-          date: state.date,
-        };
-        updatedPosts.unshift(tmzPost);
-
-        if (updatedData.endorsementCountThisYear > 3) {
-          const fanPost: XPost = {
-            id: crypto.randomUUID(),
-            authorId:
-              activeData.xUsers.find(
-                (u) =>
-                  !u.isPlayer &&
-                  !u.isVerified &&
-                  !["popbase", "tmz", "chartdata", "spotifysnapshot"].includes(
-                    u.id,
-                  ),
-              )?.id || "tmz",
-            content: `Okay we get it... you endorse them. Stop tweeting about it we are getting annoyed. üôÑ`,
-            likes: Math.floor(Math.random() * 50000) + 10000,
-            retweets: Math.floor(Math.random() * 10000) + 2000,
-            views: Math.floor(Math.random() * 500000) + 100000,
-            date: state.date,
-          };
-          updatedPosts.unshift(fanPost);
-        }
-
-        if (targetId === "republican") {
-          const popbasePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `${artistName} is receiving heavy backlash from fans and music legends for endorsing the Republican party for President.`,
-            likes: Math.floor(Math.random() * 80000) + 10000,
-            retweets: Math.floor(Math.random() * 10000) + 2000,
-            views: Math.floor(Math.random() * 900000) + 300000,
-            date: state.date,
-          };
-          updatedPosts.unshift(popbasePost);
-        }
-
-        if (Math.random() < (targetId === "democrat" ? 0.8 : 0.4)) {
-          updatedData.inbox = [
-            {
-              id: crypto.randomUUID(),
-              sender: `${targetId === "democrat" ? "Democratic" : "Republican"} National Committee`,
-              subject: `Perform at our upcoming rally!`,
-              body: `Hello ${artistName},
-
-We saw your recent endorsement and would love for you to perform at our upcoming rally to help energize the voters. Let us know if you're interested!`,
-              date: { ...state.date },
-              isRead: false,
-            },
-            ...updatedData.inbox,
-          ];
-        }
-
-        updatedData.xPosts = updatedPosts;
-      }
-
-      if (postType === "push" && songId) {
-        updatedData.lastPushToItunesWeek =
-          state.date.year * 52 + state.date.week;
-        updatedData.lastPushedSongId = songId;
-      }
-
-      if (postType === "fanWar" && targetId) {
-        updatedData.fanWarStatus = {
-          targetArtistName: targetId,
-          weeksRemaining: 4, // Fan wars last 4 weeks
-        };
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "REPLY_TO_X_POST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { postId, content, image, authorId } = action.payload;
-
-      const newComment: XComment = {
-        id: crypto.randomUUID(),
-        authorId,
-        content,
-        image,
-        date: state.date,
-        likes: 0,
-      };
-
-      const updatedPosts = activeData.xPosts.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            comments: [...(post.comments || []), newComment],
-          };
-        }
-        return post;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xPosts: updatedPosts,
-          },
-        },
-      };
-    }
-    case "SELECT_X_ACCOUNT": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            selectedPlayerXUserId: action.payload.accountId,
-          },
-        },
-      };
-    }
-    case "REQUEST_SPOTIFY_VERIFICATION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.followers < 50000) return state; // Arbitrary hurdle
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            isSpotifyVerified: true,
-          },
-        },
-      };
-    }
-    case "REVEAL_SINGLE_TRACK_COUNTDOWN": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === action.payload.submissionId) {
-          const newRelease = {
-            ...sub.release,
-            revealedTrackIds: [
-              ...(sub.release.revealedTrackIds || []),
-              action.payload.songId,
-            ],
-          };
-          return { ...sub, release: newRelease };
-        }
-        return sub;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "REVEAL_TRACKLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const submission = activeData.labelSubmissions.find(
-        (s) => s.id === action.payload.submissionId,
-      );
-      const tracklistUrl = action.payload.tracklistImageUrl;
-      
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === action.payload.submissionId) {
-          const newRelease = { 
-            ...sub.release, 
-            isTracklistRevealed: true,
-            ...(tracklistUrl ? { tracklistImageUrl: tracklistUrl } : {}),
-          };
-          return { 
-            ...sub, 
-            isTracklistRevealed: true,
-            tracklistImageUrl: tracklistUrl || sub.tracklistImageUrl,
-            release: newRelease 
-          };
-        }
-        return sub;
-      });
-
-      const updatedReleases = (activeData.releases || []).map((rel) => {
-        if (submission && rel.id === submission.release.id) {
-          return {
-            ...rel,
-            isTracklistRevealed: true,
-            ...(tracklistUrl ? { tracklistImageUrl: tracklistUrl } : {}),
-          };
-        }
-        return rel;
-      });
-
-      let newXPosts = activeData.xPosts || [];
-      const artistName =
-        state.artists.find((a) => a.id === state.activeArtistId)?.name ||
-        state.soloArtist?.name ||
-        state.group?.name ||
-        activeData.name ||
-        "Artist";
-      
-      const albumTitle = submission?.release?.title || action.payload.albumTitle || "New Album";
-      const weekRelease = submission?.projectReleaseDate?.week || "Soon";
-
-      const postContent = tracklistUrl
-        ? `Tracklist for ${artistName}'s new album '${albumTitle}' üíø
-
-Out Week ${weekRelease}.`
-        : `Tracklist for ${artistName}'s new album '${albumTitle}':
-
-` +
-          (action.payload.tracklist
-            ?.map((t: string, i: number) => `#${i + 1}. ${t}`)
-            .join("\n") || "") +
-          `
-
-Out Week ${weekRelease}.`;
-
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: postContent,
-        image: tracklistUrl,
-        likes: Math.floor(Math.random() * 50000) + 18000,
-        retweets: Math.floor(Math.random() * 8000) + 2500,
-        views: Math.floor(Math.random() * 1500000) + 400000,
-        date: state.date,
-      };
-      newXPosts = [newPost, ...newXPosts];
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            hype: Math.min(100, (activeData.hype || 50) + 10),
-            labelSubmissions: updatedSubmissions,
-            releases: updatedReleases,
-            xPosts: newXPosts,
-          },
-        },
-      };
-    }
-    case "UPLOAD_COUNTDOWN_IMAGE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === action.payload.submissionId) {
-          const newRelease = {
-            ...sub.release,
-            countdownImageUrl: action.payload.imageUrl,
-          };
-          return { ...sub, release: newRelease };
-        }
-        return sub;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "BUY_X_VERIFICATION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < action.payload.cost) return state;
-
-      const updatedUsers = activeData.xUsers.map((u) => {
-        if (u.id === action.payload.accountId) {
-          return {
-            ...u,
-            isVerified: action.payload.tier,
-            verifiedSince: state.date.year,
-          };
-        }
-        return u;
-      });
-
-      const newEmail: Email = {
-        id: crypto.randomUUID(),
-        sender: "X Accounts & Billing",
-        subject: "Welcome to X Premium",
-        body: `You have successfully subscribed to X Premium (${action.payload.tier === "gold" ? "Gold" : "Blue"}).
-
-You were charged $${formatNumber(action.payload.cost)} for your first month. Your subscription will renew automatically every month.
-
-Thank you for trusting X.`,
-        date: state.date,
-        isRead: false,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xUsers: updatedUsers,
-            money: activeData.money - action.payload.cost,
-            inbox: [newEmail, ...activeData.inbox],
-          },
-        },
-      };
-    }
-    case "START_X_SPACE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerUser = activeData.selectedPlayerXUserId
-        ? activeData.xUsers.find(
-            (u) => u.id === activeData.selectedPlayerXUserId,
-          )
-        : activeData.xUsers.find((u) => u.isPlayer);
-      if (!playerUser) return state;
-
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: playerUser.id,
-        content: `Listening to ${action.payload.topic}`,
-        likes: Math.floor(Math.random() * 5000),
-        retweets: Math.floor(Math.random() * 500),
-        views: Math.floor(Math.random() * 50000),
-        date: state.date,
-        isSpace: true,
-        spaceInfo: {
-          listeners: Math.floor(Math.random() * 5000) + 1000,
-        },
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xPosts: [newPost, ...activeData.xPosts],
-          },
-        },
-      };
-    }
-    case "PROMOTE_SONG_ON_X_SPACE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { songId, listeners } = action.payload;
-      const eraConfig = getEraConfiguration(state.date.year);
-      const addedStreams = eraConfig.streamingActive
-        ? Math.floor(listeners * (Math.random() * 50 + 50))
-        : 0;
-      const addedSells = Math.floor(listeners * (Math.random() * 0.5 + 0.1));
-
-      const updatedSongs = activeData.songs.map((song) =>
-        song.id === songId
-          ? {
-              ...song,
-              streams: (song.streams || 0) + addedStreams,
-              sales: (song.sales || 0) + addedSells,
-              itunesSalesWeek: (song.itunesSalesWeek || 0) + addedSells,
-            }
-          : song,
-      );
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-    case "END_X_SPACE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerUser = activeData.selectedPlayerXUserId
-        ? activeData.xUsers.find(
-            (u) => u.id === activeData.selectedPlayerXUserId,
-          )
-        : activeData.xUsers.find((u) => u.isPlayer);
-      if (!playerUser) return state;
-
-      // Find the most recent space post by user and mark it ended
-      const postIndex = activeData.xPosts.findIndex(
-        (p) =>
-          p.authorId === playerUser.id && p.isSpace && !p.spaceInfo?.isEnded,
-      );
-      if (postIndex === -1) return state;
-
-      const updatedPosts = [...activeData.xPosts];
-      updatedPosts[postIndex] = {
-        ...updatedPosts[postIndex],
-        spaceInfo: {
-          ...updatedPosts[postIndex].spaceInfo!,
-          isEnded: true,
-        },
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xPosts: updatedPosts,
-          },
-        },
-      };
-    }
-    case "CREATE_X_ACCOUNT": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerAccounts = activeData.xUsers.filter((u) => u.isPlayer);
-      if (playerAccounts.length >= 5) return state; // Limit to 5 accounts
-
-      const newAccount: XUser = {
-        id: crypto.randomUUID(),
-        name: action.payload.name,
-        username: action.payload.username,
-        avatar: action.payload.avatar,
-        bio: action.payload.bio,
-        isPlayer: true,
-        isVerified: false,
-        followersCount: 0,
-        followingCount: 0,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xUsers: [...activeData.xUsers, newAccount],
-            selectedPlayerXUserId: newAccount.id,
-          },
-        },
-      };
-    }
-    case "DELETE_X_ACCOUNT": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerAccounts = activeData.xUsers.filter((u) => u.isPlayer);
-      if (playerAccounts.length <= 1) return state; // Must have at least one account
-
-      const updatedUsers = activeData.xUsers.filter(
-        (u) => u.id !== action.payload.accountId,
-      );
-      let newSelected = activeData.selectedPlayerXUserId;
-      if (newSelected === action.payload.accountId) {
-        newSelected = updatedUsers.find((u) => u.isPlayer)?.id;
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xUsers: updatedUsers,
-            selectedPlayerXUserId: newSelected,
-          },
-        },
-      };
-    }
-    case "VIEW_X_PROFILE":
-      return {
-        ...state,
-        selectedXUserId: action.payload,
-        currentView: "xProfile",
-      };
-    case "VIEW_X_CHAT":
-      return {
-        ...state,
-        selectedXChatId: action.payload,
-        currentView: "xChatDetail",
-      };
-    case "FOLLOW_X_USER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.xFollowingIds.includes(action.payload)) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xFollowingIds: [...activeData.xFollowingIds, action.payload],
-          },
-        },
-      };
-    }
-    case "UNFOLLOW_X_USER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xFollowingIds: activeData.xFollowingIds.filter(
-              (id) => id !== action.payload,
-            ),
-          },
-        },
-      };
-    }
-    case "SEND_X_MESSAGE": {
-      if (!state.activeArtistId) return state;
-      const { chatId, message } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedChats = activeData.xChats.map((chat) => {
-        if (chat.id === chatId) {
-          return { ...chat, messages: [...chat.messages, message] };
-        }
-        return chat;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xChats: updatedChats,
-          },
-        },
-      };
-    }
-    case "APPEAL_X_SUSPENSION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      if (
-        activeData.xSuspensionStatus &&
-        activeData.xSuspensionStatus.isSuspended &&
-        !activeData.xSuspensionStatus.appealSentDate
-      ) {
-        const updatedSuspensionStatus = {
-          ...activeData.xSuspensionStatus,
-          appealSentDate: state.date,
-        };
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              xSuspensionStatus: updatedSuspensionStatus,
-            },
-          },
-        };
-      }
-      return state;
-    }
-    case "ENABLE_X_SUBSCRIPTIONS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerUserId =
-        activeData.selectedPlayerXUserId ||
-        activeData.xUsers.find((u) => u.isPlayer)?.id;
-      if (!playerUserId) return state;
-
-      const updatedUsers = activeData.xUsers.map((u) => {
-        if (u.id === playerUserId) {
-          return {
-            ...u,
-            xMonetization: {
-              ...u.xMonetization,
-              subscriptions: {
-                isActive: true,
-                perks: action.payload.perks,
-                price: action.payload.price,
-                subscribers: 0,
-              },
-              revenueSharing: u.xMonetization?.revenueSharing || {
-                isActive: false,
-                eligibleViewsThisMonth: 0,
-                lifetimeEarnings: 0,
-              },
-            },
-          };
-        }
-        return u;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xUsers: updatedUsers,
-          },
-        },
-      };
-    }
-    case "ENABLE_X_REVENUE_SHARING": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const playerUserId =
-        activeData.selectedPlayerXUserId ||
-        activeData.xUsers.find((u) => u.isPlayer)?.id;
-      if (!playerUserId) return state;
-
-      const updatedUsers = activeData.xUsers.map((u) => {
-        if (u.id === playerUserId) {
-          return {
-            ...u,
-            xMonetization: {
-              ...u.xMonetization,
-              subscriptions: u.xMonetization?.subscriptions || {
-                isActive: false,
-                perks: [],
-                price: 0,
-                subscribers: 0,
-              },
-              revenueSharing: {
-                isActive: true,
-                eligibleViewsThisMonth: 0,
-                lifetimeEarnings:
-                  u.xMonetization?.revenueSharing?.lifetimeEarnings || 0,
-              },
-            },
-          };
-        }
-        return u;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xUsers: updatedUsers,
-          },
-        },
-      };
-    }
-    case "SET_ARTIST_PICK": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            artistPick: action.payload,
-          },
-        },
-      };
-    }
-    case "PITCH_TO_PLAYLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < PLAYLIST_PITCH_COST) return state;
-
-      let updatedSongs = [...activeData.songs];
-
-      // In the new system, we just set playlistBoostWeeks. The actual inclusion and success
-      // is organically calculated every week inside ADVANCE_WEEK based on their resulting score!
-      updatedSongs = updatedSongs.map((song) => {
-        if (song.id === action.payload.songId) {
-          return { ...song, playlistBoostWeeks: PLAYLIST_BOOST_WEEKS };
-        }
-        return song;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - PLAYLIST_PITCH_COST,
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-    case "PITCH_TO_APPLE_MUSIC_PLAYLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < PLAYLIST_PITCH_COST) return state;
-
-      let updatedSongs = [...activeData.songs];
-
-      updatedSongs = updatedSongs.map((song) => {
-        if (song.id === action.payload.songId) {
-          return { ...song, appleMusicPlaylistBoostWeeks: PLAYLIST_BOOST_WEEKS };
-        }
-        return song;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - PLAYLIST_PITCH_COST,
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-    case "SET_EXCLUSIVE_LICENSE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            customLabels: activeData.customLabels.map((l) =>
-              l.id === action.payload.customLabelId
-                ? {
-                    ...l,
-                    exclusiveLicenseId: action.payload.exclusiveLicenseId,
-                  }
-                : l,
-            ),
-          },
-        },
-      };
-    }
-    case "CREATE_CUSTOM_LABEL": {
-      if (!state.activeArtistId) return state;
-      const { label, cost, membersToSign } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      // Create contract for owner
-      const ownerContract: Contract = {
-        labelId: label.id,
-        isCustom: true,
-        artistId: state.activeArtistId,
-        startDate: state.date,
-        albumsReleased: 0,
-      };
-
-      const updatedArtistsData = { ...state.artistsData };
-
-      const artist = allPlayerArtistsAndGroups.find(
-        (a) => a.id === state.activeArtistId,
-      );
-      let newPosts: XPost[] = [];
-
-      if (artist) {
-        const playerUser = activeData.selectedPlayerXUserId
-          ? activeData.xUsers.find(
-              (u) => u.id === activeData.selectedPlayerXUserId,
-            )
-          : activeData.xUsers.find((u) => u.isPlayer);
-        if (playerUser) {
-          const pronounPossessive =
-            "pronouns" in artist
-              ? artist.pronouns === "he/him"
-                ? "his"
-                : artist.pronouns === "she/her"
-                  ? "her"
-                  : "their"
-              : "their";
-          let content = `${artist.name} is starting ${pronounPossessive} own record label, "${label.name}". Boss moves.`;
-          if (label.dealWithMajorId) {
-            const major = LABELS.find((l) => l.id === label.dealWithMajorId);
-            content = `${artist.name} is launching a new imprint, "${label.name}", in partnership with ${major?.name}.`;
-          }
-          newPosts.push({
-            id: crypto.randomUUID(),
-            authorId: "tmz",
-            content,
-            image: playerUser.avatar,
-            likes: Math.floor(Math.random() * 5000) + 1000,
-            retweets: Math.floor(Math.random() * 1000) + 200,
-            views: Math.floor(Math.random() * 400000) + 150000,
-            date: state.date,
-          });
-        }
-      }
-
-      // Update owner's data
-      updatedArtistsData[state.activeArtistId] = {
-        ...activeData,
-        customLabels: [...activeData.customLabels, label],
-        money: activeData.money - cost,
-        contract: ownerContract,
-        xPosts: [...newPosts, ...activeData.xPosts],
-      };
-
-      // Create contracts for signed members
-      for (const memberId of membersToSign) {
-        const memberData = state.artistsData[memberId];
-        if (memberData) {
-          const memberContract: Contract = {
-            labelId: label.id,
-            isCustom: true,
-            artistId: memberId,
-            startDate: state.date,
-            albumsReleased: 0,
-          };
-          updatedArtistsData[memberId] = {
-            ...memberData,
-            contract: memberContract,
-          };
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: updatedArtistsData,
-        currentView: "game",
-        activeTab: "Business",
-      };
-    }
-    case "RELEASE_POST_ALBUM_SINGLE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { projectId, songId, coverArt, releaseDate } = action.payload;
-
-      const song = activeData.songs.find((s) => s.id === songId);
-      const project = activeData.releases.find((r) => r.id === projectId);
-      if (!song || !project) return state;
-
-      const singleRelease: Release = {
-        id: crypto.randomUUID(),
-        title: song.title,
-        type: "Single",
-        coverArt: coverArt || project.coverArt,
-        songIds: [songId],
-        releaseDate: releaseDate,
-        artistId: state.activeArtistId,
-        releasingLabel: project.releasingLabel,
-        rightsSoldPercent: project.rightsSoldPercent,
-        rightsOwnerLabelId: project.rightsOwnerLabelId,
-      };
-
-      const newLabelSubmission: LabelSubmission = {
-        id: crypto.randomUUID(),
-        release: singleRelease,
-        status: "scheduled",
-        submittedDate: state.date,
-        decisionDate: state.date,
-        projectReleaseDate: releaseDate,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: [
-              ...activeData.labelSubmissions,
-              newLabelSubmission,
-            ],
-          },
-        },
-      };
-    }
-    case "DELETE_SONG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedSongs = activeData.songs.filter(
-        (song) => song.id !== action.payload.songId,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-    case "TOGGLE_VAULT_SONG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedSongs = activeData.songs.map((song) =>
-        song.id === action.payload.songId
-          ? { ...song, isVaulted: !song.isVaulted }
-          : song,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-    case "CANCEL_SCHEDULED_RELEASE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const submissionToCancel = activeData.labelSubmissions.find(
-        (sub) => sub.id === action.payload.submissionId,
-      );
-
-      if (!submissionToCancel) return state;
-
-      // Mark the songs from this release as unreleased again
-      const releaseSongIds = submissionToCancel.release.songIds || [];
-      const updatedSongs = activeData.songs.map((song) => {
-        if (releaseSongIds.includes(song.id)) {
-          return {
-            ...song,
-            isReleased: false,
-            releaseId: undefined,
-            dateReleased: undefined,
-          };
-        }
-        return song;
-      });
-
-      const updatedSubmissions = activeData.labelSubmissions.filter(
-        (sub) => sub.id !== action.payload.submissionId,
-      );
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "DISMISS_LABEL_SUBMISSION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const submissionToDismiss = activeData.labelSubmissions.find(
-        (sub) => sub.id === action.payload.submissionId,
-      );
-
-      if (!submissionToDismiss) return state;
-
-      // Ensure songs in the dismissed submission remain or revert to unreleased
-      const releaseSongIds = submissionToDismiss.release.songIds || [];
-      const updatedSongs = activeData.songs.map((song) => {
-        if (releaseSongIds.includes(song.id) && !song.dateReleased) {
-          return {
-            ...song,
-            isReleased: false,
-            releaseId: undefined,
-          };
-        }
-        return song;
-      });
-
-      const updatedSubmissions = activeData.labelSubmissions.filter(
-        (sub) => sub.id !== action.payload.submissionId,
-      );
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "GO_TO_ALBUM_PROMO":
-      return {
-        ...state,
-        activeSubmissionId: action.payload.submissionId,
-        currentView: "albumPromo",
-      };
-    case "LAUNCH_COUNTDOWN_PAGE": {
-      if (!state.activeArtistId) return state;
-      const { submissionId, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === submissionId) {
-          return {
-            ...sub,
-            hasCountdownPage: true,
-            preSaves: 0,
-            promoBudgetSpent: (sub.promoBudgetSpent || 0) + cost,
-          };
-        }
-        return sub;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "REQUEST_GENIUS_PROMO": {
-      if (!state.activeArtistId) return state;
-      const { submissionId, songId, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === submissionId) {
-          return {
-            ...sub,
-            geniusInterviewRequestedForSongId: songId,
-            promoBudgetSpent: (sub.promoBudgetSpent || 0) + cost,
-          };
-        }
-        return sub;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    
-    case "REQUEST_MAGAZINE_PROMO": {
-      if (!state.activeArtistId) return state;
-      const { submissionId, songId, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const submission = activeData.labelSubmissions.find(s => s.id === submissionId);
-      if (!submission) return state;
-
-      const emailId = crypto.randomUUID();
-      const newEmail = {
-          id: emailId,
-          sender: "Magazine Publisher",
-          subject: `Magazine Interview Request: ${submission.release.title}`,
-          body: `We received your label's request. We would love to interview you for an upcoming issue to discuss "${submission.release.title}".
-
-Let us know if you accept.`,
-          date: state.date,
-          isRead: false,
-          senderIcon: "magazine",
-          offer: {
-            type: "interviewOffer",
-            releaseId: submission.release.id,
-            interviewType: "magazine",
-            outletName: "Rolling Stone",
-            emailId: emailId,
-          }
-      };
-
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === submissionId) {
-          return { ...sub, magazineInterviewRequestedForSongId: songId, promoBudgetSpent: (sub.promoBudgetSpent || 0) + cost };
-        }
-        return sub;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, labelSubmissions: updatedSubmissions, inbox: [newEmail, ...activeData.inbox] },
-        },
-      };
-    }
-    case "REQUEST_TV_INTERVIEW_PROMO": {
-      if (!state.activeArtistId) return state;
-      const { submissionId, songId, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const submission = activeData.labelSubmissions.find(s => s.id === submissionId);
-      if (!submission) return state;
-
-      const emailId = crypto.randomUUID();
-      const year = state.date.year;
-      let outletName = "60 Minutes";
-      if (year < 1980) outletName = "The Tonight Show Starring Johnny Carson";
-      else if (year < 1990) outletName = "Late Night with David Letterman";
-      else if (year < 2000) outletName = "The Tonight Show with Jay Leno";
-      else if (year < 2010) outletName = "Total Request Live";
-      else if (year < 2020) outletName = "The Tonight Show Starring Jimmy Fallon";
-      else outletName = "Hot Ones";
-      
-      const newEmail = {
-          id: emailId,
-          sender: outletName,
-          subject: `${outletName} Interview Request`,
-          body: `We received your request. We would like to sit down for a prime-time interview regarding your new music.
-
-Let us know if you accept.`,
-          date: state.date,
-          isRead: false,
-          senderIcon: "tv",
-          offer: {
-            type: "interviewOffer",
-            releaseId: submission.release.id,
-            interviewType: "tv",
-            outletName: outletName,
-            emailId: emailId,
-          }
-      };
-
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === submissionId) {
-          return { ...sub, tvInterviewRequestedForSongId: songId, promoBudgetSpent: (sub.promoBudgetSpent || 0) + cost };
-        }
-        return sub;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, labelSubmissions: updatedSubmissions, inbox: [newEmail, ...activeData.inbox] },
-        },
-      };
-    }
-    case "ACCEPT_INTERVIEW_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { releaseId, interviewType, outletName, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "interviewOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-      let view = "createMagazineInterview";
-      if (interviewType === "tv") view = "createTvInterview";
-      
-      return {
-        ...state,
-        artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox } },
-        activeInterviewOffer: { releaseId, interviewType, outletName, emailId },
-        currentView: view as any,
-      };
-    }
-    case "CANCEL_INTERVIEW_OFFER": {
-      return {
-        ...state,
-        activeInterviewOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "SUBMIT_INTERVIEW": {
-        if (!state.activeArtistId || !state.activeInterviewOffer) return state;
-        const { answers } = action.payload; // array of answers, could be poor/good
-        
-        let publicImageChange = 0;
-        let hypeChange = 0;
-        let backlash = false;
-        
-        // Simulating the effect of answers
-        if (answers.includes('poor')) {
-            publicImageChange -= 20;
-            hypeChange += 5; // backlash creates buzz but lowers image
-            backlash = true;
-        } else {
-            publicImageChange += 10;
-            hypeChange += 15;
-        }
-
-        const activeData = state.artistsData[state.activeArtistId];
-        const updatedData = { ...activeData };
-        updatedData.publicImage = Math.max(0, Math.min(100, updatedData.publicImage + publicImageChange));
-        updatedData.hype = Math.max(0, Math.min(100, updatedData.hype + hypeChange));
-        
-        if (backlash) {
-            const article = {
-                id: crypto.randomUUID(),
-                type: 'text' as const,
-                content: `${state.date.year <= 1999 ? 'NEWSPAPER REPORT' : 'BREAKING NEWS'}: ${state.soloArtist?.name || 'The artist'} faces immense backlash after a controversial ${state.activeInterviewOffer.outletName} interview. Fans are expressing disappointment.`,
-                likes: Math.floor(Math.random() * 5000) + 1000,
-                retweets: Math.floor(Math.random() * 1000) + 500,
-                replies: Math.floor(Math.random() * 500) + 200,
-                date: state.date,
-                isPlayer: false,
-                author: state.activeInterviewOffer.interviewType === 'magazine' ? state.activeInterviewOffer.outletName : (state.date.year <= 1999 ? 'The Daily Newspaper' : 'Global News Network')
-            };
-            updatedData.xPosts = [article, ...updatedData.xPosts];
-        }
-
-        return {
-            ...state,
-            artistsData: {
-                ...state.artistsData,
-                [state.activeArtistId]: updatedData
-            },
-            activeInterviewOffer: null,
-            currentView: 'game'
-        };
-    }
-
-    case "REQUEST_FALLON_PROMO": {
-      if (!state.activeArtistId) return state;
-      const { submissionId, songId, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSubmissions = activeData.labelSubmissions.map((sub) => {
-        if (sub.id === submissionId) {
-          return {
-            ...sub,
-            fallonPerformanceRequestedForSongId: songId,
-            promoBudgetSpent: (sub.promoBudgetSpent || 0) + cost,
-          };
-        }
-        return sub;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            labelSubmissions: updatedSubmissions,
-          },
-        },
-      };
-    }
-    case "REQUEST_PROMO_INTERVIEW": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            requestedPromoInterview: true,
-          },
-        },
-      };
-    }
-    case "ACCEPT_PROMO_INTERVIEW": {
-      if (!state.activeArtistId) return state;
-      const updatedInbox = state.artistsData[state.activeArtistId].inbox.map(
-        (e) =>
-          e.id === action.payload.emailId ? { ...e, isAccepted: true } : e,
-      );
-      return {
-        ...state,
-        activePromoInterviewOffer: {
-          emailId: action.payload.emailId,
-          source: action.payload.source,
-        },
-        currentView: "promoInterview",
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            inbox: updatedInbox,
-          },
-        },
-      };
-    }
-    case "DECLINE_PROMO_INTERVIEW": {
-      if (!state.activeArtistId) return state;
-      const updatedInbox = state.artistsData[state.activeArtistId].inbox.map(
-        (e) =>
-          e.id === action.payload.emailId ? { ...e, isAccepted: false } : e,
-      );
-      return {
-        ...state,
-        activePromoInterviewOffer: null,
-        currentView: "inbox",
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...state.artistsData[state.activeArtistId],
-            inbox: updatedInbox,
-          },
-        },
-      };
-    }
-    case "SUBMIT_PROMO_INTERVIEW": {
-      if (!state.activeArtistId || !state.activePromoInterviewOffer)
-        return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      // Apply boost to the specific song
-      const updatedSongs = activeData.songs.map((song) => {
-        if (song.id === action.payload.songId) {
-          return {
-            ...song,
-            promoBoostWeeks: 4,
-          };
-        }
-        return song;
-      });
-
-      const updatedInbox = activeData.inbox.map((e) =>
-        e.id === state.activePromoInterviewOffer!.emailId
-          ? { ...e, isAccepted: true }
-          : e,
-      );
-
-      // Give some hype or followers
-      const hypeBoost = Math.floor(Math.random() * 200000) + 100000;
-      const moneyReward = 0; // typically promo views don't instantly give cash, just streams later
-
-      return {
-        ...state,
-        activePromoInterviewOffer: null,
-        currentView: "game",
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-            inbox: updatedInbox,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + hypeBoost),
-            videos: [
-              {
-                id: crypto.randomUUID(),
-                songId: action.payload.songId,
-                title: `${state.activePromoInterviewOffer.source} Interview - ${state.soloArtist?.name || state.group?.name || "Artist"}`,
-                type: "Interview",
-                views: 0,
-                thumbnail: action.payload.thumbnail,
-                releaseDate: state.date,
-              },
-              ...activeData.videos,
-            ],
-          },
-        },
-      };
-    }
-    
-    case "START_MEMBER_HIATUS": {
-        const { memberId, reason } = action.payload;
-        const memberData = state.artistsData[memberId];
-        const member = state.group?.members.find(m => m.id === memberId);
-        if (!memberData || !member || !state.group) return state;
-
-        const groupName = state.group.name;
-        const memberName = member.name;
-
-        const popBasePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `Pop Base confirms that ${memberName} of ${groupName} is officially going on hiatus due to ${reason}. We wish them the best! `,
-            likes: Math.floor(Math.random() * 200000) + 100000,
-            retweets: Math.floor(Math.random() * 50000) + 20000,
-            views: Math.floor(Math.random() * 5000000) + 1000000,
-            date: state.date,
-        };
-
-        const fanSadnessTexts = [
-            `I can't believe ${memberName} is going on hiatus due to ${reason}... I'm crying üò≠ get well soon / we'll miss you!`,
-            `So sad to hear about ${memberName} taking a break... ${groupName} won't feel the same without them üíî`,
-            `We love you ${memberName}! Take all the time you need, your health and well-being comes first! ‚ù§Ô∏è`,
-            `no way ${memberName} is on hiatus due to ${reason}... sending so much love and support! üôè`,
-            `devastated about ${memberName}'s hiatus üò≠ hoping everything gets better soon!`,
-            `stay strong ${memberName}, we will all be waiting patiently for your return to ${groupName}! ü•∫`
-        ];
-
-        const fanUsers = memberData.xUsers?.filter(u => !u.isPlayer && !u.isVerified) || [];
-        const fanPosts: XPost[] = fanSadnessTexts.map((text, i) => ({
-            id: crypto.randomUUID(),
-            authorId: fanUsers[i % Math.max(1, fanUsers.length)]?.id || `fan_sad_${i}`,
-            content: text,
-            likes: Math.floor(Math.random() * 40000) + 8000,
-            retweets: Math.floor(Math.random() * 10000) + 2000,
-            views: Math.floor(Math.random() * 400000) + 50000,
-            date: state.date,
-        }));
-
-        const newPosts = [popBasePost, ...fanPosts];
-
-        const updatedMemberData = {
-            ...memberData,
-            isHiatus: true,
-            hiatusStartWeek: state.date.week,
-            hiatusStartYear: state.date.year,
-            hiatusAnnounced: true,
-            xPosts: [
-                ...newPosts,
-                ...(memberData.xPosts || [])
-            ]
-        };
-
-        const updatedArtistsData: Record<string, ArtistData> = {
-            ...state.artistsData,
-            [memberId]: updatedMemberData
-        };
-
-        const groupId = state.group.id;
-        if (updatedArtistsData[groupId]) {
-            updatedArtistsData[groupId] = {
-                ...updatedArtistsData[groupId],
-                xPosts: [
-                    ...newPosts,
-                    ...(updatedArtistsData[groupId].xPosts || [])
-                ]
-            };
-        }
-
-        if (state.activeArtistId && updatedArtistsData[state.activeArtistId] && state.activeArtistId !== memberId && state.activeArtistId !== groupId) {
-            updatedArtistsData[state.activeArtistId] = {
-                ...updatedArtistsData[state.activeArtistId],
-                xPosts: [
-                    ...newPosts,
-                    ...(updatedArtistsData[state.activeArtistId].xPosts || [])
-                ]
-            };
-        }
-
-        return {
-            ...state,
-            artistsData: updatedArtistsData
-        };
-    }
-    case "END_MEMBER_HIATUS": {
-        const { memberId } = action.payload;
-        const memberData = state.artistsData[memberId];
-        const member = state.group?.members.find(m => m.id === memberId);
-        if (!memberData || !member || !state.group) return state;
-
-        return {
-            ...state,
-            artistsData: {
-                ...state.artistsData,
-                [memberId]: {
-                    ...memberData,
-                    isHiatus: false,
-                    hiatusStartWeek: undefined,
-                    hiatusStartYear: undefined,
-                    hiatusAnnounced: false,
-                    xPosts: [
-                        {
-                            id: crypto.randomUUID(),
-                            authorId: "popbase",
-                            content: `${member.name} has officially returned from hiatus and will resume activities with ${state.group.name}!`,
-                            likes: Math.floor(Math.random() * 200000) + 100000,
-                            retweets: Math.floor(Math.random() * 50000) + 20000,
-                            views: Math.floor(Math.random() * 5000000) + 1000000,
-                            date: state.date,
-                        },
-                        ...(memberData.xPosts || [])
-                    ]
-                }
-            }
-        };
-    }
-
-    case "START_HIATUS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            isHiatus: true,
-            hiatusStartWeek: state.date.week,
-            hiatusStartYear: state.date.year,
-            hiatusAnnounced: false
-          }
-        }
-      };
-    }
-    case "ANNOUNCE_HIATUS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      const newPosts = [...(activeData.xPosts || [])];
-      if (activeArtist) {
-        newPosts.unshift({
-           id: crypto.randomUUID(),
-           authorId: "popbase",
-           content: `${activeArtist.name} has officially announced that they are going on hiatus.`,
-           image: ('image' in activeArtist ? activeArtist.image : undefined),
-           likes: Math.floor(Math.random() * ((activeData.popularity || 50) * 800)) + 5000,
-           retweets: Math.floor(Math.random() * ((activeData.popularity || 50) * 200)) + 1000,
-           views: Math.floor(Math.random() * ((activeData.popularity || 50) * 20000)) + 100000,
-           date: state.date
-        });
-      }
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            hiatusAnnounced: true,
-            xPosts: newPosts
-          }
-        }
-      };
-    }
-    case "END_HIATUS_COMEBACK": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const allArtists = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ];
-      const activeArtist = allArtists.find((a) => a?.id === state.activeArtistId) || state.soloArtist || state.group;
-      const newPosts = [...(activeData.xPosts || [])];
-      
-      const { isGood } = action.payload || { isGood: true };
-      
-      let hypeChange = 0;
-      let popChange = 0;
-      
-      if (activeArtist) {
-         if (isGood) {
-            newPosts.unshift({
-               id: crypto.randomUUID(),
-               authorId: "popbase",
-               content: `${activeArtist.name} HAS RETURNED! The comeback is being universally praised by fans! üî•üî•üî•`,
-               likes: Math.floor(Math.random() * ((activeData.popularity || 50) * 3000)) + 80000,
-               retweets: Math.floor(Math.random() * ((activeData.popularity || 50) * 800)) + 15000,
-               views: Math.floor(Math.random() * ((activeData.popularity || 50) * 80000)) + 1000000,
-               date: state.date
-            });
-            hypeChange = activeData.comebackAnticipation ? 40 : 15;
-            popChange = activeData.comebackAnticipation ? 5 : 2;
-         } else {
-            newPosts.unshift({
-               id: crypto.randomUUID(),
-               authorId: "popbase",
-               content: `${activeArtist.name}'s highly anticipated comeback has arrived, but fans are extremely disappointed in the quality... It's giving flop üò¨`,
-               likes: Math.floor(Math.random() * ((activeData.popularity || 50) * 4000)) + 100000,
-               retweets: Math.floor(Math.random() * ((activeData.popularity || 50) * 1000)) + 20000,
-               views: Math.floor(Math.random() * ((activeData.popularity || 50) * 100000)) + 1200000,
-               date: state.date
-            });
-            hypeChange = activeData.comebackAnticipation ? -10 : -5;
-            popChange = activeData.comebackAnticipation ? -2 : -1;
-         }
-      }
-      
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            isHiatus: false,
-            hiatusStartWeek: undefined,
-            hiatusStartYear: undefined,
-            hiatusAnnounced: false,
-            comebackAnticipation: undefined,
-            xPosts: newPosts,
-            hype: Math.max(0, Math.min(getHypeCap(activeData), activeData.hype + hypeChange)),
-            popularity: Math.max(0, Math.min(100, activeData.popularity + popChange))
-          }
-        }
-      };
-    }
-    case "RESET_GAME":
-      return initialState;
-    case "LOAD_GAME": {
-      const loadedPlaylists =
-        action.payload.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS;
-      const mergedPlaylists = [...loadedPlaylists];
-
-      DEFAULT_SPOTIFY_PLAYLISTS.forEach((defaultPlaylist) => {
-        if (!mergedPlaylists.find((p) => p.id === defaultPlaylist.id)) {
-          mergedPlaylists.push(defaultPlaylist);
-        }
-      });
-
-      const loadedPodcasts = action.payload.podcasts || DEFAULT_PODCASTS;
-      const mergedPodcasts = [...loadedPodcasts];
-      DEFAULT_PODCASTS.forEach((defaultPodcast) => {
-          if (!mergedPodcasts.find(p => p.id === defaultPodcast.id)) {
-              mergedPodcasts.push(defaultPodcast);
-          }
-      });
-      const newState = {
-        podcasts: mergedPodcasts,
-        ...action.payload,
-        spotifyGlobal:
-          action.payload.spotifyGlobal ||
-          (action.payload as any).spotifyGlobal50 ||
-          [],
-        spotifyPlaylists: mergedPlaylists,
-        difficultyMode: action.payload.difficultyMode || "normal",
-      };
-            if (newState.npcs) {
-        newState.npcs = newState.npcs.map((npc: any) => {
-           if (!npc.coverArt || npc.coverArt.includes("ui-avatars.com")) {
-               const baseArtist = npc.artist.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
-               return { ...npc, coverArt: getArtistImage(baseArtist, newState.npcImages?.[baseArtist]) };
-           }
-           return npc;
-        });
-      }
-      
-      if (newState.npcAlbums) {
-        newState.npcAlbums = newState.npcAlbums.map((album: any) => {
-           if (!album.coverArt || album.coverArt.includes("ui-avatars.com")) {
-               const baseArtist = album.artist.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
-               return { ...album, coverArt: getArtistImage(baseArtist, newState.npcImages?.[baseArtist]) };
-           }
-           return album;
-        });
-      }
-
-      if (newState.artistsData) {
-        for (const id in newState.artistsData) {
-          const data = newState.artistsData[id];
-          newState.artistsData[id] = {
-            ...initialArtistData,
-            ...data,
-          };
-          newState.artistsData[id].songs = (newState.artistsData[id].songs || []).map(song => {
-            let updatedSong = { ...song };
-            if (!updatedSong.traitGenerated) {
-                updatedSong.trait = generateSongTrait(updatedSong.quality, newState.difficultyMode || "normal");
-                updatedSong.traitGenerated = true;
-            } else if (!updatedSong.trait && newState.difficultyMode !== "easy") {
-                updatedSong.trait = "Normal";
-            }
-            return updatedSong;
-          });
-          newState.artistsData[id].videos =
-            newState.artistsData[id].videos || [];
-          newState.artistsData[id].tiktokVideos =
-            newState.artistsData[id].tiktokVideos || [];
-          newState.artistsData[id].merch = newState.artistsData[id].merch || [];
-          newState.artistsData[id].tours = newState.artistsData[id].tours || [];
-          newState.artistsData[id].contractHistory =
-            newState.artistsData[id].contractHistory || [];
-          newState.artistsData[id].customLabels =
-            newState.artistsData[id].customLabels || [];
-          newState.artistsData[id].artistImages =
-            newState.artistsData[id].artistImages || [];
-          newState.artistsData[id].artistVideoThumbnails =
-            newState.artistsData[id].artistVideoThumbnails || [];
-          newState.artistsData[id].paparazziPhotos =
-            newState.artistsData[id].paparazziPhotos || [];
-          newState.artistsData[id].tourPhotos =
-            newState.artistsData[id].tourPhotos || [];
-          newState.artistsData[id].followersHistory =
-            newState.artistsData[id].followersHistory || [];
-          newState.artistsData[id].promotions =
-            newState.artistsData[id].promotions || [];
-          newState.artistsData[id].streamsHistory =
-            newState.artistsData[id].streamsHistory || [];
-          newState.artistsData[id].xFollowingIds =
-            newState.artistsData[id].xFollowingIds || [];
-          newState.artistsData[id].xTrends =
-            newState.artistsData[id].xTrends || [];
-          newState.artistsData[id].xChats =
-            newState.artistsData[id].xChats || [];
-          newState.artistsData[id].lastFourWeeksStreams =
-            newState.artistsData[id].lastFourWeeksStreams || [];
-          newState.artistsData[id].lastFourWeeksViews =
-            newState.artistsData[id].lastFourWeeksViews || [];
-        }
-      }
-
-      // Patch NPC Song Titles and Covers
-            if (newState.npcs) {
-        const trackCounts: Record<string, number> = {};
-        newState.npcs.forEach((npc) => {
-          const baseArtist = npc.artist.split(',')[0].trim();
-          const realDisco = REAL_WORLD_DISCOGRAPHIES[baseArtist];
-          if (realDisco && realDisco.songs && realDisco.songs.length > 0) {
-            const artistSongsList = realDisco.songs;
-            const count = trackCounts[baseArtist] || 0;
-            if (count < artistSongsList.length) {
-              if (!artistSongsList.includes(npc.title)) {
-                npc.title = artistSongsList[count];
-              }
-            }
-            trackCounts[baseArtist] = count + 1;
-          }
-          if (getArtistImage(baseArtist)) {
-            npc.coverArt = getArtistImage(baseArtist);
-          }
-        });
-      }
-      if (newState.npcAlbums) {
-        newState.npcAlbums.forEach((album) => {
-          const baseArtist = album.artist.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
-          if (getArtistImage(baseArtist)) {
-            album.coverArt = getArtistImage(baseArtist);
-          }
-        });
-      }
-
-      return newState;
-    }
-    case "UNLOCK_RED_MIC_PRO": {
-      if (!state.activeArtistId) return state;
-      const { type, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const newRedMicProState: RedMicProState = {
-        unlocked: true,
-        subscriptionType: type,
-        hypeMode: "locked",
-      };
-
-      if (type === "yearly") {
-        newRedMicProState.subscriptionEndDate = {
-          week: state.date.week,
-          year: state.date.year + 1,
-        };
-      }
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        money: activeData.money - cost,
-        hype: 1000,
-        redMicPro: newRedMicProState,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "UPDATE_SONG_QUALITY": {
-      if (!state.activeArtistId) return state;
-      const { songId, newQuality } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const clampedQuality = Math.max(0, Math.min(100, newQuality));
-
-      const updatedSongs = activeData.songs.map((song) =>
-        song.id === songId ? { ...song, quality: clampedQuality } : song,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, songs: updatedSongs },
-        },
-      };
-    }
-    case "UPDATE_SONG_TRAIT": {
-      if (!state.activeArtistId) return state;
-      const { songId, newTrait } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedSongs = activeData.songs.map((song) =>
-        song.id === songId ? { ...song, trait: newTrait as any } : song,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, songs: updatedSongs },
-        },
-      };
-    }
-    case "UPDATE_RELEASE_REVIEW_SCORE": {
-      if (!state.activeArtistId) return state;
-      const { releaseId, score } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedReleases = activeData.releases.map(r => r.id === releaseId && r.review ? { ...r, review: { ...r.review, score } } : r);
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, releases: updatedReleases },
-        },
-      };
-    }
-    case "SHRED_CONTRACT": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, contract: null },
-        },
-      };
-    }
-    case "SET_CAREER_STAGE": {
-      const targetId = action.payload?.artistId || state.activeArtistId;
-      if (!targetId) return state;
-      const activeData = state.artistsData[targetId];
-      if (!activeData) return state;
-      const hasPro = Boolean(activeData.redMicPro && activeData.redMicPro.unlocked);
-      // Non-pro users can NEVER switch to smash era
-      if (action.payload.stage === "smash" && !hasPro) {
-        return state;
-      }
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [targetId]: { ...activeData, careerStage: action.payload.stage },
-        },
-      };
-    }
-    case "TOGGLE_FLOP_ERA_LOCK": {
-      const targetId = action.payload?.artistId || state.activeArtistId;
-      if (!targetId) return state;
-      const activeData = state.artistsData[targetId];
-      if (!activeData) return state;
-      const hasPro = Boolean(activeData.redMicPro && activeData.redMicPro.unlocked);
-      if (!hasPro) return state; // Pro users only
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [targetId]: { ...activeData, flopEraLock: !activeData.flopEraLock },
-        },
-      };
-    }
-    case "TOGGLE_ERA_LOCK": {
-      const targetId = action.payload?.artistId || state.activeArtistId;
-      if (!targetId) return state;
-      const activeData = state.artistsData[targetId];
-      if (!activeData) return state;
-      const hasPro = Boolean(activeData.redMicPro && activeData.redMicPro.unlocked);
-      if (!hasPro) return state; // Pro users only
-      const currentLock = Boolean(activeData.eraLock || activeData.stuckOnEra);
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [targetId]: {
-            ...activeData,
-            eraLock: !currentLock,
-            stuckOnEra: !currentLock,
-          },
-        },
-      };
-    }
-    case "ADD_CUSTOM_FEATURE": {
-      const { name, cost } = action.payload;
-      const currentFeatures = state.customFeatures || [];
-      return {
-        ...state,
-        customFeatures: [...currentFeatures, { name, cost }],
-      };
-    }
-    case "REMOVE_CUSTOM_FEATURE": {
-      const { name } = action.payload;
-      const currentFeatures = state.customFeatures || [];
-      return {
-        ...state,
-        customFeatures: currentFeatures.filter(f => f.name !== name),
-      };
-    }
-    case "CREATE_CUSTOM_AWARD_SHOW": {
-      return {
-        ...state,
-        customAwardShow: action.payload.customAwardShow,
-        customAwardSubmissions: [],
-        customAwardNominations: null,
-      };
-    }
-    case "SUBMIT_CUSTOM_AWARDS": {
-      return {
-        ...state,
-        customAwardSubmissions: action.payload.submissions,
-      };
-    }
-    case "JUDGE_CUSTOM_AWARDS": {
-      return {
-        ...state,
-        customAwardNominations: action.payload.nominations,
-      };
-    }
-    case "SET_MONEY": {
-      if (!state.activeArtistId) return state;
-      const { newAmount } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, money: newAmount },
-        },
-      };
-    }
-    case "SET_TIKTOK_FOLLOWERS": {
-      if (!state.activeArtistId) return state;
-      const { newAmount } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, tiktokFollowers: Math.max(0, newAmount) },
-        },
-      };
-    }
-    case "SET_INSTAGRAM_FOLLOWERS": {
-      if (!state.activeArtistId) return state;
-      const { newAmount } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, instagramFollowers: Math.max(0, newAmount) },
-        },
-      };
-    }
-    case "SET_YOUTUBE_SUBSCRIBERS": {
-      if (!state.activeArtistId) return state;
-      const { newAmount } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, youtubeSubscribers: Math.max(0, newAmount) },
-        },
-      };
-    }
-    case "TOGGLE_GOLD_THEME": {
-      if (!state.activeArtistId) return state;
-      const { enabled } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, isGoldTheme: enabled },
-        },
-      };
-    }
-    case "SET_SALES_BOOST": {
-      if (!state.activeArtistId) return state;
-      const { newBoost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, salesBoost: newBoost },
-        },
-      };
-    }
-    case "PRO_SIGN_LABEL": {
-      if (!state.activeArtistId) return state;
-      const { labelId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const artist = allPlayerArtistsAndGroups.find(
-        (a) => a.id === state.activeArtistId,
-      );
-      const label = LABELS.find((l) => l.id === labelId);
-      let newPosts: XPost[] = [];
-      let advance = 0;
-
-      if (label && artist) {
-        if (label.isDistributionOnly) {
-          advance = 0;
-        } else if (label.contractType === "petty") {
-          advance = 1000000;
-        } else if (label.id === "umg" || label.id === "sony") {
-          advance = 2500000;
-        } else if (
-          label.tier === "Mid-high" ||
-          label.tier === "Mid-Low" ||
-          label.tier === "Top"
-        ) {
-          advance = 750000;
-        } else if (label.tier === "Low") {
-          advance = 300000;
-        }
-      }
-
-      const newContract: Contract = createDefaultContract({
-        labelId,
-        artistId: state.activeArtistId,
-        startDate: state.date,
-        durationWeeks: 156, // 3 years
-        albumQuota: 3,
-        albumsReleased: 0,
-        advance
-      });
-
-        const playerUser = activeData.selectedPlayerXUserId
-          ? activeData.xUsers.find(
-              (u) => u.id === activeData.selectedPlayerXUserId,
-            )
-          : activeData.xUsers.find((u) => u.isPlayer);
-        if (playerUser) {
-          newPosts.push({
-            id: crypto.randomUUID(),
-            authorId: "tmz",
-            content: `${artist.name} has inked a major deal with ${label.name}. Big things coming.`,
-            image: playerUser.avatar,
-            likes: Math.floor(Math.random() * 5000) + 1000,
-            retweets: Math.floor(Math.random() * 1000) + 200,
-            views: Math.floor(Math.random() * 400000) + 150000,
-            date: state.date,
-          });
-        }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + advance,
-            contract: newContract,
-            xPosts: [...newPosts, ...activeData.xPosts],
-          },
-        },
-      };
-    }
-    case "UPDATE_WIKIPEDIA_SUMMARY": {
-      if (!state.activeArtistId) return state;
-      const { releaseId, summary } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedReleases = activeData.releases.map((r) =>
-        r.id === releaseId ? { ...r, wikipediaSummary: summary } : r,
-      );
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: updatedReleases,
-          },
-        },
-      };
-    }
-    case "UPDATE_RELEASE_WIKIPEDIA": {
-      if (!state.activeArtistId) return state;
-      const {
-        releaseId,
-        summary,
-        wikipediaSections,
-        title,
-        originalCoverArt,
-        coverArt,
-        coverArtHistory,
-        wikipediaCustomData,
-      } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedReleases = activeData.releases.map((r) => {
-        if (r.id !== releaseId) return r;
-        const updated: typeof r = { ...r };
-        if (summary !== undefined) updated.wikipediaSummary = summary;
-        if (wikipediaSections !== undefined) updated.wikipediaSections = wikipediaSections;
-        if (title !== undefined) updated.title = title;
-        if (originalCoverArt !== undefined) updated.originalCoverArt = originalCoverArt;
-        if (coverArt !== undefined) updated.coverArt = coverArt;
-        if (coverArtHistory !== undefined) updated.coverArtHistory = coverArtHistory;
-        if (wikipediaCustomData !== undefined) updated.wikipediaCustomData = wikipediaCustomData;
-        return updated;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: updatedReleases,
-          },
-        },
-      };
-    }
-    case "UPDATE_ABOUT_SONG_TEXT": {
-      if (!state.activeArtistId) return state;
-      const { songId, text } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const song = activeData.songs.find((s) => s.id === songId);
-
-      const updatedSongs = activeData.songs.map((s) =>
-        s.id === songId ? { ...s, aboutText: text } : s,
-      );
-
-      let updatedXPosts = activeData.xPosts;
-      if (song && text && text.trim() !== "" && song.aboutText !== text) {
-        const popBasePost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${activeData.name || "Artist"} reveals the meaning of the song "${song.title}":
-
-"${text}"`,
-          image: activeData.image,
-          likes: Math.floor(Math.random() * 40000) + 10000,
-          retweets: Math.floor(Math.random() * 10000) + 2000,
-          views: Math.floor(Math.random() * 1000000) + 200000,
-          date: state.date,
-        };
-        updatedXPosts = [popBasePost, ...activeData.xPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-            xPosts: updatedXPosts,
-          },
-        },
-      };
-    }
-    case "GO_TO_GRAMMY_SUBMISSIONS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === action.payload.emailId) {
-          return { ...email, isRead: true };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        currentView: "submitForGrammys",
-      };
-    }
-    case "SUBMIT_FOR_GRAMMYS": {
-      if (!state.activeArtistId) return state;
-      const { submissions, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "grammySubmission") {
-          return { ...email, offer: { ...email.offer, isSubmitted: true } };
-        }
-        return email;
-      });
-
-      const bnaSubmission = submissions.find(
-        (s) => s.category === "Best New Artist",
-      );
-      const hasSubmittedBna = bnaSubmission
-        ? true
-        : activeData.hasSubmittedForBestNewArtist;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            hasSubmittedForBestNewArtist: hasSubmittedBna,
-          },
-        },
-        grammySubmissions: [...(state.grammySubmissions || []), ...submissions],
-        currentView: "inbox",
-      };
-    }
-    case "ACCEPT_GRAMMY_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        activeGrammyPerformanceOffer: { emailId: action.payload.emailId },
-        currentView: "createGrammyPerformance",
-      };
-    }
-    case "CREATE_GRAMMY_PERFORMANCE": {
-      if (!state.activeArtistId || !state.activeGrammyPerformanceOffer)
-        return state;
-      const { video } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === state.activeGrammyPerformanceOffer!.emailId &&
-          email.offer?.type === "grammyNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: true },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: [...activeData.videos, video],
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 30),
-            inbox: updatedInbox,
-          },
-        },
-        activeGrammyPerformanceOffer: null,
-        currentView: "game",
-      };
-    }
-    case "DECLINE_GRAMMY_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "grammyNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: false },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-      };
-    }
-    case "ACCEPT_GRAMMY_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const { emailId, lookUrl } = action.payload;
-
-      if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
-        const popBasePost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${artistName} arrives at the #GRAMMYs red carpet.`,
-          image: lookUrl,
-          likes: Math.floor(Math.random() * 99000) + 16000,
-          retweets: Math.floor(Math.random() * 16000) + 7000,
-          views: Math.floor(Math.random() * 3100000) + 1200000,
-          date: state.date,
-        };
-        const activeData = state.artistsData[state.activeArtistId];
-        const updatedInbox = activeData.inbox.map((email) => {
-          if (email.id === emailId && email.offer?.type === "grammyRedCarpet") {
-            return { ...email, offer: { ...email.offer, isAttending: true } };
-          }
-          return email;
-        });
-
-        const newLook = {
-          id: crypto.randomUUID(),
-          awardShow: "GRAMMYs",
-          year: state.date.year,
-          imageUrl: lookUrl,
-        };
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              inbox: updatedInbox,
-              xPosts: [popBasePost, ...activeData.xPosts],
-              pastRedCarpetLooks: [
-                newLook,
-                ...(activeData.pastRedCarpetLooks || []),
-              ],
-            },
-          },
-          activeGrammyRedCarpetOffer: null,
-          currentView: "game",
-        };
-      } else {
-        return {
-          ...state,
-          activeGrammyRedCarpetOffer: { emailId },
-          currentView: "grammyRedCarpet",
-        };
-      }
-    }
-    case "DECLINE_GRAMMY_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "grammyRedCarpet"
-        ) {
-          return { ...email, offer: { ...email.offer, isAttending: false } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeGrammyRedCarpetOffer: null,
-      };
-    }
-    case "GO_TO_AMA_SUBMISSIONS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === action.payload.emailId) {
-          return { ...email, isRead: true };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "submitForAmas",
-      };
-    }
-    case "SUBMIT_FOR_AMAS": {
-      if (!state.activeArtistId) return state;
-      const { submissions, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "amaSubmission") {
-          return { ...email, offer: { ...email.offer, isSubmitted: true } };
-        }
-        return email;
-      });
-
-      const newArtistSubmission = submissions.find(
-        (s) => s.category === "New Artist of the Year",
-      );
-      const hasSubmittedNewArtist = newArtistSubmission
-        ? true
-        : activeData.hasSubmittedForAmaNewArtist;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            hasSubmittedForAmaNewArtist: hasSubmittedNewArtist,
-          },
-        },
-        amaSubmissions: [...(state.amaSubmissions || []), ...submissions],
-        currentView: "game",
-      };
-    }
-    case "ACCEPT_AMA_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "amaNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: true },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        activeAmaPerformanceOffer: { emailId: action.payload.emailId },
-        currentView: "createAmaPerformance",
-      };
-    }
-    case "CREATE_AMA_PERFORMANCE": {
-      if (!state.activeArtistId || !state.activeAmaPerformanceOffer)
-        return state;
-
-      const artistName = state.soloArtist?.name || state.group?.name;
-      const performancePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistName} performs "${action.payload.video.title}" at the #AMAs`,
-        image: action.payload.video.thumbnail,
-        likes: Math.floor(Math.random() * 800000) + 100000,
-        retweets: Math.floor(Math.random() * 150000) + 20000,
-        views: Math.floor(Math.random() * 10000000) + 2000000,
-        date: state.date,
-      };
-
-      const activeData = state.artistsData[state.activeArtistId];
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            hype: Math.min(100, activeData.hype + 5),
-            popularity: Math.min(100, activeData.popularity + 3),
-            xPosts: [performancePost, ...activeData.xPosts],
-          },
-        },
-        activeAmaPerformanceOffer: null,
-        currentView: "game",
-      };
-    }
-    case "DECLINE_AMA_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "amaNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: false },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeAmaPerformanceOffer: null,
-      };
-    }
-    case "ACCEPT_AMA_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const { emailId, lookUrl } = action.payload;
-
-      if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
-        const popBasePost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${artistName} arrives at the #AMAs red carpet.`,
-          image: lookUrl,
-          likes: Math.floor(Math.random() * 99000) + 16000,
-          retweets: Math.floor(Math.random() * 16000) + 7000,
-          views: Math.floor(Math.random() * 3100000) + 1200000,
-          date: state.date,
-        };
-        const activeData = state.artistsData[state.activeArtistId];
-        const updatedInbox = activeData.inbox.map((email) => {
-          if (email.id === emailId && email.offer?.type === "amaRedCarpet") {
-            return { ...email, offer: { ...email.offer, isAttending: true } };
-          }
-          return email;
-        });
-
-        const newLook = {
-          id: crypto.randomUUID(),
-          awardShow: "AMAs",
-          year: state.date.year,
-          imageUrl: lookUrl,
-        };
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              inbox: updatedInbox,
-              xPosts: [popBasePost, ...activeData.xPosts],
-              pastRedCarpetLooks: [
-                newLook,
-                ...(activeData.pastRedCarpetLooks || []),
-              ],
-            },
-          },
-          activeAmaRedCarpetOffer: null,
-          currentView: "game",
-        };
-      } else {
-        return {
-          ...state,
-          activeAmaRedCarpetOffer: { emailId },
-          currentView: "amaRedCarpet",
-        };
-      }
-    }
-    case "DECLINE_AMA_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "amaRedCarpet"
-        ) {
-          return { ...email, offer: { ...email.offer, isAttending: false } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeAmaRedCarpetOffer: null,
-      };
-    }
-    case "GO_TO_BRIT_SUBMISSIONS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === action.payload.emailId) {
-          return { ...email, isRead: true };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "submitForBrits",
-      };
-    }
-    case "SUBMIT_FOR_BRITS": {
-      if (!state.activeArtistId) return state;
-      const { submissions, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "britSubmission") {
-          return { ...email, offer: { ...email.offer, isSubmitted: true } };
-        }
-        return email;
-      });
-
-      const newArtistSubmission = submissions.find(
-        (s) => s.category === "BRITs Best New Artist",
-      );
-      const hasSubmittedNewArtist = newArtistSubmission
-        ? true
-        : activeData.hasSubmittedForBritNewArtist;
-
-      const risingStarSubmission = submissions.find(
-        (s) => s.category === "BRITs Rising Star",
-      );
-      const hasSubmittedRisingStar = risingStarSubmission
-        ? true
-        : activeData.hasSubmittedForBritRisingStar;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            hasSubmittedForBritNewArtist: hasSubmittedNewArtist,
-            hasSubmittedForBritRisingStar: hasSubmittedRisingStar,
-          },
-        },
-        britSubmissions: [...(state.britSubmissions || []), ...submissions],
-        currentView: "game",
-      };
-    }
-    case "ACCEPT_BRIT_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "britNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: true },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        activeBritPerformanceOffer: { emailId: action.payload.emailId },
-        currentView: "createBritPerformance",
-      };
-    }
-    case "CREATE_BRIT_PERFORMANCE": {
-      if (!state.activeArtistId || !state.activeBritPerformanceOffer)
-        return state;
-
-      const { video } = action.payload;
-      const artistName = state.soloArtist?.name || state.group?.name;
-      const performancePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistName} delivers a live showstopper performing "${video.title}" at The #BRITs in London! üá¨üáß‚ú®`,
-        image: video.thumbnail,
-        likes: Math.floor(Math.random() * 850000) + 120000,
-        retweets: Math.floor(Math.random() * 160000) + 25000,
-        views: Math.floor(Math.random() * 11000000) + 2500000,
-        date: state.date,
-      };
-
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === state.activeBritPerformanceOffer!.emailId &&
-          email.offer?.type === "britNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: true },
-          };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: [video, ...(activeData.videos || [])],
-            hype: Math.min(100, activeData.hype + 8),
-            popularity: Math.min(100, activeData.popularity + 5),
-            inbox: updatedInbox,
-            xPosts: [performancePost, ...activeData.xPosts],
-          },
-        },
-        activeBritPerformanceOffer: null,
-        currentView: "game",
-      };
-    }
-    case "DECLINE_BRIT_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "britNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: false },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeBritPerformanceOffer: null,
-      };
-    }
-    case "ACCEPT_BRIT_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const { emailId, lookUrl } = action.payload;
-
-      if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
-        const popBasePost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${artistName} stuns on the red carpet at The #BRITs in London. üá¨üáßüì∏`,
-          image: lookUrl,
-          likes: Math.floor(Math.random() * 105000) + 20000,
-          retweets: Math.floor(Math.random() * 18000) + 8000,
-          views: Math.floor(Math.random() * 3500000) + 1400000,
-          date: state.date,
-        };
-        const activeData = state.artistsData[state.activeArtistId];
-        const updatedInbox = activeData.inbox.map((email) => {
-          if (email.id === emailId && email.offer?.type === "britRedCarpet") {
-            return { ...email, offer: { ...email.offer, isAttending: true } };
-          }
-          return email;
-        });
-
-        const newLook = {
-          id: crypto.randomUUID(),
-          awardShow: "BRITs",
-          year: state.date.year,
-          imageUrl: lookUrl,
-        };
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              inbox: updatedInbox,
-              xPosts: [popBasePost, ...activeData.xPosts],
-              pastRedCarpetLooks: [
-                newLook,
-                ...(activeData.pastRedCarpetLooks || []),
-              ],
-            },
-          },
-          activeBritRedCarpetOffer: null,
-          currentView: "game",
-        };
-      } else {
-        return {
-          ...state,
-          activeBritRedCarpetOffer: { emailId },
-          currentView: "britRedCarpet",
-        };
-      }
-    }
-    case "DECLINE_BRIT_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "britRedCarpet"
-        ) {
-          return { ...email, offer: { ...email.offer, isAttending: false } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeBritRedCarpetOffer: null,
-      };
-    }
-    case "UPDATE_BRIT_BANNER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            britBanner: action.payload.bannerUrl,
-          },
-        },
-      };
-    }
-    case "ACCEPT_VMA_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const { emailId, lookUrl } = action.payload;
-
-      if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
-        const popBasePost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${artistName} arrives at the #VMAs red carpet.`,
-          image: lookUrl,
-          likes: Math.floor(Math.random() * 99000) + 16000,
-          retweets: Math.floor(Math.random() * 16000) + 7000,
-          views: Math.floor(Math.random() * 3100000) + 1200000,
-          date: state.date,
-        };
-        const activeData = state.artistsData[state.activeArtistId];
-        const updatedInbox = activeData.inbox.map((email) => {
-          if (email.id === emailId && email.offer?.type === "vmaRedCarpet") {
-            return { ...email, offer: { ...email.offer, isAttending: true } };
-          }
-          return email;
-        });
-
-        const newLook = {
-          id: crypto.randomUUID(),
-          awardShow: "VMAs",
-          year: state.date.year,
-          imageUrl: lookUrl,
-        };
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              inbox: updatedInbox,
-              xPosts: [popBasePost, ...activeData.xPosts],
-              pastRedCarpetLooks: [
-                newLook,
-                ...(activeData.pastRedCarpetLooks || []),
-              ],
-            },
-          },
-          activeVmaRedCarpetOffer: null,
-          currentView: "game",
-        };
-      } else {
-        return {
-          ...state,
-          activeVmaRedCarpetOffer: { emailId },
-          currentView: "vmaRedCarpet",
-        };
-      }
-    }
-    case "DECLINE_VMA_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "vmaRedCarpet"
-        ) {
-          return { ...email, offer: { ...email.offer, isAttending: false } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeVmaRedCarpetOffer: null,
-      };
-    }
-    
-    case "GO_TO_GOLDEN_GLOBE_SUBMISSIONS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === action.payload.emailId) {
-          return { ...email, isRead: true };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        currentView: "submit_for_golden_globes",
-      };
-    }
-
-    case "GO_TO_OSCAR_SUBMISSIONS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === action.payload.emailId) {
-          return { ...email, isRead: true };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        currentView: "submitForOscars",
-      };
-    }
-    
-    case "SUBMIT_FOR_GOLDEN_GLOBES": {
-      if (!state.activeArtistId) return state;
-      const { submissions, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((e) => {
-        if (e.id === emailId && e.offer) {
-          return { ...e, offer: { ...e.offer, isSubmitted: true } };
-        }
-        return e;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        goldenGlobeSubmissions: [...(state.goldenGlobeSubmissions || []), ...submissions],
-        currentView: "inbox",
-      };
-    }
-
-    case "SUBMIT_FOR_OSCARS": {
-      if (!state.activeArtistId) return state;
-      const { submissions, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "oscarSubmission") {
-          return { ...email, offer: { ...email.offer, isSubmitted: true } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        oscarSubmissions: [...(state.oscarSubmissions || []), ...submissions],
-        currentView: "inbox",
-      };
-    }
-    case "CHANGE_LOCATION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            location: action.payload.location,
-            lastMoveDate: state.date,
-          },
-        },
-      };
-    }
-    case "TOGGLE_OFFLINE_MODE": {
-      return {
-        ...state,
-        offlineMode: !state.offlineMode,
-      };
-    }
-    case "SELL_RIGHTS": {
-      if (!state.activeArtistId) return state;
-      const { itemType, id, percent, labelId, value } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      let songs = [...activeData.songs];
-      let releases = [...activeData.releases];
-
-      if (itemType === "song") {
-        const index = songs.findIndex((s) => s.id === id);
-        if (index !== -1) {
-          songs[index] = {
-            ...songs[index],
-            rightsSoldPercent: (songs[index].rightsSoldPercent || 0) + percent,
-            rightsOwnerLabelId: labelId,
-            rightsSoldOriginalValue: value,
-          };
-        }
-      } else {
-        const relIndex = releases.findIndex((r) => r.id === id);
-        if (relIndex !== -1) {
-          releases[relIndex] = {
-            ...releases[relIndex],
-            rightsSoldPercent:
-              (releases[relIndex].rightsSoldPercent || 0) + percent,
-            rightsOwnerLabelId: labelId,
-            rightsSoldOriginalValue: value,
-          };
-          const releaseSongIds = releases[relIndex].songIds;
-          songs = songs.map((s) => {
-            if (releaseSongIds.includes(s.id)) {
-              return {
-                ...s,
-                rightsSoldPercent: (s.rightsSoldPercent || 0) + percent,
-                rightsOwnerLabelId: labelId,
-                rightsSoldOriginalValue: value,
-              };
-            }
-            return s;
-          });
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs,
-            releases,
-            money: activeData.money + value * (percent / 100),
-          },
-        },
-      };
-    }
-    case "BUY_RIGHTS": {
-      if (!state.activeArtistId) return state;
-      const { itemType, id, percentToBuy, cost } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.money < cost) return state;
-
-      let songs = [...activeData.songs];
-      let releases = [...activeData.releases];
-
-      if (itemType === "song") {
-        const index = songs.findIndex((s) => s.id === id);
-        if (index !== -1) {
-          const newPercent = Math.max(
-            0,
-            (songs[index].rightsSoldPercent || 0) - percentToBuy,
-          );
-          songs[index] = {
-            ...songs[index],
-            rightsSoldPercent: newPercent,
-            rightsOwnerLabelId:
-              newPercent === 0 ? undefined : songs[index].rightsOwnerLabelId,
-          };
-        }
-      } else {
-        const relIndex = releases.findIndex((r) => r.id === id);
-        if (relIndex !== -1) {
-          const newPercent = Math.max(
-            0,
-            (releases[relIndex].rightsSoldPercent || 0) - percentToBuy,
-          );
-          releases[relIndex] = {
-            ...releases[relIndex],
-            rightsSoldPercent: newPercent,
-            rightsOwnerLabelId:
-              newPercent === 0
-                ? undefined
-                : releases[relIndex].rightsOwnerLabelId,
-          };
-          const releaseSongIds = releases[relIndex].songIds;
-          songs = songs.map((s) => {
-            if (releaseSongIds.includes(s.id)) {
-              return {
-                ...s,
-                rightsSoldPercent: newPercent,
-                rightsOwnerLabelId:
-                  newPercent === 0 ? undefined : s.rightsOwnerLabelId,
-              };
-            }
-            return s;
-          });
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs,
-            releases,
-            money: activeData.money - cost,
-          },
-        },
-      };
-    }
-    case "ACCEPT_GOLDEN_GLOBE_RED_CARPET_INVITE": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        activeGoldenGlobeRedCarpetOffer: { emailId: action.payload.emailId },
-        currentView: "goldenGlobeRedCarpet",
-      };
-    }
-    case "ACCEPT_GOLDEN_GLOBE_INVITE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "goldenGlobeNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isAttending: true },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-      };
-    }
-
-    case "ACCEPT_OSCAR_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      return {
-        ...state,
-        activeOscarPerformanceOffer: { emailId: action.payload.emailId },
-        currentView: "createOscarPerformance",
-      };
-    }
-    case "CREATE_OSCAR_PERFORMANCE": {
-      if (!state.activeArtistId || !state.activeOscarPerformanceOffer)
-        return state;
-      const { video } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === state.activeOscarPerformanceOffer!.emailId &&
-          email.offer?.type === "oscarNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: true },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: [...activeData.videos, video],
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 40),
-            inbox: updatedInbox,
-          },
-        },
-        activeOscarPerformanceOffer: null,
-        currentView: "game",
-      };
-    }
-    case "DECLINE_OSCAR_PERFORMANCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "oscarNominations"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isPerformanceAccepted: false },
-          };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        activeOscarPerformanceOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "ACCEPT_GOLDEN_GLOBE_RED_CARPET": {
-        if (!state.activeArtistId) return state;
-        const { emailId, lookUrl } = action.payload;
-        if (lookUrl) {
-            const activeData = state.artistsData[state.activeArtistId];
-            const artistName = state.soloArtist?.name || state.group?.name;
-            const popBasePost = {
-              id: crypto.randomUUID(),
-              authorId: "popbase",
-              content: `${artistName} arrives at the #GoldenGlobes red carpet.`,
-              image: lookUrl,
-              likes: Math.floor(Math.random() * 99000) + 16000,
-              retweets: Math.floor(Math.random() * 16000) + 7000,
-              views: Math.floor(Math.random() * 3100000) + 1200000,
-              date: state.date,
-            };
-            const newLook = {
-              id: crypto.randomUUID(),
-              awardShow: "Golden Globes",
-              year: state.date.year,
-              imageUrl: lookUrl,
-            };
-            
-            const updatedInbox = activeData.inbox.map((email) => {
-                if (email.id === emailId && email.offer?.type === "goldenGlobeRedCarpet") {
-                    return { ...email, offer: { ...email.offer, isAccepted: true } };
-                }
-                return email;
-            });
-            
-            return {
-                ...state,
-                artistsData: {
-                    ...state.artistsData,
-                    [state.activeArtistId]: {
-                        ...activeData,
-                        inbox: updatedInbox,
-                        xPosts: [popBasePost, ...activeData.xPosts],
-                        pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])],
-                    }
-                },
-                activeGoldenGlobeRedCarpetOffer: null,
-                currentView: "game"
-            };
-        } else {
-             return {
-                ...state,
-                activeGoldenGlobeRedCarpetOffer: { emailId },
-                currentView: "goldenGlobeRedCarpet"
-            };
-        }
-    }
-    case "DECLINE_GOLDEN_GLOBE_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "goldenGlobeRedCarpet"
-        ) {
-          return { ...email, offer: { ...email.offer, isAccepted: false } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeGoldenGlobeRedCarpetOffer: null,
-      };
-    }
-    case "ACCEPT_OSCAR_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const { emailId, lookUrl } = action.payload;
-
-      if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
-        const popBasePost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: `${artistName} arrives at the #Oscars red carpet.`,
-          image: lookUrl,
-          likes: Math.floor(Math.random() * 99000) + 16000,
-          retweets: Math.floor(Math.random() * 16000) + 7000,
-          views: Math.floor(Math.random() * 3100000) + 1200000,
-          date: state.date,
-        };
-        const activeData = state.artistsData[state.activeArtistId];
-        const updatedInbox = activeData.inbox.map((email) => {
-          if (email.id === emailId && email.offer?.type === "oscarRedCarpet") {
-            return { ...email, offer: { ...email.offer, isAttending: true } };
-          }
-          return email;
-        });
-
-        const newLook = {
-          id: crypto.randomUUID(),
-          awardShow: "Oscars",
-          year: state.date.year,
-          imageUrl: lookUrl,
-        };
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              inbox: updatedInbox,
-              xPosts: [popBasePost, ...activeData.xPosts],
-              pastRedCarpetLooks: [
-                newLook,
-                ...(activeData.pastRedCarpetLooks || []),
-              ],
-            },
-          },
-          activeOscarRedCarpetOffer: null,
-          currentView: "game",
-        };
-      } else {
-        return {
-          ...state,
-          activeOscarRedCarpetOffer: { emailId },
-          currentView: "oscarRedCarpet",
-        };
-      }
-    }
-    case "DECLINE_OSCAR_RED_CARPET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "oscarRedCarpet"
-        ) {
-          return { ...email, offer: { ...email.offer, isAttending: false } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        currentView: "inbox",
-        activeOscarRedCarpetOffer: null,
-      };
-    }
-    case "RENEW_CONTRACT": {
-      if (!state.contractRenewalOffer) return state;
-      const { labelId, isCustom, artistId } = state.contractRenewalOffer;
-      const artistData = state.artistsData[artistId];
-      if (!artistData) return state;
-
-      const allCustomLabels: CustomLabel[] = Object.values(
-        state.artistsData,
-      ).flatMap((d) => d.customLabels);
-      const label = isCustom ? allCustomLabels.find((l) => l.id === labelId) : LABELS.find((l) => l.id === labelId);
-      
-      let advance = 0;
-      if (label && !isCustom) {
-        const stdLabel = label as Label;
-        if (stdLabel.isDistributionOnly) advance = 0;
-        else if (stdLabel.contractType === "petty") advance = 1000000;
-        else if (stdLabel.id === "umg" || stdLabel.id === "sony") advance = 2500000;
-        else if (stdLabel.tier === "Mid-high" || stdLabel.tier === "Mid-Low" || stdLabel.tier === "Top") advance = 750000;
-        else if (stdLabel.tier === "Low") advance = 300000;
-      }
-
-      const newContract: Contract = createDefaultContract({
-        labelId,
-        isCustom,
-        artistId,
-        startDate: state.date,
-        durationWeeks: 104, // 2 years
-        albumQuota: 2, // A standard renewal deal
-        albumsReleased: 0,
-        advance,
-        royaltyPercent: 20 // slightly better royalty for renewal
-      });
-
-      const updatedData = { ...artistData, money: artistData.money + advance, contract: newContract, isBlacklistedByLabel: false };
-
-      return {
-        ...state,
-        artistsData: { ...state.artistsData, [artistId]: updatedData },
-        contractRenewalOffer: null,
-        currentView: "game",
-      };
-    }
-    case "GO_INDEPENDENT": {
-      if (!state.contractRenewalOffer) return state;
-      const { artistId } = state.contractRenewalOffer;
-      const artistData = state.artistsData[artistId];
-      if (!artistData || !artistData.contract) return state;
-
-      const updatedData = {
-        ...artistData,
-        contractHistory: [
-          ...(artistData.contractHistory || []),
-          artistData.contract,
-        ],
-        contract: null,
-      };
-
-      return {
-        ...state,
-        artistsData: { ...state.artistsData, [artistId]: updatedData },
-        contractRenewalOffer: null,
-        currentView: "game",
-      };
-    }
-    case "UPDATE_ABOUT_PROFILE": {
-      if (!state.activeArtistId) return state;
-      const updatedData = {
-        ...state.artistsData[state.activeArtistId],
-        aboutBio: action.payload.bio,
-        aboutImages: action.payload.images,
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "UPDATE_ARTIST_IMAGE": {
-      const { artistId, newImage } = action.payload;
-      const loadedPodcasts = action.payload.podcasts || DEFAULT_PODCASTS;
-      const mergedPodcasts = [...loadedPodcasts];
-      DEFAULT_PODCASTS.forEach((defaultPodcast) => {
-          if (!mergedPodcasts.find(p => p.id === defaultPodcast.id)) {
-              mergedPodcasts.push(defaultPodcast);
-          }
-      });
-      const newState = {
-        podcasts: mergedPodcasts, ...state };
-
-      // Update solo artist
-      if (newState.soloArtist?.id === artistId) {
-        newState.soloArtist = { ...newState.soloArtist, image: newImage };
-      }
-
-      // Update group or group member
-      if (newState.group) {
-        if (newState.group.id === artistId) {
-          newState.group = { ...newState.group, image: newImage };
-        } else {
-          const memberIndex = newState.group.members.findIndex(
-            (m) => m.id === artistId,
-          );
-          if (memberIndex > -1) {
-            const updatedMembers = [...newState.group.members];
-            updatedMembers[memberIndex] = {
-              ...updatedMembers[memberIndex],
-              image: newImage,
-            };
-            newState.group = { ...newState.group, members: updatedMembers };
-          }
-        }
-      }
-
-      // Update extraPlayableArtists (kids)
-      if (newState.extraPlayableArtists) {
-        const kidIndex = newState.extraPlayableArtists.findIndex(
-          (k) => k.id === artistId,
-        );
-        if (kidIndex > -1) {
-          const updatedKids = [...newState.extraPlayableArtists];
-          updatedKids[kidIndex] = { ...updatedKids[kidIndex], image: newImage };
-          newState.extraPlayableArtists = updatedKids;
-        }
-      }
-
-      // Update XUser avatar in the corresponding artistsData
-      const artistDataToUpdate = newState.artistsData[artistId];
-      if (artistDataToUpdate) {
-        const updatedXUsers = artistDataToUpdate.xUsers.map((user) =>
-          user.id === artistId ? { ...user, avatar: newImage } : user,
-        );
-        newState.artistsData = {
-          ...newState.artistsData,
-          [artistId]: {
-            ...artistDataToUpdate,
-            xUsers: updatedXUsers,
-          },
-        };
-      }
-
-      return newState;
-    }
-    case "CREATE_ONLYFANS_PROFILE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            onlyfans: action.payload.profile,
-          },
-        },
-        currentView: "onlyfans",
-      };
-    }
-    case "UPDATE_ONLYFANS_SETTINGS": {
-      if (
-        !state.activeArtistId ||
-        !state.artistsData[state.activeArtistId].onlyfans
-      )
-        return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            onlyfans: {
-              ...activeData.onlyfans!,
-              subscriptionPrice: action.payload.price,
-            },
-          },
-        },
-      };
-    }
-    case "CREATE_ONLYFANS_POST": {
-      if (
-        !state.activeArtistId ||
-        !state.artistsData[state.activeArtistId].onlyfans
-      )
-        return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const ofProfile = activeData.onlyfans!;
-
-      // Calculate initial engagement and income
-      const initialLikes = Math.floor(
-        ofProfile.subscribers * (Math.random() * 0.15 + 0.1),
-      ); // 10-25% engage on new post
-      const initialComments = Math.floor(
-        initialLikes / (Math.random() * 15 + 10),
-      );
-      const initialTips = initialLikes * (Math.random() * 0.1); // Tip rate is higher for new posts
-
-      let postPurchaseIncome = 0;
-      if (action.payload.post.price > 0) {
-        // 15-30% of subscribers buy it
-        const purchaseRate = Math.random() * 0.15 + 0.15;
-        postPurchaseIncome =
-          action.payload.post.price *
-          Math.floor(ofProfile.subscribers * purchaseRate);
-      }
-
-      const newPost: OnlyFansPost = {
-        ...action.payload.post,
-        likes: initialLikes,
-        comments: initialComments,
-        tips: initialTips,
-      };
-
-      const postGrossIncome = postPurchaseIncome + initialTips;
-      const postNetIncome = postGrossIncome * 0.8; // 80% cut
-
-      const yearMonth = `${state.date.year}-${String(Math.floor(state.date.week / 4)).padStart(2, "0")}`;
-      const updatedEarningsByMonth = { ...ofProfile.earningsByMonth };
-      if (!updatedEarningsByMonth[yearMonth]) {
-        updatedEarningsByMonth[yearMonth] = { gross: 0, net: 0 };
-      }
-      updatedEarningsByMonth[yearMonth].gross += postGrossIncome;
-      updatedEarningsByMonth[yearMonth].net += postNetIncome;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + postNetIncome, // Add income immediately
-            onlyfans: {
-              ...ofProfile,
-              posts: [newPost, ...ofProfile.posts],
-              totalGross: ofProfile.totalGross + postGrossIncome,
-              totalNet: ofProfile.totalNet + postNetIncome,
-              earningsByMonth: updatedEarningsByMonth,
-            },
-          },
-        },
-      };
-    }
-    case "ACCEPT_ONLYFANS_REQUEST": {
-      if (!state.activeArtistId) return state;
-      const { emailId, payout } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "onlyfansRequest") {
-          return { ...email, offer: { ...email.offer, isFulfilled: true } };
-        }
-        return email;
-      });
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        inbox: updatedInbox,
-        money: activeData.money + payout,
-      };
-
-      if (updatedData.onlyfans) {
-        const ONLYFANS_CUT = 0.2;
-        const grossPayout = payout / (1 - ONLYFANS_CUT); // Back-calculate gross from net payout
-        updatedData.onlyfans.totalGross += grossPayout;
-        updatedData.onlyfans.totalNet += payout;
-
-        const yearMonth = `${state.date.year}-${String(Math.floor(state.date.week / 4)).padStart(2, "0")}`;
-        if (!updatedData.onlyfans.earningsByMonth[yearMonth]) {
-          updatedData.onlyfans.earningsByMonth[yearMonth] = {
-            gross: 0,
-            net: 0,
-          };
-        }
-        updatedData.onlyfans.earningsByMonth[yearMonth].gross += grossPayout;
-        updatedData.onlyfans.earningsByMonth[yearMonth].net += payout;
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-        currentView: "inbox",
-      };
-    }
-    case "SET_PRO_HYPE_MODE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.redMicPro.unlocked) return state;
-
-      const newHype = action.payload === "locked" ? 1000 : Math.min(100, activeData.hype);
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        hype: newHype,
-        redMicPro: {
-          ...activeData.redMicPro,
-          hypeMode: action.payload,
-        },
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "SET_HYPE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (
-        !activeData.redMicPro.unlocked ||
-        (activeData.redMicPro.hypeMode || "locked") !== "manual"
-      )
-        return state;
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        hype: Math.max(0, Math.min(100, action.payload)),
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "SET_PUBLIC_IMAGE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.redMicPro.unlocked) return state;
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        publicImage: Math.max(0, Math.min(100, action.payload)),
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "SIGN_BRAND_DEAL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const artistProfile = state.soloArtist || state.group?.members.find((m) => m.id === state.activeArtistId) || state.group;
-      
-      const newPosts = [...(activeData.xPosts || [])];
-      
-      if (action.payload.name && action.payload.brandImage) {
-          const popBasePost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: `${artistProfile?.name} is officially a ${action.payload.name} brand ambassador.`,
-            image: `${artistProfile?.image}||${action.payload.brandImage}`,
-            likes: Math.floor(Math.random() * 150000) + 50000,
-            retweets: Math.floor(Math.random() * 30000) + 10000,
-            views: Math.floor(Math.random() * 2000000) + 500000,
-            date: state.date,
-          };
-          newPosts.unshift(popBasePost);
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + action.payload.cash,
-            signedBrandDeals: [
-              ...(activeData.signedBrandDeals || []),
-              action.payload.id,
-            ],
-            activeBrandDeals: [
-              ...(activeData.activeBrandDeals || []),
-              ...(action.payload.name && action.payload.hashtag && action.payload.brandImage ? [{ id: action.payload.id, name: action.payload.name, hashtag: action.payload.hashtag, brandImage: action.payload.brandImage }] : [])
-            ],
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "SIGN_VIDEO_GAME_DEAL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + action.payload.cash,
-            signedVideoGames: [
-              ...(activeData.signedVideoGames || []),
-              action.payload.id,
-            ],
-          },
-        },
-      };
-    }
-    case "SET_REGIONAL_POPULARITY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.redMicPro.unlocked) return state;
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        regionalPopularity: {
-          ...(activeData.regionalPopularity || {
-            "US": activeData.popularity || 0,
-            "Canada": 0,
-            "UK": 0,
-            "Latin America": 0,
-            "Asia": 0,
-            "Africa": 0
-          }),
-          [action.payload.region]: Math.max(0, Math.min(100, action.payload.popularity))
-        }
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "SET_POPULARITY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.redMicPro.unlocked) return state;
-
-      const updatedData: ArtistData = {
-        ...activeData,
-        popularity: Math.max(0, Math.min(100, action.payload)),
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "UPDATE_RELEASE_COVER_ART": {
-      if (!state.activeArtistId) return state;
-      const { releaseId, newCoverArt } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedReleases = activeData.releases.map((r) =>
-        r.id === releaseId ? { ...r, coverArt: newCoverArt } : r,
-      );
-
-      // Also update cover art for songs that might be using the album art
-      const updatedSongs = activeData.songs.map((s) => {
-        if (s.releaseId === releaseId) {
-          return { ...s, coverArt: newCoverArt };
-        }
-        return s;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            releases: updatedReleases,
-            songs: updatedSongs,
-          },
-        },
-      };
-    }
-
-    case "ACCEPT_FIFA_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { emailId, collabs } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "fifaWorldCupOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        activeFifaOffer: { emailId, collabs },
-        currentView: "createFifaWorldCup",
-      };
-    }
-    case "CANCEL_FIFA_OFFER": {
-        return { ...state, activeFifaOffer: null, currentView: "inbox" };
-    }
-    case "CREATE_FIFA_CONTRIBUTION": {
-      if (!state.activeArtistId) return state;
-      const { title, coverArt } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const collabs = state.activeFifaOffer?.collabs || [];
-      const finalTitle = `${title} (FIFA World Cup ${state.date.year}‚Ñ¢)`;
-      // Schedule single for week 23
-      const songId = crypto.randomUUID();
-      const newSong = {
-        id: songId,
-        title: finalTitle,
-        artistId: state.activeArtistId,
-        features: [...collabs, "FIFA Sound"],
-        duration: 180 + Math.floor(Math.random() * 60),
-        explicit: false,
-        streams: 0,
-        lastWeekStreams: 0,
-        prevWeekStreams: 0,
-        sales: 0,
-        quality: 100, // High quality since it's world cup
-        releaseDate: { week: 23, year: state.date.year },
-        weeksOnChart: 0,
-        peakPosition: 0,
-        isPromoted: false,
-        isPerformance: false,
-        isCollab: true,
-        coverArt: coverArt,
-        isAvailableOnStreaming: true
-      };
-
-      const newRelease = {
-        id: crypto.randomUUID(),
-        title: finalTitle,
-        type: "Single",
-        coverArt: coverArt,
-        songIds: [songId],
-        releaseDate: { week: 23, year: state.date.year },
-        firstWeekStreams: 0,
-        firstWeekSales: 0,
-        weeksOnChart: 0,
-        peakPosition: 0,
-        wikipediaSummary: `"${title}" is the official single from the FIFA World Cup ${state.date.year} Soundtrack, performed by ${state.soloArtist?.name || state.group?.name} alongside ${collabs.join(", ")} and FIFA Sound. Released ahead of the tournament, it serves as an anthem for football fans globally.`,
-        certifications: [],
-        isAvailableOnStreaming: true
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: [...activeData.songs, newSong],
-            releases: [...activeData.releases, newRelease],
-          },
-        },
-        activeFifaOffer: null,
-        fifaSingleScheduled: { week: 23, year: state.date.year, title: finalTitle, coverArt, collabs },
-        currentView: "game",
-      };
-    }
-
-    case "ACCEPT_SOUNDTRACK_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { albumTitle, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "soundtrackOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        activeSoundtrackOffer: { albumTitle, emailId },
-        currentView: "createSoundtrack",
-      };
-    }
-    case "CREATE_SOUNDTRACK_CONTRIBUTION": {
-      if (!state.activeArtistId) return state;
-      const { albumTitle, coverArt, songIds } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const playerTracks: SoundtrackTrack[] = songIds.map((songId) => {
-        const song = activeData.songs.find((s) => s.id === songId)!;
-        return {
-          isPlayerSong: true,
-          songId: song.id,
-          title: song.title,
-          artist: state.soloArtist?.name || state.group?.name || "Artist",
-          streams: 0,
-          lastWeekStreams: 0,
-          prevWeekStreams: 0,
-          duration: song.duration,
-          explicit: song.explicit,
-        };
-      });
-
-      const npcTracks: SoundtrackTrack[] = state.npcs
-        .slice(0, 7)
-        .map((npc) => ({
-          isPlayerSong: false,
-          songId: npc.uniqueId,
-          title: npc.title,
-          artist: npc.artist,
-          streams: 0,
-          lastWeekStreams: 0,
-          prevWeekStreams: 0,
-          duration: 180 + Math.floor(Math.random() * 60),
-          explicit: Math.random() > 0.7,
-        }));
-
-      const allTracks = [...playerTracks, ...npcTracks].sort(
-        () => Math.random() - 0.5,
-      );
-
-      const newSoundtrack: SoundtrackAlbum = {
-        id: crypto.randomUUID(),
-        title: albumTitle,
-        coverArt,
-        tracks: allTracks,
-        releaseDate: state.date,
-        label: "Major Film Studio",
-        artistId: state.activeArtistId,
-        isReleased: true,
-      };
-
-      const preReleaseStreams = songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.streams || 0), 0);
-      const preReleaseSales = songIds.reduce((sum: number, sid: string) => sum + (activeData.songs.find((s: any) => s.id === sid)?.sales || 0), 0);
-
-      const newRelease: Release = {
-        id: crypto.randomUUID(),
-        title: albumTitle,
-        type: "Album",
-        coverArt: coverArt,
-        songIds: songIds,
-        releaseDate: state.date,
-        artistId: state.activeArtistId,
-        soundtrackInfo: { albumTitle },
-        preReleaseStreams,
-        preReleaseSales,
-      };
-
-      const updatedSongs = activeData.songs.map((song) => {
-        if (songIds.includes(song.id)) {
-          return {
-            ...song,
-            isReleased: true,
-            isAvailableOnStreaming: true,
-            soundtrackTitle: albumTitle,
-            releaseId: newRelease.id,
-          };
-        }
-        return song;
-      });
-
-      return {
-        ...state,
-        soundtrackAlbums: [...state.soundtrackAlbums, newSoundtrack],
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            songs: updatedSongs,
-            releases: [...activeData.releases, newRelease],
-          },
-        },
-        activeSoundtrackOffer: null,
-        selectedSoundtrackId: newSoundtrack.id,
-        currentView: "spotifySoundtrackDetail",
-      };
-    }
-    case "CANCEL_SOUNDTRACK_OFFER": {
-      return {
-        ...state,
-        activeSoundtrackOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "SUBMIT_COACHELLA": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          email.id === action.payload.emailId &&
-          email.offer?.type === "coachellaOffer"
-        ) {
-          return { ...email, offer: { ...email.offer, isSubmitted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            coachella: activeData.coachella
-              ? { ...activeData.coachella, status: "submitted" }
-              : undefined,
-          },
-        },
-      };
-    }
-    case "SET_COACHELLA_SETLIST": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { songIds, emailId } = action.payload;
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (
-          emailId && email.id === emailId &&
-          email.offer?.type === "coachellaSelection"
-        ) {
-          return {
-            ...email,
-            offer: { ...email.offer, isSetlistSelected: true },
-          };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-            coachella: activeData.coachella
-              ? { ...activeData.coachella, setlist: songIds }
-              : { year: state.date.year, status: "none", setlist: songIds },
-          },
-        },
-      };
-    }
-    case "ACCEPT_FEATURE_OFFER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { emailId, ...offerDetails } = action.payload;
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "featureOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        activeFeatureOffer: { ...offerDetails, emailId },
-        currentView: "createFeature",
-      };
-    }
-    case "ACCEPT_FEATURE_VIDEO_OFFER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { emailId, ...offerDetails } = action.payload;
-
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "featureVideoOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        activeFeatureVideoOffer: { ...offerDetails, emailId },
-        currentView: "createFeatureVideo",
-      };
-    }
-    case "CANCEL_FEATURE_VIDEO_OFFER": {
-      return {
-        ...state,
-        activeFeatureVideoOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "CREATE_FEATURE_VIDEO": {
-      if (!state.activeArtistId || !state.activeFeatureVideoOffer) return state;
-
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = allPlayerArtistsAndGroups.find(
-        (a) => a.id === state.activeArtistId,
-      );
-      if (!activeArtist) return state;
-
-      const { thumbnail } = action.payload;
-      const { songId, npcArtistName } = state.activeFeatureVideoOffer;
-      const song = activeData.songs.find((s) => s.id === songId);
-      if (!song) return state;
-
-      const newVideo: Video = {
-        id: crypto.randomUUID(),
-        title: `${npcArtistName}, ${activeArtist.name} - ${song.title.replace(` (feat. ${activeArtist.name})`, "")} (Official Video)`,
-        type: "Music Video",
-        views: 0,
-        thumbnail: thumbnail,
-        releaseDate: state.date,
-        artistId: state.activeArtistId,
-        songId: songId,
-        channelId: "artist", // It won't show in the artist channel but we'll use a flag
-        isFeatureVideo: true,
-      };
-
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${npcArtistName} has released the music video for "${song.title.replace(` (feat. ${activeArtist.name})`, "")}" featuring ${activeArtist.name}.`,
-        image: thumbnail,
-        likes: Math.floor(Math.random() * 80000) + 30000,
-        retweets: Math.floor(Math.random() * 20000) + 5000,
-        views: Math.floor(Math.random() * 1500000) + 500000,
-        date: state.date,
-      };
-
-      const updatedData = {
-        ...activeData,
-        videos: [...activeData.videos, newVideo],
-        xPosts: [popBasePost, ...activeData.xPosts],
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-        activeFeatureVideoOffer: null,
-        currentView: "game",
-      };
-    }
-    case "CANCEL_FEATURE_OFFER": {
-      return {
-        ...state,
-        activeFeatureOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "CREATE_FEATURE_SONG": {
-      if (!state.activeArtistId || !state.activeFeatureOffer) return state;
-
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = allPlayerArtistsAndGroups.find(
-        (a) => a.id === state.activeArtistId,
-      );
-      if (!activeArtist) return state;
-
-      const { songTitle, coverArt, releaseDate } = action.payload;
-      const { npcArtistName, payout, songQuality, promotion } =
-        state.activeFeatureOffer;
-
-      const newFeatureSong: Song = {
-        id: crypto.randomUUID(),
-        title: `${songTitle} (feat. ${activeArtist.name})`,
-        genre:
-          NPC_ARTIST_GENRES[npcArtistName] ||
-          GENRES[Math.floor(Math.random() * GENRES.length)],
-        quality: songQuality, 
-        trait: generateSongTrait(songQuality, state.difficultyMode || "normal"), traitGenerated: true,
-        coverArt: coverArt,
-        isReleased: false,
-        releaseDate: releaseDate,
-        streams: 0,
-        lastWeekStreams: 0,
-        prevWeekStreams: 0,
-        duration: 180,
-        explicit: false,
-        artistId: state.activeArtistId,
-        isFeatureToNpc: true,
-        isAvailableOnStreaming: true,
-        npcArtistName: npcArtistName,
-        playlistBoostWeeks: promotion?.durationWeeks || 0,
-      };
-
-      const releaseId = crypto.randomUUID();
-      newFeatureSong.releaseId = releaseId;
-      const newFeatureRelease = {
-        id: releaseId,
-        title: `${songTitle} (feat. ${activeArtist.name})`,
-        type: "Single" as const,
-        coverArt: coverArt,
-        releaseDate: releaseDate,
-        songIds: [newFeatureSong.id],
-        isFeatureToNpc: true,
-        npcArtistName: npcArtistName,
-        totalStreams: 0,
-        lastWeekStreams: 0,
-        marketingBudget: 0,
-        marketingSpent: 0,
-        artistId: state.activeArtistId,
-        labelId: activeData.contract?.labelId,
-      };
-
-      const updatedData = {
-        ...activeData,
-        money: activeData.money + payout,
-        songs: [...activeData.songs, newFeatureSong],
-        releases: [...activeData.releases, newFeatureRelease],
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-        activeFeatureOffer: null,
-        currentView: "game",
-      };
-    }
-    case "SELECT_SOUNDTRACK": {
-      return {
-        ...state,
-        selectedSoundtrackId: action.payload,
-        currentView: "spotifySoundtrackDetail",
-      };
-    }
-    case "DO_BRAND_CAMPAIGN": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
-      if (!artistProfile) return state;
-
-      const { brandName, payout, logoUrl } = action.payload;
-      const artistAvatar = artistProfile.image || activeData.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400';
-
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${artistProfile.name} has officially partnered with ${brandName} for a new social campaign! üì∏‚ú®`,
-        image: artistAvatar,
-        image2: logoUrl,
-        likes: Math.floor(Math.random() * 80000) + 20000,
-        retweets: Math.floor(Math.random() * 15000) + 5000,
-        views: Math.floor(Math.random() * 3000000) + 800000,
-        date: state.date,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + payout,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 5),
-            xPosts: [popBasePost, ...(activeData.xPosts || [])],
-          },
-        },
-      };
-    }
-    case "SIGN_BRAND_AMBASSADOR": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
-      if (!artistProfile) return state;
-
-      const { brandId, brandName, logoUrl, weeklyPayout, durationWeeks } = action.payload;
-      const artistAvatar = artistProfile.image || activeData.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400';
-
-      const contract: BrandAmbassadorContract = {
-        id: crypto.randomUUID(),
-        brandId,
-        brandName,
-        brandLogo: logoUrl,
-        durationWeeks,
-        remainingWeeks: durationWeeks,
-        weeklyPayout,
-        totalEarned: 0,
-        signedWeek: state.date.week,
-        signedYear: state.date.year,
-      };
-
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `BREAKING: ${artistProfile.name} has officially been named the global brand ambassador for ${brandName}! üíéüî•`,
-        image: artistAvatar,
-        image2: logoUrl,
-        likes: Math.floor(Math.random() * 120000) + 40000,
-        retweets: Math.floor(Math.random() * 25000) + 10000,
-        views: Math.floor(Math.random() * 5000000) + 1500000,
-        date: state.date,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            activeBrandAmbassadorContract: contract,
-            popularity: Math.min(100, activeData.popularity + 2),
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 10),
-            xPosts: [popBasePost, ...(activeData.xPosts || [])],
-          },
-        },
-      };
-    }
-    case "SIGN_SONG_SYNC_LICENSE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
-      if (!artistProfile) return state;
-
-      const { songId, mediaTitle, mediaType, upfrontPayout, streamBoostPercent, weeklyStreamsBoost, durationWeeks } = action.payload;
-      const targetSong = activeData.songs.find(s => s.id === songId);
-      const songTitle = targetSong ? targetSong.title : "their song";
-
-      const newSync: ActiveSyncLicense = {
-        id: crypto.randomUUID(),
-        songId,
-        songTitle,
-        mediaTitle,
-        mediaType,
-        upfrontPayout,
-        streamBoostPercent: streamBoostPercent || 15,
-        remainingWeeks: durationWeeks,
-      };
-
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `'${songTitle}' by ${artistProfile.name} will be featured in ${mediaTitle}! üé¨üé∂`,
-        image: targetSong?.coverArt || artistProfile.image,
-        likes: Math.floor(Math.random() * 60000) + 15000,
-        retweets: Math.floor(Math.random() * 12000) + 3000,
-        views: Math.floor(Math.random() * 2500000) + 500000,
-        date: state.date,
-      };
-
-      const existingSyncs = activeData.activeSyncLicenses || [];
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + upfrontPayout,
-            activeSyncLicenses: [...existingSyncs, newSync],
-            xPosts: [popBasePost, ...(activeData.xPosts || [])],
-          },
-        },
-      };
-    }
-    case "CREATE_TOUR": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtistProfile =
-        state.soloArtist ||
-        state.group?.members.find((m) => m.id === state.activeArtistId) ||
-        state.group;
-      const newTour = action.payload;
-      const cost = newTour.bookingCostsPaid || 0;
-
-      let additionalPosts: XPost[] = [];
-
-      // Pop Base tweet for one-show free tour celebration (4 weeks before or after album release)
-      const isOneShow = newTour.venues && newTour.venues.length === 1;
-      const isFree = newTour.venues && (newTour.venues[0]?.ticketPrice === 0 || !newTour.venues[0]?.ticketPrice);
-
-      if (isOneShow && isFree && activeArtistProfile) {
-        const currentTotalWeeks = state.date.year * 52 + state.date.week;
-        const venue = newTour.venues[0];
-
-        // Check for upcoming album/EP within 4 weeks (0 to 4 weeks away)
-        const upcomingSub = (activeData.labelSubmissions || []).find((sub) => {
-          if (sub.status !== "scheduled" || !sub.projectReleaseDate) return false;
-          if (sub.release?.type === "Single") return false;
-          const subWeeks = sub.projectReleaseDate.year * 52 + sub.projectReleaseDate.week;
-          const diff = subWeeks - currentTotalWeeks;
-          return diff >= 0 && diff <= 4;
-        });
-
-        // Check for recent album/EP release within 4 weeks (0 to 4 weeks ago)
-        const recentRelease = (activeData.releases || []).find((rel) => {
-          if (!rel.isReleased || !rel.releaseDate) return false;
-          if (rel.type === "Single") return false;
-          const relWeeks = rel.releaseDate.year * 52 + rel.releaseDate.week;
-          const diff = currentTotalWeeks - relWeeks;
-          return diff >= 0 && diff <= 4;
-        });
-
-        const targetAlbum = upcomingSub ? upcomingSub.release : (recentRelease || null);
-        const isUpcoming = !!upcomingSub;
-
-        if (targetAlbum) {
-          const pronounPossessive =
-            activeArtistProfile && "pronouns" in activeArtistProfile
-              ? (activeArtistProfile as any).pronouns === "he/him"
-                ? "his"
-                : (activeArtistProfile as any).pronouns === "she/her"
-                  ? "her"
-                  : "their"
-              : "their";
-
-          const albumTypeLabel = targetAlbum.type === "EP" ? "EP" : "album";
-          const albumStatusWord = isUpcoming ? `upcoming ${albumTypeLabel}` : `new ${albumTypeLabel}`;
-
-          const showDateStr = formatMonthDay(state.date, 5);
-          const rsvpDateStr = formatMonthDay(state.date, 1);
-
-          const tweetContent = `${activeArtistProfile.name} will celebrate the release of ${pronounPossessive} ${albumStatusWord} '${targetAlbum.title}' with a free show at ${venue.name} on ${showDateStr}.\n\nFree ticket requests are open now through ${rsvpDateStr} at 11:59 p.m. ET.`;
-
-          const popBasePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "popbase",
-            content: tweetContent,
-            image: targetAlbum.coverArt || activeArtistProfile.imageUrl || (activeArtistProfile as any).image,
-            likes: Math.floor(Math.random() * 45000) + 15000,
-            retweets: Math.floor(Math.random() * 9000) + 2000,
-            views: Math.floor(Math.random() * 500000) + 150000,
-            date: state.date,
-          };
-
-          additionalPosts.push(popBasePost);
-        }
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - cost,
-            tours: [...activeData.tours, action.payload],
-            xPosts: additionalPosts.length > 0 ? [...additionalPosts, ...(activeData.xPosts || [])] : activeData.xPosts,
-          },
-        },
-      };
-    }
-    case "START_TOUR": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedTours = activeData.tours.map((tour) => {
-        if (tour.id === action.payload.tourId) {
-          if (tour.status === "planning" || tour.status === "presale") {
-            return { ...tour, status: "active" as "active" };
-          }
-        }
-        return tour;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tours: updatedTours,
-          },
-        },
-        activeTourId: action.payload.tourId,
-      };
-    }
-    case "EDIT_TOUR_SETLIST": {
-      console.log("EDIT_TOUR_SETLIST triggered", action.payload);
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
-      if (!artistProfile) return state;
-      
-      const { tourId, newSetlist, addedSongs, removedSongs } = action.payload;
-
-      const updatedTours = activeData.tours.map((tour) => {
-        if (tour.id === tourId) {
-          return { ...tour, setlist: newSetlist };
-        }
-        return tour;
-      });
-      
-      const tour = activeData.tours.find(t => t.id === tourId);
-      const newPosts: XPost[] = [];
-      
-      // Pop base reports
-      if (removedSongs.length > 0) {
-          const removedSongIds = new Set(removedSongs);
-          const rSongs = activeData.songs.filter(s => removedSongIds.has(s.id));
-          rSongs.forEach(song => {
-              newPosts.push({
-                  id: crypto.randomUUID(),
-                  authorId: "popbase",
-                  content: `${artistProfile.name} has removed '${song.title}' from the ${tour?.name} setlist.`,
-                  image: song.coverArt,
-                  likes: Math.floor(Math.random() * 50000) + 10000,
-                  retweets: Math.floor(Math.random() * 10000) + 5000,
-                  views: Math.floor(Math.random() * 2000000) + 500000,
-                  date: state.date,
-              });
-          });
-      }
-      
-      if (addedSongs.length > 0) {
-          const addedSongIds = new Set(addedSongs);
-          const aSongs = activeData.songs.filter(s => addedSongIds.has(s.id));
-          aSongs.forEach(song => {
-              newPosts.push({
-                  id: crypto.randomUUID(),
-                  authorId: "popbase",
-                  content: `${artistProfile.name} has added '${song.title}' to the ${tour?.name} setlist!`,
-                  image: song.coverArt,
-                  likes: Math.floor(Math.random() * 60000) + 15000,
-                  retweets: Math.floor(Math.random() * 12000) + 6000,
-                  views: Math.floor(Math.random() * 2500000) + 700000,
-                  date: state.date,
-              });
-          });
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tours: updatedTours,
-            xPosts: [...newPosts, ...activeData.xPosts]
-          },
-        },
-      };
-    }
-
-    case "CANCEL_TOUR": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedTours = activeData.tours.map((tour) => {
-        if (tour.id === action.payload.tourId) {
-          return { ...tour, status: "cancelled" as "cancelled" };
-        }
-        return tour;
-      });
-      // If they cancel during presale with revenue already collected? Could deduct bond, or just refund
-      let totalRefund = 0;
-      const tourToCancel = activeData.tours.find(
-        (t) => t.id === action.payload.tourId,
-      );
-      if (tourToCancel && tourToCancel.totalRevenue > 0) {
-        totalRefund = tourToCancel.totalRevenue; // Have to pay it back
-      }
-
-      return {
-        ...state,
-        activeTourId:
-          state.activeTourId === action.payload.tourId
-            ? null
-            : state.activeTourId,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - totalRefund, // Deduct the collected revenue since they cancelled
-            tours: updatedTours,
-          },
-        },
-      };
-    }
-    case "COLLECT_PRESALE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const updatedTours = activeData.tours.map((tour) => {
-        if (tour.id === action.payload.tourId && tour.status === "presale") {
-          // Collect presale demand percentage
-          let tourPresaleRevenue = 0;
-          let tourPresaleTickets = 0;
-
-          const totalAlloc = tour.presalePercentage || 0;
-          const alreadyCollected = tour.presaleCollectedPercentage || 0;
-          const pctToCollect = (totalAlloc - alreadyCollected) / 100;
-
-          if (pctToCollect <= 0) return tour;
-
-          const demandScore = tour.presaleDemand || 0; // 0-100
-
-          const updatedVenues = tour.venues.map((venue) => {
-            const allocation = Math.floor(venue.capacity * pctToCollect);
-            let wantToBuy = Math.floor(allocation * (demandScore / 100));
-
-            const remaining = venue.capacity - venue.ticketsSold;
-            const actualSold = Math.min(wantToBuy, remaining);
-
-            const rev = actualSold * venue.ticketPrice;
-            tourPresaleRevenue += rev;
-            tourPresaleTickets += actualSold;
-
-            return {
-              ...venue,
-              ticketsSold: venue.ticketsSold + actualSold,
-              revenue: venue.revenue + rev,
-            };
-          });
-
-          // Weeks to process depends on popularity
-          const weeksToWait = Math.max(
-            1,
-            4 - Math.floor((activeData.popularity || 0) / 33),
-          );
-
-          const currentQueue = tour.presaleCollectionQueue || [];
-
-          return {
-            ...tour,
-            venues: updatedVenues,
-            totalRevenue: tour.totalRevenue + tourPresaleRevenue,
-            ticketsSold: tour.ticketsSold + tourPresaleTickets,
-            presaleCollectedPercentage: totalAlloc,
-            presaleCollectionQueue: [
-              ...currentQueue,
-              { weeksRemaining: weeksToWait, amount: tourPresaleRevenue },
-            ],
-          };
-        }
-        return tour;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tours: updatedTours,
-          },
-        },
-      };
-    }
-    case "ADD_PRESALE_ALLOCATION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedTours = activeData.tours.map((tour) => {
-        if (tour.id === action.payload.tourId && tour.status === "presale") {
-          return {
-            ...tour,
-            presalePercentage: Math.min(
-              100,
-              (tour.presalePercentage || 0) + action.payload.percentage,
-            ),
-          };
-        }
-        return tour;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tours: updatedTours,
-          },
-        },
-      };
-    }
-    case "ADD_TOUR_LEG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedTours = activeData.tours.map((tour) => {
-        if (
-          tour.id === action.payload.tourId &&
-          (tour.status === "active" ||
-            tour.status === "presale" ||
-            tour.status === "planning")
-        ) {
-          return {
-            ...tour,
-            venues: [...tour.venues, ...action.payload.venues],
-          };
-        }
-        return tour;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tours: updatedTours,
-          },
-        },
-      };
-    }
-    case "UPLOAD_TOUR_PHOTO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.tourPhotos.length >= 9) return state;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            tourPhotos: [...activeData.tourPhotos, action.payload],
-          },
-        },
-      };
-    }
-    case "SELECT_TOUR":
-      return {
-        ...state,
-        activeTourId: action.payload,
-      };
-    case "HIRE_MANAGER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const manager = MANAGERS.find((m) => m.id === action.payload.managerId);
-      const contractYears = action.payload.contractYears || 1;
-      const totalCost = manager ? manager.yearlyCost * contractYears : 0;
-      if (!manager || activeData.money < totalCost) return state;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - totalCost,
-            popularity: Math.min(
-              100,
-              activeData.popularity + manager.popularityBoost,
-            ),
-            manager: {
-              id: manager.id,
-              contractEndDate: {
-                week: state.date.week,
-                year: state.date.year + contractYears,
-              },
-            },
-          },
-        },
-      };
-    }
-    case "TOGGLE_MANAGER_SETTING": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.manager) return state;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            manager: {
-              ...activeData.manager,
-              [action.payload.setting]:
-                !activeData.manager[action.payload.setting],
-            },
-          },
-        },
-      };
-    }
-    case "SET_MANAGER_GIG_REGION": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.manager) return state;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            manager: {
-              ...activeData.manager,
-              autoGigRegion: action.payload,
-            },
-          },
-        },
-      };
-    }
-    case "BUY_PLAYLIST_ENTRY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { songId, playlistId, position, cost } = action.payload;
-
-      if (activeData.money < cost) return state;
-
-      const updatedPlaylists = [
-        ...(state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS),
-      ];
-      const playlistIndex = updatedPlaylists.findIndex(
-        (p) => p.id === playlistId,
-      );
-
-      if (playlistIndex !== -1) {
-        const playlist = { ...updatedPlaylists[playlistIndex] };
-        const newTracks = [...playlist.tracks];
-
-        const existingIndex = newTracks.findIndex((t) => t.songId === songId);
-        if (existingIndex !== -1) {
-          newTracks.splice(existingIndex, 1);
-        }
-
-        const insertIndex = Math.max(
-          0,
-          Math.min(newTracks.length, position - 1),
-        );
-        const song = activeData.songs.find((s) => s.id === songId);
-        const artistProfile =
-          state.allPlayerArtists?.find((a) => a.id === state.activeArtistId) ||
-          state.soloArtist ||
-          state.group;
-        if (song && artistProfile) {
-          newTracks.splice(insertIndex, 0, {
-            songId: song.id,
-            artistName: artistProfile.name,
-            artistId: state.activeArtistId,
-            title: song.title,
-            coverArt: song.coverArt,
-            position: insertIndex + 1,
-            addedDate: state.date,
-          });
-        }
-
-        if (newTracks.length > 50) newTracks.pop();
-        playlist.tracks = newTracks.map((t, i) => ({ ...t, position: i + 1 }));
-        updatedPlaylists[playlistIndex] = playlist;
-      }
-
-      return {
-        ...state,
-        spotifyPlaylists: updatedPlaylists,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - cost,
-            songs: activeData.songs.map((s) => {
-              if (s.id === songId) {
-                const currentPurchased = s.purchasedPlaylists || [];
-                const existingIndex = currentPurchased.findIndex(
-                  (p) => p.playlistId === playlistId,
-                );
-                const newPurchased = [...currentPurchased];
-                if (existingIndex !== -1) {
-                  newPurchased[existingIndex] = {
-                    playlistId,
-                    position,
-                    weeksRemaining: 4,
-                  };
-                } else {
-                  newPurchased.push({
-                    playlistId,
-                    position,
-                    weeksRemaining: 4,
-                  });
-                }
-                return { ...s, purchasedPlaylists: newPurchased };
-              }
-              return s;
-            }),
-          },
-        },
-      };
-    }
-    case "FIRE_MANAGER": {
-      if (
-        !state.activeArtistId ||
-        !state.artistsData[state.activeArtistId].manager
-      )
-        return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const manager = MANAGERS.find((m) => m.id === activeData.manager!.id);
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            popularity: Math.max(
-              0,
-              activeData.popularity - (manager?.popularityBoost || 0),
-            ),
-            manager: null,
-          },
-        },
-      };
-    }
-    case "HIRE_SECURITY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const team = SECURITY_TEAMS.find((s) => s.id === action.payload.teamId);
-      if (!team || activeData.money < team.weeklyCost) return state;
-
-      const updatedData = {
-        ...activeData,
-        money: activeData.money - team.weeklyCost,
-        securityTeamId: team.id,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-      };
-    }
-    case "FIRE_SECURITY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            securityTeamId: null,
-          },
-        },
-      };
-    }
-    case "UPDATE_NPC_X_USER": {
-      const { userId, newName, newUsername } = action.payload;
-      const updatedArtistsData = { ...state.artistsData };
-
-      for (const artistId in updatedArtistsData) {
-        const artistData = updatedArtistsData[artistId];
-        const updatedXUsers = artistData.xUsers.map((user) =>
-          user.id === userId
-            ? { ...user, name: newName, username: newUsername }
-            : user,
-        );
-        updatedArtistsData[artistId] = {
-          ...artistData,
-          xUsers: updatedXUsers,
-        };
-      }
-
-      return {
-        ...state,
-        artistsData: updatedArtistsData,
-      };
-    }
-    case "VIEW_PAST_LABEL_CHANNEL": {
-      return {
-        ...state,
-        viewingPastLabelId: action.payload,
-        activeYoutubeChannel: "label",
-        currentView: "youtube",
-      };
-    }
-    case "UPDATE_NPC_COVER": {
-      const { artistName, newCover } = action.payload;
-      const npcImages = { ...(state.npcImages || {}), [artistName]: newCover };
-
-      const mapChartEntries = (entries: ChartEntry[]) =>
-        entries.map((entry) =>
-          entry.artist === artistName && !entry.isPlayerSong
-            ? { ...entry, coverArt: newCover }
-            : entry,
-        );
-
-      const mapAlbumChartEntries = (entries: AlbumChartEntry[]) =>
-        entries.map((entry) =>
-          entry.artist === artistName && !entry.isPlayerAlbum
-            ? { ...entry, coverArt: newCover }
-            : entry,
-        );
-
-      return {
-        ...state,
-        npcImages,
-        npcs: state.npcs.map((npc) =>
-          npc.artist === artistName ? { ...npc, coverArt: newCover } : npc,
-        ),
-        npcAlbums: state.npcAlbums.map((album) =>
-          album.artist === artistName
-            ? { ...album, coverArt: newCover }
-            : album,
-        ),
-        billboardHot100: mapChartEntries(state.billboardHot100),
-        spotifyGlobal: mapChartEntries(state.spotifyGlobal),
-        spotifyUS: mapChartEntries(state.spotifyUS || []), 
-        spotifyCanada: mapChartEntries(state.spotifyCanada || []),
-        spotifyUK: mapChartEntries(state.spotifyUK || []),
-        spotifyLatin: mapChartEntries(state.spotifyLatin || []),
-        spotifyAsia: mapChartEntries(state.spotifyAsia || []),
-        spotifyAfrica: mapChartEntries(state.spotifyAfrica || []),
-        hotPopSongs: mapChartEntries(state.hotPopSongs || []),
-        hotRapRnb: mapChartEntries(state.hotRapRnb || []),
-        electronicChart: mapChartEntries(state.electronicChart || []),
-        countryChart: mapChartEntries(state.countryChart || []),
-        billboardTopAlbums: mapAlbumChartEntries(
-          state.billboardTopAlbums || [],
-        ),
-      };
-    }
-    case "EDIT_X_PROFILE": {
-      if (!state.activeArtistId) return state;
-      const { userId, name, bio, headerImage, avatar } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const updatedXUsers = activeData.xUsers.map(user => {
-          if (user.id === userId) {
-              return { ...user, name, bio, headerImage, avatar: avatar || user.avatar };
-          }
-          return user;
-      });
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  xUsers: updatedXUsers,
-              },
-          },
-      };
-    }
-    case "UPDATE_NPC_AVATAR": {
-      const { userId, newAvatar } = action.payload;
-      const updatedArtistsData = { ...state.artistsData };
-
-      for (const artistId in updatedArtistsData) {
-        const artistData = updatedArtistsData[artistId];
-        const updatedXUsers = artistData.xUsers.map((user) =>
-          user.id === userId ? { ...user, avatar: newAvatar } : user,
-        );
-        updatedArtistsData[artistId] = {
-          ...artistData,
-          xUsers: updatedXUsers,
-        };
-      }
-
-      return {
-        ...state,
-        artistsData: updatedArtistsData,
-      };
-    }
-    case "ACCEPT_EVENT_INVITATION": {
-      if (!state.activeArtistId) return state;
-      const { emailId, eventName, hostName, associatedSoundtrack, eventType } =
-        action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "eventInvitation") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        activeEventInvitation: {
-          emailId,
-          eventName,
-          hostName,
-          associatedSoundtrack,
-          eventType,
-        },
-        currentView: "attendEvent",
-      };
-    }
-    case "CONFIRM_EVENT_ATTENDANCE": {
-      if (!state.activeArtistId || !state.activeEventInvitation) return state;
-      const { imageUrl } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const eventInfo = state.activeEventInvitation;
-      const artistName = activeData.profile?.name || "";
-      let postContent = "";
-
-      if (eventInfo.eventType === "metGala" || eventInfo.eventType === "nyfw") {
-        postContent = `${artistName} was spotted looking incredible at ${eventInfo.eventName}! üì∏‚ú®`;
-      } else if (eventInfo.eventType === "afterParty") {
-        postContent = `${artistName} arrived at ${eventInfo.hostName}'s ${eventInfo.eventName} last night! ü•Ç‚ú®`;
-      } else if (eventInfo.eventType === "soundtrackPremiere") {
-        postContent = `${artistName} stunned on the red carpet for the premiere of ${eventInfo.associatedSoundtrack}! üé¨‚≠êÔ∏è`;
-      } else {
-        postContent = `${artistName} attended ${eventInfo.eventName} today!`;
-      }
-
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: postContent,
-        image: imageUrl,
-        likes: Math.floor(Math.random() * 200000) + 50000,
-        retweets: Math.floor(Math.random() * 20000) + 5000,
-        views: Math.floor(Math.random() * 1000000) + 500000,
-        date: state.date,
-      };
-      
-      const newLook = {
-          id: crypto.randomUUID(),
-          awardShow: eventInfo.eventType === "afterParty" ? eventInfo.eventName : eventInfo.eventType === "soundtrackPremiere" ? "Premiere: " + eventInfo.associatedSoundtrack : eventInfo.eventName,
-          year: state.date.year,
-          imageUrl: imageUrl || "",
-      };
-
-      return {
-        ...state,
-        activeEventInvitation: null,
-        currentView: "game",
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            xPosts: [newPost, ...activeData.xPosts],
-            pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])],
-            hype: Math.min(100, (activeData.hype || 50) + 10),
-            publicImage: Math.min(100, (activeData.publicImage || 50) + 15),
-          },
-        },
-      };
-    }
-    case "DECLINE_EVENT_INVITATION": {
-      if (!state.activeArtistId) return state;
-      const { emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.filter(
-        (email) => email.id !== emailId,
-      );
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-      };
-    }
-    case "ACCEPT_VOGUE_OFFER": {
-      if (!state.activeArtistId) return state;
-      const { magazine, emailId } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "vogueOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: { ...activeData, inbox: updatedInbox },
-        },
-        activeVogueOffer: { magazine, emailId },
-        currentView: "createVogueFeature",
-      };
-    }
-    case "CANCEL_VOGUE_OFFER": {
-      return {
-        ...state,
-        activeVogueOffer: null,
-        currentView: "inbox",
-      };
-    }
-    case "CREATE_VOGUE_FEATURE": {
-      if (!state.activeArtistId || !state.activeVogueOffer) return state;
-      const { photoshoot } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const newPosts: XPost[] = [];
-
-      // PopBase posts
-      newPosts.push({
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${activeArtist.name} is gorgeous on the cover of ${photoshoot.magazine}.`,
-        image: photoshoot.coverImage,
-        likes: Math.floor(Math.random() * 40000) + 25000,
-        retweets: Math.floor(Math.random() * 8000) + 4000,
-        views: Math.floor(Math.random() * 800000) + 300000,
-        date: state.date,
-      });
-
-      newPosts.push({
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${activeArtist.name} looks flawless for ${photoshoot.magazine}.`,
-        image: photoshoot.photoshootImages[0], // Use one of the photoshoot images
-        likes: Math.floor(Math.random() * 20000) + 10000,
-        retweets: Math.floor(Math.random() * 3000) + 1000,
-        views: Math.floor(Math.random() * 400000) + 150000,
-        date: state.date,
-      });
-
-      const interviewAnswer = photoshoot.interviewAnswers[0]; // Take the first Q&A
-      newPosts.push({
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `${activeArtist.name} tells ${photoshoot.magazine} the craziest rumor they have heard about themself:
-
-‚Äú${interviewAnswer.answer}‚Äù`,
-        image: photoshoot.photoshootImages[1],
-        likes: Math.floor(Math.random() * 80000) + 50000,
-        retweets: Math.floor(Math.random() * 10000) + 5000,
-        views: Math.floor(Math.random() * 5000000) + 1000000,
-        date: state.date,
-      });
-
-      // TMZ post (shady)
-      const pronounPossessive =
-        activeArtist.pronouns === "he/him"
-          ? "his"
-          : activeArtist.pronouns === "she/her"
-            ? "her"
-            : "their";
-      const shadyComments = [
-        `Is that... hair? ${activeArtist.name}'s new ${photoshoot.magazine} cover has people talking, and not in a good way.`,
-        `Sources say ${activeArtist.name} was a nightmare on the set of ${pronounPossessive} ${photoshoot.magazine} shoot. Diva alert?`,
-        `Another magazine cover for ${activeArtist.name}. Groundbreaking. üôÑ`,
-        `Someone's trying hard to stay relevant. ${activeArtist.name}'s ${photoshoot.magazine} spread is... a choice.`,
-      ];
-
-      newPosts.push({
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content:
-          shadyComments[Math.floor(Math.random() * shadyComments.length)],
-        image: photoshoot.coverImage,
-        likes: Math.floor(Math.random() * 5000) + 1000,
-        retweets: Math.floor(Math.random() * 1500) + 500,
-        views: Math.floor(Math.random() * 400000) + 100000,
-        date: state.date,
-      });
-
-      const updatedData = {
-        ...activeData,
-        voguePhotoshoots: [...(activeData.voguePhotoshoots || []), photoshoot],
-        xPosts: [...newPosts, ...activeData.xPosts],
-        hype: Math.min(getHypeCap(activeData), activeData.hype + 50),
-        popularity: Math.min(100, activeData.popularity + 5),
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: updatedData,
-        },
-        activeVogueOffer: null,
-        currentView: "game",
-      };
-    }
-    case "SET_CLOUD_SAVE_ID": {
-      return {
-        ...state,
-        cloudSaveId: action.payload,
-      };
-    }
-    case "START_DATING": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const newRelationship: Relationship = {
-        id: crypto.randomUUID(),
-        partnerName: action.payload.partnerName,
-        partnerType: action.payload.partnerType,
-        startYear: state.date.year,
-        startWeek: state.date.week,
-        endYear: null,
-        endWeek: undefined,
-        status: "dating",
-        isPublic: false,
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: [
-              ...(activeData.relationships || []),
-              newRelationship,
-            ],
-          },
-        },
-      };
-    }
-    case "REVEAL_RELATIONSHIP": {
-      if (!state.activeArtistId) return state;
-
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId ? { ...r, isPublic: true } : r,
-      );
-
-      const rel = updatedRelationships.find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-
-      const postContext =
-        action.payload.outlet === "popbase"
-          ? `Pop Base has exclusively learned that ${activeArtist.name} is dating ${rel?.partnerName}.`
-          : `Sources tell TMZ that ${activeArtist.name} and ${rel?.partnerName} are officially an item.`;
-
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: action.payload.outlet,
-        content: postContext,
-        image: activeArtist.image,
-        likes: Math.floor(Math.random() * 300000) + 100000,
-        retweets: Math.floor(Math.random() * 80000) + 20000,
-        views: Math.floor(Math.random() * 5000000) + 2000000,
-        date: state.date,
-      };
-
-      const updatedPosts = activeData.xPosts
-        ? [newPost, ...activeData.xPosts]
-        : [newPost];
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 50),
-            xPosts: updatedPosts,
-          },
-        },
-      };
-    }
-    case "ADVANCE_RELATIONSHIP": {
-      if (!state.activeArtistId) return state;
-
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const updatedRelationships = (activeData.relationships || []).map((r) => {
-        if (r.id === action.payload.relationshipId) {
-          const isMarriage = action.payload.newStatus === "married";
-          return {
-            ...r,
-            status: action.payload.newStatus,
-            marriedStartYear: isMarriage ? (r.marriedStartYear || state.date.year) : r.marriedStartYear,
-            marriedStartWeek: isMarriage ? (r.marriedStartWeek || state.date.week) : r.marriedStartWeek,
-            prenup: action.payload.prenup || r.prenup,
-          };
-        }
-        return r;
-      });
-
-      const rel = updatedRelationships.find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-
-      if (rel?.isPublic) {
-        const postContext =
-          action.payload.newStatus === "engaged"
-            ? `üíç ${activeArtist.name} and ${rel?.partnerName} are officially engaged!`
-            : `üíí ${activeArtist.name} and ${rel?.partnerName} are officially married!`;
-
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "tmz",
-          content: postContext,
-          image: activeArtist.image,
-          likes: Math.floor(Math.random() * 500000) + 200000,
-          retweets: Math.floor(Math.random() * 100000) + 40000,
-          views: Math.floor(Math.random() * 8000000) + 3000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-            hype: rel?.isPublic
-              ? Math.min(getHypeCap(activeData), activeData.hype + 80)
-              : activeData.hype,
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "BREAK_UP": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId
-          ? {
-              ...r,
-              endYear: state.date.year,
-              endWeek: state.date.week,
-              status: "ex" as const,
-            }
-          : r,
-      );
-
-      const rel = updatedRelationships.find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-
-      if (rel?.isPublic) {
-        const postContext = `üíî Following rumors, it is confirmed that ${activeArtist.name} and ${rel?.partnerName} have split.`;
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "tmz",
-          content: postContext,
-          image: activeArtist.image,
-          likes: Math.floor(Math.random() * 200000) + 50000,
-          retweets: Math.floor(Math.random() * 50000) + 10000,
-          views: Math.floor(Math.random() * 4000000) + 1000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-            hype: rel?.isPublic
-              ? Math.min(getHypeCap(activeData), activeData.hype + 60)
-              : activeData.hype,
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "FILE_FOR_DIVORCE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const targetRel = (activeData.relationships || []).find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-      if (!targetRel) return state;
-
-      const sYear = targetRel.marriedStartYear || targetRel.startYear;
-      const sWeek = targetRel.marriedStartWeek || targetRel.startWeek || 1;
-      const durationStr = formatMarriageDuration(sYear, sWeek, state.date.year, state.date.week);
-
-      const initialProposal: DivorceProposal = {
-        id: crypto.randomUUID(),
-        proposedBy: "player",
-        custody: "joint",
-        alimonyPayor: "none",
-        alimonyAmount: 0,
-        childSupportPayor: "none",
-        childSupportAmount: 0,
-        status: "pending_judge",
-        dateProposed: state.date,
-      };
-
-      const newDivorceCase: DivorceCase = {
-        id: crypto.randomUUID(),
-        relationshipId: targetRel.id,
-        partnerName: targetRel.partnerName,
-        startYear: state.date.year,
-        startWeek: state.date.week,
-        weeksInBattle: 1,
-        currentProposal: initialProposal,
-        history: [],
-        isFinalized: false,
-      };
-
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId
-          ? {
-              ...r,
-              status: "divorcing" as const,
-              divorceCase: newDivorceCase,
-            }
-          : r,
-      );
-
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-
-      const tmzPostContent = `üíî TMZ EXCLUSIVE: ${activeArtist.name} has filed for divorce from ${targetRel.partnerName} after ${durationStr} of marriage.`;
-      const tmzPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content: tmzPostContent,
-        image: activeArtist.image,
-        likes: Math.floor(Math.random() * 300000) + 100000,
-        retweets: Math.floor(Math.random() * 80000) + 20000,
-        views: Math.floor(Math.random() * 5000000) + 1500000,
-        date: state.date,
-      };
-      newPosts = [tmzPost, ...newPosts];
-
-      if ((activeData.publicImage ?? 80) >= 75) {
-        const fanMessages = [
-          `We stand with @${activeArtist.name} through this tough divorce! Stay strong üëë‚ù§Ô∏è`,
-          `Sending so much love to @${activeArtist.name} during this legal battle üôè‚ú®`,
-          `The media needs to leave @${activeArtist.name} alone during this divorce process ‚úä`
-        ];
-        const fanPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "fan_support_" + crypto.randomUUID().substring(0, 4),
-          content: fanMessages[Math.floor(Math.random() * fanMessages.length)],
-          likes: Math.floor(Math.random() * 15000) + 2000,
-          retweets: Math.floor(Math.random() * 3000) + 500,
-          views: Math.floor(Math.random() * 100000) + 20000,
-          date: state.date,
-        };
-        newPosts = [fanPost, ...newPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 100),
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "SUBMIT_DIVORCE_PROPOSAL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const newProposal: DivorceProposal = {
-        id: crypto.randomUUID(),
-        proposedBy: action.payload.proposedBy,
-        custody: action.payload.custody,
-        alimonyPayor: action.payload.alimonyPayor,
-        alimonyAmount: action.payload.alimonyAmount,
-        childSupportPayor: action.payload.childSupportPayor,
-        childSupportAmount: action.payload.childSupportAmount,
-        status: "pending_judge",
-        dateProposed: state.date,
-      };
-
-      const updatedRelationships = (activeData.relationships || []).map((r) => {
-        if (r.id === action.payload.relationshipId && r.divorceCase) {
-          return {
-            ...r,
-            divorceCase: {
-              ...r.divorceCase,
-              currentProposal: newProposal,
-            },
-          };
-        }
-        return r;
-      });
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-          },
-        },
-      };
-    }
-    case "EVALUATE_DIVORCE_PROPOSAL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const targetRel = (activeData.relationships || []).find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-      if (!targetRel || !targetRel.divorceCase || !targetRel.divorceCase.currentProposal) {
-        return state;
-      }
-
-      const prop = targetRel.divorceCase.currentProposal;
-      const judgeAccepted = Math.random() < 0.5;
-
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-      let updatedExpenses = activeData.recurringExpenses ? [...activeData.recurringExpenses] : [];
-
-      if (!judgeAccepted) {
-        const declinedProp: DivorceProposal = {
-          ...prop,
-          status: "declined",
-          declinedReason: "Judge Marcus ruled that the requested settlement terms do not satisfy state equitable distribution standards.",
-        };
-
-        const updatedRel = {
-          ...targetRel,
-          divorceCase: {
-            ...targetRel.divorceCase,
-            currentProposal: declinedProp,
-            history: [declinedProp, ...targetRel.divorceCase.history],
-          },
-        };
-
-        const postContent = `‚öñÔ∏è COURT UPDATE: Judge Marcus declined the requested divorce settlement terms between ${activeArtist.name} and ${targetRel.partnerName}.`;
-        const newsPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "tmz",
-          content: postContent,
-          likes: Math.floor(Math.random() * 50000) + 10000,
-          retweets: Math.floor(Math.random() * 10000) + 2000,
-          views: Math.floor(Math.random() * 1000000) + 200000,
-          date: state.date,
-        };
-        newPosts = [newsPost, ...newPosts];
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              relationships: (activeData.relationships || []).map((r) =>
-                r.id === targetRel.id ? updatedRel : r,
-              ),
-              xPosts: newPosts,
-            },
-          },
-        };
-      } else {
-        // Judge Accepted! Divorce is finalized!
-        const acceptedProp: DivorceProposal = {
-          ...prop,
-          status: "accepted",
-        };
-
-        const settlement = {
-          custody: prop.custody,
-          alimonyPayor: prop.alimonyPayor,
-          alimonyAmount: prop.alimonyAmount,
-          childSupportPayor: prop.childSupportPayor,
-          childSupportAmount: prop.childSupportAmount,
-        };
-
-        const updatedRel: Relationship = {
-          ...targetRel,
-          status: "ex",
-          endYear: state.date.year,
-          endWeek: state.date.week,
-          divorceCase: {
-            ...targetRel.divorceCase,
-            currentProposal: acceptedProp,
-            history: [acceptedProp, ...targetRel.divorceCase.history],
-            isFinalized: true,
-            finalizedDate: state.date,
-            agreedSettlement: settlement,
-          },
-        };
-
-        // If player pays alimony or child support, add to recurringExpenses
-        if (prop.alimonyPayor === "player" && prop.alimonyAmount > 0) {
-          updatedExpenses.push({
-            id: `alimony_${targetRel.id}`,
-            name: `Alimony (${targetRel.partnerName})`,
-            cost: prop.alimonyAmount,
-            type: "monthly",
-          });
-        }
-        if (prop.childSupportPayor === "player" && prop.childSupportAmount > 0) {
-          updatedExpenses.push({
-            id: `child_support_${targetRel.id}`,
-            name: `Child Support (${targetRel.partnerName})`,
-            cost: prop.childSupportAmount,
-            type: "monthly",
-          });
-        }
-
-        const finalTmzContent = `‚öñÔ∏è OFFICIAL: ${activeArtist.name} is officially divorced from ${targetRel.partnerName}.`;
-        const finalPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "tmz",
-          content: finalTmzContent,
-          image: activeArtist.image,
-          likes: Math.floor(Math.random() * 400000) + 150000,
-          retweets: Math.floor(Math.random() * 100000) + 25000,
-          views: Math.floor(Math.random() * 6000000) + 2000000,
-          date: state.date,
-        };
-        newPosts = [finalPost, ...newPosts];
-
-        const hasKidsWithPartner = (activeData.kids || []).some(
-          (k) => k.parentName === targetRel.partnerName
-        );
-        const govEmail = createGovernmentDivorceEmail(
-          activeArtist.name,
-          targetRel.partnerName,
-          targetRel.id,
-          settlement,
-          hasKidsWithPartner,
-          state.date
-        );
-        const updatedInbox = activeData.inbox ? [govEmail, ...activeData.inbox] : [govEmail];
-
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              relationships: (activeData.relationships || []).map((r) =>
-                r.id === targetRel.id ? updatedRel : r,
-              ),
-              recurringExpenses: updatedExpenses,
-              xPosts: newPosts,
-              inbox: updatedInbox,
-            },
-          },
-        };
-      }
-    }
-    case "UPDATE_RELATIONSHIP_IMAGE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: (activeData.relationships || []).map((r) =>
-              r.id === action.payload.relationshipId
-                ? { ...r, image: action.payload.image }
-                : r,
-            ),
-          },
-        },
-      };
-    }
-    case "GET_BACK_WITH_EX": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId
-          ? {
-              ...r,
-              status: "dating" as const,
-              endYear: null,
-              endWeek: undefined,
-              startYear: state.date.year,
-              startWeek: state.date.week,
-            }
-          : r,
-      );
-
-      const rel = updatedRelationships.find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-
-      if (rel?.isPublic) {
-        const postContext = `üëÄ SPOTTED: ${activeArtist.name} and ex ${rel?.partnerName} reportedly back together!`;
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popcrave",
-          content: postContext,
-          image: activeArtist.image,
-          likes: Math.floor(Math.random() * 200000) + 50000,
-          retweets: Math.floor(Math.random() * 50000) + 10000,
-          views: Math.floor(Math.random() * 4000000) + 1000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-            hype: rel?.isPublic
-              ? Math.min(getHypeCap(activeData), activeData.hype + 100)
-              : activeData.hype,
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "MARK_EMAIL_OFFER_ANSWERED": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: activeData.inbox.map((email) =>
-              email.id === action.payload.emailId
-                ? {
-                    ...email,
-                    offer: { ...email.offer, isAnswered: true } as any,
-                  }
-                : email,
-            ),
-          },
-        },
-      };
-    }
-    case "RESPOND_TO_CHEATING": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const rel = (activeData.relationships || []).find(
-        (r) => r.id === action.payload.relationshipId,
-      );
-      if (!rel) return state;
-
-      let updatedRelationships = [...(activeData.relationships || [])];
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-
-      if (action.payload.response === "break_up") {
-        updatedRelationships = updatedRelationships.map((r) =>
-          r.id === action.payload.relationshipId
-            ? {
-                ...r,
-                status: "ex" as const,
-                endYear: state.date.year,
-                endWeek: state.date.week,
-              }
-            : r,
-        );
-        const postContext = `üíî Following cheating allegations, ${activeArtist.name} has officially ended things with ${rel.partnerName}.`;
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "tmz",
-          content: postContext,
-          likes: Math.floor(Math.random() * 300000) + 50000,
-          retweets: Math.floor(Math.random() * 50000) + 10000,
-          views: Math.floor(Math.random() * 5000000) + 1000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      } else if (action.payload.response === "forgive") {
-        const postContext = `üëÄ Sources say ${activeArtist.name} has decided to forgive ${rel.partnerName} and work through the recent cheating scandal.`;
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: postContext,
-          likes: Math.floor(Math.random() * 100000) + 50000,
-          retweets: Math.floor(Math.random() * 20000) + 10000,
-          views: Math.floor(Math.random() * 2000000) + 1000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      } else {
-        const postContext = `üò∂ ${activeArtist.name} remains silent amidst the rumors of ${rel.partnerName} cheating.`;
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popcrave",
-          content: postContext,
-          likes: Math.floor(Math.random() * 80000) + 50000,
-          retweets: Math.floor(Math.random() * 10000) + 10000,
-          views: Math.floor(Math.random() * 1500000) + 1000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            relationships: updatedRelationships,
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 50),
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "START_PREGNANCY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            pregnancy: {
-              partnerName: action.payload.partnerName,
-              conceptionDate: state.date,
-              revealed: false,
-            },
-          },
-        },
-      };
-    }
-    case "REVEAL_PREGNANCY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist || !activeData.pregnancy) return state;
-
-      const isSingle = activeData.pregnancy.partnerName === 'Single Parent';
-      const postContext = isSingle 
-        ? `üö® BREAKING: ${activeArtist.name} is expecting a baby!` 
-        : `üö® BREAKING: ${activeArtist.name} is expecting a baby with ${activeData.pregnancy.partnerName}!`;
-      const newPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content: postContext,
-        image: activeArtist.image,
-        likes: Math.floor(Math.random() * 500000) + 100000,
-        retweets: Math.floor(Math.random() * 100000) + 20000,
-        views: Math.floor(Math.random() * 10000000) + 2000000,
-        date: state.date,
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            pregnancy: { ...activeData.pregnancy, revealed: true },
-            hype: Math.min(getHypeCap(activeData), activeData.hype + 200),
-            xPosts: [newPost, ...(activeData.xPosts || [])],
-          },
-        },
-      };
-    }
-    case "UPDATE_PREGNANCY_DETAILS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.pregnancy) return state;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            pregnancy: {
-              ...activeData.pregnancy,
-              ...action.payload,
-            },
-          },
-        },
-      };
-    }
-    case "GIVE_BIRTH": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const activeArtist = state.soloArtist || state.group;
-      if (!activeArtist) return state;
-
-      const newKid: Kid = {
-        id: crypto.randomUUID(),
-        name: action.payload.childName,
-        birthDate: state.date,
-        isArtist: false,
-        parentName: activeData.pregnancy?.partnerName === 'Single Parent' ? undefined : activeData.pregnancy?.partnerName,
-      };
-
-      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-      if (activeData.pregnancy?.revealed) {
-        const pronounPossessive =
-          activeArtist.pronouns === "he/him"
-            ? "his"
-            : activeArtist.pronouns === "she/her"
-              ? "her"
-              : "their";
-        const postContext = `üë∂üçº IT'S A BABY! ${activeArtist.name} has officially welcomed ${pronounPossessive} new baby, ${newKid.name}!`;
-        const newPost: XPost = {
-          id: crypto.randomUUID(),
-          authorId: "popbase",
-          content: postContext,
-          likes: Math.floor(Math.random() * 800000) + 100000,
-          retweets: Math.floor(Math.random() * 100000) + 20000,
-          views: Math.floor(Math.random() * 12000000) + 2000000,
-          date: state.date,
-        };
-        newPosts = [newPost, ...newPosts];
-      }
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            pregnancy: undefined,
-            kids: [...(activeData.kids || []), newKid],
-            hype: activeData.pregnancy?.revealed
-              ? Math.min(getHypeCap(activeData), activeData.hype + 150)
-              : activeData.hype,
-            xPosts: newPosts,
-          },
-        },
-      };
-    }
-    case "START_KID_CAREER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-
-      const kids = activeData.kids || [];
-      const kid = kids.find((k) => k.id === action.payload.kidId);
-      if (!kid) return state;
-
-      const updatedKids = kids.map((k) =>
-        k.id === action.payload.kidId ? { ...k, isArtist: true } : k,
-      );
-
-      const activeArtistProfile = state.soloArtist || state.group;
-
-      const newKidArtistId = kid.id;
-      const newKidArtist: Artist = {
-        id: newKidArtistId,
-        name: kid.name,
-        type: "artist",
-        skills: { singing: 50, rapping: 50, writing: 50, production: 50 },
-        image:
-          activeArtistProfile?.image ||
-          "https://images.unsplash.com/photo-1516280440502-6c2e39194e80",
-      };
-
-      const playerXUser: XUser = {
-        id: "user",
-        name: newKidArtist.name,
-        username: newKidArtist.name.replace(/\s+/g, "").toLowerCase(),
-        avatar: newKidArtist.image,
-        isVerified: false,
-        bio: "Official account.",
-        followersCount: 0,
-        followingCount: 0,
-        isPlayer: true,
-      };
-
-      const fanAvatars = [
-        "https://i.imgur.com/3Y3j3jQ.png",
-        "https://i.imgur.com/O6G2e1E.png",
-        "https://i.imgur.com/sW12a89.png",
-        "https://i.imgur.com/pBw2r70.png",
-        "https://i.imgur.com/c2802k5.png",
-        "https://i.imgur.com/vHqX3ch.png",
-        "https://i.imgur.com/0P6UOf3.jpeg",
-        "https://i.imgur.com/6J7oO1b.jpeg",
-        "https://i.imgur.com/M6XZ0vS.jpeg",
-        "https://i.imgur.com/H1G58Qf.jpeg",
-        "https://i.imgur.com/h5T9hZ8.jpeg",
-        "https://i.imgur.com/G5qE6sR.jpeg",
-      ];
-
-      const fanUsers: XUser[] = Array.from({ length: 25 }, (_, i) => ({
-        id: `fan${i + 1}`,
-        name: `FanAccount_${i + 1}`,
-        username: `stan_${newKidArtist.name.replace(/\s/g, "").toLowerCase()}_${i + 1}`,
-        avatar: fanAvatars[i % fanAvatars.length],
-        isVerified: false,
-        bio: `stan account!`,
-        followersCount: Math.floor(Math.random() * (1500 - 500 + 1)) + 500,
-        followingCount: Math.floor(Math.random() * (500 - 50 + 1)) + 50,
-      }));
-
-      const haterUsers: XUser[] = Array.from({ length: 15 }, (_, i) => ({
-        id: `hater_initial_${i + 1}`,
-        name: `Anon${i + 1}`,
-        username: `hater_anon_${i + 1}`,
-        avatar:
-          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI2QzMjYyNiIvPjwvc3ZnPg==",
-        isVerified: false,
-        bio: "just speaking facts",
-        followersCount: Math.floor(Math.random() * 200),
-        followingCount: Math.floor(Math.random() * 20),
-      }));
-
-      const newKidArtistData: ArtistData = {
-        ...initialArtistData,
-        id: newKidArtistId,
-        money: 0,
-        hype: 0,
-        popularity: 0,
-        xUsers: [playerXUser, ...fanUsers, ...haterUsers],
-      };
-
-      return {
-        ...state,
-        extraPlayableArtists: [
-          ...(state.extraPlayableArtists || []),
-          newKidArtist,
-        ],
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            kids: updatedKids,
-          },
-          [newKidArtistId]: newKidArtistData,
-        },
-      };
-    }
-    case "TOGGLE_ENCOUNTERS":
-      return {
-        ...state,
-        disableEncounters: !state.disableEncounters,
-      };
-    case "TOGGLE_LOADING_SCREENS":
-      return {
-        ...state,
-        disableLoadingScreens: !state.disableLoadingScreens,
-      };
-    case "TOGGLE_SPOTIFY_SNAPSHOT_STYLE":
-      return {
-        ...state,
-        spotifySnapshotStyle: action.payload,
-      };
-    case "SET_ACTIVE_TMZ_POST":
-      return {
-        ...state,
-        activeTmzPost: action.payload,
-        currentView: action.payload ? "tmzArticle" : state.currentView,
-      };
-    case "RESOLVE_ENCOUNTER": {
-      if (!state.activeArtistId) return state;
-      const { choice, imageUrl } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData) return state;
-
-      let authorId = "tmz";
-      if (!choice.isTMZ) {
-        const fanFanUser = activeData.xUsers.find(
-          (u) =>
-            !u.isPlayer &&
-            !u.isVerified &&
-            !["popbase", "tmz", "chartdata", "spotifysnapshot"].includes(u.id),
-        );
-        if (fanFanUser) {
-          authorId = fanFanUser.id;
-        } else {
-          authorId = choice.authorName; // fallback just in case
-        }
-      }
-
-      const activeArtist =
-        state.careerMode === "solo"
-          ? state.soloArtist
-          : state.group?.id === state.activeArtistId
-            ? state.group
-            : state.group?.members.find((m) => m.id === state.activeArtistId) ||
-              state.extraPlayableArtists?.find(
-                (a) => a.id === state.activeArtistId,
-              );
-
-      let newPosts = activeData.xPosts || [];
-      if (activeArtist && choice.tweetTemplate) {
-        const tweetText = choice.tweetTemplate.replace(
-          /\{artist\}/g,
-          activeArtist.name,
-        );
-        const pop = activeData.popularity || 50;
-        const newPost: XPost = {
-          id: "post-" + Date.now(),
-          authorId: authorId,
-          content: tweetText,
-          likes: Math.floor(pop * 1000 * Math.random()) || 0,
-          retweets: Math.floor(pop * 300 * Math.random()) || 0,
-          views: Math.floor(pop * 5000 * Math.random()) || 0,
-          date: state.date,
-          image: imageUrl || undefined,
-        };
-        newPosts = [newPost, ...newPosts];
-      }
-
-      let updatedTours = activeData.tours;
-      if (choice.tourAction && choice.tourAction.action === "CANCEL") {
-        updatedTours = activeData.tours.map((tour) => {
-          if (tour.id === choice.tourAction?.tourId) {
-            return { ...tour, status: "cancelled" };
-          }
-          return tour;
-        });
-      }
-
-      return {
-        ...state,
-        activeEncounter: null,
-        activeTourId:
-          choice.tourAction &&
-          choice.tourAction.action === "CANCEL" &&
-          state.activeTourId === choice.tourAction.tourId
-            ? null
-            : state.activeTourId,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-
-            money: Math.max(0, activeData.money + (choice.moneyEffect || 0)),
-            recurringExpenses: (() => {
-              let exps = activeData.recurringExpenses || [];
-              if (choice.label.includes("Annulment")) {
-                exps = [...exps, { id: Date.now().toString(), name: "Annulment", cost: 50000, type: "monthly" }];
-              }
-              if (choice.label.includes("Child Support") || choice.label.includes("Agree to pay")) {
-                exps = [...exps, { id: Date.now().toString(), name: "Child Support", cost: 25000, type: "monthly" }];
-              }
-              return exps;
-            })(),
-            relationships: (() => {
-              let rels = activeData.relationships || [];
-              if (state.activeEncounter?.id === "lawsuit_divorce" || state.activeEncounter?.id === "lawsuit_annulment") {
-                 // End all marriages
-                 return rels.map(r => r.status === 'married' ? { ...r, status: 'ex', endYear: state.date.year, endWeek: state.date.week } : r);
-              }
-              return rels;
-            })(),
-            popularity: Math.max(
-              0,
-              Math.min(
-                100,
-                activeData.popularity + (choice.popularityEffect || 0),
-              ),
-            ),
-            publicImage: Math.max(
-              0,
-              Math.min(
-                100,
-                (activeData.publicImage || 50) + choice.publicImageEffect,
-              ),
-            ),
-            hype: Math.max(
-              0,
-              Math.min(100, (activeData.hype || 50) + choice.hypeEffect),
-            ),
-            xPosts: newPosts,
-            xUnreadMentions: (activeData.xUnreadMentions || 0) + 1,
-            tours: updatedTours,
-          },
-        },
-      };
-    }
-    case "UPDATE_IMDB_PROFILE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            imdbProfile: {
-              ...activeData.imdbProfile,
-              bio: action.payload.bio,
-              birthDate: action.payload.birthDate,
-            }
-          }
-        }
-      };
-    }
-    case "GO_TO_KAI_STREAM_SETUP": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === action.payload.emailId) {
-          return { ...email, isRead: true };
-        }
-        return email;
-      });
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            inbox: updatedInbox,
-          },
-        },
-        currentView: "kaiStreamSetup",
-      };
-    }
-
-    case "SUBMIT_KAI_STREAM_DETAILS": {
-      if (!state.activeArtistId) return state;
-      const { emailId, location, songId, promoBanner, ytThumbnail } = action.payload;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer) {
-          return { ...email, offer: { ...email.offer, isSubmitted: true } };
-        }
-        return email;
-      });
-      
-      const newStream = {
-          id: `kai_stream_${Date.now()}`,
-          streamer: "Kai Cenat",
-          location,
-          songId,
-          promoBanner,
-          ytThumbnail,
-          scheduledDate: { ...state.date, week: state.date.week + 2 > 52 ? state.date.week + 2 - 52 : state.date.week + 2, year: state.date.week + 2 > 52 ? state.date.year + 1 : state.date.year },
-          announceDate: { ...state.date, week: state.date.week + 1 > 52 ? state.date.week + 1 - 52 : state.date.week + 1, year: state.date.week + 1 > 52 ? state.date.year + 1 : state.date.year },
-          hasAnnounced: false,
-          hasStreamed: false
-      };
-      
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  inbox: updatedInbox,
-                  twitchStreams: [...(activeData.twitchStreams || []), newStream]
-              }
-          },
-          currentView: "inbox"
-      };
-    }
-
-    case "REQUEST_KAI_CENAT_STREAM": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const popularity = activeData.popularity || 0;
-      const chance = popularity / 100;
-      
-      const newEmailId = `email_${Date.now()}_${Math.random()}`;
-      let newEmail: any = {};
-      if (Math.random() < chance && popularity > 40) {
-          newEmail = {
-              id: newEmailId,
-              date: state.date,
-              sender: "Kai Cenat",
-              senderIcon: "twitch",
-              subject: "Let's run a stream!",
-              body: "Yo! Your manager reached out. Let's do a stream together. Fill out the details and I'll cover the flight costs.",
-              isRead: false,
-              offer: {
-                  type: "kaiStreamSetup",
-                  emailId: newEmailId
-              }
-          };
-      } else {
-          newEmail = {
-              id: newEmailId,
-              date: state.date,
-              sender: "Manager",
-              subject: "Kai Cenat Stream Rejected",
-              body: "Kai's team said he's too busy right now. We can try again later.",
-              isRead: false
-          };
-      }
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  inbox: [newEmail, ...activeData.inbox]
-              }
-          }
-      };
-    }
-
-    case "REQUEST_ACTING_GIG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (activeData.activeActingOffer || activeData.filmingGig) {
-        return state;
-      }
-      
-      const type = action.payload.type;
-      
-      if ((type === 'Movie' || type === 'TV Show') && activeData.manager?.id !== 'm3' && !activeData.talentAgencyId) {
-          return state;
-      }
-
-      let offer: ActingOffer;
-
-      
-      let title = '';
-      if (type === 'Movie') {
-          const movies = ['Dune: Part Three', 'Spider-Man 4', 'Knives Out 3', 'Avatar: Fire and Ash', 'Barbie 2', 'The Batman - Part II', 'Mission: Impossible 9', 'Gladiator III', 'Star Wars: New Jedi Order', 'Avengers: Secret Wars', 'Jurassic World: Rebirth', 'Fast X: Part 2', 'Deadpool 4', 'Top Gun 3', 'Wicked: Part Two', 'Black Panther 3', 'James Bond 26', 'The Hunger Games: Sunrise on the Reaping', 'The Odyssey'];
-          title = movies[Math.floor(Math.random() * movies.length)];
-      }
-      else if (type === 'TV Show') {
-          const shows = ['The White Lotus', 'Stranger Things', 'House of the Dragon', 'Euphoria', 'The Last of Us', 'Severance', 'Succession Spin-off', 'The Bear', 'Yellowjackets', 'Wednesday', 'Squid Game', 'The Boys', 'Bridgerton', 'Peacemaker', 'Fallout', 'Shogun', 'Black Mirror', 'The Mandalorian'];
-          title = shows[Math.floor(Math.random() * shows.length)];
-      }
-      else {
-         const vaTypes = ['Grand Theft Auto VI', 'Cyberpunk 2077 DLC', 'Inside Out 3', 'Spider-Man: Beyond the Spider-Verse', 'Shrek 5', 'Kung Fu Panda 5'];
-         title = vaTypes[Math.floor(Math.random() * vaTypes.length)];
-      }
-
-      const randRole = Math.random();
-      const roleType = randRole > 0.6 ? 'Leading Role' : (randRole > 0.2 ? 'Supporting Role' : 'Extra');
-      let basePay = Math.floor(Math.random() * 5000000) + 1000000 * (activeData.popularity / 50);
-      let pay = roleType === 'Extra' ? Math.floor(basePay * 0.05) : roleType === 'Supporting Role' ? Math.floor(basePay * 0.4) : basePay;
-      
-      const maleNames = ['John', 'James', 'Michael', 'David', 'William', 'Alex', 'Jack', 'Ryan', 'Liam', 'Noah'];
-      const femaleNames = ['Emma', 'Olivia', 'Ava', 'Isabella', 'Sophia', 'Mia', 'Charlotte', 'Amelia', 'Harper', 'Evelyn'];
-      const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis', 'Garcia', 'Rodriguez', 'Wilson'];
-      
-      const charFirstName = Math.random() > 0.5 ? maleNames[Math.floor(Math.random() * maleNames.length)] : femaleNames[Math.floor(Math.random() * femaleNames.length)];
-      const charLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-      
-      const roleName = type === 'Voice Acting' ? `Voice of ${charFirstName}` : `${charFirstName} ${charLastName}`;
-      
-      offer = {
-          id: crypto.randomUUID(),
-          title,
-          type,
-          roleName,
-          roleType,
-          pay,
-          durationWeeks: type === 'Movie' ? 12 : type === 'TV Show' ? 8 : 4,
-          status: 'Pending'
-      };
-
-      const newEmail: Email = {
-          id: crypto.randomUUID(),
-          sender: "Management",
-          subject: `New Acting Offer: ${title}`,
-          body: `Hey, I got you an offer for a ${type} called "${title}". You will play ${roleName}. They are offering $${pay.toLocaleString()} and it will take ${offer.durationWeeks} weeks to film. What do you think?`,
-          date: state.date,
-          isRead: false,
-          senderIcon: "manager"
-      };
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  activeActingOffer: offer,
-                  inbox: [newEmail, ...activeData.inbox]
-              }
-          }
-      };
-    }
-    case "ACCEPT_ACTING_OFFER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      
-      let offer = action.payload.offer || activeData.activeActingOffer;
-      if (!offer && activeData.actingAuditions) {
-        const foundAudition = activeData.actingAuditions.find(a => a.id === action.payload.offerId);
-        if (foundAudition) {
-          offer = {
-            id: foundAudition.id,
-            title: foundAudition.title,
-            type: foundAudition.type,
-            roleName: foundAudition.roleName,
-            roleType: foundAudition.roleType,
-            pay: foundAudition.pay,
-            durationWeeks: foundAudition.durationWeeks,
-            status: 'Accepted',
-            studio: foundAudition.studio,
-            genre: foundAudition.genre
-          };
-        }
-      }
-
-      if (!offer && action.payload.offerId) {
-        // Fallback offer creation if ID came from default audition list
-        const fallbackTitles = [
-          'Dune: Part Three', 'The Batman - Part II', 'Oppenheimer II: Manhattan Project',
-          'Spider-Man 4', 'Knives Out 3: Wake Up Dead Man', 'Avatar 3: Fire and Ash',
-          'Wicked: Part Two', 'Deadpool & Wolverine 2', 'Gladiator III', 'The White Lotus: Season 4',
-          'Euphoria: Season 3', 'Stranger Things: Season 5', 'The Bear: Season 4', 'Severance: Season 2',
-          'The Last of Us: Season 2', 'House of the Dragon: Season 3', 'Grand Theft Auto VI',
-          'Spider-Man: Beyond the Spider-Verse', 'Inside Out 3', 'Cyberpunk 2077 Sequel'
-        ];
-        const randomTitle = fallbackTitles[Math.floor(Math.random() * fallbackTitles.length)];
-
-        offer = {
-          id: action.payload.offerId,
-          title: randomTitle,
-          type: randomTitle.includes('Season') ? 'TV Show' : randomTitle.includes('Grand Theft Auto') || randomTitle.includes('Inside Out') ? 'Voice Acting' : 'Movie',
-          roleName: 'Lead Role',
-          roleType: 'Leading Role',
-          pay: 2500000,
-          durationWeeks: randomTitle.includes('Season') ? 8 : 10,
-          status: 'Accepted',
-          studio: 'Warner Bros',
-          genre: 'Drama'
-        };
-      }
-
-      if (!offer) return state;
-
-      const effectiveRoleName = action.payload.roleName || action.payload.offer?.roleName || offer.roleName || 'Lead Role';
-      offer = { ...offer, roleName: effectiveRoleName };
-
-      let finalPay = offer.pay;
-      if (activeData.talentAgencyId) {
-          const agency = TALENT_AGENCIES.find(t => t.id === activeData.talentAgencyId);
-          if (agency) {
-              finalPay = Math.floor(offer.pay * (1 - (agency.feePercent / 100)));
-          }
-      }
-
-      const filmingGig = {
-          id: offer.id,
-          title: offer.title,
-          type: offer.type,
-          roleName: offer.roleName,
-          roleType: offer.roleType,
-          year: state.date.year,
-          status: 'Filming' as const,
-          remainingWeeks: offer.durationWeeks,
-          totalDurationWeeks: offer.durationWeeks,
-          pay: finalPay,
-          studio: offer.studio || 'Warner Bros',
-          genre: offer.genre || 'Drama'
-      };
-      
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-      
-      const hasActedBefore = activeData.actingRoles && activeData.actingRoles.length > 0;
-      
-      const newPosts = [...(activeData.xPosts || [])];
-      
-      const popBasePost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `Famous Artist ${artistProfile?.name} has officially signed on to star in "${offer.title}" as ${offer.roleName}!`,
-        image: artistProfile?.image,
-        likes: Math.floor(Math.random() * 80000) + 30000,
-        retweets: Math.floor(Math.random() * 20000) + 5000,
-        views: Math.floor(Math.random() * 1500000) + 500000,
-        date: state.date,
-      };
-      newPosts.unshift(popBasePost);
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  activeActingOffer: null,
-                  filmingGig,
-                  money: activeData.money + finalPay,
-                  xPosts: newPosts
-              }
-          }
-      };
-    }
-    case "ATTEND_ACTING_CLASS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const tier = action.payload.tier;
-      const cost = tier === 'basic' ? 1000 : 5000;
-      const skillGain = tier === 'basic' ? 5 : 12;
-
-      if (activeData.money < cost) return state;
-
-      const currentSkill = activeData.actingSkillLevel || 10;
-      const newSkill = Math.min(100, currentSkill + skillGain);
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money - cost,
-            actingSkillLevel: newSkill,
-            actingClassesTaken: (activeData.actingClassesTaken || 0) + 1
-          }
-        }
-      };
-    }
-    case "HOST_PRESS_JUNKET": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { roleId, outlet, answerChoice } = action.payload;
-
-      const role = activeData.actingRoles?.find(r => r.id === roleId);
-      const roleTitle = role ? role.title : 'Hollywood Project';
-
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-
-      const junketPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "popbase",
-        content: `In a new cover feature with ${outlet}, ${artistProfile?.name} opens up about starring in "${roleTitle}": "${answerChoice}"`,
-        image: artistProfile?.image,
-        likes: Math.floor(Math.random() * 90000) + 40000,
-        retweets: Math.floor(Math.random() * 25000) + 8000,
-        views: Math.floor(Math.random() * 2000000) + 800000,
-        date: state.date,
-      };
-
-      const updatedRoles = (activeData.actingRoles || []).map(r => r.id === roleId ? { ...r, pressJunketDone: true } : r);
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            actingRoles: updatedRoles,
-            popularity: Math.min(100, activeData.popularity + 2),
-            xPosts: [junketPost, ...(activeData.xPosts || [])]
-          }
-        }
-      };
-    }
-    case "RECORD_MOVIE_SOUNDTRACK": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const { roleId, songId, soundtrackCover } = action.payload;
-
-      if (activeData.filmingGig && activeData.filmingGig.id === roleId) {
-        return {
-          ...state,
-          artistsData: {
-            ...state.artistsData,
-            [state.activeArtistId]: {
-              ...activeData,
-              filmingGig: {
-                ...activeData.filmingGig,
-                soundtrackSongId: songId,
-                soundtrackCover: soundtrackCover || (activeData.filmingGig as any).soundtrackCover
-              }
-            }
-          }
-        };
-      }
-
-      const updatedRoles = (activeData.actingRoles || []).map(r => r.id === roleId ? { ...r, soundtrackSongId: songId, soundtrackCover: soundtrackCover || (r as any).soundtrackCover } : r);
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            actingRoles: updatedRoles
-          }
-        }
-      };
-    }
-    case "QUIT_FILMING_GIG": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.filmingGig) return state;
-
-      const gig = activeData.filmingGig;
-      const reason = action.payload.reason || "conflicting schedules";
-
-      const totalPay = gig.pay || 2000000;
-      const penaltyFee = Math.floor(totalPay * 0.10);
-      const totalClawback = totalPay + penaltyFee;
-
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-
-      const artistName = artistProfile?.name || "The artist";
-
-      let tmzText = "";
-      let popChange = 0;
-      let hypeChange = 0;
-
-      if (reason === "conflicting schedules") {
-        tmzText = `üö® BREAKING TMZ: ${artistName} has officially QUIT filming "${gig.title}" citing intense conflicting schedules! ${gig.studio || 'The studio'} reclaimed the $${(totalPay/1000000).toFixed(2)}M pay plus a 10% contract penalty ($${(penaltyFee/1000000).toFixed(2)}M).`;
-      } else if (reason === "political beliefs") {
-        tmzText = `üö® BREAKING TMZ: ${artistName} walked off the set of "${gig.title}" citing fundamental political differences with studio brass! Studio ${gig.studio || 'Warner Bros'} enforced a full salary clawback + 10% breach fee.`;
-        popChange = -2;
-      } else if (reason === "personal reasons") {
-        tmzText = `üö® BREAKING TMZ: ${artistName} has abruptly departed production on "${gig.title}" effective immediately for personal reasons. Studio confirmed contract cancellation and refund.`;
-      } else {
-        // no comment
-        tmzText = `üö® BACKLASH: ${artistName} WALKED OFF the set of "${gig.title}" and issued "NO COMMENT" when cornered by paparazzi! Industry insiders and fans are furious over the sudden production halt!`;
-        popChange = -5;
-        hypeChange = -10;
-      }
-
-      const tmzPost: XPost = {
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content: tmzText,
-        likes: Math.floor(Math.random() * 300000) + 100000,
-        retweets: Math.floor(Math.random() * 80000) + 20000,
-        views: Math.floor(Math.random() * 5000000) + 1500000,
-        date: state.date,
-      };
-
-      const terminationEmail: Email = {
-        id: crypto.randomUUID(),
-        sender: gig.studio || "Studio Business Affairs",
-        subject: `CONTRACT TERMINATION NOTICE: "${gig.title}"`,
-        body: `Notice of Contract Rescission:
-
-Following your formal resignation from "${gig.title}", ${gig.studio || 'the studio'} has initiated full recovery of your $${totalPay.toLocaleString()} advance salary plus the standard 10% contract breach penalty ($${penaltyFee.toLocaleString()}).
-
-Total Amount Recaptured: $${totalClawback.toLocaleString()}
-
-Statement Given: "${reason.toUpperCase()}"`,
-        date: state.date,
-        isRead: false,
-        senderIcon: "manager"
-      };
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            filmingGig: null,
-            money: activeData.money - totalClawback,
-            popularity: Math.max(0, Math.min(100, activeData.popularity + popChange)),
-            hype: Math.max(0, activeData.hype + hypeChange),
-            xPosts: [tmzPost, ...(activeData.xPosts || [])],
-            inbox: [terminationEmail, ...(activeData.inbox || [])]
-          }
-        }
-      };
-    }
-    case "DECLINE_ACTING_OFFER": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.activeActingOffer || activeData.activeActingOffer.id !== action.payload.offerId) return state;
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  activeActingOffer: null
-              }
-          }
-      };
-    }
-    case "SET_ACTING_TRAILER_URL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
-      if (!role) return state;
-      
-      const newEmails = [...activeData.inbox];
-      const hasPremiere = newEmails.some(e => e.offer?.type === 'actingPremiere' && e.offer.roleId === role.id);
-      if (!hasPremiere) {
-          newEmails.push({
-              id: crypto.randomUUID(),
-              sender: "Production Team",
-              subject: `Premiere Invitation: ${role.title}`,
-              body: `The trailer is live and the production is ready! You are cordially invited to the premiere of "${role.title}".`,
-              date: state.date,
-              isRead: false,
-              senderIcon: "imdb",
-              offer: {
-                  type: "actingPremiere",
-                  roleId: role.id,
-                  roleTitle: role.title
-              }
-          });
-      }
-      
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, trailerUrl: action.payload.trailerUrl } : r),
-                  inbox: newEmails
-              }
-          }
-      };
-    }
-    
-    case "SET_ACTING_COVER_URL": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
-      if (!role) return state;
-      
-      const newEmails = [...activeData.inbox];
-      const hasPremiere = newEmails.some(e => e.offer?.type === 'actingPremiere' && e.offer.roleId === role.id);
-      if (!hasPremiere) {
-          newEmails.push({
-              id: crypto.randomUUID(),
-              sender: "Production Team",
-              subject: `Premiere Invitation: ${role.title}`,
-              body: `The production cover is live and ready! You are cordially invited to the premiere of "${role.title}".`,
-              date: state.date,
-              isRead: false,
-              senderIcon: "imdb",
-              offer: {
-                  type: "actingPremiere",
-                  roleId: role.id,
-                  roleTitle: role.title
-              }
-          });
-      }
-      
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, coverUrl: action.payload.coverUrl } : r),
-                  inbox: newEmails
-              }
-          }
-      };
-    }
-    case "ATTEND_ACTING_PREMIERE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
-      if (!role) return state;
-      
-      const email = activeData.inbox.find(e => e.offer?.type === 'actingPremiere' && e.offer.roleId === role.id);
-      const updatedInbox = activeData.inbox.map(e => e.id === email?.id ? { ...e, offer: { ...e.offer, isAccepted: true } } : e);
-
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, status: "Released" } : r),
-                  inbox: updatedInbox
-              }
-          },
-          activeMoviePremiereOffer: { roleId: role.id, roleTitle: role.title },
-          currentView: "moviePremiereRedCarpet"
-      };
-    }
-    
-    case "ACCEPT_MOVIE_PREMIERE_RED_CARPET": {
-        if (!state.activeArtistId) return state;
-        const { lookUrl } = action.payload;
-        if (!state.activeMoviePremiereOffer) return state;
-        
-        if (lookUrl) {
-            const activeData = state.artistsData[state.activeArtistId];
-            const artistName = state.soloArtist?.name || state.group?.name;
-            const title = state.activeMoviePremiereOffer.roleTitle;
-            
-            const loc = action.payload.location || "Los Angeles";
-            
-            const popBasePost = {
-              id: crypto.randomUUID(),
-              authorId: "popbase",
-              content: `${artistName} stuns for '${title.toUpperCase()}' premiere in ${loc}.`,
-              image: lookUrl,
-              likes: Math.floor(Math.random() * 99000) + 16000,
-              retweets: Math.floor(Math.random() * 16000) + 7000,
-              views: Math.floor(Math.random() * 3100000) + 1200000,
-              date: state.date,
-            };
-            
-            const newLook = {
-              id: crypto.randomUUID(),
-              awardShow: "Movie Premiere: " + title,
-              year: state.date.year,
-              imageUrl: lookUrl,
-            };
-            
-            return {
-                ...state,
-                artistsData: {
-                    ...state.artistsData,
-                    [state.activeArtistId]: {
-                        ...activeData,
-                        xPosts: [popBasePost, ...activeData.xPosts],
-                        pastRedCarpetLooks: [newLook, ...(activeData.pastRedCarpetLooks || [])],
-                        popularity: Math.min(100, activeData.popularity + 2),
-                        publicImage: Math.min(100, (activeData.publicImage || 80) + 5),
-                        hype: Math.min(100, activeData.hype + 5)
-                    }
-                },
-                activeMoviePremiereOffer: null,
-                currentView: "game"
-            };
-        } else {
-             return {
-                ...state,
-                activeMoviePremiereOffer: null,
-                currentView: "game"
-            };
-        }
-    }
-    case "DECLINE_ACTING_PREMIERE": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const role = activeData.actingRoles?.find(r => r.id === action.payload.roleId);
-      if (!role) return state;
-      
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  actingRoles: activeData.actingRoles?.map(r => r.id === action.payload.roleId ? { ...r, status: "Released" } : r),
-                  publicImage: Math.max(0, (activeData.publicImage || 80) - 5)
-              }
-          }
-      };
-    }
-    case "SIGN_TALENT_AGENCY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  talentAgencyId: action.payload.agencyId
-              }
-          }
-      };
-    }
-    case "LEAVE_TALENT_AGENCY": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-          ...state,
-          artistsData: {
-              ...state.artistsData,
-              [state.activeArtistId]: {
-                  ...activeData,
-                  talentAgencyId: undefined
-              }
-          }
-      };
-    }
-    case "LAUNCH_CRYPTO_COIN": {
-      const { name, ticker, logo, launchPrice, totalSupply, cost, playerPercent } = action.payload;
-      const artistData = state.artistsData[state.activeArtistId!];
-      if (artistData.money < cost) return state;
-      
-      const playerOwnedCoins = totalSupply * ((playerPercent || 20) / 100);
-      
-      const newCoin = {
-        id: "coin_" + Date.now(),
-        name,
-        ticker,
-        logo,
-        launchPrice,
-        currentPrice: launchPrice,
-        totalSupply,
-        playerOwnedCoins,
-        marketCap: launchPrice * totalSupply,
-        priceHistory: [launchPrice],
-        holders: 100,
-        tradingVolume: 0,
-        reputation: { hype: 50, trust: 50, utility: 0 },
-        utilityEnabled: { merch: false, tickets: false, fanClub: false, voting: false },
-        launchedDate: { ...state.date }
-      };
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId!]: {
-            ...artistData,
-            money: artistData.money - cost,
-            cryptoCoin: newCoin
-          }
-        }
-      };
-    }
-    case "BUY_CRYPTO": {
-      const { amount, cost } = action.payload;
-      const artistData = state.artistsData[state.activeArtistId!];
-      if (!artistData.cryptoCoin || artistData.money < cost) return state;
-      
-      const percentBought = amount / artistData.cryptoCoin.totalSupply;
-      const priceIncreaseMultiplier = 1 + (percentBought * 50);
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId!]: {
-            ...artistData,
-            money: artistData.money - cost,
-            cryptoCoin: {
-              ...artistData.cryptoCoin,
-              playerOwnedCoins: artistData.cryptoCoin.playerOwnedCoins + amount,
-              tradingVolume: artistData.cryptoCoin.tradingVolume + cost,
-              currentPrice: artistData.cryptoCoin.currentPrice * priceIncreaseMultiplier
-            }
-          }
-        }
-      };
-    }
-    case "SELL_CRYPTO": {
-      const { amount, revenue } = action.payload;
-      const artistData = state.artistsData[state.activeArtistId!];
-      if (!artistData.cryptoCoin || artistData.cryptoCoin.playerOwnedCoins < amount) return state;
-
-      const percentSold = amount / artistData.cryptoCoin.totalSupply;
-      const priceDecreaseMultiplier = 1 - (percentSold * 50);
-      const newPrice = Math.max(0.000001, artistData.cryptoCoin.currentPrice * priceDecreaseMultiplier);
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId!]: {
-            ...artistData,
-            money: artistData.money + revenue,
-            cryptoCoin: {
-              ...artistData.cryptoCoin,
-              playerOwnedCoins: artistData.cryptoCoin.playerOwnedCoins - amount,
-              tradingVolume: artistData.cryptoCoin.tradingVolume + revenue,
-              currentPrice: newPrice
-            }
-          }
-        }
-      };
-    }
-    case "BURN_CRYPTO": {
-      const { amount } = action.payload;
-      const artistData = state.artistsData[state.activeArtistId!];
-      if (!artistData.cryptoCoin || artistData.cryptoCoin.playerOwnedCoins < amount) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId!]: {
-            ...artistData,
-            cryptoCoin: {
-              ...artistData.cryptoCoin,
-              playerOwnedCoins: artistData.cryptoCoin.playerOwnedCoins - amount,
-              totalSupply: artistData.cryptoCoin.totalSupply - amount,
-              currentPrice: artistData.cryptoCoin.currentPrice * 1.1,
-              reputation: {
-                ...artistData.cryptoCoin.reputation,
-                trust: Math.min(100, artistData.cryptoCoin.reputation.trust + 10)
-              }
-            }
-          }
-        }
-      };
-    }
-    case "MARKET_CRYPTO": {
-      const { cost, platform } = action.payload;
-      const artistData = state.artistsData[state.activeArtistId!];
-      if (!artistData.cryptoCoin || artistData.money < cost) return state;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId!]: {
-            ...artistData,
-            money: artistData.money - cost,
-            cryptoCoin: {
-              ...artistData.cryptoCoin,
-              reputation: {
-                ...artistData.cryptoCoin.reputation,
-                hype: Math.min(100, artistData.cryptoCoin.reputation.hype + 15)
-              }
-            }
-          }
-        }
-      };
-    }
-    case "RUGPULL_CRYPTO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      if (!activeData.cryptoCoin) return state;
-
-      const activeArtist = state.soloArtist || state.group;
-      const artistName = activeArtist?.name || "The artist";
-
-      const cashOutValue = activeData.cryptoCoin.currentPrice * activeData.cryptoCoin.playerOwnedCoins;
-      const rugAmount = (cashOutValue).toFixed(0);
-
-      const tmzPost = {
-        id: crypto.randomUUID(),
-        authorId: "tmz",
-        content: `üö® RUGPULL ALERT: ${artistName} just rugged their crypto project ${activeData.cryptoCoin.ticker} after cashing out for ${Number(rugAmount).toLocaleString()}! The coin has completely collapsed.`,
-        likes: Math.floor(Math.random() * 80000) + 20000,
-        retweets: Math.floor(Math.random() * 30000) + 10000,
-        views: Math.floor(Math.random() * 1500000) + 500000,
-        date: state.date,
-      };
-
-      const updatedPosts = [tmzPost, ...(activeData.xPosts || [])];
-      
-      const wasMainHolder = activeData.cryptoCoin.playerOwnedCoins >= activeData.cryptoCoin.totalSupply * 0.5;
-
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + cashOutValue,
-            publicImage: Math.max(0, activeData.publicImage - 40),
-            popularity: Math.max(0, activeData.popularity - 15),
-            hype: Math.max(0, activeData.hype - 300),
-            cryptoCoin: {
-                ...activeData.cryptoCoin,
-                isRugpulled: wasMainHolder,
-                currentPrice: activeData.cryptoCoin.currentPrice * 0.0001,
-                playerOwnedCoins: 0,
-                tradingVolume: activeData.cryptoCoin.tradingVolume + cashOutValue,
-                reputation: {
-                    hype: 0,
-                    trust: 0,
-                    utility: 0
-                }
-            },
-            xPosts: updatedPosts
-          }
-        }
-      };
-    }
-    case "TOGGLE_CRYPTO_UTILITY": {
-      const { utility } = action.payload;
-      const artistData = state.artistsData[state.activeArtistId!];
-      if (!artistData.cryptoCoin) return state;
-      const currentVal = artistData.cryptoCoin.utilityEnabled[utility];
-      const utilityDiff = currentVal ? -25 : 25;
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId!]: {
-            ...artistData,
-            cryptoCoin: {
-              ...artistData.cryptoCoin,
-              reputation: {
-                ...artistData.cryptoCoin.reputation,
-                utility: Math.max(0, Math.min(100, artistData.cryptoCoin.reputation.utility + utilityDiff))
-              },
-              utilityEnabled: {
-                ...artistData.cryptoCoin.utilityEnabled,
-                [utility]: !currentVal
-              }
-            }
-          }
-        }
-      };
-    }
-    case "UPDATE_ARTIST_FUNDS": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            money: activeData.money + action.payload,
-          }
-        }
-      };
-    }
-    case "UPDATE_VIDEO": {
-      if (!state.activeArtistId) return state;
-      const activeData = state.artistsData[state.activeArtistId];
-      const updatedVideos = activeData.videos.map(v => v.id === action.payload.id ? { ...v, ...action.payload.updates } : v);
-      return {
-        ...state,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: {
-            ...activeData,
-            videos: updatedVideos,
-          }
-        }
-      };
-    }
-    default:
-      return state;
-  }
-};
-
-const gameReducer = (state: GameState, action: GameAction): GameState => {
-  const nextState = gameReducerInternal(state, action);
-  
-  if (action.type === "PROGRESS_WEEK") {
-    const isDailyMode = state.timeMode === "daily";
-    let isWeeklyUpdate = true;
-    if (isDailyMode) {
-      if (state.date.day === 7) isWeeklyUpdate = true;
-      else isWeeklyUpdate = false;
-    }
-    
-    if (isWeeklyUpdate) {
-      let newArtistsData = { ...nextState.artistsData };
-      let modified = false;
-      for (const artistId in newArtistsData) {
-        const artist = newArtistsData[artistId];
-        if (artist.cryptoCoin) {
-          modified = true;
-          const coin = { ...artist.cryptoCoin };
-          
-          // Random event modifier
-          let eventMultiplier = 1;
-          const r = Math.random();
-          if (r < 0.05) eventMultiplier = 1.5; // Pump
-          else if (r < 0.1) eventMultiplier = 0.5; // Crash
-          else if (r < 0.15) eventMultiplier = 1.2; // Exchange listing
-          else if (r < 0.2) eventMultiplier = 1.3; // Celeb endorsement
-          else if (r < 0.25) eventMultiplier = 1.1; // Whale buy
-          else if (r < 0.3) eventMultiplier = 0.9; // Whale sell
-          else if (r < 0.35) eventMultiplier = 1.2; // Token burn
-          else if (r < 0.4) eventMultiplier = 0.8; // Scam rumors
-          else if (r < 0.45) eventMultiplier = 1.4; // Bull run
-          else if (r < 0.5) eventMultiplier = 0.7; // Bear run
-          
-          // Baseline fluctuation
-          const artistPopularityMod = (artist.popularity - 50) / 100 * 0.15;
-          const artistHypeMod = (artist.hype) / 1000 * 0.2;
-          const fluctuation = (Math.random() - 0.5 + artistPopularityMod + artistHypeMod) * 0.2; 
-          
-          // Hype and trust modifiers
-          const hypeMod = (coin.reputation.hype - 50) / 100 * 0.1;
-          const trustMod = (coin.reputation.trust - 50) / 100 * 0.05;
-          const utilityMod = (coin.reputation.utility) / 100 * 0.1;
-          
-          const change = 1 + fluctuation + hypeMod + trustMod + utilityMod;
-          let newPrice = coin.isRugpulled ? coin.currentPrice * (0.5 + Math.random() * 0.4) : coin.currentPrice * change * eventMultiplier;
-          newPrice = Math.max(0.000001, newPrice);
-          
-          // Decay hype and trust
-          coin.reputation.hype = Math.max(0, coin.reputation.hype - 2);
-          
-          coin.currentPrice = newPrice;
-          coin.priceHistory = [...coin.priceHistory, newPrice].slice(-52);
-          coin.marketCap = newPrice * coin.totalSupply;
-          coin.tradingVolume = coin.marketCap * (Math.random() * 0.1);
-          coin.holders = coin.isRugpulled 
-            ? Math.max(0, coin.holders - Math.floor(Math.random() * 1000))
-            : Math.max(10, coin.holders + Math.floor((Math.random() - 0.4 + artistPopularityMod) * 200 * (coin.reputation.hype/50)));
-          
-          if (Math.random() < 0.6) {
-              const cryptoFan: XUser = {
-                  id: "crypto_fan_" + Math.random().toString(36).substring(7),
-                  name: "Crypto Whale üöÄ",
-                  username: "cryptobro_" + Math.floor(Math.random() * 9999),
-                  followersCount: Math.floor(Math.random() * 50000) + 1000,
-                  followingCount: Math.floor(Math.random() * 200) + 50,
-                  isVerified: Math.random() > 0.8,
-                  bio: "Web3 | Crypto | NFTs | Not financial advice",
-                  isPlayer: false,
-                  avatar: "https://images.unsplash.com/photo-1622630998477-20b41cd0e074?w=150&h=150&fit=crop&q=80",
-              };
-              if (!artist.xUsers.find(u => u.username === cryptoFan.username)) {
-                  artist.xUsers.push(cryptoFan);
-              }
-              const phrases = [
-                  `Just bought more ${coin.ticker}! We are going to the MOON üöÄüåï`,
-                  `${coin.ticker} is looking incredibly bullish right now. Don't miss out.`,
-                  `If you aren't holding ${coin.ticker} you hate money. Simple as that.`,
-                  `The chart on ${coin.ticker} is insane. Big moves incoming.`,
-                  `Just ape'd my life savings into ${coin.ticker}. Let's goooo üìà`
-              ];
-              const newCryptoPost = {
-                  id: crypto.randomUUID(),
-                  authorId: cryptoFan.id,
-                  content: phrases[Math.floor(Math.random() * phrases.length)],
-                  likes: Math.floor(Math.random() * 5000) + 50,
-                  retweets: Math.floor(Math.random() * 1000) + 10,
-                  views: Math.floor(Math.random() * 50000) + 1000,
-                  date: nextState.date,
-              };
-              artist.xPosts.unshift(newCryptoPost);
-          }
-          
-          newArtistsData[artistId] = { ...artist, cryptoCoin: coin };
-        }
-      }
-      if (modified) {
-        nextState.artistsData = newArtistsData;
-      }
-    }
-  }
-
-  // Interception to duplicate popbase posts for popcrave and apply public image suppression
-  if (nextState.artistsData !== state.artistsData) {
-    let modified = false;
-    const newArtistsData = { ...nextState.artistsData };
-    for (const artistId in newArtistsData) {
-      let data = newArtistsData[artistId];
-      const oldData = state.artistsData[artistId];
-      if (!oldData) continue;
-
-      const newPosts = data.xPosts.filter(
-        (p) => !oldData.xPosts.some((op) => op.id === p.id),
-      );
-      let finalNewPosts = [...newPosts];
-
-      if (data.xUsers.some((u) => u.id === "popcrave")) {
-        const newPopBasePosts = newPosts.filter(
-          (p) => p.authorId === "popbase",
-        );
-        if (newPopBasePosts.length > 0) {
-          const popCravePosts = newPopBasePosts.map((p) => ({
-            ...p,
-            id: crypto.randomUUID(),
-            authorId: "popcrave",
-            views: Math.floor(p.views * (Math.random() * 0.4 + 0.8)),
-            likes: Math.floor(p.likes * (Math.random() * 0.4 + 0.8)),
-            retweets: Math.floor(p.retweets * (Math.random() * 0.4 + 0.8)),
-          }));
-          finalNewPosts = [...popCravePosts, ...finalNewPosts];
-        }
-      }
-
-      // Public Image suppression
-      const publicImageVal = data.publicImage ?? 80;
-
-      // Talk of the Charts Prediction Tweet
-      if (
-        action.type === "PROGRESS_WEEK" && 
-        data.xUsers.some((u) => u.id === "talkofthecharts") && 
-        data.songs.length > 0 &&
-        Math.random() < 0.4 // Only 40% chance per week to not spam
-      ) {
-        const getSongWeeklyStreams = (s: any) => s.weeklyStreams || Math.max(0, s.streams - (s.lastWeekStreams || s.prevWeekStreams || 0)) || s.streams;
-        const bestSong = [...data.songs]
-          .filter(s => s.isReleased && getSongWeeklyStreams(s) > 500000)
-          .sort((a, b) => getSongWeeklyStreams(b) - getSongWeeklyStreams(a))[0];
-
-        if (bestSong) {
-          const weeklyStr = getSongWeeklyStreams(bestSong);
-          const mStreams = (weeklyStr / 1000000).toFixed(1);
-          const mRadio = ((bestSong.radioPlays || 0) * 5000 / 1000000).toFixed(1);
-          const eSales = Math.floor(weeklyStr / 800) + 1500;
-          
-          let rankPredNum = 95;
-          if (weeklyStr > 25000000) rankPredNum = Math.floor(Math.random() * 5) + 1; // 1-5
-          else if (weeklyStr > 15000000) rankPredNum = Math.floor(Math.random() * 5) + 6; // 6-10
-          else if (weeklyStr > 10000000) rankPredNum = Math.floor(Math.random() * 10) + 11; // 11-20
-          else if (weeklyStr > 5000000) rankPredNum = Math.floor(Math.random() * 20) + 21; // 21-40
-          else rankPredNum = Math.floor(Math.random() * 40) + 50; // 50-90
-
-          let artistHandle = data.xUsers.find((u) => u.name === (state.soloArtist?.name || state.group?.name))?.username || "artist";
-
-          let isReEntry = bestSong.lastWeekStreams === 0 && bestSong.streams > weeklyStr; 
-          let isDebut = bestSong.lastWeekStreams === 0 && bestSong.streams <= weeklyStr;
-          
-          let content = "";
-          
-          if (isReEntry) {
-            let rankBucket = rankPredNum <= 10 ? 10 : rankPredNum <= 20 ? 20 : rankPredNum <= 30 ? 30 : rankPredNum <= 40 ? 40 : rankPredNum <= 50 ? 50 : 100;
-            content = `"${bestSong.title}" by ${state.soloArtist?.name || state.group?.name || "Artist"} is challenging to re-enter the top ${rankBucket} on the next Billboard Hot 100.`;
-          } else {
-            let actionWord = isDebut ? "debut" : "rise";
-            if (!isDebut && weeklyStr < (bestSong.lastWeekStreams || 0)) {
-               actionWord = "drop";
-            }
-            content = `"${bestSong.title}" by @${artistHandle} is predicted to ${actionWord} at #${rankPredNum} on the Hot 100 with ${mStreams}M streams, ${eSales.toLocaleString()} sales, and ${mRadio}M radio.`;
-          }
-
-          const predictionPost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: "talkofthecharts",
-            content: content,
-            likes: Math.floor(Math.random() * 20000) + 5000,
-            retweets: Math.floor(Math.random() * 5000) + 1000,
-            views: Math.floor(Math.random() * 500000) + 50000,
-            date: nextState.date,
-            image: bestSong.coverArt
-          };
-          finalNewPosts.push(predictionPost);
-        }
-      }
-
-      // Generate generic NPC quotes
-      if (oldData.xPosts.length > 0 && Math.random() < 0.8) {
-        // 80% chance each week for some engagement
-        const targetPost =
-          oldData.xPosts[
-            Math.floor(Math.random() * Math.min(oldData.xPosts.length, 20))
-          ];
-        if (targetPost && !targetPost.quoteOf) {
-          let quoteAuthorId = "popbase";
-          let quoteContent = "Thoughts on this?";
-
-          const rand = Math.random();
-          if (rand < 0.25 && data.xUsers.some((u) => u.id === "popcrave")) {
-            quoteAuthorId = "popcrave";
-          } else if (rand < 0.5) {
-            const hater = data.xUsers.find((u) => u.id.startsWith("hater_"));
-            if (hater) {
-              quoteAuthorId = hater.id;
-              quoteContent = [
-                "This is literally so bad lol",
-                "Flop behavior tbh",
-                "We don't care",
-              ][Math.floor(Math.random() * 3)];
-            }
-          } else if (rand < 0.75) {
-            const fan = data.xUsers.find((u) =>
-              u.id.startsWith("addiction_fan_"),
-            );
-            if (fan) {
-              quoteAuthorId = fan.id;
-              quoteContent = ["MOTHER", "OMG YESSS", "I'm literally shaking"][
-                Math.floor(Math.random() * 3)
-              ];
-            }
-          }
-
-          const quotePost: XPost = {
-            id: crypto.randomUUID(),
-            authorId: quoteAuthorId,
-            content: quoteContent,
-            quoteOf: targetPost,
-            likes: Math.floor(Math.random() * 50000) + 1000,
-            retweets: Math.floor(Math.random() * 10000) + 500,
-            views: Math.floor(Math.random() * 800000) + 10000,
-            date: nextState.date,
-          };
-          finalNewPosts.push(quotePost);
-        }
-      }
-
-      if (publicImageVal <= 40 && finalNewPosts.length > 0) {
-        const modifier = publicImageVal <= 20 ? 0.05 : 0.15;
-        finalNewPosts = finalNewPosts.map((p) => {
-          // Suppress likes for fan accounts or news accounts, but let hater posts fly
-          if (p.authorId.startsWith("hater_")) return p;
-          if (p.authorId.startsWith("manager_")) return p; // Don't suppress manager? Or maybe yes because public hates them.
-
-          return {
-            ...p,
-            likes: Math.floor((p.likes || 10) * modifier),
-            retweets: Math.floor((p.retweets || 2) * modifier),
-            // Views remain same
-          };
-        });
-      }
-
-      if (finalNewPosts.length !== newPosts.length || publicImageVal <= 40) {
-        // Reconstruct xPosts with modified `finalNewPosts`
-        // Wait, finalNewPosts contains our new popcrave tweets AND modified existing new tweets.
-        // We need to replace the new tweets that are already in `data.xPosts` with the ones in `finalNewPosts`
-
-        const olderOldPosts = data.xPosts.slice(newPosts.length); // The ones that were already there
-
-        newArtistsData[artistId] = {
-          ...data,
-          xPosts: [...finalNewPosts, ...olderOldPosts],
-        };
-        modified = true;
-      }
-    }
-    if (modified) {
-      return { ...nextState, artistsData: newArtistsData };
-    }
-  }
-
-  return nextState;
-};
-
-const generateSongTrait = (quality: number, difficulty: string) => { 
-  if (difficulty === "easy") return undefined; 
-  const r = Math.random(); 
-  if (quality >= 90) { 
-    if (r < 0.15) return "Smash Hit"; 
-    if (r < 0.35) return "TikTok Hit"; 
-    if (r < 0.40) return "Radio Hit"; 
-    if (r < 0.45) return "Slow Burner"; 
-    if (r < 0.50) return "Flop"; 
-  } else { 
-    if (r < 0.05) return "Smash Hit"; 
-    if (r < 0.15) return "TikTok Hit"; 
-    if (r < 0.25) return "Radio Hit"; 
-    if (r < 0.35) return "Slow Burner"; 
-    if (r < 0.45) return "Flop"; 
-  } 
-  return "Normal"; 
-};
-
-export const GameProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
-  const [gameState, dispatch] = useReducer(gameReducer, initialState);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingMessage, setLoadingMessage] = useState("Loading Game...");
-  const { user, isLoading: isAuthLoading } = useFirebase();
-
-  // Effect for loading game state
-  useEffect(() => {
-    if (isAuthLoading) return; // Wait until auth is resolved
-
-    const loadGame = async () => {
-      try {
-        let stateToLoad = null;
-
-        // Load local DB first (always local-first for fast startup)
-        const localSave = await db.saves.get(getActiveSaveId());
-        if (
-          localSave &&
-          localSave.state.careerMode &&
-          localSave.state.artistsData
-        ) {
-          stateToLoad = localSave.state;
-        }
-
-        if (stateToLoad) {
-          const fullyLoadedState = await injectMediaIntoState(stateToLoad, (prog, msg) => { setLoadingProgress(prog); if (msg) setLoadingMessage(msg); });
-          dispatch({ type: "LOAD_GAME", payload: fullyLoadedState });
-        }
-      } catch (err) {
-        console.error("Could not load game state", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadGame();
-  }, [isAuthLoading]); // Now we only depend on local DB on mount
-
-  // Effect for saving game state to IndexedDB on change
-  useEffect(() => {
-    if (!isLoading && !isAuthLoading && gameState.careerMode) {
-      const saveGameToDB = async () => {
-        try {
-          const processedState = await separateMediaFromState(gameState);
-          await db.saves.put({ id: getActiveSaveId(), state: processedState });
-        } catch (err) {
-          console.error("Could not save game state to local DB", err);
-        }
-      };
-      saveGameToDB();
-    }
-  }, [gameState, isLoading, isAuthLoading]);
-
-  // Effect for debouncing cloud saves (every 10 seconds of inactivity or periodically)
-  useEffect(() => {
-    if (!isLoading && !isAuthLoading && gameState.careerMode && user) {
-      const timeout = setTimeout(async () => {
-        try {
-          let currentSaveId = gameState.cloudSaveId;
-          if (!currentSaveId) {
-            currentSaveId = `save_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            dispatch({ type: "SET_CLOUD_SAVE_ID", payload: currentSaveId });
-          }
-          // Cloud saving disabled to prevent lag
-        } catch (err) {
-          console.error("Could not background save to Cloud DB", err);
-        }
-      }, 10000); // 10 seconds debounce
-      return () => clearTimeout(timeout);
-    }
-  }, [gameState, isLoading, isAuthLoading, user]);
-
-  const { activeArtistId, soloArtist, group, artistsData, careerMode } =
-    gameState;
-  const activeArtistData = activeArtistId ? artistsData[activeArtistId] : null;
-
-  let activeArtist: Artist | Group | null = null;
-  let allPlayerArtists: Array<Artist | Group> = [];
-
-  if (careerMode === "solo" && soloArtist) {
-    allPlayerArtists = [soloArtist];
-  } else if (careerMode === "group" && group) {
-    allPlayerArtists = [group, ...group.members];
-  }
-
-  if (gameState.extraPlayableArtists) {
-    allPlayerArtists = [...allPlayerArtists, ...gameState.extraPlayableArtists];
-  }
-
-  activeArtist = allPlayerArtists.find((a) => a.id === activeArtistId) || null;
-
-  if (isLoading) {
-    return (
-      <div className="bg-zinc-950 text-white min-h-screen flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-zinc-900 rounded-2xl p-8 shadow-2xl border border-white/5 flex flex-col items-center text-center">
-            <svg viewBox="0 0 24 24" className="w-16 h-16 fill-current text-[#1ed760] mb-6 animate-pulse" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11.996 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12 12 12 0 0 0-12-12zm5.772 17.27a.754.754 0 0 1-1.037.248c-2.842-1.735-6.42-2.127-10.638-1.164a.755.755 0 0 1-.341-1.47c4.61-1.054 8.56-.607 11.768 1.35.372.227.491.716.248 1.036zm1.471-3.284a.94.94 0 0 1-1.294.305c-3.242-1.991-8.225-2.584-12.029-1.428a.941.941 0 0 1-.555-1.802c4.341-1.317 9.873-.655 13.573 1.62.43.264.566.837.305 1.295l-.001.01zm.105-3.41c-3.921-2.327-10.37-2.54-14.122-1.405a1.127 1.127 0 1 1-.652-2.155c4.321-1.31 11.455-1.055 16.023 1.656a1.127 1.127 0 1 1-1.25 1.904z"/>
-            </svg>
-            <h1 className="text-2xl font-black mb-2">RED MIC</h1>
-            <p className="text-zinc-400 font-medium mb-8 h-6">{loadingMessage}</p>
-            <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
-                <div 
-                    className="bg-[#1ed760] h-2.5 rounded-full transition-all duration-300 ease-out" 
-                    style={{ width: `${loadingProgress}%` }}
-                ></div>
-            </div>
-            <p className="text-xs text-zinc-500 mt-4 uppercase tracking-widest">{loadingProgress}% Complete</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <GameContext.Provider
-      value={{
-        gameState,
-        dispatch,
-        activeArtist,
-        activeArtistData,
-        allPlayerArtists,
-      }}
-    >
-      {children}
-    </GameContext.Provider>
-  );
-};
-
-export const useGame = () => {
-  const context = useContext(GameContext);
-  if (context === undefined) {
-    throw new Error("useGame must be used within a GameProvider");
-  }
-  return context;
-};
+              channelId: "cxúÏΩksGñ(ˆùø"â·äÄlî†—BCaA$1	\ GK—duw]√Í™ﬁ™jÇ˛`á·ÿX€qc}}
+;6¬◊ªüÌﬂ3¿˙	˜úìôU˘8YU _öuHDwU>Oû<Ø<Ádç&qöFÀWÑıŒ«'qµ.V‹ˇ0è“§:[Îº:ˇÍäı;*™§¨ÓFU4xïå„º∑≈”QÆ:¸-ã¡`∞Ë¸„≈”gKœæ2⁄;ø‚~;◊››º)n‹∏!6nñbwÔ˛Œ˛TÔ“∏Y|∫9çÂ”$ã™$œ uq?ö∆áUT≈O¢i¥5/ä8´æã£¬(µL‹Æ;-± Xˆ+c,O‚¯•∏ıŸ∫∏WqEbö0J´≤…±X¨;ÄAﬁ≈.N±ˆÌ€∑°Ò…'~ˇáÛ·4)Kl¶Î˝ ç≥ìj"æ+™‹íxS◊A	Çç ‘¥tígOü·Çã kDuâ$∂+<† J∆∫-l“Íä¸XTìX ‹,\[xüäÆ2õÈp>ø>Ã≥ì€áÛ2	¬∑p°{—+òPã˝|¶Ü”V «”Úx˝ ô›x–’G]®•]¶•ØÉOÓ¥˜CZ˙¿˜-ÌÔ÷dÌ=®"-}»-ΩlÂÛ¨*Œ⁄˚©µÙ§À¥A,ΩÏ ïhÉhÈ‚nîç‚õ€i<™ä<ÃÙ∫{f“„ºãr„çåmÜàlmDsgÎù
+ˇVq6éµMıOocK2ygE|/IÅh≠=)ÿTŸ<M°8˛q+$%¡Ao(u•eÏChtóípÀ-äI5`2H≤Q:«Â"C/ñÄßX5Uı:AÉºv˜∂∞¥dî^≤j˙Ä™äπÅæÛ(›˚ú!Òí◊C†¥Af⁄@· √e!¡∞å˜∫∆rì∂/≤ã¿rnŒ‰ €@Xõ†ß.t(~¿4oƒÉ˛—g¡ß= äŒ4!ü˜lDk¶˝¶ÔtÄsÛ¡«=õpI∂ç¬m⁄+n·Ä§Õ≥4:ãSòªÕÀp«‘¨Ω%Å‹ﬂ˛ZîÉQçk 0öÉ7Yœí9KÉüîÛ!no$6+©≈æZHáëŒgcËl,æƒáO°µÅ,≥3∂Xã›¿~ë√åbh#J”}ÍZµ≤ôçÔ˘|ÜSŒ∆ãŒ∂\åh — ”dÕÓl5d…Óóı™1xP-ÆZCY">ôdŒVï\©ÂvÂ+ÔUR~ä–òÂS≤[áÏªp’Ä)‚4éJI£©á<0 Å£0¡mÍ√áôj›ë®g¨À¿ ä≤BùÊ∞*‚hJ Ÿ í∏)÷V‡„∂.∏∏§?Á÷ÔsË4∞,ÚÈèMèÃÄ“,üÕ”H˘ô¯µ˘|r6Ûznóø>%Ú\´[|¢V¶ﬁäﬁB∞Ä«ömP«˜ÉR˙¶X]y0Êì™≥©$∆¡l^N˝ÅÍ=∑ﬁ≤õrHä÷Ìù?»Ú§ÜE0[oAdYF∂®Kπ§Œ ¶˚¯‹YHÁ>}ŒÊ”G≥Q-2#y^]sŸE«G›z6¢"•3öAô&£xqeŸÔËS±∂‘ª¥WË˚v4ö,.Fÿ-‚¶ûÓE6ó˘E6=øˆÜöSÎ}˛¬áπ≥‚FiÆ¨^mYnû%ˇ0èπ7◊\ñ≠í*eñ\-˙∫xUìAe„|∫∏Ñ∞ÙÏWà
+≠D“"J¶¥ Øo˘$©&ä\eñÂ]≠2ëüæãln[c*÷oâ©Ëá[a$O]∞¿‚0Æ|ˆkÓÏñUL£Ÿb-πHP˘#≥<"Öè/ÕfØóÖ˙Ú◊˙r{ænµ⁄÷øgc∆Fom6Ä¿)A‡q¡„è628ƒ_√©Ãã
+ ª,Ü”·@ÚË∞íÙÕjD1¥§∆12≥°f]¢+ñZé»4Z~ı2Ç[H˛ß™#˜˘iíehÓ—ÔüÆ<så˙¨®yÊu4Y£nö ô)J€mÈLuŒ¶—U$£èpˆ∞.ÜU_ﬁ^yqUNhbêImÉ∏XΩé”®zàÙÄ:ÑøΩÆKNY©T"˛QQ¯;h∂ù1J5„í⁄ñ<[Ü7Fë≈'üÿç∏òÕÀÒ∑Â÷Ü]≤[‹EﬂvUÄ◊ß‚≥VmQÇ~ï˚q∏6EM~Ô¯òÙzõ‰¸V¨÷Ï ®Û1Œ·≈]¿i°©û)˙û/_π,‚§à*/Ó™x√êcP≈Qàã*QñÂsË\úÂÛBnO*å˙n4z]{£çŒ†∑s±9çãdeBö‚6O£b\Æ_πÚ‚+Ó&pj>¢ÒÅWÑkÉKï§*4‚ë	ã
+ˆ”©®(∞¸”?˛_0W›ªƒ≈s ƒ  @\Õ9Œ‹ô∫§QñY[óØ÷_Ÿèú!l˜≥eqã”|ûé≈0ì<@K5â^—2âôlWD-œ(.‚iûùƒæTã∏úÂ’©&I)‚iî§¥ÿ£Q<´,Î8•x`àıs€¿[æftá OËÜvœ>_p®L}Ï†¶8*ŒfUÆ¯Ò„ùªãK^–fJ≤a˛öÁ5	∞t’®ªÇ%1ºu±¿"¢w¬,ãÔ¿8°
+p¶ƒ|¯áxT≠£ÕœŸ1ﬂÂÛÎ∞c†è˙l5éØ˙ßÿ ,˜“˝u}ﬁÍæL É8Ç)íM«}I+≤.ﬁàÍlÀAõÁ≈À5`X
+rÓsVf¡ ©∂¢bW€ÔcÂ‹÷?‡ÓdØíä µ.èÍ`˚»¡∞Àí„É$HBüƒ∏¸ÒÎÏ~⁄Q	6/˜!¸:ç“ó¥âpèé®π-a€!±º^“tZ{7' W‰P£˘ê™Ÿ(Mq´èÚW1Üa{Ò+X`S™-ç$^äóY~ä‘zø.+EäXkx& ID-OÛ¸%4 ˝<Q¯ù"ÁÅ^Ì5}‡“¯u≈˝vÓπ:¨—Ç*[äÏ©R$Êzæk(t¯TòÚsä∂Î¥`¯RÂM›Úùh,Í™4G_•ú_!Àg∑å¯È«˙Ôjé_|L±1’Ÿq˝⁄˘Ωah◊≈ﬂ’ÒlPƒ≥4ï‚Ê˜ÂÕìe±∞∞t.~≈pÄ=⁄zÉWQ:ûÀ»»„3¨{<xΩüCQPﬁÀIr\1J#íÜ:1Ê¿y5…Dø‘Ü∞uº=Øï/∆òê&/—’Ñ∞cÿ?≈¢´˛}év“%ê¸V—*Ì∑Pƒ _’ﬁ»™nÑo„Uü∂7pãÃµrÚ´ﬂJÎwÌ› ◊_∞Bd¸z€ﬂR“©Äπ√kï=| §ñ‘CGÍ<ãj∫ù%ÂEÄ¸b§w@M„∆ÓB˜¡ùE\T/√£õÖõÇÊˆ≠4a]V¸|ó™ˇú<›&Ÿ¢!Éä	ıF%ã°Xj=÷ÖE’√«∆uür8ÖyãX†E‚#b·qÜJ∆ê\ç;-iæ;ˆπ∂π}@ÜªëÎÁyÁ`ÁË0‰Ëy0,‰È9ÑwΩ]=√Ö=_œUÀ◊áW^ÿ€sïÒˆƒ!¥∫{:.„ÔâÍp¯6E»„”¨r9óOl!)'‚≠‹:%úí%kXaˆıù∆—xò:E%πsé∏7Q∫M≤oL∑æQ»ßf‰!¿,(ˆ¯Ò	pl¿π&Q*¶$?6db4geÊ/ÒB2\wÓŒ#±õÃ"˝D∫=VgiåZÍ¬Ê8Nc¸rp˙√~ΩΩ¢G[0¨±«é#™R—IîdÉå“W i`€	µ∫ZNöàﬂo˝Ä0@]DSq8M™â›⁄ˆXN‚Ñ'™ößcÙC°¡#ÑÀ√<{üQ√˚Iˆr? P9ãK[≈\ÿçOA•€äfQ:N∞^öºJ"ÿè≤Â›§mN&”hñI9JÛr^ƒ≤´4˚QÒ≤\`™≈˘“ﬁ]ﬁó¥eZ‹/5„w›≠^ëL¥lÆ=«◊ŒoŒ€bÏ®\ø6øf«s-…›äõïüú∑•πF`;´Ó¬m∏˚ûkv>ÏQæì2∞â⁄Îj⁄¡÷ÕÜÌuu·Í6Ù•µ	á]»ˇÃe*ÔƒçóÂÒ@{ÔhÕéÛE}‡C[Q&Ú,=ìvÆ¨LÄ>ôá∫h’ŒÆW‚Ù§aã3jÑ1≠¡$*ü‰“ß∂>ıZTy•H'¥WôÔ`≈Ëı¡ï∆?Â§Ü≤‘…ËR2Ñv◊∏OÕ¿Á£xq1çñÖlæÇb≤X÷ﬁW‰Ê∂ˇ˚ÓWı)—Éº:xáï˘4Ê4•mdÓÄ@∏öòëz`Õw»N	√v.N†Ìätq„kê<F1IN–:ö†È˜'*õ∞†Wp†&p)Ô‰Ÿ“ åŸ[ÈØµùDlàµ±?˝Å◊nà^ıõç±'§^öeË
+à∂ù¡÷∞«ÓV˛≈j_B≠œVæB¿= ¿àYë£aÇ!p Æ¥Jfi–B™6Ñ∆_Ês@Ó$ÒäQ∂.ÈYsºã;E≤†∏Ö†çWóò¸ÛwsÌˆs˝L£[SV≈@bë/©—’5¡>íw,≠∫Ô#Î »qû¶˘)j ª˜„Iõ3›«∂]t‹møhVöﬁ|–ef∏Û}å+@	ŒÂÖÔTΩ˜gx;æØµ”u /tÏÑ~ÉíÔà@¨}»qáá⁄”1˛}†/>ÊÜæ>Êro«–BÒhK4>£û¢∆9¢ﬂ˙éËø∏ñÎO¿ÂÙ7ËqzÎ‚ﬁ«“ 8FØÖöˇ"e¿ÉÖÃr–RS†.„3<≈K·πU—4¯5+˜πqê;©%E∆çãT6À≈tÈ∂%FÓYR›R@âª¯BÎªYóÏÙ+¶ïÎl∫YÈF—Î•8¨Ê„$ó∆4∂f`ÈøX#≠†ó≥Òï˚iKÏÄx[¯óùËÏDÑˇE6‚É§áIví∆b—®∂Ù±∑aÿxT[ô¶K4`#ﬂ6ŒhœÚyv7k+ ív›Ì˝ßdÌ∫‹÷x‡û[∏gxﬁRâ;ÛÇ¸ÓÌÓ·üGPc≥MíW±*É˙≥tˆ√@À—Ûl@«w•g¡>,ÒŸÇc$µe8á¬J."…)ƒÀÒ& µoßÁaπç	"Z#ﬂ°NÅ.å7Ú4Å∑\É4^Øs€πÇfï5ÁiŒÚ©N˛∫÷ç(¿≠∑Y7yí√Ø[5Î÷uTÍ5n˛N—(¶*ª9¨1zªfrg> /â≈^{ª0˙e˘ek_F:T,c6¨óÒwyÒáHHãÖá—¥T⁄å[iúã√<Uõl*ƒY9âNÒ˜ÃX6©7•ªd≤˝_ñÃ[¢÷%≥Œ2˘ïYwT/]ßÇ}∏d≤yºäãiûÂƒ7—˚(Æ‹%‘˝≤Üﬁö÷–ìç§A#’π‹n∫g=ƒÁ/ñzá¥^b⁄#P€¢N/ ⁄/ê5§ê\jE~â`}ÎV«o∞_kÿG∞-Üˆ
+˙’c¿F2J`«HóïÃ®≠£ˇ¶Zêg‚˜ÎÃP∞ØõyÔ˛œ˛^^˝ù˝ õvjÊÏBÒã6AAuB‰üg5X»≈}7á°eW≈O?˛˜ˇˇˇﬂh!~E∞tvew¯¿⁄ÇÀ?YÔ:†¯¬´ﬂ6˘Z6∞∆úÌCL+≈íÉaE>≈Q˘÷X‡ˇÕå	@÷â"˛%‡ª¸%∂∫˛¸¸b´ø¿„µ0nã[vÎo|=é”‰dR9·◊’›c»]Ü!Hj[Aù4ÌØ)˚˚Ïí°ÿﬁÑÎæøœv2 ∆£¸$£òlÙL¢Ä |^ïU$É-…ë	àπP/”äHÓ: ß†ÛU±¬]Mä$MπËQ»ù&∏Ê⁄˚N AÊuhÑ*ÜEçGhVA&∑wd›8ãˆT«~√∫'–$çx÷Ãz‡CÍJ`˙$OÒ	‚“Ú˜ŸëöõÊò{≈Iî%?‡∑Ùd_∞!∆%&‹n{(1
+V-±ƒ/Ç·‡D‹Ω®£ƒ=°˝˝Fâm—Úm√ƒ—]GNKƒ•Ü9√«œ#ñ¸].ΩFÓn.ãrˇ-]"¥pâ¥9Mœi∑Dï[[ø#à+ﬁcÜ&~
+@Ø£—uÏ˘8ÕQ	®£«—ÿ"ˇ‡ ÚóÆ‰Sc<@è·Òlícöâ\îì¸tÑM⁄¡ÁËﬁc:.Ëá	D_][∑–AG¢Éƒ´"*‚W1åY’cC”Wç–Ù∞~◊;6Ω_Ô?8››*®-}ü}ü9î1&¢˛ß¸_ﬂ.HΩ—’¥ûf˙Ø(^Ωvu[˝Ú-‚’o©FPÅºLº˙gøƒ´Ñxıæ$·óÄuc9`˝ã^—Æ£Â€Ayk~Ÿ´sãÉd-1uÌnôHûÄ®¶ﬂ∂èàœ∆Ìõ/∫˜ç≤øDÓø„»}7‡<∫ﬂn¯nâ›ﬂz|x¥˜Pl>Ÿ<∏+Ï=Ò‚¯…qú:Õaïß$ØÇk¢-„ √”ˆf∏ı[VÆc€îuuî ùù°8Göù¨Éô=ÇF√4˛mì\‡∫ŸrS¸˙≥ØΩ`_-Á`xs´îS3»†(∫ /ƒà´:í3â#<‚≥…Jc[ÕrÚfgÃ1∆b†µ≠kâäõ¬ı∏éc◊yZ$Í∆ëNXëd[-Ω:íŸÕÅ`¿˙LLâ-ùË∫¿ÏÌGKOW<63”„\r–Dë¶FT®…“ÑGœ4m—≠‘%Q®ì[#„‘&¨u ‰ €ÃFºA∫êÒ§ãnHSÏb1®à‚@»«ˆ:¬‘|∫Ω}âYî@®≠ˇÓœ}ôh ¡uzõQ7•ö!ÎÎlÉmg)ŒOÉ-4PJ€∆´∫˘Ω°˝—®J^≈õjËX:©◊äãt»‚´‡]0qe≤∂ÑÒ<àó;l´XU‰≥…#FQ‰3y¸è9wZe˚B•Q©1]Öz.BËÙ£Óƒ∑®ä≈Qtë|ƒ¥êíd°Ä;«ªÄP–HodV™ÕAÙÓxÙåpµª&É; É7cFyñ/◊¯föÒ\u∏hC;t Ï—ù·Ç˝–XJVBËﬁü°L‚í
+{dÁf®õ˜Èõv…M2JöCÉ‹0#'Àú ì7ç©«S2PıÏ …¬èl*rLãœ?»‰(‚j^d‚M°U3˛°—4˙h◊ïfq}YÉ‚‹=∞ÛŸ≤*i0cÛ…íÈ'D»ëQΩ7tï¬r≠±®-=8S≠Á…±≥˘¨q⁄dÇgEév¬˘ÙXlË.‰U∫ 2°çß(˘ºbŸÉbBaﬂ†~<®v	∫*∂&ÒHœ‡9–√dÑN0¿Ü …0«„Z<âejÌô–eñ®j“FU™t'ÚL!4ù‹ù>0ˇÎ`NﬁÒ>s^,gõ+ÇV§yØ—Ç Lb;C^<WC äÓoze d¥X∞∫3LP¢-´0=bnŸ	l•yïﬂ†•4&5•_ÚGJ‘"˘!∆)±L”Ù´P|WÂ„π‘Î∆2k˚Î\ıﬁS–W&µµ}ìU‹™†Ï´´¥Ã!ÏöŸcl©úyá}N]’É'ËõøQÎáï8ä_”ëlµ÷Á*ÀÒë±âBÁ†f-nøïΩF¶a~∑∫«Ñ–œ6t œ…òª§†iC(
+dK0è·∞Çméwï≥h„ -¯≥>˘—¿¶lˇt,'Èﬂ∫è·Ä3«pÁ/‹Æœ€V¯œÙn]CÍ2Gq_æã‘—∑~é©£¬Zƒe\yõ´K\r≠z}‘}”ﬁ…ù÷£%¯˛¡Ê√áﬂÛ∏ﬁ/¢ÈÙ,î…ıÑﬁˆŒÂ⁄V‹ÀÊ˙˘öôÕUé#êŒ’„©üØ…ú]FØd64G–ôº,Öêœœ*˚Ô»–⁄ê4]ÅÂÈÇ&cœ¸$≠Ò(©ËíŸW;R∑ˆÀªÍﬂí^'OΩb/§ßLç˛ïÏîÑëyÃ\zﬂ3ÎgËÆåüj›ºúüF•èqÁ∫Q¨<M™—ƒæÛÿ;ÄF«!ºÎ—È∏≠?›wü„áÇ¶øb˙n÷∞£oÓíÎw—ç,˝ª˜cøÉæÌ}r)ÿw\∂ﬁ›}Ω/˛∑ÇﬁÛóZÅ∑Èﬁ'rÓﬁª|ºŒÛH±?åÀLìπˆñKbgÚ®~Èó ’îv˘aÈ‚"ª¡YÊ¿å`1∫◊ﬂ˝ö°wõ[c¬ÉË≠”ª°xgÃfù•k\ì±\ﬂf-Ÿˆ†0õx∂…_ãÇˆô>ˆkqıjÈ1á€e)?µL˙0˜€‚™A$πÛQÏ¡(:ÄTô^±‡(Íï890ïQó≠å{ÉÌ™|CÅ>ÂûR&Í
+Ö¶E˜ëûAM‚è{Ò£lP3TÊú1»—ÁÕπàJÒF<•ﬁÙŒy∂éiïÜæwæ˛p«®BÉm˝!/d.«€ñÛáœ•NÍ0^≥÷”Ë‡Ç˘`¯LlàH¨C·çÒ¿'‡∞ÖRÒû`æmI7‹Tn«ØË’…P)7}WB˘·ên±úOug¯
+∏QÍ‘ùÀî°±O[rgÒ¿Q46–å1ÍO)’cw∆H©‚ápFRmÉ4ÈGÅ•kM‘à]⁄Ωˆlo.¡º°⁄ÖH?%nV?ö$Âw‰&‚”Of;(˜Ö∏	√OtŒáèŸäöËŒ—ˇE≠Kw
+of85é™”D¶füúzñ;.9ì˚Syç≤◊®Á·ûÅuvTL2çN|è‹ÓåøÓﬁº)y]£B≥XÛ!“ˇí¿e*∞-„”>édµë+w∞"	Ù,Hn≠»Å±,‘B%Ë¢{˛)\õdy@YﬁI£—KÃVèÔúÌF√8e°ÊfW_¨“±≈ˆkÄ«4Nœƒ§>®·!P∆8rìÈŒítd~Õzd}¨áúáK©@¨”í≤Äpfmπ ÛÌıî9.u¨ïË˜}•é≈ ?Ì§}ÎÏ±=vÊí&æ<Fk]hPKÛ2ïk?Yû›ºL™Má¯Ë|îZ–Á‰¨~¬?t‘-ˇ7””“?ˆªRÉ∆≥ˇô∞±%v£©∞¥ŸKV{9Ω]Fg≈ÏK»Ê¡À;.$ì◊¬73®û“¯E$ç∞Óâﬁ.{õtŒAπÎœmá›…sh7.>HÏ˚F†”RØùÇf.WÛX,7xXi¥//íaÎ≥@(0ªöYÂg‘ôˇ5Èï;Îì€‚Ä]©∏kÓ«˚∏à:÷¢Ω"ZJ]í∑p€ñEàe≤π`C9È,eÁjeÁm3∑r…ö˛^@P}¥†ÖÏ˜E¥ŒúÕYè|Õ&öuÂäÓçe‘ê≥95™µ‚XX ØÂÛ?˛ë-ÙbRU≥r˝ÊÕyr#z¬2@oîOoF≥‰Ê‚ˆµ7q6 «Ò„Éù≠|:À≥8´ç)/ù2·˙§ é2æ-=>Âi^‹>>>˛§L~àoÉ˙¿x†ıD|{ü∫®1 éã√∏Ú)†)∂ õd⁄:ÆfÂôrÌœÇ∏Ãlôû)˚£pØ<5¡l…Ú◊ûV"∏À¯
+ì∑…%ñ˝ólÅoù-–ÛNÈó/∞Õ•-c†!≤ÇûVﬁÀr≥∫Ä≥Gáª∆€˘ÇÑù=<OïF°W3¯=˛ı‹Z‹§Vzáèj-’Ÿﬂµ˘⁄ÑOìÂ äÒı\,Õ£Oï#(i_á÷ÎΩÎl7yfÂ›®∑	mzŸ5¢äÒìDΩÈ\¸J:Iïú£§üML˜˙kfÏ.Õ$í,g¢íz5ïÂ≈ßü‚‡ßüæ F˝x·Qﬂ?‰I∂∏}∂‡Ê)Rπ–|Ëâÿ¨7Z∏®7ÿ∞mÂç3Mõ™ÿxNj‘√7±ágb 3√}xÅd!∑8Ô¬ã•
+·ZËˆN\m2Tr	*[]É’D;—Ñ\£è∏d
+—%ÌzÆ¢‹cèÁØ:∑	ﬂÂ{M†È`òïO≥&Uü|“3øfõsÏ/Ÿ6k>ª\2Õ#
+øAiN6G—8ûûQ‡i«vrMJI÷l3¥ˇaíJn¯WìMì~.∏≥ÏõH3‘ÈïÕÒ8ëâÁ“≥eqj$ƒú‰Y^»%"Å≥aÍTòJJ—·Au^À".Ag•:’ñô≤ª—"èFÒ¨∞ú„xî¢+5÷ß‰poÈö—,°⁄ï|ôÁc%¥ÙÜ÷û◊P ˛mô√I-‚Î¸ïlN√wü¿œ√xï–ÔƒU~ò¿å GêºS._~`÷¸gí€ÚùcÅôﬂRãˇM^ÀK§≥|#≈ØG:ã•ùÎ6ê”í63íﬁÎ•MwM†≥UbeéWUa¥'é≤Œ_Ií∫Œöøô6ø"»dÊ•¿0d§b0ûÎ≤RT°)kœD9âä:˚•ïæ“ßÔ~ÿ8ˇa“XÆ›“äΩõ»RdCO÷n5·ömvÜﬁô+˚6Ú˛sW˙ÚƒÕ:|H*“YsWﬁﬂ7©+ÈÕ˜ùy+õƒïµ"˛óö∞í”u¨ñ≥în]ıÛwM∑˙så¶3^˛ï)ºÓ˝6„]§∂¥t¿ü_¢KR3‡Ü⁄UÒœ5A&sH€qß’ñDùèù◊±oNGæ≈ü_>G?d'ò—±Îh¢%ß„Ê›ªbÎ¡Ê¡ëÿ~∏π≥{(éˆƒŒ£;{ø7¢z°(˙†¢!`å	“®¨ñEtåá⁄@±îÙòÊ'…®6†h3Pı/E]/M[ z9©∂°∞›Ùu…Ì∞oï¬$09˙ÎGèÍtöˆ«˚w7è∂5Ù†õñ-g6ïÄ÷ÓÄ¿.”§P˜≤_èŸHª˝ÉºÍ∞ùUË≈+ç&uu˘éè	ã(ÆÈ8ù1y≤6˘¬‹›òw÷Ò;Ku–>l“N˚¶ú(ùöÒÛ< gÍ‡˚Sïßq·π:nQéˇz< óóKœ’ë‹ô55mü@µ|`¥úﬂö¶C_+’¯Wkß@µì¥;‹ÈﬁÒÕÍ€]åªR*∫—•∆’‚j9∏‚ﬁs“=ØñãfÆ|˙i”‘GV¯ÈßÆ…Jpõ°ë˜ÒjXˇò“ÈÈWË¸ÂPt}yév?˘ì‹b|”«”ÓπX°Yﬂjõ±’ˆ«ùp3z˜@B¬QŒGò©™æ¯¢ûËQM]‰±I[÷f¢∫«ÀÂc|"˜ÄKépOå?Ô÷˙gô´∆Òq4O]´Sã?	FyÃvπ≥V>íî2t˙M é&–ì≠⁄.¢-º'Èd^»w]X¡oI“‘çÖ»πôE–’≥˚i>å“?;∂Âêr¨†qs∑ÙõÚº…›&ÂG++Ç≠QBBY Ô$ˇ%π7…“(e=†Avü±≥ÈAÑ˙í J£DßzD^Â≤ÕÅ‰M*ngÈ\Ëÿ≠é”ôÜ@}«3?	'P∑ßyÒ)íµa FíÏnªËí3»«$GxÇT at$ˇo˘óŒçdó<ßñ  pWc†%F®õóˆè“-≤”›Ì{õèwèûÓÔÌ‹˚Ó˘˛ÓÊwª;áGá™ÆÚéú©:Ó÷Ωﬂâ@7„}Ú/w∆ätëS¶Æ8⁄%dnÜ,ı‹ﬂ∫í$´˘]˚!è∏›§–ˆ†⁄à≈QÌ˘ª‘†bˇRßxØaH@∫®AP=µ
+(aò2ﬂVäj §Mó_˘√¥rh=D„q<Fî‰£¸îŸˆ~πìÈu≈ï∑ßoÑï9Á—Éáb -õ}∏æf£¥ÉLìiÇ&Ui(ˇ≠åãYVa1xƒ#ƒBUM÷≈Í≠P8¸¬	—„µ(µ.UD≥QÙ*¡Ã$bıÛ`1Œ≤ˆ"”¯$ö$bÓ\—›Â£ó£4*ÀdT∂ó¬ÆÓtr≈Uûµó≈í#9Ê∆UvI>ØVV ˆbCL]9Õ«1ª≈“®ÿ$ôMÚŸYLî∂≠&E~äû‡Ì≈f˘lÇËA°rMÚjÑJ≈Y{99Ÿø]Èh$7‹Ë∏h∑ZV6È*Qd√ˆ»1a@ÌÖFêù5ZÜìÁ„aûó@Â∞`;≤°å“^Í% æΩƒhR¿~üFUqúÕÄ!—“Ñh	›qz\$„ÀÆãéQwÓ—‰09ë;Ø•Ã	@ÌU2åÀˆbòóïZÇœ¬∏äπ„≥*âR ÏI‹^¿[–eDÌ‰ä?KLj)˜*ÅßF∏Ó5:.rÿ ≤XKØr3ç‘8û‰Û'≥ ∆-5ΩMmÈ[•µ_Ï∞¬´h⁄©Ç§ÄTÜ)rﬁìŸ†Ë0ç^£ääÉ‰:Ok6ùåüQ–TìchÉ-≥.v@«ÀíÍ¨gø»«]¸ıÌz(°ú"¬úêÀ.ÜÜ˙”ZÎùd8?ŸòeSF’v)›ËÀP(ñkAÎlÙíŸdÖ7ˇa´g†	&£$rÿˇ»}ÿàjKeÑªy1mÍtqÆõZk/å5 ÌÙ.“∫õ€)h.Eû%£_5∫`º^€w‚ü¥mü1
+¯Vıçó‡ñ‚ªDÙã∑Ó”‡y≠„√K¨·>¶1|zâ÷∂jËœæ~ı÷ÛˇÊã≈ÚÒ%FΩKB´◊û||âˆvàÆ{Ì…«óho≥ÊQ^õÕ´∑«*…A|\êœ{∑¢¨&y<∑„⁄ßÕgÆdÑ‘•—X5®Ú›¸4.∂¢2^\j∂96!Øã™ëf.Ôáé\€!@TYC◊º’÷ã{π¨tªèÔ˘8¸±J´C)Ë]£d=úNWÊ&g«J€£∫—ñæßÓáÛg∏™[≈tàÍªôp©=ˇ≈Õõ‚!»†ËM®ÍåC#;âÑí$ëûo~e˙^{÷´rÌ∂g⁄X04„∫¯åÛL‹#úã¯œ*zc'•zÑûŸßñ÷‹-¨¡"ãË‘[Ω¶á”e⁄\\t[ÖFvd*.jîà‚é3ÿƒz.XïK£ ÊL"ÏPA`‘èˆ∑húÂ:“Ç*“	Ö4§ÕFè‚” AÈŸ˝8ã‹™ò6@møl&I¸µS_í™†#„x8Øûp®$©
+ΩˇéΩë• ÓzhE0@x‹Aç∆§—ì#êfJ”ëmuøˆ¢†)m]|1ã¥ç
+o‡ì2P/eXB\(Ëd…?7}K™|M	˝…≤è€2ªË;•À—®öGÈ°õQMè÷¢ÕÃf„;ÔÏõë‘Ö9ÜB6oz•hÑR”ºpÖØÖ´Âr*¢JBv[hì¸Û;{{Ô√«ªG;˚ª;€ÑYíì	ûT°ˇ∆$ç˘‹œIÊ”dÎ‚‚ı‚,J)Á•Hd~"◊¶arl’í»éÛ4E)'©<[ŸL∞NN·f…—î·™-´¿#¬‰çBl]cbÃD∂Ïgˇ1r©0Ω◊ù√V€¢ª#⁄¨Ó)¡Ë∂ÿ›º≥Ω{ÃÓòö¶¶∂ó€Ò∆ÄZÂÛí∞÷ ú
+’i@wT+Ï≥∏™|çÕÂgI¢bx∫úU)¯âí›≈\ä»à¡û)÷¥Ö∫ó[&`W∆?ÛW}˘⁄`0¿¸_‘∞s◊öI¡;”EXÖÎî+Ê©µ∫ÎÉ¨3¿iù#6zLÆo.{!ˆa¥øFÙ|Õ0îú-πVû∆õZ›â50ùeCÎ¡Vl“Q Èçˆ¿&œÚñ£∑¬àqC`3⁄,Ãï´˜nΩyÁòé÷q¥ÚÇ\√V·&|^'wÉfyô»()ZyÙÙ˜ •è‘÷/r∏z%BÓ÷&±|;ÎÔ∞ˇ7g≥Ù6~ÃÖÛZ&—3i»)∑l⁄≈aVøêΩüøk” üﬂNÓ…˚Ì#∂`Œ+’ü≠’›NŒ„pØÁ|´Gt2~j†÷GÔ!ô≠ˇÌÆ&Br—å¶1´èùf:⁄4Å\í]ÀÀ0tÈk?Ÿ+:’	'∞ØsÌ∏ßˆ—i8≤î∂√bn◊¢∞#V≤≥A?◊ªjg¸Z˙/5§•§◊ÓŒQa›_kû± ?7GÇ7VCGÕ(À±0£Í2õéèë$YïÄåΩà≥Â‘Õ¿§'◊rÉŸMOÄØÚ©πa´§›ÿ(∫UùÒÏ8ËKP≥∂^K„0∫∫N8Àõ…ˆ
+∆W—åßn?òoŒ‚9uÒp ~L§◊ï·BjÙ/
+_	 üƒyHXw∑xb,≥Æ˝%¿@bñ∫ssœÜD;O√Ø@.[j.ÆñM†!∞‰%¿u=S’UÕ∞\o˙°”:÷[õEùéã|Í;&-5`5¶Y€bƒ≈¶Ïî‚©dîœmåtü(;SXßUqö†ˇ‰m–¬§°H5€bß©c=Ω˙≈™‡)™}ò‚◊V⁄¸qù¡’g◊-7¯†sû≤'‚-¶òuöºﬁ;>ÙÃ^∫7´„⁄ÁaÊ\ _TMyÎµ•X’¯Ûã·aΩ≠i……©˜r…{
+àcıÍ'DΩ≈ÁÍ-~áÊΩﬂT(•±.B)ìƒÆ‡b‰6ái{ï}#è7^©j@cJ(‚⁄.ü√⁄£∞»Ω‘f‘Üø„ˇ»ÀxZ8Jl°àQóòé´.=–XkW§ﬁõ√ö†?CÕ“‹o¥©Ö‘#îîö˙!~4#6«ÜnÔ6òfΩË\1≈(€s≤◊Iô©Oπ¢=î3›áQ–‰'~ç‹3—√◊?qœíoz‹¯º√>€)5*yÿÃHPâíi∏ù¢ì]æ–,™ﬁæõótó£"ôI‡ø–1óv•¡‘ﬁWjﬂ-S fí—Ö€µ6„uP[ ◊Ωm√ ‹"çì1 ò|IÌ^mÓD 6h‰ÊÚÎ©¯Ö#=LT)>}Ù≠ä*)(π™øß©∫Sì”Œ”÷ÄN‘óƒ2táÈÈ)çi´ç∂Œ•7rÚ´∑€Í¿¨˛6õJkñh˘< QÌ4JÔÂÖlQ©7ç!1$dÅ&¬ŸÑN0!jd≠uF˛2ã∫Œ˛Î8Ã
+C;Dvù	õeãﬂôá)‡”cTIn≠ŸıúóVÊ+Y/+3/ÿûÎWªœ˙±YâbyÃ^∂åàÈ∂∑Ù¶˚îµ2·,üã>DØéoìqúó~-„•Ÿ¿+|‚Ô[˜)”Á„C≥ì«áLë≠(ã∆ëYL>·Z˚∆jÌ¶y ô•ËSp≥L¨NÒ7WÏ∏HFvAzbùø<ÃQïÄAe[è¬ÖMx>ÊﬁÿU%äô›OÇEÌN¸f≈"'˘∞¥°π≠“À{&CûºóèPB˘z˚˘å±5)¯õ#˛9–Ö–+Â0x)£#PRn-ÄÆ|°!ùmyüV-/£àA@ÕË`rVM¶I‡ÌÊxûV·	Ú°.ùΩ◊ìÉŸ°tÙ îy–¸väD≥Él®…_fë∏ˆ)mPv€~fëKcÒ$π¨¶1B∑xèŸÒ:U¨á-£7´m≥ØBs±8Äˇú°:è†∆)ªìﬂ©ÆY:õçd˜∫ßê¡∞Íª	ö"%^¢@Çú.ß"˜úÁMç„‰8í¥Íp4â„±Æƒº≤¡bâ.{2£\ª@c’ó±¥ﬂ&ÒÈ:∫˙[ı)µ1n9yYÓ~˜hÛ·Œñ8z¯˜‚`{wÛhgÔ—·Éù}Òâ∏øwx_ˆ˜èÃÑ!oìeÂ2	Vzg≠äÿ4*éG˝’àπ/Yp∫N {Ò4í]ÎÑâ3¿r¿ÉRû∞óì¯Ê$.ò& æ∑˛F˚ÑÃbô∏Çæ»ëIì°¯√<ùÙ)Ò!é±öƒg2∑j´LìdVZ”àÙ≠ñÕ{J@Ï?vR˚Y}Wn9 GÌÑ§˝n≥Ì*{`!”é ∂œT∆HeO–œ÷y#›kÃºôFÏËÒÇ≠Ë+Ë›•Ü“÷n¸˙RM∆ØŸ÷^&„¶-˙A—µVIø÷,;L„m\|7ÛíS◊vV‘ÚËCªÈö˜Ù∑Ù7ÃÒï›ªTÀÄàD@©“4zéù9s=w$Åÿ~Â4€M¸˙9hÄŸKƒﬂ¯≈V)‚‰$K™¯π∑ﬁ∞ÏΩƒ–`˙Hûòa…¸	í*,µV~>+‚ì, ™KçW–YÍ˛pù/®>F√≥∂ﬁ›ë8Õµv≠v–+Ùí±™=mI∏»v∞ÙÃÉ2z¸T”∂Í‰û^nep8∏C]ÊO#Îm`π∂ëk¡å?÷x_\{5Tr—£yÏbKèIÏdUé∂µ§{ßôxc.›l,ÓmÄ¶ÒÕkoò4Ér>îq€ã+À_,πñya˘÷ihX≠dhí˚π÷éÔçü~¸ó€øﬂ⁄}|∏ÛÌˆ:≠¸√◊KÏ˚⁄õ¯ı #P≥∏†ÎîÄÊÛìI%‚)Ê)´Dö#ã7J®·ïYvF¯s„7¬ÛõÒÎ^0≥(ÕGÇŸˇÛˇzÄz\•(rôÌäN9Ë]Ìß'¶Iu[g∫Ì¬öà∂ÅØ ÁÕÜ∂¡–#î=w¢¬”®√"˙!Œ“3AÉD«õ<¬hl$‡fyE÷Ó·0Ò4.üAk‚W ¥]G¯ÿ Ò'J$Ù®}dd°söO„Ï¿qŸ’áçrUı3#E8"ˆJ˛{âÚﬂK ØŒ∑Í¿oIu¡v@~iMÛ<;¨ì}µÀb[CM‹®	ôÑV»Ëà.√†%Ú◊{‡/ç±<ÔztÑá4}X3∂VBÁêÈ˚9{¬÷4ÿ7ü∂˙iµaL⁄÷f8¬uí¡≤∏i5t5%}.ñK˚V[SJ©Õ_UZS=—áusR˙ïìΩYV_d∑–áK¨/ˇ*s»ˆ£ª§åÔÓ›ﬂŸ"£á˝˛…ˆˆ7ªﬂâª;ﬂÓlmã˝ÉΩ˚€áá;{èƒ'bw{ÛõC£™¨˘≥µóÑœˆ±òºΩ1ÇÛARÛlQÀ…a1û∞B´±óù‰HyÓ&ØÚ‰£›¯$JÅaÃóU\πŸÜ™D∂?æïObîÖ»±…yÜ¡Öxxò¸¿π‚“›rJ‘¿mÈ≥Ê∂Î!∫Qg†RZ»	`R©K∫˚Yﬁ•Ó4àÒäQ&Á≥˙O_ˇ=Œ>Lìëÿ°€˜ææ-~≥Ê‘C©’ùQYYtcC|	ÎG5xõ“oX&'˘8 ‘@ˆf:sÙSf´øxÇÚ>jFƒ@˛Œc8òÏÙoY—W÷´‚∞äŒ–=›ó˙Òüˇ˘Oˇ«ø˛ˇˇﬂ?±¥æ8T˜àîπòŒGëÊØ(äÀÔq<W◊î@á)!÷PÇ˛ßˇ∑˙”˛/|˚Ú÷íˆæ„ÙæQ>áe(Ê©~ÓuuU¿Ïi xãŸO?˛œˇëÔ}5¶Ò8âÄ§∆c
+iLc4!˙ìàRî◊N'H#H≥ ¢W…	z∆–º≈ü˛Ûˇ¯¬Îâë°ÍE=B6`´‡®3ÖFüóUû/ bwiƒ‚s∂≈öÌzò◊&@zÖk9íÎ£õ]ﬂ“åÒ≥ [Ï≈®?Wç|¡∑—˜íF=∂ë÷Ãeñ)kî`2¸˚‰icagj3Œä|ñó∞√`wå0&ºí¬c˝ä!V&qTG#˚∫! T-Ø->†Ò¸ÛÒIÃÍ$ zïˆÃ5⁄/‘Ú&›~Fa&‹e{óµ}Ü‡s∂jã¨P¨çqdÎö=÷¿	I√Ëbex1NÇå2 À∂¢Ø~}G%%Ë¸Ê\å ‚ûâÌQó«Ò?Ã„°R∆H[ß®oÄ*6≈KH›,A(èœ‰õÄ‚	%∑ Öî Qk ŒÅ˜"ÿA±¬eˆ‹∂ ÿU{"O2ë≥ô’ñûLπg«∆ª´¯e∫ê∆“K]©âÊã?˝ßˇ¨SlÌ=ÆoX÷
+N"X≈C⁄i!cµC·áf&∆RâÃeæ99=ß%Ú„ª»%CaE§Õ˝≤S7Í&ª_6W≠Öá”©˘◊∂∑jÌ(˜iÒÙjê2Däzº †€Óø	ïA¶Aò– FéôÑqı+ÄÒiÇ7£ÌGgy° õèZ+mN—À¿Æ%ü6Vc%9òzœª´[]˚/ﬁ]3óˇtÕ¨÷B◊⁄€3‘'¡'gqkÎÚ‰À]Á+È™ù öX’†K}•Í€$É^∆ˇ†V/üæPWŸ›Û‡%ïµ„ÂR/À"◊á1éö-∏Dr”}tÄŒpûjkSkæÜQYoúQ∂„C	”¿?TBÅ1ÙZ-=˚ñK∑‡z‚Àù|∫AâÅd<ëπΩ›ﬂf…5pßàq«Å0âF—¨åÀ%xƒ)™∫K¸5‰Áí±b0Oö2Ç`SVã>+^
+÷ÂÂ(dÌL´IÍ_Ü*?Øc¨¡¬XBè∆ÚÎËì“?è≈§q◊qÔ%›¬jµÒÁ≤€èˇ‡Á≠V˜g/Ô›ª∑≥µ≥πÎccM~|úåº5[ÀæcÅßÔ^≤Ì&˚˛•tÀ_£âünÒˆã∆Ó+tï&~z	∏ºm$
+'îIµCç_/`F8‚œ|Q–˘øÎqw†*äI§÷-/´¿åCÔ∫)ëÙﬁº–ÏÊ’+ªxµM–È£Ø˘£VÁó∏¥ZaÙoÂ˝¬^ﬂ∏Òyü‹[†ΩÏ+ìOâ∑V•à§q\‹®ÌCU.ç)!çlaK™ î∑.k¶G±á≥Œ„7UzaI^¶ßﬁ,7/ñkn4Ö⁄=¢É7ÑV?)ÆBÀ1∂’Ô¶f¿(„>≈]Ω,o»Uz∞‹Ëœ⁄˙ˇ<‹…˚îlmYÏÁ¢ªﬁOWiVdH5Á÷5)±.VÚbı´7D_E¯G[EÓú≠≈)µfk!k-∑4[çõ-%kù“≈v æ.€¨BΩÉ†ﬂ,œ∏´§Í,ª¬\Ìöz€Ÿê—z_¯b∆ÎvÌÿA}zã'ó;	â&:∆…Õtíê¢ùÆ!•Ü≠eO—ßb¥Ò¨∫"oEmÃS˛∂√K3›≤ÃgZn¯ÚméEæ0‰°Àùã¨9wÅ_Ê`ƒ?Èh∏uòk~}ÿfÄˇ≠
+JÃ˙0z≠é∞≈Aå~§cq„keÉM r˙ŸE,%N`‡E˚?uVGÖª,l5“¸±M|‚ÈPü*ö*ÑƒOÜΩ-Î‚µËqI†T@Ñ¨y÷ó§ΩÉ![Fuaö’«Üv)Zá˝ÃE#Ü4^∆Üf…˜$>øi£ßÌ‚6¥¥^ˆ≥6Îô{æîDæHÿÜÊ[–8’Ï]G.lπÄÖÎ≤÷-i 	—¶NKgÂ@êπÎw!ì‘%Hó0Ω≠ÒHBÆ«D˘Í=åHÏaÿœW>kGõÚF{±zÉn0=âñ˝ìUb(ØIØ•0…„…{Ë≠éR{:ö∂ùKKi´ñÃ%µ/S”gaSSQÕ{ÿbd
+õòzòzõózó˙õñ¸EÓÏÉsÕºoÁN◊N«$;ªqÙ“ÙŸ‹DaÉ§åU∫ÍZÏF∏a≥¶ùalÊƒX√|ﬂÕˆñÂf‹>qÃ\Q∑§%mYeÉ7ÂPƒÌˆ∆‰U"Í⁄–ˆí‹Ω!ug[Í:fÁé’p◊’#F7å°„µ°îÛåªËZõÁí„B€b6A¿≥ΩpÎ$(T‚ri8kÔn˘\!:‹Ä“Ω´BTczwmO4O¥6ƒ¬ΩyöäEÈ·ΩÑ∆Æ∏265Â∑_SŸÖﬂ°j'◊VnÆ≠,˘QñıÄîîe»>›/Æ]{ÉoÏM6ä“¯Pzi.ùﬂúÊ/∞Îk+-˝I1¡úæ/ ]˙o;˙våãoÖ·˝ßˇB~˝€wïÅÂÓﬁ÷„á€èé◊≈›∏¬˚†E~ÃÖ4jF’‘,#c˝%÷â<C”˚U±•µÔkod8JÑ•„ßzQÖ%©Q=√@§Õœ„XÕÄ˜eè√æË!üÙïPjÔÿœ√-uÀ(€KF˘«aÔ˙4™ç∑´A¬XÃÜúq°#∑Õ8ê¶n±£æ8LÓo?⁄>ÿ‹GO∂∑ˇÍñ† µ“ôn‰s'#!wÇ’çœîoyÍ'≈Âc’pd>— _œÚŸÀ)e˝–â0fu»|üßQëTgî—Ò+¶x·˙L∑t@óŸ´‘èKuèΩ$~ÙS«zŒq9Æ>ïT´∫¸:*ÄH„w aÿô◊ÄŒaóò	¨nu.ˆ RÎêÿ)”L1éÁ∂]∑O s Kœ6ÁÜçÀ#ß1î¢\ﬁ É¡<ì\Âµ¯‰Ü¯&û°¿À¿öxä—I”3Q%”9a»K‚≈É<ãÀ*=Ûµ_:Á»ß±¿{®eﬁÌeqvóñiœTh3vlùdΩu8GÿY∞£¶ÿV(/¶ÿ|ÜÇÛw“P√^[2^'BøhTrˆDGS ‚°v‘≈V0ı"¶?»"9	Ô‡6s7èÈÇ<™ƒ|îqÜÁ?ﬁBı
+r®Cﬁ}÷ùwûn‰§ﬁéRŸ≥ ¶~}PïúΩm◊ﬁmπ•ßÀì*x·)Yø¶„>ïù–tÛ1¯4«ËÉ‡*^Lñò_wÃü®¡ñ’‡ç–Wx!a/´uÑmƒ5É†hõÁ/7ƒO?˛Àˇ‘9G˘<ÀdÎò† jÇñp`üÄ"≈x«µîÍ4Pı%(Ü˘úŸG2$Æåa1∆ΩGÖI·#‹h¬F¥)àØöèì˘˚Ó&F˛˝cx«q Ô\e9dòÊÉ|p°ëí†¨OﬂÁ”i\ÑW◊ßtBf≈“KU$òŸ$ÀO7ƒf˘“à,í8~ªMät‘Ø¯ËOΩ˜‡ö±ø|õ=∏G0√0O¿&Ç"èP5TØÜVf∆≥ÖºúÒﬂC∆a8ïÛb—˛\]ì4≈∏"eêVîòj∞ß;†6Ó<∫œt§∞t‰y}ƒΩƒ_Ë-^Aƒ‚05ZT–à3Â-≈ ^Ç÷Xú5	6˘dr&∆»º∂ë``Ï)ÒQÎˆ∑€ﬂ=Ä9˜Íaª˛Ë4!^cS06‡íß¿â|ÑiIWuf¯8çôÂ59:#Î∑ë2(%E¶·˚˜ﬁ`˝√\&gìûx´kß«IåÇ√Œ}›“¡∏»bL(ÜÖ4cÜ=çN@¢2@	®?ÿ£∏ê	°0÷/@#|È;îLe0êî9ªNóŒN„èG/XüŸze„\\®wﬂ¬R0ä3J´-ùåh¡ÿ∆îîà˜µvu)≈c®Z«Æ˜sÀ–ª5£≥Ó6$^ÎGÄ©eé$ø;Ÿá0º¥ÒUD'Qí	·—√øgh‡p~V™≠uÌñA_£¨ƒø@nÓƒ@+Är<ÄWaAäÂ›‚Ñ“wãdÑ9å‰u∞ùa‘¡væÀÁb·é:…ëIüNêz†dÜúfí=ÓC/Nˇ" NﬂT£TÈ\Ö€‰¨F& THÔR‚y&7ﬁ"W
+G[¡Q¬
+U}GQO§u <vÉ•`€cg…ö(":∫ÏÁ¸’&∫°Œîâ¯5ËœeÚ*ﬂÓÏì´ù ¥yÉn¡ 	3/¬KèINäd‡‰	£yZÕã∏…ã0å•êD)ÎbT6PòËÙ"ó¥€•Iπ–˛—m˚=HfçÆo9|Ì˚N¢1”Ùû
+?@è~iz‹nd1ßŒBKŸ±*ôÑÂ∂òg§â∆cìû≥ë≠∞>IEA7¢‹ x›l¥h(5-∫€3`cnÜír[À[VñÒÅ"l—+Ä=wm±h≤πaK:C∑ôÔG>”ÁÚ-®KÍ»‡”Z[¶˛1{ÔLí8†TsUÏÜüÆ<´Ô@
+å∆ê=¨	ΩÛ1©vü≤Ω‹´}G⁄≥”ö$zÖöÙs1`uˆ∂˚q÷ûΩÌbπ€ö≥*˝-P∞I›fÏ“@YöÔzã@±ÓÉ-“§eå÷íJ©h´◊·ñjÓñjm5ÿZ˜ójJûñuÂ†Î:Â‚“Ciﬁ‘˙ojIÎ÷rN§
+ŒÁ∞
+—∂3Â Oâøö;Ç„§ƒ|#ı{Îa£úLAŸ4s[0çÎâòî∫{ÇL2⁄/LGˆûÜËÑRÚ≤ _÷%∆0rÃyw√·;`ÜÇ∆Ôq lÛÃ0Í÷Zª5˝Éår∆≠t∑∞wqÉYÔjÀx≈tstùÑ*·nÍCMj3|–Y=o˙áûFpC”ó‹O	ùß¢÷ŒvsrÉ1Iäwª®’öÇ„¥ÂrV:Êâ‰M§uHWü}fˆÃﬁÅ^ß<oP‚∂8âÒ¶9ÁπÎ¡±∑{CsÑΩ[é'õQ¥f}o€8	˜€ÊÃ}≤≈ªÉÛ=”üÖÿœrl?ø_D”ÈŸ!FFï•°∏π@0¶‚Vq¨(É¡`±µ∏åaX∂´∞Éi ‘≥<w&∞9ç.4˙»*ﬂ>tßlp‹ˆz˙Ï¶çzhWh∂[88ngÏ¿áì˝|<ä`_&”πÙYQÔP9ÉΩßﬁÎ[ÜÕ!ÕÙ+9ñ∫}ª¶ºG,\]ΩØ€0†*yUzˆòhÑΩ}Ì°ø(£™jõªWí	z=àgIôèc◊ëA9˙®R\Ú—˙mÙ[TÜ®4∫=ßÇë6u[ï óg8x∆ﬂ‡KΩÓ•c†L∫<R]h∫,Â ò*íbSpT≈†#À!ˆ4•µ”˙Èíˆì]4e˝≤¯îµZ0è4B¨nª˛/Õ≤4#ïÎ“Àå∂4ÎVQñw	/öúçÏmâR~∂r„ÀïøA;ASK˘	–\Wôn;4≈ãèhˇ–„Y~∫∏2¯rπ^(9 ªÒ(:„F“Ê∆àñ§üˆ]9DuL^(ÜyŒ‹t´n)ôN∞–N ]£5úOWa5ºl¢0ÎÀœVôOfSDØ¡ äÃ5ymç¸≈PïÎÿ#0º∫˚•'∂÷J≠ﬁãDò„@Z9!«µéªKíí_◊C’(^≠yº.w$}óµ`ΩP	oÒùüMfytì–X‰0Ëz<≈ããÂ|∫C!©æ√PÙ\ñ≈JWWòœOÌqR‰ß’Ñ!ù0íÊFdfÉq^¸Óh[Ô˛©Á,œl∑gÅ9?¥J¶&örÿˇ[M¬Ÿèvá,°XYs˝‰«Ç Øo◊¯ë1≠+–#§`ÕFı( ¨ªPb„
+kLZ∑ã+l‹µmN“ùóÎÑÀNÏ—˛ñ®Eîê¶ Êåîª14éoø˘")ÕF<¬Ò˛≠
+Àæ√§∂∆∑ÌY€ùBQ∆≥ÁŸlÙ¸⁄bÎ0£•s¯euŒ»Öü*©Rå¨T ÆΩ	…WxÖGkSˆ=Óõtò™ëA	∫Â÷S:’÷ºàdC≠Æˆ“7æ≠!CÏiø‡A}IÔhSÒ÷Rì®§;ò◊v˘5ä4Åz¸-¢ìK·ß}«ÎO≥Ûü6Íµ^ñ®˜Ï"√kw√û@nîm¸Äbl‰gÉ2/™≈≈hYâ{ôÌÜàö_KÉ2MÄ◊QrûJÉŸ§ãù¥&òûÍ2„àVô|[íi≥2µ’˛v+Ûˆ=ﬂd’t5=∏DMyåìˆqu&	yª&t:˘¢æ46ÕeÔ¥Qs+ïQ üœ‰Cüeë´=í})gy:Ä¿ºÿéFì≈†4kàä.÷ô4P=á¶d©C0[F«± ë“”∫ÉË|}3‡?$^∞œe∫<rÿ†¿Wq%’≤J.≈7º≠*Jã8ü	‡L#‘ƒ—ß Éˇ«„XÊØA‡:∫ﬁT~œÀÔÎ•Ú˙ä§#›8AÎi¸&‘'m3I`zHuª‘˝]¬ d:K1À=ÌéueπÇ&wàÓ(T±–sä¸(⁄!ES{tıxvhH∞ÌLı´“¯·Ùb5%πî∑IÎ°;DRNu4¿AuYRÃIÌÏCËÍ	a≤^¿$3UX«Õ›]q¥Ûp€]K¨)˝W±kÑóÿZc¿ıR∑<0Ã=3¨3ÍlÏﬁŒΩMÒdÔ`˜Æÿzº£∏Û¯!^ΩΩy∏mDQ¡Á,ùí^ùª∞ø‡/ 6©.∂Åb*^ã≠/ƒ∑√óeUÈ&µP9ÔŒ[\¸[÷U∏56¢–¡jâÃo§‡∂,Ù!9~K”hXäÛû ¯3MÀhﬁ#“ﬂUI)OL.˜PË2˙=ÏNø}5\I°rNﬁ[…G◊/ƒƒ(†HñZ@)=u“	§&ëZƒgÍ°°"ZV@›ßºTòFCÁaKôlÖÆ2ç¿ª˙Âä6±≈^ø~¸zbNB˜ §•„?sÓ˙ûpÎäDΩËúxÅΩ◊Q#N≠Æ¯gÚJ¨' »|b{h¥l*Ö@–÷`û%ˇ0èywÖ:º◊®˜sËW˙>b≈Q2•∏πù4ùOAR´Ë◊∑	∫ˆù·W8ß3XáKUã	hùègX}˛ûê∑$–ΩÔÚyA=}‹,b±óQ„˜S’ÙcÄr>õ·ôÏ”vkæHÄ5{”èﬁ%%∞v„s;F˜√È~X˝ˆxÌa6ó>Öa¿ÜÉ‡“ê5‘~JGó‘[@©^´ãÑ÷ˆ¿o†>Áå ê˝+¿µB)ìz;i]~OEç(fJ¯π5G«TÎÍ]—Ä—≈5cYoXåW¶ürM= ~‘‡˜ã'E7 II*#ïêß≥qÙr_k¯<…◊˛≈àúK£Ô-è∂¥^à¡:®}æ&Öy◊qfÑ◊a‹À“ÂË⁄MˆÜxóÕ Œ™"¡‡^?P‹ïö[’–ˆìj4!˜ãí”Ä`*ÒØwÀÈê™öDô∏%·Ì3„@√Fº¥˚J+®yXHÔ—Û¡∏S4WeZDr%@◊˝¸§2∆Q6Ë–Â€{Ü #ç	†AAW
+]ßúb∞º!ñ<qjƒd)°íÎÇtõŒA∞Óﬂ√{øcØ»z≥5öN¥yd›¥MxØ•Ag›3Ò4zÜ1eùq2 =À´‰¯Ö<î}:õ‚√$MáyTå‰’Í 
+ïæc?c
+ﬂôáx_‚cÄCqkÕÆÂº4™õ/»[idUÊ”ÎQ>”ÿcˆW?n™ê√πŸ√ñÒ¿ *V€rÀn∫O=‡ﬁßÄ≤ÚâIr≠¢1êÃ°•_Àxi6
+üxÉ˚÷}ÍÓÒ°Ÿ≈„CØ¿VîE„»,$ü¯-}cµÙçW`£hÕ2Ù¿+∂Y&Vw¯€/t\$#ª=i
+Œ_*7i≈°‰cÎQ®®	ø«‹≥¢D%≥„I††›Åˇ¢©VD„$ﬂ{EÒ<NãÙÍ^^L#è&–´«≈0 ∏:˚˘å{º5)∏«õ#Ó)Ït˛≈∫{gÏ+îs$ïÛıA>z…èÉÓÑΩM´‡´(‚x¯9LŒ™…4aﬂmIØBS t¿Vvπµ&y´Å™ù‹ÁöﬂV°Éhvêu˘´) bÂoÀU#¶b€ˆ3É‘$Iªb∆»Ll}‡=f∆ÈT∞GmV⁄f_Òs∞®∂ˇ‹£è†y) Æ‰˜-;ô)™ÚÙ˙|¡p(b1òÀ#˝KPg?R ·¡ÎÇÃÓ˛|ÎÒ·—ﬁ√Á;7Ôo.¨◊≤Â‚Œ=j#(Ω‘≤sñR^ÏÖì≈ *,Eò¢hm.å8ôBæÁuGúE7æÄ3,ÂMõb¨›
+öçQ∫-Hﬂ¡¶ëA†⁄∑ﬁú{J†@ûf È‰—8$»£Ã>ÿﬁ⁄;∏˚¸pÔ—˝è≥Æ™	<¢p‘Ú4î˝∏…¯º˙ ™)∞wö≈≈n4å”VÖ≥èŸjﬂtS-bbÍR˘÷ˆ>Á
+ùDèaj≥ä…<à‘∏sü/7Kê@õ.ßˇ˛=Œ“§Í◊ûÜ€•ÜTyoL]≠[«Ü˝VãQ∏p©ÀË8˛Û(Exπ4¬Sƒ›‡‰[s’ïæc÷EUÁz6ü„‚:n®GÙP£GãFA–∞Ì.◊Íπ¥téàﬁ‘≤∑
+ydˇƒ-OoSõÕ>áı@[ÿârb≈˙G¯h±e$Àj«·!bÇ!»gÒM‰ [ÄÖÀ≤aÌÎ•$GIzV[gû∆Ho©◊[Ò 7òÁ¨NÈc…:ÛÃaQNDâ¢9Ñ]"=Õ≥∏ÆÅ˝ÙDm≤òK‹TÏI÷yjµ:Pyæ‘2?ÛF¯1Xïè¶¯yﬂ⁄{xgÁ—ˆÛÉÌá;øˇ∏¨]%âÄµ'€
+ù¯[ﬂ~o±è⁄xÇ·∏∑ŸÂ≤|‡Õ¶gB™.ÉKÈ5©cÅÏæóL s’|ÁB»ö`Oì◊qÈwHˆ≥z—Íæ©¸ﬁ±Üá7<pÑñJ⁄´w íõQ>‚æS€€e¨ıÎH6≥/wÌ3ÉP±}˚– TÏ@ùC^?ä+´ÑC5·Ì+#„Í∑%%ﬂ˝z±ôΩÇwÌç≤Hg<øæ-Î‘)äì“WSò~ÚE]‡’ïúìò@u®uuÁà&P]É≤Æ¶Ω ¯‚ÎYÛÃÆ$„»e£jE1ƒ^≠A4{i†YBÚ∂‰àïSTï4YΩw6~ü}uuÒ‚;k…ﬂZË“3Î≥6}çïnÜŸcåt†Z:(IŒ „ÄóÒDb+ıy ¥jbıô[ËÔTD¨ñ’j¸∂*·Sªäw∫ï9<7õq6à›†w	ròo6Ëlª¡⁄øì†Ak≥ÖÓv≈fP]gWò’õMd∂pÓcz„ıïè˚ñúcÊÆh8õN`°q}±`P…›Ñì®\,(â¨Ö9Ä–[ìxÙÎ$Ë"6õòw2R€Nıe‘®ØOzîgT(∆@ÌóÚŒ$Äã–'œQjy(·m@ßÿ’öönHπ§'j∑$cKiˆBtØ£≠y5ù<e–ö§
+ØîyÈï∑XR‚Èùîπ!M=^≤•¶y‰”Ñ≈Z£ê3u~õõﬂó7O(Øe≠?çÃ…Ω∏DÍÇ¨∏`w ¸ı˜˚t¡ŒÔΩtùá◊FÇvËÛ	ÃÀº3≤ππ3–˝›µ7z:Áj3©TΩ
+∑˜eŒ&ã‘„Q4G≠π«i>õ≈cÃø˜ﬂ¢«˙LÜ‚!¨&|”˘hbÂˇÏy)ìy¢W&å5£nSµ;Ì≈™{Õ±{Ü¶î>C´8w∞qñœÓ¿‚æã≈´T3+wÌÉp2/ñ&à‰U™≈_P”ÆΩ1˜˚Ä|ŒdÆWkqÈƒsp°Â˙2pÛOØÂ™ØZªËz5W≠]rΩ.®“*›‘î'Ã…JŒ∞Ó2ê¶àÃx ≠Å'Àıv_∂ªU˘Qû˘cˇÛPv∂—òM∫ÓÛ˝Õ≠o>æ∫´¨•¥—%–åëGãà§[⁄Nwº~∆£d-2\µ~66XBÄ˛3µ”(˜ËÁG{èûÎa6æ˚¯åy}lyü(ŸÜ"™˙¬	{±úkF¡g≠Êå£ÕS˜^¶˛s⁄sÓ⁄ÏC≤ßuÅﬁùwÛ—ØÀâä3ÀIN›xÑ4 XﬁñåÂ]\∏pß«÷ª3∫}≠°¯^äî˙*7≠aZ’…'ÔqëÆ˚à/_X„†\ﬂÎ¢ÀsumâÇ∆1¡≤¨`CÒkXlxç¿vÙôÜ]æ∞≤ﬁ°ÏúcBS∑Yù&£ÿX^´Q©$ΩKﬁØcyµ|≤ƒ™∫á›¥∏ù‹≤óÕ
+°˝åü~«Ñu{°√B5öñíxY Z÷–`É'Ñü¥¬”$[D/&Îƒﬂ◊ZÈ-ﬁÛ∂…3‘÷ís?
+â7Æc8wÊ¡ª;ﬂn?ß»èèO¡ﬁIâöH
+∞∞w›•âﬁe©\m∆Ê%iˆl^™?Üß©£Kcj^$|x}ﬁ‹∆$Ãr‚.ï≥+˚òƒıLm´∏ªCTP?tR[˚"Ó:ojÿÑØüÖmdvÃ·=2å¶cÆD√/%E,Ób¸(ÖƒôÖøõˆ√π‚7∆ }Éµ—ï=é3F-Ì~Å~6_Å¸áq{ôR‚<Õ]ÍZf4"—B7´eıèı	Åöd;NŸE$«Ú≈ä∫•.aB‚ƒ'Bêõçœ‹ÉÆ˜ z∂n ¡bˆ¶OæØQ‚G{ôØ∑Zë”·óﬂºf–°≈]ø≈Qøy<iƒ h˙:M lÇBÍçπÏı˜øI·¬
+é˘iN}˝bŸÿnjÄãqˆ≠ΩÕ≠€ªªõ?3è…Í—ë¿è™,…´OOê≠ÜôøºSCÌG|∫≤6>øé êˆf˜∏ïÒpì-÷IÔ¯Ì$Âg¯~‚ŒK•K™€≈ÅããÍ⁄Vòvv$ï·3j”‚˝È˜íiﬂC¶ΩïG£Iú¶—˜K◊n&À‚˙u¶qénH}”óÊˇvSK/¨Tt≤º∏+¡P}ﬁ¢ú}Võò—xhéßMÊiïv⁄‰≈ƒÍYŒÌtÙµÓa⁄ÖClaYr-∞¥_‹™LÈnœ}≈üo„˛∑œ|ajÕí0ëgÁ∆‡È 3|WõÕsSÂ¢,Ó(ÈZ`#Ç7o¢ÿ5ã|/1X’.b,9‘ÊêÀç€v"∂ÂCá™”≥Gtle∑Á«w;tì¬ØH™“˚ìêyc r*œ±Í	yÂÒ¡ÏXê›ÛÃ˘ãØ¸é∂Ùäﬁo≥∏ıh‹√Ä¸ê>’∂u@`ºÁeŒs≠9Ÿ‘†–ŸéaÆ•¥[Ólï:[dŒ†ƒî7˚Ìmsoy2®e«ﬁ…Ü9ûqõõ5°g2E™LÍ¿«ö3*A§üá∑—#ñ8R\*+§∆zÁ
+Ö]ä"EçY¥÷*`—îèÜ!πu,	¬œ{=î|1∑Ì©ôçUÍßîB—-#◊ﬁ8ªÎ|A›¯(oj# Ê%GÍbÜ¿ÜÎ>ƒ\≠"?ˇ†ßò∑ú€ƒ›SÃã˘∏ÁÅﬁÊ	)TóT•.¶D9º)ƒ∫ECÏ¸9¨("È\Ãv≤ØÆ9≤≈ª±3'·£¨˝ÉΩﬂmo}‘®ì`®HãŒb¨Z„F®wNhB‘^PF*,`ØÅ jg2÷*ùëúuëWÆ•äh˚#CK∂3üô n‘Â|¥¡6.Ñr®úã¡k‰˜ﬂ5°äªR
+åëj„ËS„îÃ[8ˆïÈÕxn˘P„⁄…FÖ‘j≠<≈<Ëbgè~Äíò•L˛Àÿ‹3Ñ¬iyuÕî“ÈƒØúF∂˜€∏’›Ä[⁄¯|%ÿÜ®ÉÒà(—¿ö”_÷<·∫ƒ=m§NGoX6◊{— ˘4ç˝‘˙F!Æv¸ˆ4:‡°®\ú6û)ºUxmxKmJåÔe+1fÕYëg˘o¬KπQ˙:Ô©¢•ıöƒ7'…‘Ã/¥ì“|≤ﬁﬁDâmƒÖù£[qüÅÄE‚ë´Ä}`Ø≤FÄ√;íÃŒTão◊ﬁxê<ó∑|æaw‰9 w˛)Ê|ÈÕ+Í[ÏˇÇ›—™ÈÔbëÒä«Ó¶Ée4®∫Å∑†œhyŸUTQèíñ"Í õ]…S/I\–èr`rùÖÛÅ∏´|AÒ∫W”îÓA?â≥9^ñ¨lì}·›ùËâ¯á˘¯$àü~¸_˛áü~¸◊˜êƒÿ3¶∏Õ¢"˙·ádíWπô‰‹Ÿw·:O≠í¯iYÓŒÆ›3˚gÉyë:˚ù9ÏFÔœﬂ∆9ˆK√√ı"ÿ˝∑ZJrKó¯.ºÚ-·eõ‹Ä§:Êı•§≠ß+ÜÔXÀKœJÓ›/UJÉ#H≠Hì ’Ã:äºt˝Á€KÛË…ﬂ25å∆äÂµ∑	”≥œuMù”d§/oîJGÙ⁄M»Ê?/ö >˚Â
+¶jªÂTY≤¨Úı¡Å9‰£0ëSÄÔóü-HÍûÉ|Ì4/^µ#«vklH¿P «KêÿœÒ™aiµ†ã‚'ÅßïÜıÄ““•Ù∂|$&I¥∑4¥˘7œe¡#i˛“ı#lÚs1Ú&?∆ÆîpoQÎA˝∏ÉQ¸¯).Ò„”F˘iÒöË¶ì_Xﬁ¸n˝^‘ruç‰ßõhﬁj"
+æ\·¢ùÚ„§ágˆ“Ωà.Ã\}áõÈåËK¬ëÃ=Õñ€>ßì3L‚io>‹x_B;ØŸbbØ~H1KØ◊løp?‚„"Î‹4pÒU^]	0‰w∫∆∑~nkºs}ädÄR¨ãríè^í i/˜<„%“/e&Î4?êpMI·a%–‰•÷ùf.∞Ó∑Váî˝˛ Åπ–∫˚v«€^
+^éãrÀ„Qá>ÖnπÖ∏XªÃ3á◊ﬂº)g—ilÔÛîBr˙Aï1úªewõ§¸®~)_HÜ(o8A©G_0«PL≥ KÛô8é@◊ñW&—=R◊/Q≤.üf•R„ËmC¶ ¸˙6,Ô-Ô¶$Â∏-èóÓ«Y2/˚xT÷ﬁ°w≤’¶ª*eåA‰ëØ=©ßúSvSÿûﬂ∆Erú¿ñ‹¡€5õI$qDóo◊ÛÒT ¬åµôóØ\y_9gòúHÄÁ«‚]si3Àã‚ù÷"û·»—¥0*äo¡_hÅ∆Ö]◊cæÛƒ§[Xäåabúüí&“≥"ï¥ ”8¢`≈a<ÖÄﬁ ÿµ+Wv1CE)^f˘)Æ3tÇ#G:É◊3±πrÂNåªâëZΩ#@r∑°	wÿáÁÜlreπ|;#<6]8·ó0pºXü5Àjı™r˘’U™oZäÑÒ7M Õ—(ûQ†Q 	¥¬¬t<wàö„-j¸¿3¢˝—∂’Mqtp¯‡˙]9]BÅ…L< B q©t∂™Ø\ 
+•B™™Æ÷w]º2¯çy…êK`zøY”7X1ÑbñFÃq™ï/´Â54©ò–!õäÑœ'®5ŸoÌ$<tW]afuË˚ãwP*ãVÈÅ0®®Èï’[®ú⁄¿û&†DJ÷n?.∞S∫3l'{ï(•À°Aåì∏"qﬂÂÖö4å„LL 9t(Ùp˛√"*0p…”4d§^âR9¯ÖUÀj>Nr©fÓ≤1ê•≥î.A”ìb•o—Örúƒëóa9(r√ﬁ_,5ª=Î†h-Ù™¶Xy„¢aQ˛j>É~ÕÍEµ|∫FÕsèòπi™˘kNoj“ı~7å⁄˛[•* 	{≈FΩKô56À∫∞P6ºAûÄö "⁄	∆Øπ;Â;ΩàÂzåpuIU∏<q~¯ñUz'åÚ)ZLËzbÊit&ô|d¢>m9@Ò	!<JïW«ZÑˇ≤‹œÈie˛º˝
+˜ùΩXΩ≈öªΩøÄÊ¡ñÚ4‘7˜™tq3Â%çê=Ç6AG€,äËÏ∑ﬁ¿ƒBRãH¯kòWìÖØµ ™c¬«®l=¶Vö'œ‹aiÔÓ==<„úQÉnªõ§)•OLMãÚ5 ›ìY0‰|É;◊y¨OÃΩ°9N·tRm¬√∂J6}Zå7óLÁ(œ0ç†8úÄƒ}XEÒŒﬂ%”Èô∏•iûmº∞±MçîU4 ì”:F•ÏÅ≥);©JÎy„U…õÈò©H–ÿd©!“Œã¶åS|Æ@Åó∂°•Ç¬œíÍ¢ Öb lΩ˙W°—ÎﬁÀΩ3∞ì‡í¶Ë•ígÒu¥¯§ƒ¢a>ØÆ™J[ëßöã¢d¶6Xpúî£yYR!u˙¯ÅñàHApu6g3 ﬂﬂŸú,¢
+ÔäKr‹(Ÿ;›(8‡”	∆˛ìgL«&¿~°õ"ÜôUÉ∑X∂ÕGwm6ˇûWÃPD[Ñ4C<3I~#ê9[åA≠º˘Wœ¸}1)$(X‚ﬂ1·ç5V2Q2â,Œ	%~¿G3BW:©˘”∫œÓGÃv	∆ï]Ã∑Ü¥“»)Á¡¿mÔåÿ ·R7:$Ÿ(ùè„rQ…cÊ1’Ür¡≈xﬂóªtç–≥ïOgâ‹¨ËA·P≤P∑2))j†ÿ˘FU›	f∏PÆ≠tV‡∏á5W,íˇ•\l~jó/_0Õã"Œ™Õ!]∫T{~÷nÿ˙˛ „1ö]Ÿàz—'ŸFøËπ≈ñ=ä¯øÆ÷ƒó=˝o¢?lﬁ¯˚ï˚s´]øéπ’…U‘Õäé—ƒùßÅò>œ1ıı„“ªÿI5!©Ücß‚:‡ú^Œ˙V>2˝¨Ì±¯‡©<≤6¸±ƒ]1¿ãá∫ã†Ã¢––j·YÉ°sJ$HNù…ﬂ\\ ≥∏Mf÷©w≈´∫9Ë›;Öéº+ñ©¯3j”ü%¿lÕ«Ûãh<N»ˆ9<~Ì¬‡¸ÖUŸÆ@É*˚îD ≥MΩLUÅı %gÄRË¢ øª®^.ôNÌkK„dÏÊ‰Ì±˙±ÃÂ@\%πºI)	QÛdBøQ‰©æCrÅ…'Îs}∂—´˛Rba†Kx2€ï¢LlúeU¡∑túcæu\U	 I≥∞≤ãR-œdkéÁÎ€‚3Ô™v œFyU=åÀíÆ≥èÖxqgÔª≠Ω£#qÙ`ÁP_J—∂x≤˘Ë‰Fsÿ÷»Œ≈ùÕ≠oÆä_©ÆΩ—˙\¸Íﬁ¡ˆ∂Æ+ü‹9ÿytﬂ|Ñµ≈O?˛ÔˇÃXg^‹›èˆéƒ·—¡ˆÊC9∂«èévvÌù√Äè<:G{BıO¬€çä–Åˆl'qzä∑iâË∏"Ø cAŒeÄÍ®ŒHá1VXñﬁ∏*6ÔÓÌ>>⁄ﬁ˝Á:xÁC~îªc∏-˛~˚`OAıP‹;ÿ{(æ%∞úé›kp],4(O	?›aËéâƒ⁄CØie„ÌRìz¯t:B‚Œ¶6ˇ∆)ˇ‰%üvk
+v˛¬∑`d®p õﬁà6>‹ª⁄ïÅ√ºøÄá”*Á!ß’«˚E˚Q|∂∆∑“ÌÒ€Üø∫∂’!?~böû6yÖ>†üµS¿†0é@EU'Nk6˘È#&úçîî0Ê$M≠˝¸”èˇÚ≤¥©5Â(´˘Ò1˘:ÂÛ ivcC–°ŒqŸ^úheÇvˇ=∞øO£3ˆ…¸¨Q78Íö¯¿‡£!®å’UÒ8µ"â_adˆÛØ\?O&qKø-k¥W…AªÓZfRìß\Ë˙ç?&ãL¶˛◊NJa≠’/t‚˝“âœM/ƒÀìâïw+¸tìâœkó©/ﬁ+ï‡O2|;¬œ:r∂G¨k5p¬TUÏ≠∂ìÿ/ùV§'qı 
+lÅ“‘ÙÏª:!Øø∂€◊p«6$Étù©—S,-uŒú¯ÿ]9C5˝-⁄ëY?¶Ω…à`†?ÙØä‰ª{˜˘¡ˆ∑;€OåPZùı®…ÅW¿f¿ƒG8(ù®°3’°,‘¡¢&¶VÉxõJÅPZ:2B@<πìK'R<’¸Ø   ˇˇÏ}€r€H≤‡ªøÊxFb∑LKr´€Õ∑Ç¢hõß%Rá§l˜xΩDB"∆$¡@…j#ˆa‡lÏ√Ÿÿáâçÿ}€Û˚KÛ	[ôU‘ )Ÿí‹Ft¥E†Óï˜  L≠fR∆€L¯ñﬁM6ï†'Ñ∞ ï®vA4ógï-QuQÔP
+˜çm'w,Ö|mj?T$Ì»ÿŒ¶Få-È60.,<ˆHLÅhvÂäòâΩ7≈dbÊ»^¿wâ´˙ Ωaâﬁi[´n´≈ Î¶b¢
+É…
+:Ö#E¬¥?`5j	ï®.<≤…û¨H7üîªY‰7Y-ô–ÿÿÈbÚÿÿ}ÕÒñZy'l‘‹@∏C°!WáM|'BNeNTù0ìÿßı)-—h}:ÏEiΩ1‡Å“º¡ı^ËQÜ≠≥3z/HÿY@Ω◊Õ›F˚.D–√d›îπFBÕ˛±)À˝xLÓ`Ã;Óˆ˚Èº•=pÃÕoi#ø•◊~ÅÛÛ¬¨ÜÏ∑Ó9iπ”¬ù=ÚæN]ŒYûwEV¢Ø◊ËÁÏ %üW∏+àr›√ù˝fÔhø˜˙N¢!ØALÔ/g  ì‡ªI˘øˇ›Yü—ã åáó+r'
+cU»õ:Ù‹ÛÀB›ün=ÁØÖv»∑M¯ñÜ¨H‚ËíéﬁÓwÕB´Ê\ô'¨QF5Jv¢Âì®ÉÏDrlùU}ölâ 2HöŒ«22Å}1¥#3e<˜ç∏,/MC+}i‚uõ»ΩŒﬁ#l‘Ñˆ»»ºß0ÅàÆ#˛πÑ¯Eq˛\Ì¯¸5µ"ëˆ¯è4˛ïb3 ¬ÍÛ˚Ü’•»D<¶pks [«~£Su˚Î«ﬁX¶o≥”&ÛT#eFñj[´)|¨äßÌE[L€ƒj“•¡‰¸≠‘acú.â`äBıÚ„2…·ò>K4&!Ç´^’Á&`{ÈØüîX9>NXÒ$òÃ"L»>çËç`z/d}tÎ+]∑P2˘`&ªè‘£À~n≥Ñ<| &®–;#êOùX'¢Ò±?öa8+>=ı=8Q¨º'ÓÑ£„GW¶bsÁò ﬂ ä⁄-.÷ûèV%„Í/¿,«•GWÒºt\Æ¸5 §ieÕY˝ƒsõ˙0 èRÎM8¬ê˚°{Ó·-8ÓÔ£éåº∑G)pí^Ü%ñ∞Yâúïƒsñ∆+]Aó[∂As/Y{∂÷&Á€s"p¿uò8X<ı\B:=∫⁄ÙB´j÷≤P+—
+n⁄|B)ùöÀÈY\-„¥ØõU’Ñª€Ü‡[ÖNõíp*ø.vÃƒ/Â?Uj∏ëˇÃÇ+Î`I#8q°áz»“s£‘¯º<íB´	\P›Âµ?π$_8H?‘wço›(Ú‚ÿ[)ﬂ-íıbª„N ⁄]ﬂÉªó6⁄Y„ΩÅüƒB”»≠„ÏS1Ñ ‚8˚£Âd¯Z·èoeÔÖÏo◊ËWâ8YHWπ/Ï5-ﬂÆ!®ÿéQÈQkzLZ,rA¢”Ëˆ⁄ı_Óä¡T´}XôB‚B—Sò±t
+ì»€™Ó!k	x"3ÜLØAˇCï‘¬?P+’‹1°&±‚Ÿü\÷L†ˆ˜¨‚v,\áªpdÉ∞ut–i÷_Ñ	p5}∏∏≠¡∑x¸wﬂ@ËÊ†˚™y yzø\àÜ>˙Ó"WTJäø—iÏ∑_7nü›‹á•÷‡í]»QH <†mà
+ú‘f48ΩæÕúas∑U;Ëæj˜évj≠V£ÛusΩMä–Yœ3áÛó‹I¯Â©¢Ù¿R• 	æ>G‘·d·\π˛∫ª˘8⁄çÉ–3o∆Ú¯ı≤S€ﬂˇıÎ˙gØˇYËé«ó7∞ˆÜhÔÌ6ZG/˜⁄;çko√ùXƒÇØ¨p0x0ä]ƒı%nwÎµŒWw2A<à˙nx”‘Â◊ˆaÔ‡˙_˚À`œlÄœÌõ∞€ÿkÙ ﬁQcø÷‹Î~› À€Àµˆkù_éö≠ùˆ€£N£∂˚uç≥◊XOÒ’1‰™⁄’)H§_UEO°8//£pÙjø4év€oZG›vÎÂ◊m¥l#Û 3˙ˇ—Ã >EïÉ∫*Ö—x™Ω„SAÄÌO‘s?xì›‡bbN®…ãôìëZcÈR,Ø®9,Ó˘^¡“yπòÂV
+ñÜ±Ó∫óE:œ-¶^›@WîÎ´Ù;á†h‘πuS"ºP{ıüU sµy“@2”“»âŸçPVZΩ”ÿo7ˆoQEˆçX≠Ì‘P±·–R“G"d Ñ _Qóh(D«cav—íÌ"Ø·L8b∂¶,Å«ÑiŸwwÓ8˝ÕX∆‚ôﬁ˘Ûô˛H‹·¡^ª∂{‘k—HÕ˚MËæTZÙêà"L&–* ÏmØ€ktÓ=ü˝
+~º¬ß¶·É+vÜ‘QÖ}Ås˚-ÙÀQÜ¿æ„Wc,9·}õMC_Êo)@eNIÊVSô⁄-»…,&◊˝D·/áØ+Œ⁄‡æ µÖibzhyS˙U¬ïˇ¥[ˆõΩ√V£{˚~Vwöº|F13ûMºË¿Ë˛úÅ ‰ßä^˚ÂÀΩ∆QÌ‡Ä¸ˇ∞€¨5ﬁ‘Zªç›£z˚ı◊£ük¯m‹a~ÑJMß#c=4>N]BDup◊ «õ ),LÕãﬁ¯oÙ$ê©µö˚Ñ∂|ÁÆÅåõ Lm‚è¡%Ê0i0„*>‡±õDp∫›F´◊¨Ì›æÀß!ˆWœ˚Í5"øπ•Ì¡øæË”Ñ,åu•√2c<wNQ%”{.-ü5z[˙VÂ1º`’±d©§E	¥\BO¿(\K¥ì˜W’∆j™ÍÍ;8HΩ:ôé8∏œS±Váœ«èÆBñ≠ÉÊÖ#ª<@òQ≤+·-£GWôG≤0UÊ◊∫∂ù»ﬁA!
+/¬œ>igú≠Ã+«Â¨Ã‹éö‹VMŸFÑrπ˘5ƒSâ≠tzÕnÔàpõ^≥ıÚ´Ñ≥S€9´£¿‡âBﬂk∏g)&ë≠u[Áp—ÓE öê*«≤y›'Â,˝Û≤–Ö¨ã∆‡ó"C†3∆ÄlÉ`˜ﬂ1ÏÉâÕNÂÔyRã[Ü•Ù∫˛±¿i"˛Ï’~›#x˚|4°YÓé¶Ñúøì.í¬5“cw<=zt… $∏X-œyít~e±]Ã"≤˙Ù˚r%öù–ú"´õkŒR∫t§§⁄.‚[°ÙP∑éçNŒßs‚Œ<‡w1ˆ%-‹üÖnÑ∆‚¬7TÖÀ‚–@p¡tEÏ¸–,î!˝Ü≠¸·«ß˝≠”¡ä8Ü(∆V±Q˛úVc)ı.Ù=Ωå(Ùz |÷»<ØRä	óH4®MÚ~$ãKˆåCÅÂ∆’¿Ñuzœhz2˙™ÛN¿º‰©-¡2~pŒ{w0ˇ˜∑…⁄å©l>µ ÊSã~»ÈèYVœñ°ß&Aòﬂ*VÈ†∆√Æ≤®&ﬁ:πöèú=àT‘‘QÂ]∞ªÑ˙*@∫ÏM§·zE©ˇ¢3L)æié≈x≈¢ÛôÑq™0ô;ÁGÔ5èGY˚)™Mo@1‚Œ‡_…Û%œÏæ%£–SÀ’JÅ/cßO|úÔ¿—r·5…‘‘êÍ6K&_ÅƒÊÉsK≠ﬂ;Wì[9$Pú™?«ëÆ÷^H√ià@ˇ’U\mırÔˆjùﬁ—AßΩﬂÓ5€≠€'SWêNzX„?”≤wöäÿù]í©a¢÷—e]ÛvIJË°Å”Oki±e»z≠UoÏ›çMø”)nÜq#l±rD^_Õ;µ‹ŸÓ^£ﬁ”ÛuM◊3I˝ö∆	V•Ëå∆u&£˘NÍ1òﬂ¡A£Û¢›Ÿ?zŸº%ˇY÷8=ÛœÍn4‘hNÖu(˜QÎB3Œp¡ﬂä¬PR≤ÈÚ?™£Ü§«ÅÀivØ∂”ÿÎ≤±Ù¬ﬁàKI3#Íü§‰π¡∑≤	saöﬂ˙ΩQë“A$µí)Ùí⁄S/é/Ke©˙zeC¨ûgÒ⁄Xs6>”ÍmÎIH@â}/§ÕÏ˚É«CˇlXRÉÏö
+ÓπÂz¡¥$ê≈y∏ﬂeL3m:U'*•…H!ãˇıMZ<-∏Lnñ*˜5oñŒ‹±W∫î”∆øÂ+ ˇ4ëÌ4Jv}xä∏ßÓŸ"ıOÉÿÛ¯ËJC4R%ëÖU	Z	˘ßWÅ÷u±ªtÁ™ˆ·Ë¢c©ÓN‹Å[2 ï•√_,ˆ\¢5;µ±˙}[ÂZ‰[?ùÚz 7›<ÛN”öŒX2òÏ{m/~ßÀñ≥L0JUÁ
+å{·iéΩ¡Kˇ°Ç£khEeèÊÀ÷QΩ›Íujı[2n…MåFîØ¢„.⁄Ñ_Øº}ÚW"£TŒ›—å(ª…≠¥∞\9πÒ>®—‰¡‹¥I;P≥_•rAn∫ŒÁ5ë ‘∂:ùÇ¬@“@uQ!B^K\ò∆htÄºäÆzTõ^Bú|Õf§D≤O:pŸn	∆"πß¡π;¡P≈iˆ
+`z¡ Ùtaâ¥Eª’%, x#‡ﬁí…Ñ…Øt≤o°Äíí@(¸>´+¿÷aÜÎ0mBY](,I¯Uµıòv—¶	0ù¢, !{e*Y(inœπè+…ıPŒ,Ú–ÖdÌß~ﬂ'∞tÈD˛Ù]B˙A8pû;¬lÕŒ£+*Zaµä”f!DÄé‹K«èW¿›j<≈˛cÍkı*J2e¬9]Ää{NVO1üÂ«e√2´ºΩ` ^óYÆ] Uoö—{Kœ’;pÌYzÁ∑ñÊÒ”IãåËÄdB?vbòàvFnˇÛΩ¡Œ%S£â—õYD√•Sÿ6ZªüÜW^7»,k5“c2öﬂV◊lErb›‹Ã‰≤¯ê°óáöb+ˆ<MU%¯p~»„‡õqÓ¿¥DXƒπètﬁslO∫sswb˛à“4≤¶ŒJ?Øñç-ÛÀ—=v‡g*äSÅêÿ∂í$¶«Me…``iR™™zÜMòÔ i“(Óº¢·á2ûaàµD”5˜@•UÇ%f-Q2lií‹∫⁄í`2›‘”ñ@çi¶I⁄›‘KZ] …–Ö9xü,‘≥Ã‘ò=©∞»•]&§O…ì"&H› ñõèZVbàº… .º§ h˙ﬁ$Î@d
+,§H—evÚµ„ùπ·ÄÄ∑Û+ú]oJ&0=•¬I0 º‰¯ïÔp1ÑÕêäkºÒVŒ=0Ó·""í»%47‡Õ9ßa0v¿ÒöéŸ©E†59P»==oLÑú5"ã ]	NùGèÆ@•r„÷ÚF≠¬˚2ïzN<oBZÃ@Í£cgnøÒË+ºòÖ§´pÑè»æ√∞`æGë˙@–Ó°á.<6z„‡ú∑Ò”3≤§·πèô3&D∏Úœ¸ò»Wƒ4%'D˙É W4Ñ¡‡LO<Hˆ5°É;ù·2¿∆∏ÁAÂÀ¢Ÿqq°$¶1‹LyE
+ÈÕù(ºòd	Œ^˘0]Ôd)f’¿lXYñlaÕå∫`Ò^ÔµÍLf£ë ‹¢Ë%,‹™|Î†Uê]ﬂöàí!Ö 0ÏóÂœ÷Ùp=’ßåóÊπ‚>ô¢ß¯Z"p:apÈé‚Àûm¿{ãHö`-â≤î˚'OúÑD3ˇ(JAtë®IPÎ#¶åÜ
+nÕ(‚íˇçŸq∏Ä,UÊ»ó‘≤Ô“^ﬁ´^∏T˚jM˚¿UA“]jVÑØ,˚à≤T‹ùÜO!≠Äº	_ØÆNê+MR	Ñ≠Ø$–…M˝¸\ŒG¶„Mº≥ ˆ¡§vñkíﬂI-ºW“ƒŸää( 1#Râ.¶ƒMR‘ñYüQ-!F¶è"Ù(‹çË¶êi›Æ‘	ËõHŸÙ(‚ ∞$:ü.¿•aó™	
+‹’Èü{ìô˜íÄE‘M1°zßﬁÑ:ÔË„≥ÔÚ\œYd¡⁄e§b‰ñë¶ÁÍ…Ωàõâ±J™#aÏsq Ê4±E9bF‹uç˙íÂTù¬7Ó	Kcß÷»’^t⁄˚øcæV–ùÚ•;¿x®ÜG&†(x∞z‰≠Œ[$(ı6R`-% É0òNΩAâ]6≤¨t∆§nB√ı]$w⁄ƒWÄ∫‡¥•Ì6{G›√ù˝f∑€l∑é‡BÃmz1ôˆ∫;;˚QnB≤˝wR¯*∏i*`nçRíT∂•˚f—Jò2Ÿ~)mMºã]ºµïÅëà˜ ÿ‘Æˆdô„N ∏ﬁß—êæ$∑9}˘ﬂIﬂï Bò<;å–/\∆(ˇ≤ùl'‹“hï™,0Œ†+‡¢~1E¯hÛŸ¡Ÿ3=πìí2\Ê(G«∆yC7
+ÆitL˚4çG‹œwvüÛBêÖU)£˘ åWZø"iTœ“QO2
+oº…˜Ê£˛πxç{∑gí”∫É9âc|vœœ˛ïEu|.d3y(Y˝ˆ†≥SFë∞àIjvZ@Zah¢öîÆ®wB0czÑQÕ∆kD´4\o,¶[ΩÌ|Åt‚|KÕ¯€bdÃu©¯|lOƒ9j√fB3©ª°Ô°t—tÃe)bt·4ÃÕ…i@-˙∫+á4ÒEŒ≈DB'-zú ù´:»*R˜‰¥îºGÜ^*I.Ê=øZ∏È+∑ ÒíÜ”A•Üæ,˘˝™‹CãGCmO‚ L˜mıu¢nhÓG}êZi›≥ÀQÊmZeΩñ6v˘à¯KHßöá≤éc?\êM+*û2é•ùmpTv¯·Q\r·…óß˛æúz‚(íj)I¢ﬂß…ﬂK59)ë!mímT6∑dàÉ€ôŒº∏–ƒ`Z¬â¥â.S/Úè∫pﬂòßbıØRNSaå2ø(î+ß{
+Í9˝zè€ï±g[ëvL"2’ˆ>®Å≥L∏‚≈N3ï6ﬁ3Œ¿N2∑≥é2’©˘—?å∏®BÊ&öUícuŸ§íú´ãÊîüîfk}∏¨∫ì≥«˚*KÉ?'gùÄLËkf¸¬{¯9m_ÍÜ˚òp{àÊf¢Ÿ‡∑î9ìﬁç√%Ô3z•ãÚﬁäâ`û≥	'– mWÿ◊à‚E4ÙûΩ0£DÜzQT"∞]¬!ï~“€¶; Èù¯ª˝‚Æh§…“§’ÌdˇéúGW‚ºÊÍÒ6ÛVªG#g‡ùÃDtåÒY¢ÄHfW3•|ª®∑Ÿ3ÓÚıT˜¯*‰o∂…ÿ“ÍÁ{úQ?≥§˙B.g‚˛&ﬁÖ6Ü˛iº*lµ(z©t∂$  »|$ø•WÄØ’Ã‚Ò–ª|B˛GkÙ^5~EòÏí∫eçn#Hî#ƒ–[tA&ÑJ:ﬁ`‡«6™
+_U“ (EÏ18Â:ù	«Q>fˆ^£¨NèÚ‰º:¥=5übs∫aMí≤è7 àÉ˛dÊâ%ç#1‚]“‹{ùäp{ÛRÃ©X_™%ñ÷Hèì¯˘®Bc‘$‰$Ñ[“’düƒm≈Á%V‘⁄iICe>º†ƒi^DxZ˙÷A¿P˜ÑˆÊÖn(r+ıù¿ßlB˚©;¡≤Œs≠ˆªı˜™îJÎ…PCk≠º±P∏1F„≠Õm⁄õS⁄”»î.˚dAlõRFDVÈ»Ì˜7J¶r)?jÓ;›∂”x[oˆªŒãvá∞"tCcÅ%F5wjΩÜ”{’Ï:{Ìˆ/Pkß∂ªªÎ¸Ûˇ˛ˇ¸«ˇ?«¶éc‚[f*íœí28
+}
+Ò%ª5}Úô”Sô7ô…v?RÓËÛ	a °† ‡ÚçC¶¸!"–È=wä[ ˝>!BŒiâ‡–tÍÅ∑|êwGéÎEÑìƒ~?⁄V†ÊƒãIœ‰Á,H;^ﬂù˘0Ü~»g˛9àÖìÄº ï≤ 'E‹Â`g+›±•!g#ÖúÂ g#ı£øA¿aŒæÑjc$ßÁ6V@ÑÌ¡
+ƒsÖ?X!Ë∫öÀ:†í´Í¨Db÷è7§ô>!<õÖÎd5îä,-‹˙p'@—¿-ë¿ØV÷–ÎÈ—_ŒπSí@∫î	•"GXN±{”!◊æÈSX”±,Æ¬/E<†í% ¬∞RS©≤å¡±5í,Ì∏‹ßV®E(◊EΩA√lÆ¨»†è@>Ÿb ˛ï5'ˆ«^Ì, Ô6Ü‰gx+Ì˝óË¡
+ûˆÑÌ•£pı°ÛB){@^O‹˛áá§ﬁlzƒ ﬂm≠´7#ãu¬7ìF∂)è¨GFÂSô»<Q&#w‚Uú:`BÏ\∏~\áÙts]Ú"mƒ<ΩÅûKE>·¶Ùá’/‹ò∞¨0cgéﬂ/q˘Sµt¨πì‹R $¡IFﬁ.£o€«¬≤§Z~ß"wp™¿è≤KFF%Ä·"ßLπ®K>êA
+#åπºkﬂ‹µO∂Ñ«á?˛òÖ"ˇ2#†ì≤ëmßI¿o.ÈdËe:Ç;24^gŸ˚n4sG9+øá≤O{ÿZöÖAŒÅ¯Á8""Ò¿.0∂1†6qàõyK/í@Åsªg˜0ÓÓÇåª)1Ón ∏ª∆-´˚V÷]êmÛ≈/’fq∞<å7©±Ìd;Jì‡¬PcÅø{—it_9µV´}ÿ™7ˆ≠ﬁ{õ—Ï±"åÆ2ÆÓûÕÀOiDõ……66†)É”t“¨∫∫ò‡Ï˙QE!IﬁC≠øbrò∏EfÌS$≠√çç™Ç∏\u˛6[÷vã…0jÁƒÆ#_<PÜ©Cƒ`ñ#¢¬Ω„å]¬ΩÄÌ∞;∏tÇE∫êùôõ…Â8H–t7ŸŸõ≥SYœÉ…zïus“b&(Ÿ÷ım]∏sxM≈_≤†uñMñ ⁄C˜aúZuùÛ&‹∏Ò«„Y%ÃŒc‘=µ|Q(j˝Ç«b√ôãV∞º›Ã3ä¡#∆Ú⁄S≈]uñyˆ2ÿ	º¯4"Ù&é›˛ê≤|VàmÃâ7
+.Tµœh^√aﬁ˙∏"NÁ…4¿•[/·r4ò—“f$ª\^C‘LwùÓÀ]^SõÖ;4ÙXH∆}+Æ#h¥Ò±Y;Œ#ﬂ÷œÿ˚‡πõ<7b˜É'O'Ü«`∆ÅÁ3¿J∂-ûªmƒŸ±	¬smª <7aÑÁFÏÉ\¿4[a1Üi5. oó≤$¬Û0#À™»÷Ó,ã8ßb÷Exn¬¬œÕX·π!K#<E_ycêúÃñG\¿|Î#<v!Àà;f™ê¡û;jò,:¥œgúÑG€+¡Hπ(Ω˙˚vWlóE«{;ˆÀ¨ç˝‰[ÙπÌôÖAÁ÷löÊÌ»8ôtœ6TsÁ2¬∆B÷Ox
+Z@·Y¯2◊
+Ok(-ˆâ-¢l∞äÊÌœ¬FRxÆi(•≥∏yc)Ó?Û∂ºI[ã1{£jg∞XWÖπfYX·Qœe˘øí}_ˆ“h“,ò`ÀUgO.då5;1›≤ÖΩR¶¶¡ŸâÊ›∆ØVGÑØf#o†asDÏÃmπö\7S
+ön¨ÍÔ,µ∫X-M$[ükÜ¯Ä™¯#£\wäØ Rn8±ŸâpWW˜˙øgwC≥ØÊ¶Qìàå
+†&¸£™ìºÎ†Êú2≤gÑW∑Ádm∂∫Ω⁄ÀNmˇË†}[Iø§&NÉ—XÖ¶°?vœBw¸"˘NÓäuâ™Û¬_~~j\dÑC_s6*[îéÀÌ@Ùı§!)Ü7Fkß—´üÄ~
+µ◊+õ`ô„*Å+πCh7¡=‰ác/˝~2"IjóŒÏfÈ∏§a@È=–€a ü+‘É~7»õdŒ0ît‡ÚÑ@◊~M:`±ã”Ü°ï-ÚÖµ=Ü◊	+¿€£l*7Ñ;fd%”&øïz++>Ï˝TÚö±¡hvΩ≤æEZ$ˇlêñ`i7˛íÈ˜óq¨&É√º™”‰ £]€»œêÜ#ùÆ&_¨sßPDèÔJﬂßq∞B=∂ÈõcÆ`lÚKÒ	≥ï®n˚x«qÉ¨<wJ…Ö‰µ ı™Ï´M‚Â\±Mµî/ìs[¡'HºÆµ|Gÿ@°>ÿï02¥±∑:acúŸo°éy£x'¨@£, )D¡/Yl∫Ö∂M«ÌÊÜœÃ∑©q:¸máˇ@£ˇ¡‰D f†ô‡ÚœHi∂¡∞∑N¸	µÚ›–ãV42Ù-Edwr)˛Ê´WŸ∆[›^€B-à+*0¸9™.”a@:’≥hüêÖÌ
+ë¬Ö‚˘VWz°)	°-‘-di˝Œbi-zheæIUîù!z!plMÆ0&F’R—¿ü*ï0ıJñÿUBç˘"s‡…Øñ¯z’$vHô“Üîd0òÙCæ(vŸ0Üd˝™{ˇV]\}§lD]"ä•†lñH@qJ»÷√ÖiC∫≥:.†ò\∂c˝ôàe6‹˛ê7™Í|Ü]Ü~ﬂÉ∂<Ê9 ÚXÖ\hC∆kT∂“ö/îa”¨c∂	≠e˚Ó&{,¸Hµ%&≤qoÍ{KñŒä<º–{y˝ÚÀkÎh^E•ñr-µ‡j*ç,πÆÜ®Qã§H"ÓãÏiM∏?˛—B#$Vü›":Z∑◊Ó¸z˚y/	µÏ“†≈âîçøó≥≠Ï¥êh\xˇnœé‡ãã‰{åﬂ‡äŸ+´ÉSÒ‘ô*Ùt∑Ï÷ı¸çık*˙O%E?’“¡ÊÇZ:Ykj˙÷5‘t⁄2¥Ú¨àö~ŒbV”ôûN€Ã÷”˙˛9äAIﬂ†:˙”—∑PGﬂÿB%´›ú@S˜;$I¸\åùCéQ‚ñPˆq“7£˚p«f`[Ù$q˙¢ø(;õ)¥ü'‡∂Æ÷ª;B;l1#¢ßùÜb¡ØB˚W°˝´–˛;⁄óóΩ1lØp:“iøhÓ]#êÂùêP
+lñﬂÒçÛù¯Å•Ùû?˘†ëó7! ÷€˚˚á≠fÔ –∞!pà?õ1∑ÖYîµ÷È˜)Åó,Ö´e«h&?,æœ/⁄{{Ì7¬>∑Í◊’XxXyÕÕà}»–oñôœ‚≤…ãC£≤’‡⁄N≈è_£»íî.ÀI<ÕUïl¢zR´>N—*è;Ø.î*LãÉÖÎZzõk|Aìæ≥G˘\jVÌq⁄—¸Âi	l+$ñëIR<;nˇC„úÈ!E7F¨ñΩCRtÇûF÷‰-èú%˜-⁄í†áw	≤té“îX[
+--j°˙x≥⁄á˜Ú@YˆÇd1up)Â°æ†&∏Œ•ä≠@Ωq Ö8]ßú◊<Á\‰§Û⁄gùO;?ÕyÁß9Ò§ÔJ⁄–Øpf[jñBÃméœåÕ†yQ	¥I3Ôb„√8ûF’'O®À98zNGn4¨•˝	>ﬁÿ⁄ÿ¯˛áçûm˛√èè˚?˛0x:ÿ¸¡›|∑ÌŒ‚‡9Õ∞˜ßS?~ﬁÉÈü˛ˆ¸Ÿ˙ü.û?˝ÓáuaÃ	§„<Ûb∂l–ÔjöÑJ©¿¨œ=84•,‡~ösª≈vB
+i9B:èÆÿÁx3 ºZ#å|eÖö“©j6´|∑ƒOn&'ßœ‘ª!ãùnl*’ã&>Nod…ıÌ◊QÊ¬vä,‡ù∏´hœHæ
+TN'Ù∆zb°∂j·xÓXÏùﬂ:Oçµ‚û‹FÜÜówŒè°5ø=ŒÏsuq&Ùﬁ*éw7.ÏõlXY¬ÔaÎ´¯ª§¯õ'ÇD„S{·*:O– £Ê˝ªqaò9ÿk◊vèÍµ÷ÎZ˜∫†≤îÖ◊7Ö-ø™SI¡ ÇµTN”†Ä9ç•!xßîˆ§&t\&|E±¿È ®%ÏNŒ›Ë5ú?8ï‡Â_1ÖÄπÓ∂8d$Fî¿pN(
+uÇEl˘iõAˇ§F;ÜµΩù√˝/
+)¬$jº∞]Itx«C¿Ç–Çi“píDÌ◊É|5ç	?-†ø’À≈ﬁƒÃ¨jˆòºHŒ*«Já03≈∂‚ÿô÷Y Cg?R‰-ôÿÀ¨ºΩÊ/Ωˆ/w˜*BÏàÉw¯ÇÿDæw¬fñwÇ‘V¶{B°[ŸÓ	Ÿﬁ	¨ô'OúAE˜Åﬂ≥ñ·¥;∫p/#≤‘;Ò–ÓZ∞§A@œÙ∞^:«(Æñ¡7Å∫&lîÂ!n=ﬁXˇ£”‚R¡m»s?tGl¨´˚èÿ⁄ß)@.∑˛g∞¢?	öm˘Ñ≠˛@Ωy◊…ÍÛ¯	Çö™!4Ï
+ê|_!3'§V3¯ÓG≠iøK√éù∫£»?û±«¡¥Nñú5 fhŒL)¨¥B@f¬8z„«√’’èJä—Je q¸S[À@WÑX˚°7π}è5æF÷¿|mítA	»Ñ''‹
+]’ÀöM¸øÕ<vjè˝j|ã5•G–∑É•◊cRäõ7@]Å|æyÓlZ¯ä-Sfö¥(_˙6ÚlÖÆáÆ”4=ˇCè†Ù+?.©Îí˛©e*dÁ˚11«"ìøQ±kKbK∂¶å>K=$]UáŒ%â≈|ñRûâëâûFÃíß:,—˜iA∫QzRHI{rAùçO&ÆØ;K%_ñwÇÍcË¡A-æŒ-(£‘ıK£iXùD*®»º*∞ˇ¥c"»`@⁄ã…¨∆v7´≠ƒeé˚ A¯´`Ïë5¿öFSïö”¥ºrd#•Ñ]€I^÷+Dë≠∞ø+û4!9ÙŸ≤t#Õ	(ŸÄ„•n⁄À9ñJ7¿DÛ9(ßaG@™iáp≥SËà"¸…íamô◊·Í“™
+JâmßÑM”§9ÿ∫fÈ/x∏!„$'áìì‡b"4™Ç≈€¨∏7ù•J:Xs\¬ÔY⁄*iÖÁŒ_Ç±Æò ¥B=õ4_aTê∞,o2PÉ]ã‘fãçV8Dõ%
+‡B1™MH%ex'(ôs}ÓÑØäÕΩ¢*—#Û≠x	RÂ"TñGF»<;)ã‘|;≈Ç&ﬂ¯kyw¶#±∏wöI¯Ü‘DAWóÉ√N˝U≠À’]p0€oﬂnf¯>Àµúåˇ,pGkÚOGQ'mú·ÂÖT.p√3/∆XÈK‘v ]s
+§É:^öII#∆,Ë_v/«'ÅÿW˙g˛ƒ’Y•û≈˛Ä©„E≥QÌ˚ì¨ØÓG·Î`FX·áª†&Ú“‘…BÑ¿q0ÒX~_¢¢—e∫’∏Ágtä†bò1√ÿA«ﬂTÔs≥J∏Ó\ÄdNÿQ 0ïÂ<UYŒπ¨¿⁄(≥X22l √ZíÉ%gˆ©í‹$‘o‡ªÄ* æ∫I§†ŸÙ4$|¶,ıÎÛíÿ9“˚∫ñ‘4)¬≠ ≠4Ú¢*D}V?›îoî÷Àr∂S±‡zÂiŸ“+è”êˆäúkŸ^ïŸ|CMñæÎFÂDZv‚ën:ÖÑÙ›‰4¥€¿I!ïJﬂ¿)˝pt≠ç4çÂ©A7ká/‘ØùÉuLQÈàf˜ıé]Ì¢ ∏X-œ…/I8®ƒïâ¥˙Ù˚2Ñ"äËØÕ5Á˚Ú\sê ZâlU{Ë¥Ç·z!xïÆ<%ƒU·o®≤öRá¸/‡Û‘˚0¢“á/z©Ê'ùÌTÔKQﬂËl#ªAÒ∑•í⁄_&“µmÒ◊\A·`ƒHPbc‹iÖR?aY„±ù™ÚW∏^{$4`‚GU„[Ù,R∫3±´Ln%Î–TP©*4N—¨µB{f}[+W◊ÒÔµ≤˝©ÄµZy•U }MÖkùNq⁄Jä7Àjs{TS0‡ÕÅWmPê-$±P√Î˙P≈U©f—πbl	à¬MUu\˛ê=HôARnI4ºÓ¢"A1‡/§n{Aﬂaà3FÁVº…„√ÆHJãŒÆEöãÚ¿!Ílçò≠úH_”–ã|Íñ&“gDaG¥$¬MJ◊’∂§ﬂ‘Æí!&Å·D÷µŒûdÁïsv®a√‡D—=ØåX%ãj„y%1L~´#¥`ÿ%Eu≠R:Îµ9uôNª bo…ß˚‘≈w——Ü	Ùè5¢è¶™´ï•∆J†d*x@Â¶Ò¢‡aQxy…k\gæ;ÕΩΩfª’=™ÔÓ5˜k/Ø≠s^9@KF†È1{qr∑ﬂ®Xâuo‡òññg4’#˙™‚»öëFái∂ækJX»T€PIi„=S∂\$ n∂∏™neúªX›#ƒ≠î◊ÜÏ!M¸ì°Æ2®mNN≈ÀáWî$‚Ü+wA°C|œGƒ†,≥Ù}pzÍÖ€iæ•“â?A≈˙hv¢ú¯£zíÖ«ñdd¬f´‘Ç-t¥˛ áSÄ92ÍÉ«bk‹!9“úá…h∞ıÑé¶k-Æô¡õk~%¸ïéRwƒ˛ÈeI˝‘Ï√≠ÛR§ûù@§O¢õ¸ÃBgá-®+Í¿¸€Ãs˛‰‘ÉIﬂcg◊ã…"A˘8	ÑøÚ’ÿ¿44⁄Éo<≤éÁÈ©ô∂Ngê« Ù˙ãÅs	ΩRq"r√<˚ gJá«·J¿ﬂá@î˜>¶?q‹–èúàV>q‹Ç√®öça˚´Ú©;Å®…H¶^àﬁ˜§ùäM≤>¡s˝ƒÛƒ˝ÈîÊ$¡
+§(“{Ó∏Ú‡¡/û7uNà‡Ú|G…DÉpë˜è∂9Nèñ–n„ı£éÁ™Ù4|M»_LùzÎKˇ∆»ëbˆ&)¨aƒ<˛ﬂÅõépS'…Ç1ùE√E O∂˘˜a pY3[∞∏—oDÄÄPM¢ñûyp  ¨?úg)€a›iﬁæî2Ä®˚/(8´(?≈NîÃãù»÷ÚO6Ì'6à@„ÜvT9≈…€PÜ÷QÊ.Ÿ—ò‡g8u#L:∞·0IÉü(¬ëòbd0rCõ˚}≤π[Kl.è˛˝Çõ+Dœ{∂¯Ê¶∫rxBãà—ˇ aœÄH•&æl;ü6+≤Åp KË·é¿{“é)èDï!ëYU+Y<˛Ä≥tÕwêR“ñ@πúÍÄúZ5r'¢Éb÷	êØñÁê∂DLµc_*ÈAz˚aE¯7v8Ã>ÃÄQÿ≈oe4ÇÎK§∑ÿh{Œaq£∑ˇM˚#»„π°ƒô˙}†p12ºÒîÏÛ$^ ‡-©pb˝§ÛZôxÏ‹OÓ jôi/]r\Bw ©%∆ûÉ¢4Yò”@≥Q(z0´Ñ™V?!õî©—˝ 6£Ñ·±*âíÊc‘wÙö=EïgÍ›':Æ-®M÷Íı∆AÔËe£’<Ïµ_ºhtÆØFrÌë+üFy[¯ú ëç˝MJ
+˜	Ù?™˘xÉ	ñRÒÎ*6˜“î√Ω]¬Ø¨®˚/qÁ⁄|Ÿ50µQj˛|©Ï{æ<√™f´◊Ëºn6ﬁ¡,™‹ÑAgc5¥~CM1	ÌÆ!◊0XNÑY>48‚•ú§
+¶Y¶`'v +S2ê™›7‹8ÁÆ42G†Ø◊ËÁ≈ÉÊYsÊ≈ØXr*ÿ+À&gõç≠\#™eÂ∑ ⁄{<;…NqQk’{6UX®(<$§0YbL≥›ÍΩjtjªµŒW∆YÑqìﬁ–Î∏7ƒM∞0ŒîY.¬ ø<Æ∏<ñ™Ÿ¨Æ¡1€Úñ-¡5”Â¥ ÔêÎ†—y—ÓÏXäÉ*ì¯Çπ®2”krRöHıÒÌ@†
+£UòhΩË¥Úïœ~2>ªπ^òœjz3º6ÉµÊ∑≠(œÌu∫Øvø≤€"Ï6£·‡+ßM[π”ú∂óÏ÷L+/∆_)"]óµ¶£˛Çπj:…Øıãg®"ﬁ/5≥¨‚∂Ç* A_‘ˆˆ⁄≠õb°I@∆CË’ë/ì°û∫£Q0π#ïÖ∂√(Ó∆ﬁÄ¿yûTNˆÇé<°G%a–€ú{º¿y5Me™rë≈¸dŸkÁ–•é∂•Ô]ªãë¬O5u‡Ø7≠
+Îj$»Á˚˝_7wÌ•Xæ0ãLˇ3∆Ùπ/·g†™°Í6®\_äeª"~uÙh√l–¿ö‡gAû∏<ªKÌ¥È·+8\OâòQg/‘Ë çy◊—.ŒﬂùŸd‡ù≤ª˘8∫Ùöà‰ü»æ%(øG‰àƒÇﬂÍ6]Ø_Œ;2¡G&∏…Yûhû€ì;!hMË‹¿?Ås}Ÿ˜iEÚ.X˜óÒ«„Ká"BÂ¡É7n‹Vî*'ﬁì®9Ì={˝ÏiΩ¨Sv!‘Ø∫lÊ3≈¬ë√Ñ˘ØÜe)åòÅ¶≈R∞óÖA
+ÉI0õ¥Ö.¥ 0G∆∫
++—	Ω'C\íË6ºñ_U3â†¬r•*ÿN§6Ñ+zó⁄≠}÷‰zÜD71?∫ôIﬁ“I¯zÏÅÑyˆ¬`ä˜ﬂ	UèCÔ‹sGë
+¢>)v]i˚8w.‹I¨"á<pXÕ'‰c‰ﬁ40BiæNÉÄg¢»˚Ê ÿ!¯tÈD}7§æôß‡Èêë†É'AB˘úìYÏ4	@£{i¸>Y+ßπ2†/@?ÇÅWJR(Å„!ﬁqÒKD:¿¢…Ù“-Ü‰ØqÎ¡µV]6`Ô#¡wGÅ‰π§oÇk˛Ÿ0v&¡ë÷‚ïàNj‡∆êr⁄Ä‹—2û2;t{.‹«qNº!¡J€¿.wt2ya8∏MIΩNß/ÜºÉ£6°KÓ»π¬Œ%xç4	›õ¡ {0‚x£  êYHÉb˛"îèÆ¿{ó·c§e6 ÔÁ	-úã¨CÄNÙí,‡ü8>∂0Ò;sK8£¯-ﬂ¡Î©-#p1ØG-±ræó◊3´ìWNLk˛ß ‚0ﬂ£ƒûÌà92fC◊91≤f⁄∞!gñ∆ë*äÚpƒ√íòTÀV/B›™à:´&B§ﬁÜ‚’“ô∏†TL‘„ä&ù
+¢;H`f,Y\5êWÊÿ≈k˛ˆπ›B€¿¥m9D™¶ÖôU+õb%¿í¢ú$äÔŸjA±ò,
+õP$≈Îz6î››£Zß◊ÏˆnÊ ’uî¡ä«=
+ì¨úËB$U*ôù,f. .Ê¯;””,¶/=7iL^Ë
+…ùVÛ≈’‘6Ò„Z≤ÇÀ\Ê‡©∞F˛Y·Èµ3@,Û@æBWQËR÷∂*	ÛZÊYS™óﬂ/öµÉZßˆóø4è^µ{∑
+ù*X@
+ì—Eêái^äCé‘—ùÜü©;uC˜∑ﬂ|\Ö\»Qä`Ê@^)xñÅô›∆^C Ôw–ÓˆnjÓÙ.&Ÿ,ÿÖ c&1=Ov1EeËgTLxZVÙ\Vi®Ÿ¡€N6~?vê•2ŒÕ^Ãw0ƒÏ÷?;Øe·”5vêÖ£ªu©‚NÔüÁ!?ÿÓıeÄ "hæ5ÔèP≤ˆuΩ£⁄¡¡Qª≥{˝ÛŸ/v„Bo∞Ô˜¬@≠£≤æ§† Ù‹ÈîGìwéê œóƒ¬ª¢+ﬁÈÕîu-õJÀ∞œá,{?;phú:¯B.—#+àµØtÑt‡∆ÁôYó¶±wEsªª´È:πöfJmÖ˝>gÁY¬~ü˜"%˘ÉﬁÔ;§›È-◊‘ª.íà¥(œﬁ‘~’Z›7ç—>v 4Ôø6∫ΩfªuÉí‹It·Öü¡©a:r/Ω0BØxFÓçº~Ï˚[( ƒÇóíÓ}Ñè˙±„¨Œîx&∆óœj^‹á4+x’÷W⁄|DõQÇ•SÀ¥P‚öõ|ªh'v‚)n\J¶ÄŸ»ÒÎ6=dÄ–4Ô&5°˛Ú@É\góœ„Ühõ‰Na)C’Ù)∫¢!_”çzè‡hLŒ%0EÏPt‡≈!{“©ﬂ«êÖí”É÷ﬁÒ£´^ÿπ§;ÑÜzÄÄ'ìÙ¬ |: ¥—ô‡Ù—ÌûG˘<HO˚Ê’JèÆ(6œKÈeÍ§a∫ŸW£–∞ÉI2§øÕ jh0Ÿ∆8åI€∞d¸ë:À≥Ú€Ro(ç<ò¥@˛9Èw“iÂöu˘ß§œX›ßÀG¬¯Æh‡ô§ÄØ∫wsèGBÊÍ	¸˘Óà·çuB∑ÓáM∫x‹
+LÖ¢T,Ì√ñ,oœÌÒ¿(y‘nÌˇ⁄=®ª¯…2‘Ì!)…Ï≈â™˙>=WπÏN›>ÔWX¿q˙AêÆî›J	î∏ƒ…(8„[˝~Õ9ôç»X¸	˛X	tÑÄÄ¨íD≈y
+©´ƒYV∂“˜Ü˙∫£à£¨E%Ø‚ÂhñÇ¬IïËìy|¿B±>HÖ‡Ö\hæ¶¢§mb¡˜ïh‰˜ΩU»2∏^÷π¥¿±ÏªBv÷∫#Oç;≤q˝˝‡‡îª1,TjyŒ©ÖÒÛJÍ
+ﬂŸ]„Û¥Ï⁄Vˆ¶•¿∂{<™4x£J.1J)-îm∑∑åª-`•2;÷yó•Ç5˜ô÷~Úƒ©dG'óI‹8èFCBCiQÇ»st°,—í/´ŸQòıNá»ó!'!èºıì–é:Çë›‡ë|õ…ﬂ
+lnkxÜ3ºœJ˚%Œ“X◊Å®F*¬4•©VlÆºëÜIæeÇËàË$n‹œLDXÏë≈§Ω^–åg/zCpYÚˆUàÏÍ&.èÑ˛ôm”ÎiE0° wí˜8á∆°ãËŒÏ|A©,A¢U¯=òÔCÖd†ÄπÙO¢~Ö8ñô_›èLXÇlTU6ìJ∑HãYF·å‘WB⁄·oÍΩLÓ™√É]∏ƒ‰`H]ı¢πwRW›MÈv‘:ôXâ 6,«¢iÄ∑?Ÿ€ß1óGhX@^*÷óVMÎW-ë1ÜÒ,Ú˚ãé@©§œ[˙û—{LüΩ}o2(⁄µXCÎW¯x?TÇtßhf:¶ÊæΩ)ÿø0+∂∞òçÿ`6SsF¡$M28oÖÀ>œDœH˛˛l˚”ëè+π…\çåÛÊ m≤é'≥óágLê˛§?å£˘÷,#√˚FäT´ÿÊ≥R;1”q¨oñi¬›MÃ–ŒsÓJs¢‹ˆà•Q3¥ΩAì¿c⁄hö˝}ì∂çu‘Î≠\·§◊D÷–ãﬁ·•jéòG„o≥ ˆ⁄ßp^dQ€dªèx)áı#BÔä
+œc7¸‡≈G‘àãRÙC°ÖJ˙0A&\≥m°ÖÎÅ?…∫8âBÊ£íei’JÏ˜?¿÷;%∏-ıPøT¿nÖ‘hmºú&!(˝svø™Ã¡RLôå˙9ÒRΩ'ù›"Aem‡π#˘∏Üè≠œ◊V¥⁄W¸I4xV¨›hªgrô≤û'^>≥Å™kÍd+º¡ìhNV|’§≈î≈Û∫Ü~†AMÑsÑ%ÍŸÌ›·ÌK–,MkõîﬁVùc∂#]ﬂE#D0√|¢/ôÓË~ä”Å‰˚¶‘Ó∆Khb¥rÌPE…ƒûòø¥%ïªÌ®√·´ ˇ–Ï•Éœƒ¿ó}6ìzÛ/1ww$ŸUq’%ã}k∆ﬁXáΩ+tYÉ*c?äH≈îÚË•÷~R·8iCÜÊë{‚ç∫…«|ªî4ì9JY@S±jäÂì≤2îJ∆ #≤z)÷øÉ(ëÊw¬—<Ûì•ﬁT5◊ÇOj5ˆë¨%ÎÆ¡D0≤dÌÑéJ*Ωz$-Tc;
+:úcÀ4P^ä
+k∏ìéH'…⁄pè—àDHIV;HöÁkπ≈Ä\œèÌÑZ0ò•Î1£F∂@
+ c1ygËª®t¯Ec]à òaNJ©e%•lX]Ï@_F˙ænY$6R	≥ˆ%kg¥Í€¬~>övAeòs”
+_ã’%≥’ÿ<*v%åK¶Üæ•.Öè®qÌâê•®¨B¡Wù…Ÿ>Õ¶∆∫ê«I§ƒHü]-π°Dƒ:<Y˜„“i˙Âò,Ê˚mEØ|H[F—ÀéëñM–$˜k”«4ﬂcgµ |t•¥ˆW"˚ÆÆ¨9+Âπs·èFD¯%î∆‹˜ßd¯4-à%A;3$è!ù@&–â'∫Ïì˝"|°´πó·MYÖZ‘ÕÜa/∫ÄõCtÁ%ı‡$ë∂Œ+ÍJ¬ÀcyL‡10ñ>8VN'óœ˜/y∂.¯à('Ö≥≠2µ¿S¿—dÀö>
+ªÊ»≤º(h%∑Ò–(KºT4‹∞‡GÑdçF‘ÇAﬂ™<x	xh4™∞4áYY-Á>≈BÆ8ÚË[+Ò¿#%¿Ò´Ç.€“«·Zh%=d<’¨∆,Q[x{Ê/IÙññ˜÷•≤Dÿπç•“Î\k•Åz“πÃè·ìƒøâjaŒ⁄HﬂÏÎ§ñÃòZG[‹íö"8”«ÓQ˜.ç›0p”∏cûãÈfXèú'åucd;Ñ¬`:•.ú™ƒÛ<ïyp#ê3a˙5åQ‰ñL‡ëJ•π
+D"‚ÕJ‰"XC"ë’úad¢ÈB#¡ÆÅ¸Ù4¿ÑÜ`? ŒLà∆9õ ˜1G¯!C9Û˚¿O˝ÿÈ($]Vú˛„ﬂˇÔ?ˇÒoˇ≈»¸î}…pûO≈€ÎΩ3‡¢c¥Jº-wd&/—Ëû>Ô+≥pd 9…–¢\?Ò*›XíÎsœR5˛N¶ˇ„∫$s‹(œg¯(Û{"œ◊á^ˇ»æ([;<2°P`Í¢¢'°<µ+ÎŒ¬À''¡e?à	öSSy0°±©ò»á	UWQJ‡¬,î]ä{à>åÿ>◊Ûå9N”
+äÓÄ:≠Æ§Øe±CêGhyﬂ¢3∑–⁄	sYÿÒ#m
+;¢f©k–?¨Â{.(äIU"»NGnﬂ[}ÚÓ?ªè´=˛À˙„ﬂ?9#zƒJYŒÅ(7	Î{ÍÍåxlF√¢jFszà•Î;¨)öëT1”Òs/‘«f >Læd~æˆ¿kﬂ√K
+ﬂQí.(N©?$Ñú,®?X≤„h‚N#BJÔS;9úŸï©B7„gxÂ≤]áuÃÍc6‹˛puu\÷≠ıâ"j=øD˝“®C¬ÁmÎ:Í+9æ≥ã®˚mIc?&lŒG+ÈyD‘4“∆¸XkDÆÑåäñÜÖ∑û+øYU≤_µ0t/+ß!°¨@ò∫^º >ñeò¯bç»+óÉ¨ü	*∞ì∏≠"}CÈcÓÔ¸
+§Gro0Cö%{A@ê˚/í
+ÑŒëëõªcîŒÿâ:ü‰ÇÉ–ÆBL'}⁄™”£4ê-ﬁdQ*®5k-éÎÁÁÑ√öM:Ñ%Ó»ºx5^zKπz	Èsÿ1]Ù––;ªßÕÏ—n"k~Ã¸9ﬁiˇZo˜zNÔU≥Ît{çZ∑Ò–y”pﬁ‘Z=0#	À†‰º›©’yË¸ÅµËä3êπÛáùFÉ◊•ov:Õ÷KÒ‘&2Âˇ¸∑c≥ƒuº€vZÌû”Ìuµ}:æ√VØπ'jN›;Ï¥∫NØÌ∞1†,~ΩëŸEÕ—∞!ÄŸË%‰∏ßÑhíæÖMû£{"‰VG{‚˘‘Òëñﬁ~Ë‘v∫ÌΩ√^cÔWòoÂìª®„xÓ¸•—i≥’Ì:/:Ì}Á∞{ÕE3	…:Æ9*t
+/"H5nZËù‡\=#·4;’,à&¡^æ[%ƒDk†$ÿÓïÚÔ·‘U„%úrÍ÷v˙dG5]∫¸“9”áOœˆ=Q@a≈,eH`æ°kÈS,ùyr´mÀﬁRæÚ√∫§Y[ “G“Ge—ˆ∑Zÿ ÙÅ{†v ‹0≤l%ª®ü‰›W¡Ö”'≠]≥Dm ≈Ç¡+K¯(√ΩH;àN˛øl8@‰è Ê§*ägßß»C®ô[l{{€ÈÅÅ‡£˛DÅs¬Åi¸?2 Ö{â8õ]Rï-±|†µ¡6	˜$"Ä˚–9úúx#ﬂ;w!~9ÈÍ€∫z3ÙH„§¶2ËáŒØbÔ†êæ—∫Ü¯1t	øa€/Jù§M¸JõÙı˘,¥)1Ü<ª6iZ∑öE“'ü4}∑≈€˘˛≥R¶L•HÆ1W}L†`?W4⁄nàéhhEÓ÷D<Ÿu™ÑÃ5>ˆ˝ò⁄e˛\sm&IÕÉiÇ >Û2⁄0’„œôçÀ£Q’cVK†Ò–ã<3;ÜpÂ,M™+èÆò·”¡Dh∞ç–Lz%¡‚ âﬁ√ázF[-kxÓú¬Ω~“B>ûÅô+rœ=8:•l@oÔ¬ı-1ÒìF±>s˜4=”–Ó•˘∂”‹w∫Øjø˘NÅO÷5«|2ÓøŒ@ãÉh–coP±«å'≈”ÒùlÆﬁÑÖ|&û“œ˚¨PÌ[Â˜äéïÄ5Í≠m7Fõù§Rê
+ôﬁB¨äøˇΩXãÓ“.à.Wlsã©»;—Ú¬l1E0F¢4ìú¸“G„™ö§&› õ_Ú6˚©6Tî•ß3iø∆—'NÅ¬π≥^*aY•—KÂ3≠≠><7¡ØÚ9’VÆù«§Ê*2≤∂°∆OC‰#—Õ˙yâxdq`∫√' ¶ò ı˚ïËqû`F	}«ÕïòÛ∏‚mÈ@áo2sYu˘Co:ã1¿å+0≥°JZ”Ñ» ›?º§ó€êê9TÖÌû;5∏Ñ~ﬂ´⁄Z¥W÷∑LáIZ∆ç¨ÀÊÆƒmR!aL¯Œ%ÿ‚ %!°‰cVÚ'kπÃ≠_`ÛÛ∑y ∏.lÈÁ†ä<*8¶[§¬VÓÃŒà K+}7›Ëâ˝W	"N!Dñ ÿr∏†–†Â@Ml⁄ õπMh’á°XŸK+‚•)–∏YÎ˙Lã÷:[-TÉ_¨ﬂX∏°‚‡Ä»ó‡˙ ÓA‰±“¿˝–çKŒﬂAûŒNF~ﬂï|¢—·ﬂcÃ]"è °‘]±éÙgÁ©rπBkvsÔ<ç`å°CT}w_™ à>…|,¬»Ûzÿÿ˜∆∏bB%~kkÏ~%,âãBÕ«jÁ∑·Å_¿{f±F™ÁåÕo&8=ı˚>™"ÃKıËJﬁπ â≥À~¯}‘a:ÈÆŒ¡∫6aèP%<Ω» õ}îY´|àw<ê’∂ÎHx◊ìÌÆÁ†aóÁÙIπÆÀch!91Ô´Øöó¸bº[{≥ú“⁄‹KÁ¬s pçè˘Î¿PÀˆk\q∫pß!ì»a*8?ÜZÄ§&}?ôó†ﬁˇÛˇ„ø*z˙ı‘°Î™B◊UÉÆÁ—§´>sÅ
+rúƒ]˛‰V›Â}éíêD∞ö{Ó˘•s‚ˆ?ÅgËÄÕÖH˙e'#Ô„ q•`EÌ˛ûìRaº]p©–ﬂÖAËŸ≠Ç–ßtä6›FÚÄ˛¨¬ï»·∫{Øª€%Xü{ïM®™éQ–
+ëùá ≠«KsÈjÓ»©„±«ûj
+ƒªs`≈$Ω∞‹ºé;¡,$”bÜS¥FÍ÷◊ì`pIjΩÚF#8¸†}Ì¡É7ûπ@CáU‡rË¡l$§ı<—Æyx_∆MpW<ÛCRÎú1)gëÛa\¿÷íW‡\ã≈Q%ëæ“¥Ñd∫÷ÌGœEKwÂèz8ƒÔsÖ›è¸÷¨“Tˆå€ÿ™Üu£q∞LçÅ∞‰»W„'ÙÔç‚8¨€Ê@ãvct¶í…8≠ZK@±öÜ]J°ÎH"O0IÌwk†‰¿A ÖFxœﬁ˘éñ“≈º[çVeHúòÔ•”8ÿ˚ı®◊>z{Îió¯≈löÖhMïëÍö‚ßKmLº†g»gﬂ≤øñªÄØ›∏W.ŸπœXÏ∫∞“hï€⁄xV≈úgsaÈõåëΩU*4’¨}∫N,q!mòøc…l÷Ñï}o·µZ ph(¡çÚ˝à©îe€∆yCÆncØQÔ‘™’ÎÌ√÷5∞ÎN¨VA|ñó“MIœü”ÔÉb+ì·Ç´‹i`™Ü£ÓAª◊|ÒÎ—ÎFß˘¢YØ›DÚÜÎ–3≈≥>âÿDÑH¶ñI˝‚y}x‚«°^:√Y8ywi˜≠!¿£.’µπ N”,µëØµΩ£n≥ırØq‘Î‘Íø!ﬁÏ∂ﬂ‹ÍNJtZËëÓÉÜnùù»6ykF+ƒ 1i™Ñ≥àöÜ
+[M⁄eWnTMÌ‹sGﬁ†ó›ösˆ«U°zE≠¡yÄR-'ñ.<6V!«0"}ØÒÎBUqöYÃÖTyã‹ÍùDJ™∏ZwiˆöwAê[2*N^¨fCà%4ﬁÁë!Ü#MR¨$_—ŒOä w◊ù,dó?˙QèO≥√–Xß Â•’Çò®⁄UÂùCD‘y9ß√]nòy#ÇÛ≤Z1ïÍ§•†´P§t¯=«Á”OÆ?≤lê&‰•L8æ7ÙFzT®Ñ6´ómR>)Ø2Î€mQ…ÿã bˇΩµjCt%be:éìàs8+ü¢úúœ)-éıîÚÒ^ k“)®ü“@˙[û¯Í1≥∂9l”(?∞ ™4ù÷ÑÉ
+HçPCÁByŸ¿Äë“±=˛çãÑÕu• \‹~.Ü›¡"ôÎ∂sú¿Ù$ì‡JDØ√0ùÚ)ô¬|≈˘Á?˛€ˇ{†=ã∑I˘ºí∫ïWóÓ¢˙‡¡±åTã2Ã€ïdõ"tÃoÿÆ9>°/3©EH;˛√£+LÁspœåÁ«≤˜ç	T˙Op&+K˛«pú1Á[H’d4(Ó∑f˜(t:%ªò/v’~k¡$NÈ©‘¬IúD $E-L>ºøìí»∑–›àÄ‰;˘)_OàM∏oZí3L≥·%Yœ%D·√ÉΩvm7’o?ëÓ›ï)Îèhûìî˘+˚©Î´≤˜IîΩù√_èﬁﬁU;ı÷¸≥ûÖ$ Œ6»V}J¡è˙ô :Ã»0≥†BbT,&,œTQ95h©¬ÄÔ)πPŒY—Æ?È{ôyS≤ |f’2Ü4 ëf’i∞ƒ¶0x~L\zÎ‘ËíDŒüú4""ã¿Îììﬁ“o‘∆~-¯å}"<¶Ÿ….‹˛¬çôh÷Ô{Qt:É#X“J‘˝o UwVâƒ•/#=‹;F<´~âêÏåf^i^Æ<x Ω@∫Q¸{ŒH´è]¡	∞∑P–“”ã@õÛ#„–9ıC,@Dóa.,Ü|ÑS®FC1ÜJÜ≥8√99uÉÉª1¨ﬁÉΩ°;˘Äg–x√)úEËùÛVÙß∞àÁ˜CT†ÿWïS.Å/•B`€&† Õ˘é√∑øø_ÇDv{µúº‹b≤F±Öﬂ}*ãœ˝xè,æ7a7‹tÇL˝æ;¥òä"•êf≤%U)Ë&W.FG0∑ãj≤â‡esr»h=¬≈@‰-òúŒå[˜ÇJ-ûg∂hFúN{ø›ku€≠óòÁÆ–î´$QH≤—π©ÂΩ–%J¸©è1∆º∏¡ŒBtSÛC(ñuw0 "K¯<må%$hGSeL °¬Gi»£≤µé±nÀ"AZ7ıÓçFZnñåv◊+4=ÀFŸb∏Ìf'^ƒà€Ç3K∑(ƒÈ Jœ∫pOJi>ui¬EhOÕπ(Æ≥VïÊ[dìúãi5X ÕA}π∫Pö¶°’ï◊πâ7ç™é8±{‚◊Å;[ï∂~	ä–hÌﬁ*;ñ,¿'è¥É>û„ s7°#)≤C4X:'óŒñß›8ÿÉ64ê◊ß»€èF˜++~)ß ÂÜi%9Ú¸π,ß‡E◊
+c›4—R%·ÿ¢æ“3πwiıÒF:±OZí©–*b·wI7Ô’ãøñbπ¢áΩj:ıá"∏∞UP%õ˚*Ü\”q¨ﬁi@éÕpªY2ìòLˆª2´ÂvíP(œù-É;‘û?&¯J$˘-áŸr"M´`M≈Ç—¿ã	z +JºLã ı0„®;'ãÍÆm¯Z0û¯ÅVÜºÖ|∫n*.à)≈”\ŒXÔ;“OD4S?›åbÊïúQ;Ñ ≈¸”Ú ÖØÇòπ€ÿk¸û0ÛœœïÎ fÓCË¥˝π±ñ˚Çõs,]–∞ÀÜórWAÏxòa÷’X&sË≤≠/ â ’,hMñ{gjq‡˙`bÊΩWh7 ⁄qç/Œòˆ∫Ÿx∑x~È‚K≈ácq6ÏF4∆kﬂª®:•èa@@1=˝fÉíÜSUÎ-5ñ˙–çﬂıb◊ôáÛ¢Ω∑◊Üvù;t˙ÛÒÁ7ÕAîﬁπïg]æ√NÓV,'¶≥#ÒÎö≤…ÀXù[wfáÔ”∂X!QÂ1ÙYG:BüçåFÓ®ºƒ&v©•`ø—ÌﬁÄ¬úÄ·Õ®1çôkÌ[n◊MÃ»ë ºÒ5ì¡¿≥ö€ËÿÕ'±∞¡=ôC0¨œ_%ﬂgû°B√1Í›b\ ™¥ÿKÄ[Ì‡ |¿ﬂuªçV˜÷¸Ñ”’ ß;ã¶ﬁº∫1ãx_®Q’@Ò0≥Ñ†uG]¬\¡ëëÀå¬Ó(Ó9 ÿû´∞ê’ô∏krøπ¡An	:åf@i>úÖ‘LX%–™N∫j[;≈zlÈTñVB GŸ˙Z€Ÿk îÔtÎùÊ¯øtÔäFEN%a{ñbÒŒ∂ìäJÑb+’ßπò2ñÔe#˜µÑgÕ«}¢+∆˛oñ kP°"ï—Œ@é»°ÕèËAî…∑û©~à4+æ5¶¡Ù‘¬V/úxøÑQ’—‚>jë‡í’dÊuánà7ÕïâoW‰pBì5[C xºëÊüå<P."¥^-ÜÒ¡ôÒ©Ò{n«Ë&!£ıÇﬁMwõ-Á(æÖèã¡Ç;Z≠√∆Q˜Uí7|%Yø_í•·πÙ}I4gTÌ›{+3 ¸5	÷‚¥˜:ƒH+·‰QÃÌä⁄ûr•i–¥ˇ  ˇˇÏ}€r€Hñ‡{Ã≠)âS-ŸVïãn∑É¢(ô]î®&)W◊z2DB"Z ¿@€jóﬁ6bﬂf#fÊa7b6*bc'vf_7&ˆs˙∂>aÛúÃÚºËj!∫Àê˜sÚ‰…s5ﬁl{«µNØŸÌ6Î?<à'2ñõ∂{Ëˆœ≥%≈-ëöΩ˙kà’rÿ™˝t”NæVﬂ|h«t∞ıv∑óA‹Ö”‹G™°µ∆;Q›ﬂÙQŸèÈT.¢ÿ≠A∏<ﬂ°ÁXmAÑY ¢ä’:,WÄÖ“Ht∞s f¥ú6	Z√3€gˆø‰ø˝	§^eaÚ—]é¥q‘¨⁄Œõ⁄AΩq¸c£ÒÉ.SHüÄôö…l£âá÷¡Q?û"Lô´¯ßlk§∫zG
+™árRº,¿B«∞*’L€m!úF7ﬂ˜Ç4u◊h]∂]≤KØ¬P(Ÿ∞µ√C¬Óuõı/tÛﬁˆ€„±ÁÏCÃƒ√á}pC˚ ∏Ö∆Î-Çˇo«≠fΩq–ΩQ”π[Æ>9ŒÇQ\«dçÜ¯Ånœc◊Àÿ.Bm…hï>∫Èj2NOeñÈ„|¬”ÙÉ”"W?rQùÙ"¶¶‘¸J`1®Ù9èÚÖŸP’è∫Ωˆ˛q´∂›h-ÆÅAá>M°≤ì'ıÇÆ{Ê_≠2Ruá)Åæ!)Ü~H¡Gﬂ	•^Mùï©Z¸ó$≈ˆ(TÈ…∆çÍà&ÍÂÕf#‚RlyúÇ∫“¯dãª—Â>bæûÉÈ1ÒjÈa”ﬁ”Í“o œ£¬÷LÕ`Rr-‰LÅ∞Y∂&∆§Â‚)ãıum√|fªEw3›çwÁ2ﬂäÙ|Dl‘\UJ÷®+ïœÕ`™ÃÒ{]·E©3·–y<tG%â+›H_57A;N®óß-ôø@ƒ}∏®ﬂí˜/ÑÄB˝$hFZL7	ox.15µŸÍ`ÒÑNñJ_}¶[[(U¨mRúˇú®"•*–í«ˆ Î÷æ˝ß@é%Yô·#"—.É>çaìú6ÊÊ^®≠eO÷≥'~ìF⁄x¡sG„–Öü ¨÷  ≤5∏|›1MÀ¸’g$çær)œV<`¯ñ5Âcú5¬wf x˘%í!ÿÑ´&°à≈\—4G-x
+á·fQ∏Â⁄/¶q‹∑f¬]÷yÈK·P;B:OO≠ïö≤ÂCm⁄Y$UïÃQ)Ò„EcAÄöÕ;ÀŒ¨˝‰»ïN‡¥@‚†F£ÖPÀ|'µÀú„üF~è„·8#¬
+√áU1ùzs i∞%nE?êËÁLˆÑ∑ÙN¶Òi-çß_ßp#à¸Ÿ	ˆî¡ï¿ìr&|à &ü#¡&≤∏ÑÙR&c
+ßë.èN'Ëí»K4EÏ<∑Ω®>Ó,√√3B>¢Fë≥güÄK>aÂ}r¯®ârBÃ_è±§èk≠Ì£}ŒÛÊï]ü-’
+,®∏Ádüúç¿&¡H S¶òÜÍ&üAz2*ôúBQΩ—±»ç 9¨C*LîX|¯≤õéÂÁü≠GÏ{Æ.çfÌ¿+¶H0SOAå:F›ˇh2·Ü‚INEÍHóπö¸Ç≥W §◊àÄõY“_A‡Tˇò˝ÆB+ì°"ÌØ&√ëﬂÂ›≥auopËÑ}ãWQ?©µ⁄p(¥8ïì´âﬂ≤ÓC‰ƒh…±d™ñÚb6 &±w$åê.rhŸSä˙Cg0ÒúÅ(ìE≤ÈÍ¿Èª0™Ïzå9#<ÔàõäÈÁ≠rêèzµº*—.óò«¶ò˘ÆÄ#˚Õì„iÓ◊öSH" Ê"aÉkà}¯nƒàZéàµ◊ﬁÉ†ŸojG≠ﬁÅt{#t%aà Ëw£7ˆÑ‡°|èh#¸Eæﬂ˙É"u–X∂éªı◊çù£VcÁò1k7è)iÃ∫^P∑˝æ„…¯25d4ãëW,*û {i⁄⁄ ≤›Œ˜¡ï4—ö†+b/ PŸë5ÒŸÀ>≥]_ö1˚D”‡DRÙUﬁ{Ïó1C¶¿∑3m1E≥&!u’a∞\ÃNJèn·
+7)É°Îÿ†â?p$Â∆SJõ0öCC7gF˝íqÕtÂ‚⁄]&4W–pßŸ›ovªTKÜ›◊á5‘I”é¡Ô¶MlŸƒ©·Gìêì&óZÃh%g ÜÂ1√ïÑh’¢ß}Jµä”+6¢õ&XZˇ)»ë±
+uø(‘^ÌxP¢Ö¡fq¶ìÈ
+´Æ© M Qes(ß<$ºF`ˆ	n’é–äÉ>>\ä◊°44{_£„·≤£%gáGŒ$ì√Ü6≥—êY¸sU*=ùÆ˝¡—M™« æÌ…‡Ãâªcî!·Ë‘◊I(.5dÊÏi*nıvæ≤l84%ÿ^„†y‘Âvπ!!È‚ÃÒ›I‘Ñ<™†KÏ8û`>’› §áuï/÷√V∏∆≠`ÿ˚µΩ⁄l4Ó«éò-√T$+eD¥óı)…ó\M
+Œ¶∞5»ŸÂ©Ú‡∆äÜdÙ¨ÆI¥Ó}˚Ã˛·+≠C»◊Å≈âT.…ÀúL∂†≈ˆ`’˙Í≥!}jm.•l«,§˜èéE”êìõFœ∆µ\¡6X±H	!13π1∏Iß<:∂ÌßiôIœ,Fn ˝	π<ïrFT™¸Ê7zífà*‰åïÃÂyFôÈòÈ“6˚†=)çÿ™Iãúû¬⁄Àõñiµíâ∂°êb˘!‹å˘öîÀo™Gõ6éÖåfBVÖÂ).uå◊nu„@+»–»àOó)m∏ÁIíˇÅœ∫»…1◊iqWéÂX(våù>+À‘{s‹<Ë5:ÔË·ò∏∆c”©øhÜ`ÌMSz@ ïæ›∞ˆ];QI6Û[kÛ˚Ád»5¿™¯†u∂∫CB`ª±¢_˘ÔÉ°Ô_Xu;å0πmŒ!ÙSnÛ{≠ÕL`ìhà∑c kG®8Ÿ”#;ª≠'hQ6e|ÿ‚ÔÌ“û‰4µ©7ƒ∂«èA´E`ûS˝…,+ÂéF÷ÆÌyÍB…-ºb´Ì∞YKêˆ`fæ˙úñ∏‘πÅBæ·†wœÒè‹ÿÇ;/=„¡•x‰¨Ég≠¿ÑŒô`ù∞1∞„ÅÔÕuÏÒá€p§+£ês3 ÔÍ9x8¡o¡	^´◊á=·ÙnÔÓ.9Ós∫÷d$_—89ËÆÊ@7 |GFu\/äﬂ8Ü„{é„|Ã_MVêVº™ u†N 
+Å»ﬁÖ'6…+⁄‰FE b«C\ìu Cm¨+"7˝L “Y2¥>Ô´<¥ƒH¢3"t©¨¥—˚†◊ûw3ô∑PÒç√∂Ñ„Kq–¬M	.’Ÿ±4C∆écG‰
+{1›í"{ß÷	®Û'ûó1¥.MûÒ-ÍMP™*»o‹¸h;*~ê«d¶)u∞˝ËcFÊPFÆâ∞o¡)/l?0'†?üAj—ì¸ <É‘£èÈÎC€?Æj„ÖT≤Tf};Åî§v4$_ê]x°˜BÜ◊uG‡„è	ÉÀÁê˜ca∏“Ú±w©Êq¶∞RVùfÙëØø$\Ê©ê0ˆo^Z[∏X…òÈæå¨ì…_˛B˛[4∫7u%ëö¶	dE )î)ù62“˜fÓ»6∑D2•ÄbÆêÛ¡«OhV íB¡ä0ûfdZ›XSröf’˘F_ärŸ‹¶B-⁄˛FXB±U	ô8‡ÃW∞ä}OO—âµã∏)¡Cô‹ïÿ˘Ø Q√¶ıbiˆ¨Ø>+óOˇ˝˝˜ﬂ[Ø¨ïÉ∆è›√⁄a£cuáÌNo≈"mowµö{|]πDy#6a»ñm≠`,|πrIveﬂåÅgpä«ˆi˘:®ãÜG.π»ÒfM™"^z⁄_!w4¬
+€!Ÿ’ü∆!8ÕëM>p#{<H)“≠rÛ†œ"~XÃ‰ãµenaÏπ”«`ÙÂÇ'Ô≈0(…0êIä:π…Ù ¢Î¨≈
+óÁ≠t).Æ ŸË≤CŒÎÎ¿˘çÌ±"“Ìy¡	¡	xI˛¬Û9±ˆ•L—ƒ˙)…è¬ˆÿöê¨D(ÒŒHˆ2ub±∂–ôóπRv∞Nx≤¯&aºÚƒï1`2‡ëçZIgœÉ∞p∑÷jµÓáòˆÍWOQÿtËÑòˆ‘Ô;÷€°aï7Ó#˜=„~∏ãXp©"3Üòh•î–›Bf6ë∆“V÷(@(8SA∫êå}’Q∞86û¸ﬁ…<£@†j%k4ì_éS^Ò∂.ÙLdãÊ°I‚‘`Bﬁ“◊»©7’±4ñ“≠G[É–a#ÊFΩïÿV‹clEûÒJ–µ∏Ù„û£ì‰ÃÅIö4«∞–)Ø|EÅˇ?∂j„1·€O ‘Ëé–WfÏÙ›S∑è¨äëıö«*|Œ q∞5p %	±‚û-”æ{äÙZ⁄®é)0ëÆè¯∆∆ôw‡≈‰ΩúÇqÛDπ™°d#”Ts“¨‡+ÆïúöWΩ∂>Iâ‡/Á0≤F«˘háîÁ¡ ‚ã1ã«â†¡J¨A‡Øƒã3∂˝ò|;Éaí≠3\c¡@YB]ﬂŒ¬õŒGõ‘†	∑◊:~
+y¢¬øj*‡"WÑ◊ À"HôˆY^—Vy!(Ç®Ó¿	Ó–»µ"vÂ…u˛MØ‡Ω,C2 ô18¢Ê|=W†EøúAL±Ùeâñ*]ÑKLÌlbç“ı¬h<πN<úåN|≤¡µô'_L¬$¡Ω>[&§≈˘ñëàrôŸ<–≈√≠WÎÙé˜˚€çŒÒÎf≠w‘ï4\êƒs!ì∞	psÑ Û±Î%uDYƒj4Ç£gƒ)1oI	yˆH ƒ¨›ÙL∆ñ3Ü¯`∞3#j!ÇôŒ
+”?X9•‡8oì’—ãVß…ñgEöÑ»«ÊXdøc˙ÑWßnH»q<¥cà‘ï˙T-_}NfåÅ¿ÇS¬$∏HÛœ⁄–]Ã≈3†∂§_}¶qI≠T‹h∆πårˇ|d){o∫PW=ô‘{m°Ó÷Fakˆ[X[A·([ó∞Omøk VOœ˘DÖùR[Ôõd+¬	z‚xÆCéN&SæR±ö+#¿(¯Î/ˇı[‰¨∞>:ûGË3©¯ò¸^!†«‰E0y§Ä‰}7∞"{ ≠AÓkü9b˚ú∆É;!›ûCüÆ|D.‡‘q< _¬. ã1hÒ·◊_˛·ü‘n	¬†Â2ÿIΩ=≤zˆπA#±54lÇBæ„ÑÊLd†^<ƒË·0—ıÜ◊'ÏQdƒ˚ÎˇüˇÔﬂˇã⁄©XÌ}ôÛ¨ö0åx`ç&˝!7]>!ÈÌ◊_˛õ÷◊¿˘`#öLk∫Òf√`=`ÄÛÉÔ(F/¿|©¡ç¥}VÄq	Ö¶1˚Gó¨¨·	˘mª®Y€±Î üñcÃ 	 Œ8Ö(LË_˛Ô˚§øw&ÃÊy@RRÀ¢Ræ‚Æê ’è“∏îË
+Ú¸…eŸ5Uh\Á©l% ûÉFç0‘xY,Ü üœ[◊˙õT≈∏πñ|`yxÀÔ 
+˚=˘rL6ŒÒWü]ï≈Hh/pF
+¯åìüÁÛ«L»ﬂ¨‘/ç08SÄ¡ÀrYC\®ûpÍ°öáCXG,∆ÔãÑ∆vgÖss£◊.ó§{“›Ê£xèÁQÅåô•rÏ∞™ZõJ◊|à⁄Á˜:πHvP„≈8Ñ¶è´‚£+äªF÷¥ΩÀ9ÜÙ®sqñ˛ñ–Ç∂–oÈw¶ü¢!K∫™¿úÅ!≈A£lëør23gˆ«*æSïˆ9Eç*¸T„h™¢É#ä¨µlH≤y≥…/<Ô§7í‡CñƒòƒQÑÙé‰I €x$0‹πÖÿÑ
+@«<Ä‚†* 	º:∏ôæãq^Â∂>DqÔ—N‡ø<⁄Œóø˚ÈªvìÅhÍm∞v≤N∫dﬁ…âóaAèvÙe¸1îßá_°Ú¬Òó3ñ¸ùèy-í	Nâœ‘À≤˙à¶X¬m˛bà˜bä3Ñ√«»Så°«k	∞ﬂêÄh‰P·¿…ÂÑÖ»V•	ó*sØ>ãﬁõ’g·{¥˙,~ØVüÈ÷S¸—dfÈSò}‚œ;Ì≠ú„Rß®öDM£¶iUƒO∑ÜIG*% N£˛2YB¥è „ÿÕCYlÅ~L⁄HÖ‰äx\Æ+^—`´ífi´ÚU—÷E/âË?Ò£°{ÀÚ"t{ô©≤8
+3m∂9§©∏3:hÖ™à‘€Sñ$`u¨`ŒqÖ_IV∞î%úêÚå¶”ÌUq—…¨'û∫Ò,¸÷xNh&øèKm¢·Sõ¬ö◊åhßSÙ"m≠+Ì´Ù]ê%$:€ª@Œf∏˚Û2+ÕNùíõ„z{ø±]ªŸDü¨œcI¨≠“ü5h´&ü—ò5•	,d™Ì|äCäˆâÁ!»m‰ì»t‰,æ;K;Ù*/ÔP9%§WE\•⁄ü…9π¶{f%füπ	Å“F∂SzÙc˝C
+O]Ÿ∞_ıjüO¸±nA∆ΩØ>Â x]ÎZùFÔ®s–ÿyÑâGA5 û Îß ÇâÔÇO≥h∞]…xr‚ﬁ§ﬂˇÙ/¸ˇ:gæ¢˛î∆ÁFFx9§ùüõ⁄—œË˚sÖæÎùdyx.ï¨D¬
+]s‡’¸òúÌcL/MŒ·g‰‹Ω¢‡Q{z[§Ö'BF_≠€Ñ⁄®5:"w√fB6¡n‡Ä <¬–îÅª⁄iÍzáŒ»!SœRìE%˝ÛƒˆdQôì>Œ»}ïÏÇcPO˝€ïÏÅg9Ã<ÀŸõºÛ%v	ªÄüŒ‰…ıoÉıMÿÎÌÉı'–ƒ¶∏Ï.pbπ≤∞¢2∞¢≤Ø"2/”jg6®2âŸÊ`äÔ„l¶a‹rMEÜ◊ù†É•y#|ì"[Y™bm;»IªW€o®q\]ﬂç…EÆõÚÆ,∏jª∂√*$®AY&‡çh6Eè≤•)N*j„ vO/“íd/Ô4vi Ü√vØπ˚Sí∫´òF:·ô‘ÚvJœ©V3≥’ i6Ï˛puï dG‡ïñµèîN◊:∆¢cŒ¥*ÌËë„’V0Òû⁄ªnM´Œ≤…è8“∏SÇÏã∞™áÌùz-k1”ñÑµd/ÊXmI_@ZCY?yY£t«∆Â£EÙ’Vê∑"- Î˝Öa\Ía´%5_µ™“ãtíWZ∏1QÑ¶˛òUafƒg~õ?ˇ,î\UÓ4ˆBYÆ≤µ!Wz˚NCÇ_U·“¢§4d’.ˆÉÅÓﬁ"FSNÓ<5ÊÇbæ®‹è±T˙Å,πÙ75#!ø™8[w(Úêœ1]ñ¯wÉ†4q◊i>…éŸí¸ÅÒK.£–=…R&lı±uÍÿÒﬂU^Y?„Ø	Fª˙Ÿ˙⁄˙yç¸Ûâ¸ˇè÷c∑¸v„]%›—™¬>Xr<“~ö]≠
+VEÏh¡’j:î5iakÙ™Ú6-Æ¨,ª$g]í™—9¬SÏ≠Üyˇ≤ÄFø*ê£/)¯0w ±ÄB˘Õ¬@§Õ]%±ák$ˆg•	àK'Æòê”≈À∆¥
+|uT0e*˛÷5»Vfì„)Rcó5µƒ@yyY§+ÍC:4.àPÇ
+|kiÊB[Q:#8$π∂·∑ÅË= ,≤›xœÒù^◊“JìˆœXxŸÉw´b)v1p*õ8Î¨wòOìÇãùÜ‘g'Y£ õìícG•¢”.–A+ê˛b[A®.ùÓÂB®A-ˆïú⁄”J+Vë9b˜<ŒﬂÃ‘âTßxW‰8Ôs6%+0√ÿÉIÂ5Hoêgs}Mﬁ·E—ıP´Õ–°ê≤∏pobù‚]Ÿ)±/‹ïTg÷Æ?z‹°e∆>’ ≈;€c;¥ˇÚ˜pƒ≈qZ≠6Œ÷óP£x7âªﬁå»©’õa)¡≥*¶4
+ÆbZ£x7Ã«o∆y)µäw˜iWƒe	êäı&Wö°≥^Ë¯3t√äœ–A}h«≈€ß•ã7Ôë+‰.AWÙúÌ2gÃÇùÎŒŸıÙùßcZSÈ÷î¡˛–é…ÈspX∑êsÍÅ≥!µ≈™cÙ™‚7F Ç¬ëpé˘e"ÕZ⁄üÄÊ-•ÆLæY&Ú	Úóv/)r\Y[…∏T`∂∑„F˝ÄTÓ4j≠„€ù÷ŒÒN≥[oÔujáØõçÆ»ˆã-–4^º>·¨í?ß™øb÷Ô DçÃd•°“¢}][tJJ/ï˙∞¿»&´-é#‚Ë|/≠ı[µKÓ£°ÒÄÙ®N.}∞ÚËõj∫ÌY…W∏Á…Mº≈qº{°‘…≤É'kû/ŸJ|cmJL¶≥Ã[ü6tIhÒ2˚∫hîXôÓÓÛ\⁄”MÄ˜…"€`ÈWÈŸñM,∂p≤@õ/è.?:hµÎ?w;«˚Õ:DõX<ÜWå!WØ+fóß˚nˇ0pí@2≈ø•€¯ƒ˜Ç˛πn+MN¢~Ëéa®4z7Œ"˘˙*1,—DÅ†∞\iÿ`∞Ù‰[°6‘äÿm√«\Íä‡„4[ƒì˘!lf…;T¡-ÏfUp√ëFê°Ù¬8UQ-Éo¨u%ÄU…^!_É™æ"˙™ﬁÑﬁOXòiNÌlÓ‘XZı„?’ZÕﬁOKàÖ«¢ﬂëE˙Ü\«~Í{ˆhÏxèyQO”Åï3Bú,ê¯õŒ^ŒÔÕdBUuêó∑*•∑œ⁄ë£h ØzùZ≥∑T¨B°€u∆U\.6†@≠öNÑÍçÓ=2∞îÌ‰_å;NXÓŒ2|
+±”	◊:◊ƒüÂÿUÉçá‚F‹[»q!*^HI”¬P#ÑP!4‡ ˝õ}Oß¯ﬁ.§‡ì≠jkR4Xÿk‡‡ÍÌB$Íâ;Áˇ°Æ'´“êMÖ±—;Æ◊:çFÁ∏€ì”Ê≤{πûùÜÂùÒäÀ;©YÆ< "<x;¿Ä7!πG<åprö⁄a∑H≥€A@–Ã_ï∂„∆`oôﬁW8ùÏ†«è≠É¿_ì:åÀ–∑}Î†Ò¶—±¢è.HF q–{;°-Wµà1í;ŒX∫Ñ1Ë`E.⁄4±k1◊O÷‹ÑqvË8a7F„ƒ
+"aØΩ∑◊jÔ∂⁄á«çNÌÆgàX±gé/RØ(§K3Ωãõ∆∞omÑvãÃ†j	ÀU>Ãà2ÿr’ÿ¬.H4ÓB»8áÅå=N7ûÙœ€>ÅÌı"ˆ	ÔsÕXù#ÖI E“idó*Ÿyá∞,G›^{ˇx∑QÎuÙ˜≥ÂcŒûB¬$6ö]î”!?IWà™=ì◊í@ø ‰ÍU¥T∫ZS˙.g÷ù∆~˚M£ÿƒoÀîïnxê•S`ÀOi‘C∞ÉÄÂú©◊;∏¿∞©◊~¨uvéªØ€?Œñ5âÆ!B!-£v‹*ﬂÕ≈¢)°PÊ ≤£·t$á˛Ã÷+Œ¨;ˇ¨ƒ¡©ºÑ¶ﬁ0úﬂÌÏ5ñ4iî—¯È∑)|ı~˚†±ëπÎ◊F®≠∏ ÎÈ≠∏√0	´0„‚∑ò^Ûá^˚á„›v´’˛±—YÿU¸ãZxj£¥ÀçdØÑd ≥¿£y  Nmˇ$sÅ£<üÖˆh©P˘©}‘;⁄n‚›≠wö€Pô*¡$ûú8]™√:YTÿMfØ›⁄9ÓΩnÏ/AÆÈ¯‡´}µ9Io4¿9⁄ÙÜ$Nf]|7tk≠F˜xª›Ó.A…@@OC¡ﬂ˚eèlœâpÆUa÷≈ñ˝∞”>Ó6˜é[µÌFkÒU«‰F◊í◊Nm&<`ïåj˛`‚0Gßdx†Éº8ö¬Ü9}¡¨HW∏H]ÊÅFÛ˙&Y|ŸÃ•$π‹õQÂöﬁÇ†Ñ=¯ ©¥h(aÈiè I†ÊäS~Æ∏—éFY'XË∂Ô]»R„	6§fÊ¥.©NìÛéù8Vç…”∂ò∑{NãlEJì—Y	.~Ú€(≥≤ï›∏PÅ∂ª8⁄‹wÎ‡^í=¥L≈Z¡«)•z¡∏î|ŒËw[S!mzÃjÊ©:]æU5ìz¢P‡ø¿l
+3¥ÓP/<˛^p—gH©R#Ã‘ñÉ˛Ö$Kåå dÉIàw.ñìdsÎ€5Y=ESê‘ÿÌâ˛0	ÄÙ=]ì_GL¡4ê≤∞ï·´†«’„Vá†ƒäó¥÷è©√ù˛
+(HÑ¬4R≥BË≥:¡m=ìπ‰u!ã¶D‡jVèi,2¥…1ù¢å5I(tΩî%j≥FÕèG…åòˇ’gfÄññr˝s‰mçÏ?°5plèÛ£»é%+÷∂	å]P(˜·^~¶¶6eÒ•“V®øô\jë‰ß3%>’óŒ"zs¶—≤ÀåjwΩÑ4‰YlñÖ’7|õÍƒTû)π2ª˘øÉŒ*Y>X‚”9§πÃ:·«ÊÕ√∆N≥FÆU˚˚µŒÑ>¢i¬d4≤√k±É*nù∞Jf+;Ö‘6·£{ÓéùÅkwÈL™¬î™V(∞@wG3ÌÊ«n›í‡—¬¯ì&¡£Ù§•ãüæH·„Ù%π&À!î˛ÑÓôÎ€^ùÏ
+¬”Ã7ÃÂƒ–]Æ‚
+ﬂBW¯`DÙG"¢'p_s∫¢fµ¡©rˇ“Pt.•ysÈ~ÄÜ”–ÜºÅä∫Å`ÚÙó‹å»ÈÚÇ/u,ê€¶6˘ÌqÉ}¸WÆß¢LVZπó∂…˜ß4(ï˜s‡>QS⁄IÆTÃŒÄAä›S° }i⁄/ÑÌ,˙»Ú˜w%ÒêŒ⁄v˚®«lE\¢©(§πzD”uÛP ∏GHÇ"Ÿ"t>ªcŸÃ4√∆tçÊŒÅú/Uæ‰∏÷èh¡s˛è<Ï¢∆Râf8œØø¶ç≤ô˚ı'G”'4MÜÄ††Ó.65ØWÅ˚…î¯pzh8úöñÔl/…˝$¬–n#«ˆ1ﬁÌ)ÕÕ≥.}ıÁÖ‘Ò≤T˝Õo»ò÷eI∫≠∞ªä–æãÃêŒfSΩ,,ñÕf˙Ee3ç8Æ«eÀæßG°äPZùiOH‡ù ÄSÛTÚÎä¥sP«ΩˆqØ}⁄∑˝üéQQﬂÌ6€∑ ~v±<∞êœ’¿}·˚¸‰ÕÊ¥∑ò
+ÄŒ†„ÿZ W—ßåU¬Ú‚{lé4Ãñí‘≠-‚› ‹Ì—Ë"R£@L@v€ÜkKP&ä÷<y˚5^ñÄò|–‰<£Ô»≤˙™í˙…ù·“¶6/•©X∞ƒˆ…+⁄(†36˘çg√jiN|;^3`® ŒöÙ…™ù!c3€vH+ŒGÊZW8±ü°ù{€†I='Ωº¬)%Já£ÿAWËôtL˚Ω¸Ù¨ƒ9S¨™ã8}£´h«‰bIòpÂ+èÚçëæ~óE9‰Tı&„«zΩqÿ„«“a£C«~Ì†æÄ ªprkJÕù"˘}ßÕw€Æö°WB{≤ÊKu!Z√y+¿¨Á[-«ΩyNE“‹¶˘©Øœ·i>≤*`¥Daß/BíûPa≠ïz,X˝e©„≤íVQ*-ΩÕ°ÿ¬`’‹Ù“&ægÃIíΩbJ≤M?+…‰ÊNÀ˛t£ºŒ(ütàˆ±*m8#∑ƒ<B∞”®∑öÛRÇ[Ã¢gmŸ‚zWv'Üõæõ€S7,‘vB°ã¡å«;:g÷:áç%Â∂¨Y^úÖûÒ‹∫`≈t±];)…|ö^‰U"€·ÊM1ÂüønÒS2ÏKñp ≤hé%Î?–Âé ¬x‰çù∏bí*±%ôMòÙ˝˜\òÙÌ\¬§oYıÔf&=›L’ﬁsJì'áƒ.ágPGhj16gª÷»Ì ”©õnárƒ#Ì2öƒ¯Œ«Aß9P>u`)1ºïpﬁ◊ECfÇ∆|æÃœ-j ,öIk%a.ƒÂ2DnÄÇ√ta®ZulGqÇG 1c"PMµ2Õ%t¢∑¶•í¢è2éÀ>KfØíñçÃU.{%˚Q3 ≈Ñúë|∂7Am@ ¶5çm∏ºÛæÚÄÈ˙N· g¶çåø˚¬ô∫‚[2SÁP€Ø=(Óæ¬aY¯ïhj#ª®*Å†–É°´hèÏ[®Dπàz1UB™E‡⁄t»UD£ê»»i¥su0I«3h˙ﬁsÂÇ8√™y9ÃDÑî’ÚßYu”‰iLˆ ßœÉ,-≠`¢bÓÎ>Y[#˚
+‘Or´tOslMÒdòJñ÷IﬁOäﬂò-Ì:K 7Uë+|ÀΩ±é#∞ËR†Ö n·ï»Ê»ZGÇ0N0“´ÚÏiÒÈÚπÁíµóo∂à|nK2ÿJk6ˆ¨ΩÑÍY‚πK·∂nı·´Ë≠‘téLIµ55-‰¥TêOïRaëºGÊty…%]ÀP=ú◊rÖ€w^?(æ2d$S˜D>ó˙†ªı¡∫1!pﬂ9›!á˜^1˚†˚“µb5”oP%fF!}ò¥QgRÜ-˜pºó·ÉÏ⁄Xºπt`€ùfÔA	ˆ†”î`€‰⁄^THÙ†+ƒûêeΩøz0@Ñ»ö√±Ê
+‘`Ä¿∫å%Ht#rÜtc;\∆|;ÿöÕôk'Èúti…º≥Mæí«ô}äDà–˚H©öïÈíFyÀ∫CÂ€)Òÿ~êF¶åÑˆA}x3ÍCÿgW†?Tö-†@úgõhD”l
+©{Æ›mU„¿Ò\H£lŸ¸∞¢a1äÉ1îKCKhö«à=È!Í˙V+ cÚYø˛Úüˇç¸ˇ˝ıüˇU◊H.¢Ç‹íeë≥™ øM¥à[≥™ ≈Ä[◊™Ç[∏rG”VôÕΩÒŒìÌª¿x%ﬁç¯cMï“œås…˜rÃ–?_X[¨ÍõßÚäW§N6eÀ–'?∞pJÖ[H4 ‚∆È€b ›ÂAß|5:Â(û¯ê5 ©.9ãŸ™$Ã÷Øø¸„ø/M·ºπ±µa¥÷* j=g’üœÆqﬁJ5Œœæ,ç3–À{ØrF~–9È:Ám◊oPÈlG!≠≥ºYgR;/˘ Ωüå„É‚˘˙8¡5œ,.¢ÒvÌ‡†—˘‚2¢Ω©&o€æ´™là|≠∞fESªRN¸ÕÉqÁµwæy0ÓL0ÛÓ≥⁄æ „Œ7∆ùå∂ÛÊvwÜQàÕ˛0∑qÁr«˚«dx0Óº.{ î<ìYdıvkßqpº◊j”\∫ñûw€“≥Ë’aiÒ’èOÉ¯,é|Ê'é¡,T√∫vó–Õt{@∑ô—m7€π$eò&ÜÙà‹›≤DûCMÿi∫π–É5+ï√xnÀ‚/S)˝€ÚóîﬁXdIëÈÕhèTˆæ„˚rÔ†)∑√Ú^ÓÚ˛ÏeâÂ›°~\z∆Ü˙Î⁄¡^„∏’Æ◊zÑ·x)gÄ÷˙hO£	î˘•∏≈˚6îùΩ∑ò‘π◊ﬁ€k5é€ªªx¡ﬁoÔàFOçl@œıù˝`@Ü¬ *ºÀÈ∫€hµé;ÕΩ◊ÀSrcg	·	)¨Åâkü†ÈZíO‹˙`{HÆé|BJªàÂ–SR‡k©`òÊU Ú/Ô$©<ü^íë˛¨§KË]‡ ÕN3 6·çñ–(	ºiE»ñ∑æ)”`lÍ-~ßH.)2ﬂe›≥au…˘{HÅQ•I¸xÈäV ®
+Æ9ÙÌµ?˙Nÿ¢@≠ÍŸ‚Âé€,ËÄ}ï¢¿≥1M ∆|ìH7lqìØ¬˙“LØaÊ˙&’MKÃ|ÀKZ/5mπ•œBi·vÅ@Xkg3KF¬äßi'£*¶&»üÊ¨TñíÅCËÅ5}o2p¢Uÿ eUqêaÀ»¿¢‰ﬂ3CÇ ˛¨K=”rœ∂‰⁄≤À˙å‘{B“xî{ÂNÿUGzñƒ–ê66/y<=;˛÷Ze†≤C¸≤ÚßÌˆ—OW{‚ıÇÌ…≈)]UˆŸtÃ⁄J˝˚UG}üè«D≥«7ıKfJoZïêkC∆µb'·∫U°Ö≤F˘ñuFßsôJ˚ö"ÆY™ÎUö¥í Î3[ª}ÁÚ‹∞ù·†-·´bñmÌ@†Ø}´öŒÙ¬8qèÖ,xÉ	<”v·îe÷ñ˙Å9¿'ã9X«#o~k/Iòj∂èõoöΩk…kô
+H3u˘≥˚üZ-í˙K\çEó‡VDƒXñé_X€ksƒ“Ï°¶◊_öú’§`8MïÆ◊õ¨uuW‡ÏØ∂[¿€ÆÈkÓ˛∆	}aâjçk0õ#7 ˚Ô¥'w∆¯n˘∏Œ4µœñò¶6Éh,√≠zâ4Vo◊Nı[∞5øH«Íπqøp:[3á_™*85√ò—πCÏ≈‡›ë∂∑ò…ø–Œ¬û"i[Ç	∑&Û(d=è@ŒwaΩKóõrﬂŸÆ#8¥L˜xq!Åg17xu%Å'€ùûK<Õ^≥¿RÃã¿∞ˆdH˛LuçH¿dvè0Ã¡0°|\ÿÊHÒk∫^ÎÚ(˙ÃhÔ≠pjÍ
+‡¢hoÃN0X∂ú≥Çπ3’ÁÄ>9(jÂlG˛uHë⁄ŒvMIüN*È≥ÄªJ˙W∏üJaøîåtÄ_ 3Mû§∫®–«¿QfÌ@M	Äœ<HTXÙeöhQWÊ2Y‰Èl¬£úM˚¶0À≥íæO6“Y∂t6LØNÕ◊„‘Lı‹öE§ ~Á‹öQ2pÔõ˜x\õø@◊Ê∂ÑÌ7Ë‹lH!˜fe√öFñ….˚®º¸ü≤∫À·¸úúÕ¨ﬂ‘›h`˙:çÉ∆è«ıˆAØS´g 02!È¢„zc{TùóÀÒ%Ü¸nTüDq0Zcã…ú¢≤€U6V ‹∂∫	p–i•„F÷∂Á—±°a!Ø¬_o¡d´}Ú'ßW–û4J7G&‰ÀÑ≤„}ÿa‹]ÉJ_Ë@…gÅKDz·+dΩRGDh¨“ùölF∂¥e´jµj€çV7øÔî˝Êöˆ‡HÕIﬂ‚∫—ŒÊíŒÄGÒ†≈∆Mã€ëÖ/dπ5/Vq£≤J°{2
+“ˆΩã≤©{ã“~©*Gé‘Pî‡t|Q`1¡ÛöaÀQöåŒJÙn†|à_nîEœk4vùê÷ﬁwÎC˜l(∑-o≥>˜Ç±‘˜w[≈ªÜf≈∫O•a_jŸiÍlA	¢≥_§µÿqNÌâÛ˜´)ÿ5ˆdC+TR,CvHg{;&!jÕ~t‡j67û≠Yè[OêÖå“vΩì…Ëì àÔ,QÉÊ¸aC…æFía€ìkDjFZ·÷¡ñ)}∂_$∂|O6†á»{;Ô¬:!∏Föï≤NÉêw)$¶ìó—*JÈB¥ñò§%Ø{u>4´ü HÄê–mœÓü{§û3ÿæ@4HNæ˘£•õ1+•©UiJ‚Qd €ãiû˜⁄«ÕÉù∆aÉ¸Á`iá–Mú8h# ôwò{)®#ÇP@!m˝_ì/Ax!ﬂêÒ◊˚ge\ø°p˙˘ùﬁ´∆Q‹dÒk€Ì£ﬁÒaßΩ€l-lıê’Ç¨Ω∞r'¡$ﬁv=Ñ°(•öpÕé¥Çx˚éî%∏.XXòb÷∑:ù^≥€;nÓ◊ˆD‡®€}»'Æ¬T;2x„ÉÈ'é¥¬ï1ˇB∂ÕNc∑v‘"ÿ—ﬁ©◊∫ΩÆ‹“»	œ§ñ¿ûHn>!jKr∫4Ï˛ê∞çÙf5å‚®GrOî˘C…1gi‰VÃ∆ÔJ+„I4T{7Iö.&ñ¨tÄ,!8_µ™“ÀZÇ1Ÿ áÓ‚Éí\Da€Ò$A/øó&ª0Ì‹Pû«ÜOk\¿ö¢å∆@•#Dâ≤EX˙c‰åNú–4V¸^Vn◊Ú◊º9≥†=©¿∑9c7*ﬂ8¢¬†πé2&˙Qt ë–fuÑ(9R«.nz	m`⁄báø”‹vbπO¿ˆèytäã\Û≠–ùÓvÉ4+ßBÜU_‡\cÉb cs®™ŒêÎj˛)2:ü»xËŸˆâ«®kd≠ûªÉ®lBISq˝~G™k®a™i∆ê’sƒèÛl¸P<∫íÓtƒê–‚w†·ÑiXjuﬂÚéﬁq∏?ÊÓ(+EH√Bõ∫8  ¡?E‰äa∞!è•KÛMÙ¬∂D„ Â[‚—õ¡§ˆ÷ò ∞©¸™^]«6#ûåZù '¸FEäì»A˜=q˝…+¨Wl˘#Â—©ãÀmU±öaLÛSv∏àYLâ¿^jj}íÚñß3Æ ãìe±´$å◊‚#‘˘nÑ–˙i∑v–]#zo„∞æwqj˚:≥;ÉS◊õ`ES∞ˆ
+‹uΩ^Û`OıOz»Úò–
+LÉHÖèé’,‚OÒ@>Weó¨Ÿ#ıdè&'Q?t«Ä6á°€w8‰ˆ’BÂ8÷${∫›UwWh¡È!›w≤‚)ÅÅ»Û◊mØ?Ò‡‡r}7vmœr¸3rå¿÷ˆ‰u?9R˚¨d∏{7µ?H¶ó°¬ åÃ’ﬂZöÖ¬FesÀ˙˛IÑ!Â0∞Õçı'[√FY†π&7ö‰N"•å`¿Y£ë¸XasCÅ©ìû;Ü§∆Ã3¢3 Â≠W6≤@4Mx_ÚyDbàxq8	˚CÇ´M\qU+†›à…ç∑·Ÿ6D∂÷nk˝È∆ﬂ X‚ÍüL.,7N 1÷iáÚ.Ÿ‡ŸJ ”`Öô=“øJ	p BqleÌO†ıË4v	vkFDå)#Jâ≥ﬂ¡*J∏(bUULKãƒ-™"éË"9nÏ≈{aE	Ä˘çÿ“≠˛ÅKµ≈ˆ ZœÛû‡˜'±‹=ı˜?í™Ôø˙¨à\ÆıπáÑŸ] #˙Ë8ÁdÔ<+ó…:∫†YX}≤fï6JÂÀ˜FÅ[√}“^¥}¡ªEñ3Ö∂£∏Ò˝ëπï∑…4ﬁâH?µ0ˆ~´ÍÇ6e6T”ÇÌT∞Îm˘_nÅÙÕÎ'‡º…V≥c˝Hì°:¢?;»en‰\“µwQúyH–D3»a¶<lÁØ…856ÒƒAl{{˙iŸÙ-õÅ NcÄ5J˝Ä¶2•ÆÇÁ’Yú«·Ü£ú«È4˛p‘–ÿúEG		&W#…DDÆ'†*CƒéÛÁâ©∆Ç≥≈ÏN<ÇﬁºUMk@wzMTài«õ∫]sç‚rˆ1¬W?¡`QÖ—$º§.ØHêØ~‘¶Ú‰ÖR)Ë!E§ó£W∂i≠Kµ)µm˜œ◊˚	óJ…ÔiåÄÜ≥⁄Í1 Q⁄Ê/≈ﬁ_®w¿à5´†LÂ:ŒT˘8îáË:3Êó]Yì◊&ßÙñ¢ù2°˙åùß'lqPÂ¥ÊÀ ‰Éª¡„6_Ì6≥√l∑Åö“„◊?jÅhØ]LEµb‹π¡æ€'fe‚{Aˇ‹—zVπ˘◊Hïï”Öíi⁄@…zÖˆF÷î‹ÌK$¶4– ú`∫¬'ß·ÖiD‘ÄiË_yûŸ«¸mD’dDºiL%5π»( tVç%9§@ÛÃ∞åÅÔJ#€üÿ7•ÕÌ,ìPzﬂuÏO©\æª¯sx¥›j÷5ÛÇªFÀÄıxr‚π˝&’Å›{ê7˜é∑;µÉù„ùF≠uìó¬Ø©$5R≠T7Qiø™™ËÕ”êõ0É]sπ⁄U§R‘cÖ˚ +µ2CtÀ#∑ ’t	‰}àl&Õo^$âB±¶Fë–=Ùÿ¢Sü¡KêüíÎï€wmœª∞lã”'vi·<,{D∫àÏA™¡%òNYÔ?\˛¸≥÷n∫2óJ[”ù˛6∑∏Á›ñ¢êﬂﬂ”ƒuOo`∫Îu˜K†4 õ43Ç¢lG4#D/∫ßÒ™Ä∫PˆéäØ∏¬§Hc"˜Ãw€∞æ;éÌ|¿îΩ©V»pÛRçï®¢ä ã∂?√(‘
+£‡µ¶”ä!Yôÿ>À•"Ñ?˚iÉ>;⁄’>¿À5ãµ≠}eÔ◊¨¥›¸2Ì˝ÚπêIÊ-$˜‰»=á¨è≠7ÕùF˚xØ∂ﬂ∏Ò≥Î~Ôº7˛mè†I—ùóVX¬Œ+äÑyÌ4ˆöÌÉZÎ¯∞}x‘™uöΩüæL6tŒ»˙⁄ﬁa0ûxvË∆Œ…7.µ8¿MF∞“Xwï∆RaÂÑ+’mﬂÿ%MlU:˙¡≤e«Æo’FNËˆMïjëk|} Àã¯"a€[’ËTﬂÁÏÖyñS≤v)#‚]·ˆ·Ç˜Öoç±∞%Ó˚Ìéôiu≠F≠€8Æ∑ﬂ4:‡@∞∏NäEg~ı‡Éíä◊®öÍ§Ÿ6$4b	PA%€b&fò…ÿπf^gtUe:U+1√,ãñ;5/
+ÿPh]Ä6Zò–P˝Ò–é≠∏—Y'é5â¿é,[—9 öÊ‘eQ˛≈Û4;‡?:DV“…HSÀV¢EôìÕ—î%∆ÇñÏVÛ<™*æ(¸,oUZˇ¬¨á∞œòÍw∑π[É¨tçŒïæ˝¿ÛÏìËJ£AõêÒZtøßÓ©˝czÉ˙dåliÛ‚ V˛ﬁj¥^ TÚ.Yj5"àÄ]Y0ÍΩ+¿)7Ä:Jnô7ÇBÜpIı±°ˇ¢QócWä˝aÙÜÊˆ—2ív~∂b7ˆúîT^C0v
+Y\ô,Õ´
+/ÄW*πÓ)$OÎ¡ê©.Gi≠¬¬X8ã@Œ“ï‰˝Oˇ£ú(ª…π÷Ìù¡Ñ4'˘N4Tî?y*uHs‘†Îº&ÅîáÜ˛§∞ƒöÅxÇ∂ ZÚë!WÖô®˚Ñò¶eLÀùTùÑãcŒñkÕ*·*tÉâ?(	7KÓÄ_µ6üoêÀpé8Ô[1dπÛiÏπ}7fﬁÁÈá(&{e$kÍ!Î)x¯wﬂ∆°Û!Î[d{é¸Êœ€C¶˘S™◊Ñª‡o\}«r„ï»˙à‡ÓO∆¬æ√≥o•éüûU–5s¥*ë@—®Ì◊áv([å˚¸0à\∫Ä¬7"L¸(HCJü“h’ÜØu%ﬁ¢(gV¯/±NÌ!d‡Ä‘ˆÈ2&a¬R"•¢#c4åÃ¶Á†gå ¡RwL©ÿ»Yé'Ç©ÙóÄóÛCÎ‘≥±-˝®°÷ÏP˛Ëûªc0+ÏNF#ºÔﬂó8’)Å  x]Æ6Hh	ÿ¡á©TânVn?«,ÅÄ4Œ¿:πH 
+xxIÿm`È‹ÅC*2zP˘S@.y%B óhcüRáä≈£fXˆ–±`√„çrLÿ#LŒÎ⁄ÁÑªê¸œ'ˇ#%FH'OÉ >±=œ´ÎÃ‡èQ“w»ê…¢–p˘ (ùóo5ì¬òjS¬ƒ5~®iﬁv=#u‚ö∞qßJ,èÿN∫]˘y7(∞’÷D ›⁄”Y)s¯˝—mÏ@ ™ñuô¿['pÓ~YëF	≈x∏G§≠\¡=¢+/t5ΩÚ/i+Ú1	bπLæ8t#≥≥˘:v»ÿ≥/ú∞Î@h_∫(¯√Ø±¡0˛°lñî!7âé®=Ñí-ñµÛËÖäÃ"vG‰Ze 8CŸxE√®$~âeVâ„|U3Ë»9∆—˙ãñíåL¸v>«ùœsãW<ˇS,írˇXÑˇ)l-`¨Á∏üiú7)îˇ™D§q§”ﬂ•™ä
+§¬t5d
+Éù¬å‘≠L|˜œßi|ŒÑ|§øØ≥›ŒD…gmTæ‡TV·C∏5
+fÌ#nNttI 9Z√8µs\EP»›≠ìÓ∂tŸ±p)Ê( ¢CÂ√Û‹LZ¶›@Ñ¬ìπf‹;L∂)çπV⁄∑ˇD∏›]◊Y›x2pÉíz§Mø™ªBÄ:ë¥hn{°√
+24HbH87≤;V£…<∞ˇ"ƒeh˜OiYŒo$ÛRâ.íï/‚Ë Ø*£iŒ„5ÚˇY„ÇÎ‘µç
+;∆îq∑≠Zã\rM®ƒ.πàü≥ﬁqŸèP≠(•\_”?d^DdA442~Ç≈ÕBƒb*öÄ¡W—“hπòÈ°Y.ñ&J+Ï[∆Ó·_≥oíÍM-9Ü≤!/ è…îc?WD¶0è…§ë›9˜ [ìÈÍ;ün2ú•a∫™´Ø∆•À‡à4◊«Ò$˚áÇ6}!AWf·£qªßiŸ'&W@1êsµ-ú(v ‘fu‡9⁄ﬁoˆ»Ω¢V›hµj7c±ºk≥»-)zy?∞˚C«Û®,e9—Àªììë…wlÄ6[W…¨*y+ïµ∏≠Ç©‰"⁄$Ç≠…◊µ§%¿"CÒ·0ú¡4*ía:îlà˜”j.Ó€º∏“Ïs¬\‰
+∂ÆnâB)MX5√ﬁÍ"E&Éæ⁄$™]'Ü ]FˇŒm¸∞ïçH◊∑ö
+ë¥]¯9K∫úlb?ùí©≠9ˆ-7Mi‘zGù∆r Àÿ∂âê ÿIy≥‘my€wV˚™Q~)ß≠\Öiä∞ Uß&Eâ¬Be÷NÅ«|;PÇáM1œ¶@#ˇáùë∂ru;#]Í%ll¨àWÓ)|]3La°7˘GWdÔbN…≤JX~ûúÖ∑∑¯∂®ÁQa=}’¸¡Ë<ò0YûUw¨ùÁÀ*àôÖUÀ‰ŒÌ≥'£ü`—T•g∏◊@@€∆Lîivâå’ïõôG]%Méä⁄Ú£Y`ÁUˇôK˙˛´œ“,/◊ò˚+_Vff≤v)â∫´:cœÓ;´Ô≠U†ïc•Ú˚5´6(´mn'É-ˆ"LË∫?â‹æ%Ô€ƒU–ö$P¨¶?ØDËö™˛ƒ˜˝°Ì˚ê'áŸfÍ:0Tk∆÷«¿_!@yàgZÄ◊±N&§ê≥‚y˘ÿ≤≠Sœ>K¡âÿ4Eaêü‘t*‰s¶Egi1¿íØ '8B†}@‹Î†“¸(Rbñç‡D`*'ö1?k¸ß{M?Á>ÀOeóÂB”ODágKß˙j}•∏ö!ú/ÍÑ@—ÆÙıZB9aÎ),o÷XkZò£πŒÊi˘c∆aQñ·
+∏Ön˚`of·KÁÄÇiˆ2¬¡RÄ}êË&èiHçn˛@çô…K4!&ç@{Èπì˝‡g_©Ñ—˙º‡ÈüÃ˜r
+ùNÍû9~ËTÖzpXÁ9{ˆùF˜≠¥Ôƒ(Hñ≈ä‰êKZ¢‚9˛Y<,4*1óñ2ùThÉMü¢ôºZïä3ZÎK2Ò‚ã$˙ív€^©ºF⁄cÕh
+»|sÌTm©ßHÃâá¿u,—∫^2.I_gZˆ∑j`ò◊∆}uiäÈe%Ï®*€%ù!	 ‹∫dÇ…ÆyUëíJÓŸÍ—)¯Ê˘r»õJÙ:L[–¸>Xç,SÑ‘át);O6√ÛlH1‘,Äâ≈æ≤Ó‡]Q([}iB€<tŸ·πìπoOgJh»‰[wå‹Î∆ÏòÕ2`*röÄÓUE…èπ {V4@ÍtKsL∫É≈çªåºwë≠[G◊m¥u—"}6vŒlf ÛK42ÿi≥Pfı⁄˛a≠π∑∞Öò9|]8éôÃóâuß0fÇGÊ®º‡,8
+ßKth75öÄÈ•<bù)lö∞ö&ÔWÜq<é™è”‘ä®äúM—êPá—„Ò0àÉıÕ≠ßœ∂û<ˇÓŸÊwﬂm≠o=˝˛˚gˆ∑ﬂlÁ‰πm/—%,˛˙‘ç_ˆ√`¸ıü_>ﬂ¯˙„Àg+7uπó¡On¯B$¥1)Cx r€ˇË∆Cr:% ∏ƒ˚æçπ&¢ %;}{4∂›3ˇëıÎ/ˇ¯Ô˝Á’oÏ"îèO™òs›ÊüÃqõ«K˘<∑˘ßi‰≥Á3ﬂÊoµø¯±è1‘ıW…ë·kÎˆX0˙,kasa¡ï`Iô¢áÏ`ÑÛòw§q k˚€µn∑∂”æ*±k%ü ‘Ë(ﬂrËÊ]2≤*≥÷˜à∏¶©ç1d]-	ÂXO•œ@k˘í /dN_µ»:ú¥Œ"ıŸ.ÑgóûåbÃdŒ?(y—i‘≤—˝O0ÀÄF‘B?m72ﬂk:Ø∂;ç⁄ÕÉΩ™UË‰:qCRA5uT’x‚!&ûjpv˝√ﬂˇ˙À?˝À5^õâ8˘Ÿ<≤h~z)¡;ß_[ÈÒµ9ª4˙Vü_Ù}∆ﬁÆ&€_Æ§GÀ2|"¡n£º§Éps„ÊNBêw:®∑öı∆A˜FCa_ÔQ»’ªò5à…zÈoøOn†ß!¡~R©J°ù∞è.Úîˆ2!~öı‘$TÑ‡I7OGÂiàS3èâ"¥¯J¯Éj„,B_	%tiÆí¡WÎ¬ÔW≠5?'ø[.ôÈ¨Œ5™∫4ï•ßíètÕïwRÍiÉ,™ÜwÄ'õ[3®7t∞≠àr¿ˇ¡t¿}t=‚¨1À$»}EJ¶´âg◊ﬂˇ˘ˇˇ1®JlÄ;,‹0e:Ø6À	ˆ≠téÃz˝z"hbg9øû,ÆLu>ëiÉ∞ê ∫‚Íd´; 	Ft¿Ï\∆Ü¬·jS¶bCiï÷8ë»àt|µ'”qˆ⁄G∑·∆&|L+ÅDiáñÚmëp˛¶¶4•D/òÑSéü>•g¨pÂ$Œ	§Î ¶C€EÂFÇÚê@‘0FD–EÄ#IDØnas<~lc¡BÄ,6A¡u4å9j∆Í;ûsB©∞µ˙åÜÁ!‰çîv,ê,ù∆o=Öô»∫,çﬂç⁄æ”Ö6”I|p¸	ŸÆ_≠ºaäD\◊ÕJ3ª0$S´Ú´∑Ô^ë£¥ÓƒòF[€@%z~¡‘Ç–57ÈÇıŒbù+(•g>c¬„‹(ìÒRΩ•{ˇÑÏvÂÜ˜Bi	G™Õöå\H@π{áNˇ!8ìÎ8&™ê<n¢DêAt´Æ…_ˆG˚¢¨Ù…õËNNHœ"u@’
+zKEbtÇ MN{^Êq:9©Pwö-'‚anJ‘≤Å|á¡üú~‹Iu]	a@ÌÁCì€Dc`¶nÀÆÀx±…IcÁ2ÑÃEdhÒ¶AYMõ•=¨Î∏ Vb„ƒZø,%Ü¸ˆ•ıL0=.gÅ;têçJÄÕe
+–œÊ¥ùT9*‰f—m%hì∑Fh?"*©rAØ¬¢∞Ö¬3ÉîT‚ U:ì`©~À¢æã◊ì~¢xµ‡aƒ}˜J¸ãô\Ve@ë≈çZY%ntƒÈ¿KÎ—#°-a∞ÿ¬å)_'L|rÄ¯G!§ÙŒñÒÄ%≥/±zQ	ò_C!©bZ5µÑAÕ. ﬁ≈à°ÛxËéJJ–HiËF˙˚Í,çG–∫ËW*∑o˛¬olÍ∑‰Ω∞Ëi|pn'hﬁöö\
+˙7!…˛Ü¨@GX|ﬂE˚cÇÑÄ Ø¨˜…°@n,RøóÔI≥ÔA7§1Xÿ7‰:M˙†“\LÆ∏c_Ÿ,◊¨≠≤aãF∆Ö*oñ]#èRßó1V‘ TÒ∆˘Âä|ßd¶V_ÚÈßkxië˚ûvÔCõM$dïÏò‘∆sôu¿}OX™À ﬂ˘Á#Aπ2Ã.K0ò®1H@ICÒêàg†ΩñÍ⁄ﬂ‹¨n}oç+£ä’ËULêôrÜg…)öDÄ»E§´,]<È*kÄVazÜ‹›™‹|·ô~˚}∂eæ˝¬SË¸Ω†ºî´‚¶2\π~÷=ûK	Œ
+[_O¢°1ìê‚NﬂÑ◊≠ˇ  ˇˇÏΩ€rI≤ ¯^_ë¬‘)í%xìïäÅ ÖoMÄR©tdTHYJ —ô	R,5ÕéçÕ√ÿ⁄éÕúô›µ›c3÷/;fÛ2Øc˚∞_”?∞˝	ÎÓë∑L $Uî™
+›%ô7wø†Ë£ñEâƒ4ï°ßzöÑÈWüF.q|«ˆÉ´ò !;J«?\;ÖPß~ÿ˘LÑfn÷É‚Ü¶q°yfﬁ{¯’‚ºáèsÇ<‡+=@ZÖãt‰çwà*@íÃ∑ëáqá4/?’œ+IÃldÑó~Wõ];'Öá†d?µ±œr?Ò="/„$åå\á÷»H©≈ñÆ }õõ-ÜΩñXàT!ê¯ <õ7:I‰üù°ÂJ…»sÚ‰n˜¡'ª„`Âî∂>:|éIw«\ÌëVâ(=®á3îá|ö÷˜∆{ÿ∂i-;Mƒ»:_Ë8kﬂT  íL1¶túdœ;ùh}4tkVÌó“◊Å!ó]ÖQKã(œ∏tLÿƒ$©(ÜF uç3°¿∞±ƒπº o/bK*tLÇ7S¿.Ee˝∂∫Èv˚ÛÃ•Ò{çjH9â}–ﬂ“–ßaŸg"≥òéu¢-£3';¶∑ùÜÈf÷YÑ“ÊßÁı‰#`¸'¡1ç´≥œd∆1M‹i…ª…ß}™ª7ZˆπqOˆ)b&Òs•`LˆÎJ›î/6%=P?-®"~VﬂÇˆÓTh/CŒAz˜ÀFz°ÅÚIòè˜>1¬Á›füŸn◊Øèô‹Ù ¸oÄëìnÙ0¨»_jwùV$ëò:Ó@˘ªJ
+$â.&	ËÊÖ	ÈÁÏÏ˙¢SFáKá¡Ac‘—q	á)ö"è› πA‰πΩKäÎO^N#=ßá^Á$ÛFŒœc‚GN«√oÔ…÷êû¬ÏU4Ë_'l∞N‰Ò\È†ÊìÖ˝*î^iÁõoîvÀºál¥⁄Y£ˆ>∑⁄JD„û„≈%öAczå∑˚˛:õ^á$‹ê1ïΩÕüe´nêû^yT≥@˚»Næ>FZä•∞…pO´/SåeIÄ$¸Ü}rS9’fo∞øC^AáÕv}ÁéL„~=R%ˆÕ:º'd´ííîû7@ª⁄3æ¶A*Œ»ƒ8:`e≈Vî®Ö•TáÙŸ1+eyÑ/ı ª|€ñyG“pÛΩ&'wç´‘˙ÈÛâÄF›hüÜß8¡ióñåVú»´+#¡UQÄ|˜âìB⁄çVŸ<∑ªh#°ˆ|ì≠ uW®≤ö 8Ωd6∑ë ¸°Ô∆˝k6}0@f≤ÒTf≤ÿ-E◊π]¥è˝VôÖWb+}·‚ıÁ≥Ò•
+Fˇ≠3/ñÊoAΩøëÑdf€¿¥é,ÒÏz$náAÔâmX›dÏ¯VÙçx”N.fM‰ı‡úmHÂ[•]2yb–(mC‹«ÊÛ‹bbG‹ó“zcçûI4ôö–πXiVjÊD±ÃÈº!Ω*'∆¢ö†Õx~ÆñU¢Í¸û≤˚o<W£∞Î≈1†¯»Ç»8êY\xLˆùïÎ'ÈíπÊïñ´jGV$\ìUÔZío‹Æ++äêfª9‰◊¯{c}7rÃDfoU˚¡‹•å°ÚêÌŒö∫uuÜ>cVj¨#
+€sﬂÇo LD‘,ËsÈgM¢÷Euƒ\Å‘a¢Ø<’:*≤åVÒ°ÿ¢59wéÈZ—‹qW*(’*qæ˚7 ÛMgusS0D«ıùù˝F˝6R}ÊR‹¨—Ùª⁄`X$Ô¡´¶ébæÄÈY`Ñ[G∆ó©ÄÆãÒ9£˝m"<]+Ì4ß
+©Ù˘¢π4ˆi0^*nﬁ§äÀN%®èìøI&W≥ô˘‡u7ñ8.ﬂ∑úªM’W“`Ÿõkì˝úû˝ˆ6¡—¡Œ~ùÔÉÉÁ˚ù©"ë~™ù@ó*‚†èpvü‘yú„˝ıŸØâ’ÖΩ*4Fô:…)6ò˛uÜô)∏…◊ZcÌ<o6èwÎ{ıÌœ!Ó4»íp˛·›/ÔR€Óv°—^Õ∏é§Ë)-h±TM}çŒh∫jx‚≥¶=€ﬂ»≤8∏§◊ﬂj-’2eM§®¨˙◊3≈⁄wY3_‚Üò†/lF\V7ﬁ…ÃTûèØXçÏ!sÛÃg°QG%ª }Cúk‹b‘#œ¨Ó¥Ωπ~˚‚cOü}_≈"„:KŸØAT:˚€€;ÈvG+úNk∫(îüÚ†∏'#õ˝/r'‰aïzLb˙Íæ—hSÏ%Ë”˜∂f èe∫Ú*ﬂc0◊é@óÌ÷ˆÒas˚ée…?0FÙ{úÑ€˛Ÿ°wF·#Ìg˝ıW˛Ÿ—Î„Éù˙k¥”;nÓu_ﬂ={êÖA'È{ìÕÓ"Ûñ,0è”ÿRq wÛœ^E§;‡çRVV£∏èóÉÛ~≥πU?⁄È∑ˆ;≠≠lJ€Èô§ç1Ÿ∞Á} ø µmbàË•t+;"ˆh$ÿ#ivx’ªQm›Úñ™¶£(Öæ8JΩ'o0oe±,sq’≥ÿí·K˝˙÷àûÃbÏ) i–È4C[ÃûJDf“ë¿«# n¨TaÆ(ÈV—˚Íc/JW…¶‹Vxòî’…e¢PÜø¿3U%N≈pÎ∫I¢Ç≥V©É|˚i!û78Ù)":/®
+Ñ"ˇj´[tñ†î<mÛ|l-À&-≈"Ã∫FN“É‚œb†öÜZ∂≤ìî‚ß0Ò∏ˇµ¿lK‡EM¡µ˚˙ï	Ÿëmyíÿ—g[GFÁ{g≠≤ Õ0∞’ÛRum+[îÈµü''Õœ¢<
+Ï;Kv-‡M"))ªéÒñNèkF{ü0Éè2kê ñÚ◊r#Ã7ïF,íãr[v0é∫}ÚﬂÖ*Âë¯•lô=µDß‚:P€	ñ}“≥,;ƒrŒ¥Ï≥ê◊¥ãì∆Ú&ª•J[Ü1›È!>roîjo/<Ò)Ω,çı≠~ï∂j+veéÎ Ò`Ì&"ﬂPˆ◊È∏e5ı‘Ö™ù^T∆¿—ö∫¯∆tË ˚ßñªZ∏ÎºïØSKÎÁÂz0
+L‚êÖx Ω¿Á¢ßS•ò{h∆˝eàg¶¶J7^–x<ÍÆUOµ‰ÃÛÒoËö*v8ùæJçü=5>íé∑›l∂:üÅóx.<:Ó4Îªm;´_|AM=˚AÀQ¨¬´2W†^Ω’¿Kz£7‚¡—´ﬁ°A‘XAﬂ©˛ÛãÊûG„>ú˙¨IàæÊ◊‹¿GõVÛ∑¸x|‘VN°«ûp!dAÉ·À<äîx∫NDÆŒóøûMÉ˙ç˘ëC–ÃÀreã¬›ô¿L›+œ2+ºqıe÷z˙#-N√3gz∆xaú$%“\„#AWÿd)K≈s)„õE
+I[À¶rÃÁ±¶N™RøF•¨‚{—¯4q)ëå)lp5u¸ˆ\G>RˆÖŸ…Ñ|Ÿjæ:>®∑;«;ıgÕù„∆Û˙ﬁ^sg∂îËl‡Å';rNõìm∞◊·8üxñ©ØÊî($ïØQ…€p…äÂiêvVcˇ•uce*⁄Sî’'n®·®€¢@Ÿbqaˆé¨è¿]:o2¯okR⁄˘X√éíÊ0â|;Ô±Ø5'}q˘Ê≠ÇÙºOπã¥=Aœ8∆±7Ì*aÓ±˜~ÃtBËog€3TjQRjd£–∂+)Ô}ê1$w§Í€O<\jÏçwäÌë¢äÚ(Z¸ŒF
+ﬂ¥q¬ìúQÚ@{ˇJ$ıXiúfDÓ{¿∫·≤0RJGËôΩ+∂â•‚SM,+iÎÊâ'°ıûáIµR©È;áoD≠òóiç∂)y^u•êY˘®=°‚Qõ«ë“¢ÒW‡ˆ{ÓÑ˙¨êÄa4ˇbRÛ/Ú™Ó∏â?úPõ ‰®«˛§Œcë‹ÍßëﬂùÄ
+ ˙aré⁄LGf ±U?tGá√ìÇ ¨ÄQïíE·–ÔRµ< Z1L≠†£ÀBr@ä’ùp$6´ç® b¨∂“ö∏eèÂÖ ˘Ò¯‡p´us7,âô•S˜ƒùæÁˆ‡!EÄrXjä…)/n Wÿ¯„åÎî\l3Æ{mährû¶&Q÷ge<h˛ÿkb`ïæòY%SMﬁ ñïÌ#ÛŒ#€âT I…Ú§)¸L'Q•Ú‰*ˆô¿ÛAZÂ≠bV∞˛≤ﬁ©O≤Í”°‡ÔS≤R•)Å±Ú¨˝Æƒ•z£—<Ë7_6˜:«≠Ωó≠Œ≠∏d|tPïéŸtñ·2J?“äSŒ/%Î/äëïå∂üäå*∏’¬…*˘§¥…úc«¡Xå‚Èπ¿/>bd◊ŸÛS aÄi|≠·πüêìbéÛÒÒ`—	Yr¬ÏÉπàYRª]oî¶ñÖ	+2=ß∫2mΩf›äÇJ#ûMsM]á¢X`Mu’^	¨ì•¯'=L1Q>Al8©RsLHùSÂ{7Iºaè∫Zòx{o´u∏À∑_Ω”iÓmbtãkeﬂ÷&¶x{¶Å-?%£¬/]YøNCGµŒ–˙´5õ	Ü ¶1~Ür.ßag—1xÎöc-ï€¢¥#Âå––æx…∂∏ÿ/∑–ÚÙBŸ±j[i8ñ‹¬çIn@ÒÄÖ∆LÔF^œ?¡∞°õUk*Õ≈r¶€ï]çÄÇ›@˚ó”˜–ç"#[i];„j.ŒÈ"eÿuÜ˛Y?¡ﬁ˛∑3ko„t{Dﬁ¿˜"o˙^«…x8Ñ^áC>∑[)Ò4¯hƒa≤ê∫Y'l€õß<˘€ˇ¯èˇﬂˇÛÙ1L;è¥’°9≥ïÑ=˜Úﬁ;„XW‚¡}¬¸0RÁ≥∑<2ì†Ÿã…°òñ’Ä_Y’ÈíéŸCéMéªTÕ4÷À±0JOD}∆w`CjÏ⁄Å∂‹êA1ÒB-üHHM>8ï-˚clã∞Ã0¯bÑ6¡Îßú’¿_. p"√FfØwh?≤ßŒ∂|ó7di+æGs"Xi7Û@Ω^Éh‚Ä_çêΩfa[Ç#;eñì·P.8®π∆cjóÙ£ÒI‡3çm©òlÌ:f&õÕ∆NkØ˘Èƒä_Åmô$êÄÈ|HBB*‹Àƒ…‹ô}˘¢òÔ|…ÒÂ˛ˆQÛxkÎÊNz¿=˜‚Á≥Œ∑) ûágcñq˛ŸÔ:≤ﬂÀt˛jvl…;TÄÒÜ®˙KW(ñ±Év‘û˙‘ì;[t‡—$vá•.c›ŸÇÔGá◊ì≥oCJö˜√–Ó≤"æ˘˛ì_ŒÕZ™ZhBïuôbÒñ)ÂrÀ"ÿr^x÷€J‹®¶
+·U˝ÿ9£3/«B»°KGû!$]ô≤¿˛´≤ô≠Q*Fï[≥Êe\ºˆÚ5Ú2>ííœ¬‚?J9¸ïi9¸Ïö‡N+ ûÌ4p/å=≈íAœæFŸWv≠˛¶Úñ‚abò!I≤$Ÿf€í•:üUj≥DåûjAW§∫≥,Ëjnäë)T¯2ìÖ-’áÒôıJÛ¶Ω§Ùs8o˜=ÀÆsÍG „Oﬂ‘ÔI/‚º`˚;Ç∆Åò„“Èc∏–>àf=«=	«Ãr{¡iÌ´Ø˛ˆOˇÂÎè⁄ÿÀ.˝π˙€?˝◊ŸP≠˙v∫Ë&≤N∏ÒŸÚçWf'àª?iwÊ„æ€ªT3A%S÷sRæ/3”W≠Ä5ßó-õóîØKÓ7•Ä|™„ÁªV„&¿ö &˘—Üc√Ãπÿa∂¨ò…N>Ú¬Q  PçπË`†»!°°„¬aˆú˜R¶pÔ⁄·8Íz±ªó÷ñI=Í2‚ÄrM±ì.ˆíÇLX÷n≤ﬂŒ¶Ó:n‡E…Ü‹ë:Ù¶3e˘®°6˚Uv∂#‘•ú ªàc-;ˇÎˇıo’ë< …0uItâJ›>n—$Dº§l^ÁÓ˙ì3ﬂyÉa¿O8˚q¡\ß€˝ÆóÕË€[=Âí¡/‚%!úÇWo
+ˆ•Rê˚È…∫ã€‚F÷¨Áœt4g-%9◊<πfß7◊2€'— ù)ƒG÷œË%R3≠l~•πü!ªdg§*öŒº‰9<iÄú’ZXîedR=·ÙJ∏fç£BÍ¶ºP)k≤œ
+®≈æ≥
+vä&3'ÇEcgˇhÛ∏]Ÿ<nmŒ&evÉp‹kü01ûíô—k≥~◊·UR¡Ï–H+˜˝QÕëÕv2Ç¶á^ƒ¶UÔÈùQ°C8oØ†ﬁˆ¬x"
+ÄS†?ß2ØäcÌx√É¢"<f· ÚN·\Ë)`Y§ˇ8ûIÙ€èHo[chçªèœ⁄	%íV;∂Fn’Ú˝f•Cˆ—J}}ùhgáÕóÕ˙ŒÒasá4ÿÌÁ≠ÉÎlõ/Pi¬â·°2ÎFfcEò¬T5ƒ )◊œL≥H«)∞ök8kN∫…ÙÉ6¢Ï∂ﬁÍ"X\ÀÈ:ì◊Zzù˙!…µQ*É¿Ü÷,6%ó9·]ö„lÔC7#ó\:Pº‡Fˆ›Œ;˚±√® &dıÇô∫]ïﬂ)“G â£JRP>\dÎ-Y.ÿ”SøÎªt–:~‚§lØ∑yìmù»¢[ÌÊ≠∂26Vfs%óıõZ˘ïÊdΩÆîª<µîõ(d°Ä^/∏1ÈZ3-ô]Äæ˝2ú£µC≈F
+ØWØ…ı‚G0›Ú2\„Ã©oæƒà?ùÎ:⁄›t‘ﬁñAŒèw—F
+Ø√ç⁄òP2…‚∞†◊Kı3Ì!áµhiÇ≥Àk@-Õjgú®‘À≠^"[ïî[]¿”‘(òﬂ„Jã¬ZC»ÚöΩ2ÇNé@`èLú#ÃàWˆQ¡}ßÕá‡◊eË"∑çãÑŒÕEZ˚V1Y§”X0Cñ8hVfƒ`G4lıÜg∞ä=]Ô¯ÓÔ˝Oˇ˛F¨|ÔùπFêˇ”ç s∫˜ŒÃV¿vLg’ïßõƒlL≈nLùÃS:ˆU"2•^=ΩqSÍO{È&›∫)ıÛ¯eJ∏Æ0‚yzå|ÈØ…?([UìJ7Æ√]<™,h`jz);˜ë™˚fÁ<û6Î/éèÆ≈m∞‚ø/fcF	Wë-NjF$’TUT`∞…ÀMP:±O™GÚ>P™HöµêÏô˜H›wtò“ôıø9[aÑ
+Ç›Õ∆ãòª—ßy;ı£A°úûw¥—’.∆áL Ôûh}¯ÚO≥\Û)≥¸‘÷”ﬁ⁄ÿÔâˇ8ÀÓÚ,[øÉ≥˝Ωè∑ˆè7[/˜ßs™˙Úœ4ê≤`Yâ:O<»náRK›L[/ÏcLÇÈ”¨ØV©5{õ^ºhˆ$vÊÅ2©F<÷jÙ∆Æù`«N√h‡&Bﬁ›‰ÔÊ©ﬂã¨›E„H6§_√î…O@ö9àB†¿øc”?£Æ'Ãx›Eµºﬁ≥ÀÂ?∫Ù"%⁄PúÑ=|ısËK>à˜ƒÑ√À˜2∂¢4áû˘∂ŒìﬁIÙ≥€˜É^{<ÖQíSY.bÅêÚò†é‘„ü«Ω3π>Œ‹÷4 N†|
+∞·”˘ƒ≥Õ•äŸ5	e‰†Ã cVƒz∑x[WÖñ¥5|Ê&¥π*Ø0õbìÜ^“•>êå0∫¨)!3¸xÀ¬jˇÇS≠ﬂ~aLrv9JÄ˜£9º-‡òå0*Õ»ﬂc ©ˆ‡ó’…êÿOº∞i˛ÿÿ9j∑^6kv6/ê–%∂GVM||Œi†ºMÅ5E75x-QΩ+4ºpäó1¶J˜nÍ•h∑<“ˇºŒ©ŒÏ±(≥°|zt6T:vÛº∏66PâÄÕÆôÚŒ©;‹ı‚òáÇìÔﬁﬂΩÚ∞s ø\¯Iﬂ˘◊v≥÷>0)g}¯Îc^¸ ëÔû”Fc∏„	ù9ˇÎ?ˇÛﬂ˛Îˇç∂Ú{◊fßÄáŒ`‹Ì;AbQÊ¥òäÖ©±¿;É”ÚÑh"Ë˝t@V`w˙û¬ôÔ¬Dz= x(vŸÅªZYÀMàm$≤
+ˇÌø¸/ôR”àO3y[RÄ:éŸzåÓûñöÂx|s}ùØ,:´
+§tOIã[d¡'≥ÿÔM≥ø™k“ôY⁄ñÂk≥äzôŒs˘∆r_æﬂ°úwINçHáü[’⁄Gœv[!®a∞ÆÉ˝v}Án$6ù«¸ªqŸ%^Y8x≠,û«–k•Âóπ\æΩ{[( Ë]”Kãµı∂o]t∏£kftç :]ñZç„UxXÉ,∑†3¿Ü‹ a∏∆ﬂ‰∆ı∑D-ß$bÕóıù#t‘¸<»ò	·w°x"ß◊LÏëvB˛õ≤∂)‰]i[-ÜíoEU Z]"c¬õ[‰ÍJπúÔúJyÌ÷‰Õ
+«˜Ê†¶±ßã0.<2óÈkÆQƒr◊rOö)|ÙºnÄ&Œ8/≈+ÌdúbyKf"?á£\uàááûc∏ë“ÿò›NO'‚ﬁÜÖ˙Ûÿãq˛17e‡°3ã‚Ò §Äê¸úb¿æ¯Ùí·Ä≈˝ƒ≈ N=Ÿì1eH#y…çzqπ§0ú⁄∏3Zc2E e,˘ƒ^ÆíOÚÇ/OΩ∆¶ö"•LnCe^!◊Æ⁄æIÈoˇÚÄ\Ë4ˆè;ãrYsî≈—ñJ»g∆íùê‘1,∫ë≥ÎD¨wqÒØw7TTUSZçXÔ…fÛ≈‘≈∂ô"1ô+◊πdã‘∑ˇurÙ◊icø∆}’∏äÎ(HSP‚$î5—@à%Í!È$≈«pÜ(íÃÚ¬œ Hı8hÕ)Ë˙=AπÒN¸T(îÔi…Â•oJÎúB+Qr*P!|Så“)*eüJ.´ã.V¡âu!_\≤LF-Ω≠¢„¶¿µ*ˇëÕE‰Á”ò•Lcír˚áõåkyáõRf∂√Mª8AÁıu∫	6s	!!–Y‰yΩvä´5	oß8La#∂NvÎÁ õåt¬à°é√ïàãòÑıü”¶àØ∂sﬂvØàb´â„Œ˜NEï_5∆“ñ≠èÕwÃ±|˚Ω´wÍ±¥6ÔÍ|dÛy'˜ÇVØKgvÒûtúÑ`%xùÙÉKª’¨§∆4˚÷>WÊFΩ˛Ñ¨T/<’¥5x˚◊öº"J3”j4â∂Hgã…Óomµ≠˙NŒMú1íI0ﬂ™Ω‚´.ì≠£Ê?9_ßR.sKÜV˘¡Uf6÷Ç¸L√Æ8+]G/%ódã◊w„~/~Â'˝∂ ö∂·=ºV<9ùƒ¸{R3ºG·8U&K¬ú¥ûë®˙,<obº1ÃKa≈∂1®¡I7ÁmËµ‹≤ÅÃÚdM0%prÃúú#√ú"˝Dgkí?¿	ÒP! Ê@w£§%˛`ÂoÖï7éÔö~xÃ∆¸;∂ÿ{≥ _eˇ*â*døµ„÷n}˚NmÔæ$UÙı1mf€ˆë\Æ≥cI™NO-IéúΩNòÿÌfÁ¯YΩÒ‚¯U´Û¸∏˘„ÔCQ˛%T±hπ÷T9ë,“óπÒ,“v&Z…I%ßp¯\úÿó;Ù]¯Ár⁄˚ùNs3áôF]®˜¡Í†y»Ú{=`≤O0¶x¬¡’˜¢{ü“]aé∫ë{Ó˝·≥pSuÍÔ‘ñÂ÷}–“EÉÛÈùvÎá/éõªı÷<|\ﬂkøj67ˇ‡†r–ÖÛ±∫¢≈Ì÷œ&9n∑F‘y0i´d<„}c!ª≠oã¬xS»N)å7E^⁄‡ÿ0K£◊a¬õpPÏmwˆèœõüI\∞_ÉãÓ»T! ıéë.ÁuÓPhÎÍ€O¿w„ãG–(gOa2è«#%ò}Œ ¨ÃñUöπÜ$c€ö6∆v*X¸LÎw;ΩÁ≠û&ÿû`pO‘nﬂc·ü‹ -°iJÛ}î¯=∫I˜1«,ôv˚7˘¸Æ|Rg1ÔˇıY∑¢∞ƒ∑Œ∫eyµ
+∑‰iùî¶&≈ÈEÍy]ü&t8t⁄ê<qFÔ%ø 4ÿË¢Ü?≈ÿ∏ãF2¡'≈13>˜m‡YıÜxñ}<[˛ıÒl"Ú¸üˇ”é0r%C¿(?¿ïw~/ÊvV‰@œ¬;ÿ#0‰Sc∆Ï"Êıc¢œjâsÃ®Æ˝äòÒ[o3¯€M¸ (8Ô¡as{Øæ◊x˝áÃó≥ £»;∫√Ó•yØ3s‡t¬–(Jn‡ƒú{n`∏ÕÎ<kÑŸœb’oU˙"ÉkŸ5Q¨Z°XÊ«m8#Ô+Ø+/"±<sº¯]ÍŒ©#Qœ≠t∫.ıÏ_˛ªCqè@ÚÕ∑<>åº.cªù˜‰ÚﬁªJÌ⁄P>i§W˜4è‹[ ö„ë˚È¢´ÍVVwVõÖY˝q˘y›¯™_=‘n‰”WãÂb˙¶[:ós=ÜB÷^p5Ñ%ŸÂî4ì_4ß4Ûx≥Ÿ©∑v⁄wI;%˙7π˚b0J; ÛÀ^ÃLJ`,ÙÙ˜≈≠óÕ„g≠√ŒÛﬂÃ9)m›§Ê/P!6Ö⁄∏≤ÁSyü?J˙˘è≥N¨Nf@U≥“ìNi4Ä∑¬Œ0Lz|;ÓPBüb6.à•EëRê.j∆ÑQ∂îQ◊IeOeIïØ˙üˇÎøˇùVgÆÌ‘ùgıgØÔM•RºÇn8†ÏÁñúMò^
+ŸTO2dfP>ıMÚ'P = e\n ∫L≈º,0/øOI_:°rL–‘L£$Yà.r
+kM∑]LåÌwùÊµ;∏`f*Ü≠Õ„F˝∞yÛ§Õ◊;I¥"
+	œ÷Ëâ^
+‚[v-óZÙ⁄oå† t^9{·—4∆Y/Xó®%∫§zØ\R6(lÍﬁ/Jhö∆$Ω“mí‰9:àBÈ4_aaƒ<≥@W—1-TsRFe/TH:gÒûÚÏ9w`K/ëﬁ¯Ω1ä%10 ˇàÄ ä∏£Q˙„"ÚìÙú"Ω1Õ*˛ñ±ö…ü9G-ü±n∞¯óøHÂJ˝$≈µX÷‘2ú•£¿ç˚e8πPÚ¥•ÍZu}˘Qeuµ≤VY^ZÔ.{+è´èWΩGïí…z#î¸=~<äÒzü˛ìX«JT>6yÚ‘j≥àÂs
+ÂÅªﬁ¸ÉåÔ?8[tJ•ÖrÓÑ^ÑÓJäÄõ(“Äh¢∫øÙ"ˇ‘∑(≤N¸˙æœyt©BÁŸØ˘î.#Ω(nQ˛N≈=•˘ èhŒTø)}^O›aù˙ØF• Fr6éhÒV^Ø¸ºÚÛü #%%ñµË˛˙ˆ≤WmNS4~U]v=û¶ËËŸ≈rÙ∞2M—.‡◊Ú˚µiäû?ˇÛè+›˛4E+ÎG˚ß+ÂüGﬁƒ≤Î?<˜´'Sï›]ˇÒß y{™≤œ´€kè˛t:UŸ˛ZÁqˇßGSï›^˚ss=>TÀÍá†ÓΩòÔAJÌ]è"˜≤å~AÛ÷™Ê,Ø1qÊèÅ*”°°eœ|Äæ˛Ë„±,{Tqo™-@J∂é-Ö≤m˚√ f7g˚ZwÔï∞ÿ»Ÿûx„;ˇ ˝‰AªﬁNøØ©ábOﬂ{óøß∏—yºwrñPôá=^0"xÈD†ñ %AJI√Ç~Hˆ·‰ã¶[ÔÍÑı&P«<j¶mÚÖˇ·0¥!Ü¥ÊíÂ
+÷P>èz»-=~üü›ˇ0û†ƒ≤æ∫x|o˘ßÀg+Ó´√äªYÒ˜~˛ìﬂ⁄ÓÓ´^ÿøüˇ4˙È«^„dÂÏqÎÁ˙Ÿn£æºGˇµŒ~Ò	î;<ˇ‘nùy€’¯d∏˚∏5ËWzœÎÎ;óèWz+›qÔó›Ò… √ù_ZªõıÛÓ O√÷œ´è^/óØó?≠ÌΩ’ÉvÎó]øuˆzÂ=¥≥{ŸÚü]äg¢ù÷Úü~Ÿ˝˘ıÂûﬂ:?¯˘Ç‡ú=}Zö·†˘yån€#ñqätì∏‡®)æ'_∏.gıLîì∑2s≤ÔzbWéMYÅEÁÚò™A8Ù.ï£íâ “9ß™Ù¯ﬂo$nÑÑ:AÈG∂kRB1ìbÑÂ»≈≥√û∞ÓkŸQ∆bl©≠¨%W£<Ÿsâé›ù`…ƒFI»ë≤£•}[3êe:ô¨≥øΩΩ”<nÓ5ˆèˆ:Õ√v©6˝‚Ù¸ß∫9$äNÿ¿Ö8„ç÷•Òù˝˙fko˚∏› ©pÔ:=ÿ	∂[ªyﬁ–ËÖ˙∂®'Ë∑–⁄z}‹ﬁ´¥üÔwé€ù◊;ÕY:è¬ƒ?Ωl›QÏ};πuhQÍGù˝c~≈–hBoZÊ–6K/‹q5<@‡¶ôÇﬁÁíô6tC3…˜VDÙä,ıÇuPªıΩ£˙»Î„Vßπ˚]ì63õ0ú˝¥°¶2pëpÖ¸n∏≠Lë≠ˆhÉ8;lµƒÍñ¥£„#e Jœ /:]X7ue‰î3Ñt‘ÀßÉÓì#t@\eJåêdº+Ÿ∑C¥˜T,1>zb=ÙœµƒcOÀ`6$¶înÂÄ-j1ŒkõiU´Lë«bçÿ.húMQ∂Ë“ùˆ=ÜNC•¯—ãj¡è⁄JnæúpT_Ã˚j.vJ_§é$~xW%º¿Ü¥àƒ–8_zÂ¯C2sÉG¨Oä%-~ƒÇŸ¢<L•„ÊDEËπª}Ë-≤í%Ω–§ËR‘ªÕßÒu—ÅPX/3•Á‘%´R5“¯ô⁄ ◊á
+?ìı‚˘—ΩŸá)∆˘f“. lEë∂z›0Í•Ü˜lñTö´Ÿ‹ßk,UÁ+Ï\YTªeÙƒîù0–cë\XcπkRC:^hÁê⁄[mz‰>…∆ÎÇ\CW≤"Ÿ“©(˜`ø¨Åøª{¢0GÊ´‘FÊ~ãtAÒ˙§a%›ô∂≠=mxX…ŒNV3€~√2?∑D“ô∫{Ú¿ªÚôPﬁ+ë¯"nâQ©)úÃ¢∂åz’t"W|k«ïvHè∏ïBzügœ≈≠^~∏æo©"‘wÓ42ÒÔNàò~öV¿–Å%ÿΩJ—Ï`È]C˙°π|õgıÒHıqîo¸≤êC¸≤ÿ˘o¥Ò›X‚P.PgÊ˚q¯H }7¿Ç-3w*E=É/üyIZÂﬁ≥∆ıXÇ_]J(‚¶‚¶‡&sìeÉI7în*‰û˚ÍA{Ú¿-˜y)LI`ÍS~˙3æ(ËøÃˇô÷oÃÛÎ‘ „˛g!R≠_ô&‹≤êYëÖb—‡fÇ¡≈Çõ
+∑@¶>!u∞
+ø2Å–ÿˇ/%7»oçÈo7;«ıF-Á;ª?Ï∑;3]bP:"ˇ_ûE?è√¸ˆüqΩ±AnF∏›¿Cä ñH™bΩ∂8l∂˜w^J∑b7V>:›~Ëw=ÍÓ(
+&j·?°|√K°Ó]ghÉ≤¨œe?Ü’≥Ê€b7Ωö<›ˆj±Kg~lƒ¬π7.ª,ÁõoÃW‚Úﬁx˘&3¥Ê~d Ÿ‚î¯-\Ão·JoÀ˛∞å{^<?∆#9√â¶—ÕB:(ı¨óÊ)+"ô7ZîèJ%>ïÏ	íΩ'H˚‘
+sFvp#˙dÌ*ﬂXS2ˇÁòÌFûÌÜ=ìUŸ2√`•ó5Yí›(íOïÂÿê´)o4Äopí¢∆¸Ä¯ÆA°¨Sf√,ÆµÚÄxÓ¬Dy[◊EÕêjU1Œ|:¯˙|ÛçXzb.:ﬁ`@ÛÊn‚Ø…'¬V#5‚íz˙‡9Î˜èWé‹ù∞‚ª‡&GöªkjÓÅc[´ÃÏ.QB.n	3H"€PŒ3œ_B|ìﬂ¶º`:#Ú[ì≈√˛3¯£∞\à=Œdg	`eö˙&è«*ØM’zæßD ﬂ¶ß‘µx‹»£B∫jÌÑ„H√Ê…h,êû◊Èòíq9}»˝Ï±i‘˜Õ€Ul^ÉL√Ø÷ã|!∂≠—Ù}7/bgAŸ†ƒbx©Îª^xΩ“D2÷º±˙òFõ⁄¿Ë°J9CÉêmÙl3_Ù⁄∂jô‰±ˆÏS gT£Óÿk+Yóﬁˇ¨º„∆lÃ∆˝Ä9j%å£∑@ïj”ÔÊÈ©◊%-neaAÁ∂ç∏◊ÛÛû‚∑ñ˜a41ùôrVàè¥Ÿ˜ctV•T¬‹cêı“ÇéÂ¯·M"Cè_QŸT5£∫∞ûmñ≠˝ç»bTÇπ»3.0aTœ©‡\=’#Ù\IQ"Zò7FLGÇûÄæ≈a™CeŸÆ1Tæ€±}µË’ÇÆÔ–√jÁ£î4ıSzh=∫»%%/)√V
+‹ãxÏ'«<ME)ªîòX≈Õ0Œrx÷Ê∞á—ﬂ“|Ì±Y*ì¬ÅèXÿBFÜôK.’ˆzsRpA•Áºsã˘Qr£ﬁëãS¥0ÂJbÁ&≠§l¯ö“úqµõ:„ÛR5ÔÅù∆+#RŸCôR¸™˙@Gñó˝”$/<Òê®Ù ﬁ±Õ69Tƒ,É¿>+}$GHΩs¯êı™∏≈	>#œÌÌ¬6bZ,%˛Ñ˙í≠'ÍUƒ’˛ÈnH⁄⁄›|Ü)a∑Z;§C»”æ˘Éﬁ	øUùxB*™#˘hÆôÃ,ñF?0
+Û7ö≈Éï]Ω _˙Ì}´˚¢ﬁ:nwõı›„v≥stp˜¡+&dx—b'k˜2SƒN∂ßµŒ"%;~|˚O∏≈hë©º¨CVA~ûH\úY≈F64jÈΩÎ7ÂπÉ6tT2®ãÑcÌ£gª≠éåd∑Á£√Ws—	Bv∞HÍq|2ä¬A¯8Ù7πL:˝Ò‡dàIë>•Jı·0& ÷RÑÓâ8\Ÿª=>¯I"Öˆæé+£ÖCé!ÑE◊Û∞Â8¶∑«_ÃXr53+Ä=.Ωp}ß·›DπLYÆƒñ[z"/ºÙXB•~∑Ôı0ﬂ2#≥≥ÕG Á¬ DﬁwñùÔùµÂT´©æZ¬W÷ZÄä:øZ À‚°ÔÆÍÊÉVΩÎÕ8Üj˛™˘c®Êè¡p⁄1Ù›∏Œáaã\Øz•oUäìb„ÕSxMìƒk˙4^^)füâ©Æÿ'πìnüÕÉ%pàÚZé ¬Ω-êyî•P)=ı≠§Œ∂Bﬂõ:j∂Åo4˜ÍNÊÔûãêd•ÂuE≠‘Ì£˛*H•†4ìGˆöú:?uﬁ°TI¸R4æW©›ø4†Í5Ã´Äî3Egú2’6‡;—5L‡ôıÌ{gUK⁄)Äjîò†2'Oﬁeª¡±]˜åü„≥Á”Á¨H´KYÌBöe∆'?ÉvºdÛ›óìˇ{FÈ â\zﬁs^ÉÄ„‹!HÖ éã¥€	«IŸaÄza
+'Õ	Tv∂¸ ¿Rd¿“ÛzL—¿[sÇåDË’i‡üı“≈e£Ç!¥ƒTÕrhÿˆ,”"ÂKÚáüÚÚÌÿÙ<6Ø?=Ï≤E(X⁄EŒz¯FIéÕ>|Å°,aÇEcüæá?√–9«óNDk[™ÏºÚÄ¥årœ\Ë‡ÕW4a≈¨3˜82ﬁà≈¥'∫,B†)H:⁄eÏmo∑Ó4„äèóÍbHû}‹xHƒ•˜ p‡’∂&ìE[◊ƒ(=≈kàe|™ ÿ≠yVïïª·πÔÕa_≤gùóNª^Ã- Õñ/ÿˆ!ÕÍ=“tÆÃa9:g‚bÄ˙˙ô7Ï^Ê¨⁄`§sÖ$ií“ªj©Y˛¡XÁÊ‰©÷ád≥g‡“∑œméá@30ì´”ÈGû7∑ËÃµG>–â%†Œ*˛~1ÑQ≈Œ>·¸]ÁaC∂¸»#R\è˚¯¸ôù¯û≥åﬂ;@íüπ	L¢æ’¬Áª~ìmXk0
+·Î	·1æÿ‹ûÔ&a©d⁄p^π®!€Û.úºûÔÏG–1÷oxFŒËmØÛIÒ≈„»∞]ÁU=ÃJO |µÂ¬–‰É•NnÖÖa¿ÜŸ	GŒ6f4∆W~˜=2´lf.B_ÄvÓO&VÏ`icÁYì∞º.∆˝|å}s∂Òtp<å|ÿñ!≥¡™Ü°©DŸ˝ﬁe{ós ÄXY∂No
+ÏY	n¸µVﬂiRRõx√ÜÿµW}?Òúù0«l=†]Wáº‡£Á·vJ€å‹≥pàèõ„Q?å|Wåq'J18Ÿ»	—èq∑ÎF8Äu√%¿¸{@»¿ÔØ=¥Ò3LΩóÄW^oË≈=˜í ¸yªß:≠^R±gëﬂÉÓ&¨O¿o¿˝û°œñ0«	Ëág„a∂ºª~Öë ∂K	Ep0C˚—î≠(^ i!ÿ:úªX/∂€Ê‹;Mú˙8	ùó¥;ó'^4ﬂ;ÀïáùÕù>mcÿ∫ŸNÕvrÊÛ—óä?~	à≠Ï¸˜ŒÌu¿]gkåXﬁs·ë<h1fﬁΩ¢QÛ"ñq+‘kÜTÅ†û>îË0∫ûV@+ÍuêUÁv<
+¸‡‡”9SÁï"(ŒŒÒBπ‘\≠ãÊîTöhlv‡¶€”&Â¡ CvÈ‰^<»-åz6‹è¨#"¬#kTÙ‰[AemÔºî:∆ÄrkØbe˛¿*‡ú⁄#"Ü»ˆCÿ¶dçëkêZºÄà•{Ó˜iﬂË" wﬂ„ﬂ√KóÍÔ˜{°€ü”ƒ∫SOm≥9•ÿ¸sF3‡|!déÒ9†ÔÌp‘g/wŸüFﬂçÇ0IÎ/`èüª—àmÒÊπ\ı∆—H9k∫=Ÿ—Ä„é°‡£„$$º`Û≈|Éè”Aè∂›®À?{¿ËéΩ_8ÑhW.¢!#úû©øó›C ùß¬@J˜¨∏4«Eu•b∆NÕ:∫„¶˝LßØjZ»ÄiÏj6;ù^‚g|≠ﬂ±î’Gô¥´wòA»Kâg“:ˇCå’Ï—â)¥–©b,˙≥éVÄb-Ã
+Ú©x◊úÇ¡çn8U‘‚ôá7ºy/VU,ø[? 1ß/ì¨:èöcì2ßòMådv&Ú{!EæCæç≠•≥œX⁄Ø?2EuÃD»wœΩÀEßÂúÖâséÅ±‰Àu
+<°ã5aÆ@ƒA„.Ùä„qeT,8®&¿(Uò˛âØ∆UœMê3#èÅ¬é|˝ıGX
+é†<aT¬2å˘	î £ Ä®RYY•+“«∆î≠$êg˚ $˜BÍ2¶æ{ø°å≠– 0O)°®a∏¥Q2ñÛã|ÒØ∆ñÊ◊íÒ_&#◊çÊA*"S.‹ªíu·œaCã¨lL¶b⁄œj®¢´KeÎ„ûOñ	ãˇp<Ïâ˜™ﬁU´kÛs∂ıYÚtë}§&T1ƒFüMR*Asö%íΩêAµÖ:O+fÑ¡ÙC/i£Úù∑ï÷È?ù zAÌP0éµ¥ÚRÛ-'@Ωã…¶<‡÷¥˜ $‘≤ßj…3o¢á6Mú≈ç¡D@ZHÀ¸‡Å≥%%X5êÍiú™µ	ª8¡ÈÙºSw†[G“@ˆp~+VQ@ÙÎ8VùGûæb4ÚÜ}œx®ò@´§!|åqzÖxÃ)s\®:©9ØX99®w@Hô2ﬂ™Í™MëÍ.æq^Ö¡9n\ıbhR4au&.¶ÿCπ!∂ßÔW,b˙rMñ”eêíÑü>^V[Rïr)´NAÌêU ∂ØA°–´À öD›ˆ˛<¡',	¬ôÏ:\&V1ÆêÈVJJ<r
+?èKµo#ÉQ≠…]”πVÂef¢;«fxnÂÂîÀÃ+¨/¡ˇ⁄Àf”ÃÄ´~M∫6n∫∆§{&„⁄XÎö&˛k¨6∑÷rY®ƒu‚l ü]≠Xm+ôDvÓïaAÜåïú∂ŒnÉ‡õëPCEí—–¬îŸ2ô9Ã*SRQã≥:m(%◊+?ëñAÙ2≈Q‰…∏aJ∂nfü‘Ã:¿:∏”µ∞÷FôzBª/(R§sæãﬁ®N}ßπ<›vsØ—j∂Éí Éí»ä∞¨‹£.–”BZÍ∫¥…”QP¯j8Bx˝Ú©Áx•)¶kËÖ••ˇøÏƒBX[æm„≥WVq5}ô#∫÷¥u∑Ô∑¨åŒ⁄V%z>Ût€l±¡ÕYÛ£≥øöÔOã¶å,Ñe‹T∑ÙÑ*å„´h€π¨>˚Eÿ?a'≥ÚÙÉä+[7p±G ÿ›u3k/ãÅ¨∫Z—è•B∂⁄SDP~À›7πWe°õ®›ûÌÅ∫¯ô“ªgì#ê2ƒVÈÑﬁH˛Ïyñ©o\aˆ?kÌQ8zÜJ—[Hqi¶ÉJΩﬂmπ‡fDƒC	Îddºä˝3”ã∑E!NxÑ>√%°ãAÄ†éxîj;‰h˚"ô¶%yIVhÜ‹”+◊H¶ôÜËYõ5ïfñ≈S?øÛ‘)È6K„!å—¡Ê4ôóñ∫ Dƒ™:Qù≥Ov~ÿﬁr:ã€úç,äèÓqMΩKß”‹€zó∆NΩ}ßI5π—Äo”∏‡SMŒ+é˙Xÿ˘~óÙ¥xƒ‹Ï‘*î†hÌ\¨ı÷êª\VÀÚµ[»rõø66f#∂ÙbCø Y¨j}DC^Sı•Q¿ﬁœ∆ÚÖƒZ…√Û%öPµ¨>OµtVlÂÅãY; œkÜyã˙>Û˛±Ïê¬ΩÚ|øMŸ⁄€Ì„éˆ^4;wøS>/à˙·N¢d—qá1&ô!ﬂ*´uæR?
+ıÃ€“ôœ£;pWBŒs∞ˆl7¬\Ú&êÙáè(T>·,Ω√^™¶—”°˝¶80eh?èáÔΩ‰SÛ6-¥˙ƒàêÃÛ‘Ó8=ûpúa«’b”¢∑¥39Ó	⁄v"üC∑3å◊Ió˜
+0~À8vU∫}6Á±`7VØ√ÊàPÇèfds§úõèfŒÆ¬ôñ”$DÏ√-ŸOWŸ\íÉÓ(Ú‚¯B†Õµ§ib¡Ë!˙“∏k ¸hzx√ÔWzyﬁ∫ÀyY»≥˝6!˘¨Ùˇ∞Ÿÿ?‹<ﬁ›Ÿj∑˜èˆ6;áı∆ãœÈ˛Z1ﬁ UÎæo9(84GRu®¬`ˆB;
+L≥–Òìπ¯iy¯B˛=åç˘WØ5ãò˜lû€4Û5ãï^íV§f, eŒ:∏h`πP÷j0¸πæ´9v_∑N∑rÁe∫yàÚ∆¨¯2)ﬂ¨tÁOG≠ŒÒVkg˜3±øgE”BÅËå4ß÷z'…nñLï9{éA∑°‡i‡33·pÎ1∏I…‘¬–6iÇ°.?‚5ø&ÑÏ‰rÀÛTr
+˜™çÂ•∑ W\–È”¨¡˚¿ﬂì;U∏tºgtµêÈd9?¯Öáa+•—…>35˙x€	o*Úå!øëêS FX±cä|`e-ø˚˚_ˇÂø;œõı∞ÕúŒÓO5G	Û´+qWäsôbD3°ÏRÜc‡ûB‰X˚qœau$≈6Œ˚9wÖ°ê◊xÏ∂ÙÎØ?¶˘Ä[∫bû-ˇÉ◊õ_^∏⁄%k÷Q0¬ÈT+ˇ@¢–ÕøùyÑë·¶ Bâ¯*3Wó'u0∫Æ8'^‡{ß◊ü–7xè™’Svπì±MŒTû¬1‡¢i¥õı†Á£ﬁÕv·p"IáOÊ	:‹s⁄Ïó1œÚårxä!{z0oß„ pbxÃKß+ˆˆ}öŒÚêπ ìc5À∫¥<iÊ`€Ü0˝ú»››ìh<J {ﬁﬁA˜≥T⁄®≠÷¶1Ωp áu—îOÔUYLb≠!¶®ƒÉπ1Cºsé<\gCí!Ç‡⁄ÂÿËùz˚π>–WıùÕMgk´ C»P0é«hÖ∏∑Ô4ˆwwõ{ùís—˜Ü–2.5º:ÅÕ·¬Lπø¸‚ﬂsZ√ﬁ8Fü7üÆ√#Ê¬x
+Ç-Y'ûé#o
+Ro∆x‹Î4iä˚∞çÓÂa¬Zˆ\!UKô™O„¿r˜f
+Ãjj¯|œ"ÉÁ’üJ
+Oo*ñ+3ä·≤Eˇ◊ÍlzêeB”\€⁄â”*ÏjU‚Q‚ª„Ÿ8ˆá ú;ı”S◊è‰∂ô¡mcEƒé”i˜FI%ùΩ˝N´—¨ih,iQ∏˝Ì^òp[ÎÜÿá^‹Â[_}µ%2ﬁ¢≠kƒr‚.∆+∂C…>Kmf—§Üâ|Í iaimë§=ÑÉ˜¡%ˆÑZÇsDE6ª›ﬁ9˘Us2J'k]X¢ûz8q≤*üQŸeB_(ıU€vÍåß3“uG®ÈÇ’˝\ôY˝´Ø⁄à;Hãúm ÜCZF¯ òlsîÊÁñ$ﬂh8«d¯ö√üìÙ"K»ÊµVæ*_YÅI:/r:}OJ`ıòëZx2Öª/Q·<≠'¿TFjea≠ìºÆ⁄i≥ŸÿiÌ5?€h]ú‰Alº~∫yf®V9Ú∑tE\†π)¿⁄p ï÷NÛ¯ËNsz]˜…b'])—0ôΩ€J€¬AÿùﬁjW·t;àºÅÔëLZÔÅ7Ôa=aÅó9˘∞—àz‰YŒKÒûß*0sØåBjœT‰fY SœüÉå/ÌxÓ ?êƒªt¯≠·πüº ÏÜßlq¬gGP8Ö3$˙ì€(K∏‹ñW‚ã·∆Zº§¯"ƒLc&2˚ÿ&
+¥!Ø≈˚¬xz©•≤—ãI¡4
+#ä(Á1F4fhrÃ¨1G:‘.‰Èp´‡tºEÙ@äÇÕ˛~ÈÙ0UâÊSΩl•í∂ô£ÂQFŸŸ+Æ:.plJ7Â¨ÙŸN§˚/ˇ —êË_ôDK§òY»¥˙ ¸e˛U)3°†ç.ãüê*€õª≠Ê·ùFdæ{íÏqeòNäY´∑Kdßèﬁ €ï£¥“«&O¡öÖ_~?YÙU¿)Ô7`]¸	6§˙(Ò4vòñe“îØh*ìI=&_2Å1˚bıtbl'ΩEQ42‹CØ◊¿0#âVˇïIÛ1gˆ;Ç67èı√≈úsf≤êô‚a¯æ8Ÿú∏9QyÕ(0x[∫W‘ÕiîGæ⁄’/™≥€]Âí⁄`•aö
+«^NBÖaÑ]”X@Ñ6&}˝N;ı·ô«å&Äìºr¬=N¡ÛZl¶≠qªMı¬+N∆√òÆÂÊx@M-=óÒf˛∏BÍï…íq;Lé˙€)0ãòu#iÍî@TA<¥@ò"ßs5ªZ∂duûƒv^M\j‡+v`~n∞Ãn‘C«\ΩÇ8Ï$Ü–oKºÉ)‹Ú“Â#Æ…∫ÇEc≥¶à≈èÌƒ„„(:˜‘ Eß˚Ãr¶∞ãOBˆIı“ÕI•öd‰∆Iz\‡Í«,ú	~5îˆfa˚-Ä“¿çÕXhf[Z-ıÀ#Ê©U Wæ1±Ùèﬂô¨-XË…}¥Éü}Úèªãîzºü-,Â°º%BØs=ºˇÑ}4ƒÌÁ˜.á¸¡í_ì%∑ÁïöLñÃÌ<ÌµSk{ÔXvÂ˝Y•3˙Gm`ËB\˛‚zÎ≥”¨c≤Ô?Ë(Õ{Õ%©Ì5û7_tˆè˚≠=iEÑúH9ÇÅIÏæG-FûÖØ;v˚•-'K
+-\≤\äãPœãD ãâπwhVfZ∆{jò@°Î+´†4Õ:∫Sÿ˝a,§Ÿp0(«º:2Œ^‡19ÚÓîa√UÍ¬”„º‘«j&f>€ÈoöıÏó4˚ôXœN}zZ≥ë*}®œ@ˆf‡FÔΩ§·ép0'v8¯Ú9,CO˘F™!±°˝0ËQÙm%M`Q,ûóa0∆x"ä	ﬂh,n>rvpìtFcñùt—'~@llEÊÔ¯”Ê≠»{Xy ÿ }6¡»¶ÛﬂßÓ∞åO“ﬂÁ!ï¸ßòç+'qêæ◊Ó¿tÍû’v*›vÎ(}˚ÿùô†â(R(n!2Ö‰ÊŸ—kNk,d∆%;9F@>=≈∏'ç9]üñ0Ò,c“äß|D@*¨mï•]§˘y‡¶i1ê]ÏÌéÉƒ,–@ì™Õ|ÀbEˇ¶—ÕrÏZßT?1u“VÀY	„∏/∞Q®™úuïa˙Pcl:±∂√ëÀ¿2Á`Ö*ŸÕ∫#€Õùù…[2ÚŒΩ·ÿÓ•/◊¯uve—¬}«˚\Ë„≈7PŒ¢õÓ“Mœ∫Kó“]Jç|+«sœ¬—¬>ïÑ£2È´ã3 ÑŸÅ/ù‹Ëˆ—É•€§÷·È$A‡«Õ∂˜≥£√ΩI€˚ﬁ’¨âœÕ?OºÕàZ.÷JRPòkúb’rUá¢¯ÜÃõ7GÂ¨ö)(sÒ@SO S¶Z‰GT§Å∫∆6‹≠æhvÚ7b*3'ËÛôl»…ÃÔÁΩÒ~mfÛ†±ı˙cÛKëj°ıH|x¥}pd„Ô‹Ø#õáB∂OÜf1–Ll[N
+í+ MpÁQ÷‹∏ø?N^∫¡Xª¬»'îˆB:Ö◊ÆH∆g‹€Ï©3/7öπNWtxÓNt€éúÃ]ñ„åSﬂivtüŸü«¨ÀgÃs‹èxõhä¶X‹:	L9vÂ∏ß	∆{áq¢o!ÜÉB{ÑØ?Óç1¿|:¶›=BÌ†Bé	ª·`x‰i‹É¿≈^O6Vò!‡ÂÚ5|PW÷¨Úßäx©  7öJÉ¢NÁ_fUÄ\∏ÒÆÎüìí/—.Â˚ºí™&∂R^˚2<Û√d {R≠ì{]ñs[∂ÑÈ59^ãˆ˝%<!T ì˝óU¶?;ıE˘ß'Y_èœ†{§ÆU0)˜Ü[0û”–SÆﬁ”∆[<¶úg«V]Ôìªÿ¯)f≤Â∞ÙÜıà8‹ú∑ôN‹x≠qj}aª"”ÑY˘ÑŒ˛ˆˆNS‹)uZ;≠Œk”À˚xW‹ns"(‹ ç£/∂zøÜˇ‘L¯”MˇÙ IP7ú•eå‡∫ºˆe“ü)ú¢yÅìˆ$vY†·}yµﬁYo‹∏_ö~DjUsT)2’ú{Œ‹.3t∞YÔ4èÎáùVªsºu¥∑yß—îø–„\%[ã◊\Ñó≠ÕÊù S
+¯“Ôya¨2oÁÙå,ÜŒ—bË<«b(ÛÅ8O-•◊¨ÖòåÜŒøå–xl‰5urfXhûs™¶é5]ø´ØêÁëÁ@(:Ùz„.±Œ,Zç∑i6¯d≥Gu˙æ Ω«u¡aâÎÖ	,nÅt›ÄA i)æ lÚ‹f,‘¡·˛6Eí~’læHA±V|òp?∏‹{ô©|‚<ˆ k˜=∑f«xh~åi5ÇÀ#öO4∂à∆ì±u	‡Ç≤$;‰∆ ÿä†â÷z	∫œóWHj[.ö5è›zı√DˆötíeÙÀÆ˛±‚ Ï˘ßæ◊S[vHPùó˘õVÕ‰’vÃ${ÆP^®ﬂ∏˙ññÕb¶G∆|©sÚƒeÕuπKvñ…ÍB≈∫[˙˙‡ÅsH™ÉÈ»7ï85ÙRΩ73{È9nÂ"∂Ã˘éÁ:∂¿Å{s0å§jY»3™[µU≠™çò¯Ç∫9Ì.SÂÊá.ãßÖâÊ@2»á≥l≥¬˙‡ﬁâ„¡¯£ÿS¢ìôpr˙S%@Ø˙n‡9'„À| +ˆ…x,’è=%.à†pF:!∆µ?òa’ﬁÖG†›uN4¿T@»È√*ÅxF°¢∆=∞VØî≤Íûi’U‹Gõˇ sÍù„n2&.”¿k∂õRq(Ö≥eõL”◊ÑµÔπfnVÎ9êl
+êº.´ºl÷ï:â5U˝“ÂìæoÌÌ}µŸﬁÄì;/Xê≈·†kAb£K˝l ]õn€òsT‘D÷º§bôWŒáÁ¿·os{bRS\≠x‰yøü˘~÷Û˚RÛO4“)PØ$’	0`]ãˆcû-§Æ>‰yﬁm5xoø’∑Ç‹ób#Òv!ˇúÿÙ∫pö˜ÃPÊÕ≤¸Oi/CñÛ5á˙4ÌËΩúl“»ÉBœ≥qæ-«¸ô_ZS[ß*©-•‘ŒréâIZOU*=’Å}´oYBC≥ynwiCÖﬂ›0'WT]*‘C£Zö%©º™√∫/√≤ùU;—·…p‘∂u∞¶g…”òµ!$ıÎfû>æYâœŸ¬T†?≈ñ‹¬*ŸıRŸ„SóY˜*≠¿‚ÚKáïıÖr<>âŸØáVßâ!Â”+5ÿ=;oˇ˛◊˘'k®àqåº<U`=8â¬¨y˛íè[[>•ç∞6º1ô˜R‹V‰√¬l6a-ãª´Ww¸“ãàC≠iîÎ{dlUN0_Èïw≤‚¸≈·”¯go´„üê%êb`dˇ{–:≥~|@Z·úP ¯q)˚.¥’OíQ\{Ä\!){ÿ( û≈‡¡®&·Ru}yy}•Ú¯Ò£’áóñ+'´’nØ‚UÆn\<≠ÆUæÈ”øß~Ú¥Ö£o˛¸ÙQ≈ËñÊJ©h6ÀCy^Ì1
+Ç„≤@ïRdN/òxO£R‡Q8ô¥ÓÇﬁ›øéõ≈ıÅe6R'ãœª=a¶´Ã˜ı«ÆtßwœyÂQƒó≥ÔÙxîó›˝˝=⁄ˇÎˇ˙ø>ƒWC±d¬=ãm›çºû\„ +ﬁw"õÜeg3ŒAO¸8∆D”AôÄ∑(û(ˆ#C¿ZìX¢èB&iá N€«;EÃê¿„»tŸái«H»Ê¸aÏΩ≤ÛÃ?∞òFb∏Àx4ΩÓ»õÎ9ÉKê;N1ºÈ9Ê_∆ﬂ°÷DŸŸÒíπ&>0¡ˇ˘ﬂΩ”Äæ’=sq º»Ò?«œîŒ…¯…Æì3Lµ«æIÔó9öÂKÊE“D…6xì/v◊*E$j:Ûî^⁄@Lh∏à‡≤´ﬁL—sM7RÉÄàΩÆf=TV÷öq?*h’D®zÉEÂ
+°´©≤d∂Ï/“6°úê	ï]·¢kCû(–Ææ‚!¨Å›$ıÜ`ÒYñÃﬁX⁄.ÓY˛ ˛‚7EG›»Â·®\∫Çf˜ØÃÈ›âÅ_√úGL∫√€{wÔ©E+ïØ"J˜Ÿ¨zß5KÿÉûmMù
+ƒ/WÀlTaô®Yç⁄º˛p¨€ÂHY{ô°&ﬁÄ’öO~DŸ8Qå¬≠ÕáÏe8öi¸í“öè”“{jX—Ö∑JÜ÷v≤f∆ÏtÂçîíîL]¡L# ƒúÔ∑-‹®,Ha
+_ã !mIÜsJ#RÚ[[¬kåLå›U:$’F?ÔâFÊh§Rî©»ª`ÑMïÆ`◊©ﬂ®LœÏ¢
+¿˙ÈëïM2>*”≥ô†Xâ˘®,œ ÎJCl(ß¨›ñ(•ﬁ⁄®#ˇB*M"E-)íñ;≥aWŸ=›ädc√yîe%Aùº«Xz»u5ê/â1VHœÁÒ q§ívq¬≠F‡JÀNﬁU øO°ƒaˆ	£>&ií±J§L)oá∂?æä!›˚ˆ}BåÁ=Cê‚ë;Ù¬ÿÃg^Ç˘°ÿtû;†¸Shä=º§˛«ÂÂÌ_˛¢»“0X˛b	™ïAFHöTÓ»;◊ÇDÀﬁÒ⁄O¥éùx1ıåcU69rÙnApb÷Oås»¯qbmCõèQ∆‚∂e2†8åí˘yw—9°1[Îû†o}„.,º©d4ñ!ëÅç`•3ä◊X÷∂DeS{7êñ)ÉÛ¿1≤…ËÍ™|Ëb÷®ö6QFMLàÇ!_ŒôM“kª,iôD\‰~= RI‰®0Ùº~è;ro< Pè≠%ŒfÒ{ñ`íXGµV´I] EwuiÕ¶"ó®^≥Åuj`}©ZôÿBeÊ™l˘ ™ pOjdˆQ,3SO÷∆rui’hcjP´\∫ Pkï•«ïØ¥%Ázv®BPd˙…“`	˙ô ˚Û3?[Xÿ»îh∆¨õ0ãn ’h“Ñ¶{B'cÿ:„¨Ñ†zﬂgõ˘âé‘~ºÈùåìÎ˛Ó©9„p…—ëSwi≈ÿ-0•Æ õÔŸ«åº¬–ájÖ≤yc<ı≈2æX∂ºX¡+ñ´¯b’Úb_¨·ã™J$ixÔJ_L'I§:π—¨ L`•J§âÄC3¿„ñke"o…CaäÖ$aÿﬂtrÆPôÅ/PPqû˘Apb>ïÁp B«Â¥T9QíÌâßxF(	ŸpJ=¸RÇ9(E>∞∆Í4ê¿!
+∂d€¸ªÏ§±æõFLÈB©Ö#≠π´◊‡_x∂õifGåøb1çô…;kÛ qÁ_±âÂHêŒ,üJë5YúuWªﬂò>áù8ñÃ71>_$…Í“Q5È|”Á+„•Ï`^(Zá•ùÂ[¥MlM|ôƒ¸[&˘)x˛<ê©ô6KTj†ØVü¨∏·Sd¢pƒ∞1ÂE 5òW]±Öb¡b€zjDŒà{Áœ„0I≥Å‚”dpÖ∑ﬂè‰Ωı Yùîß§JƒÜ£‚ÂÄ¡òC~´ÎFg,_≤ÛT≤⁄UÎ\∞0©ù®u0ãx∆À¨ØfZ#ıÜ|/˚Y¶…⁄?U…	4zQOÂ˚L∫◊Øw©`#;Ø:}“ó«lÛ˚ÒÜz8sK‹Õìåe∞≥¡^_WøÅ€`XQqW⁄^≥ÅE’yT»ﬁ¯=4ˆÍ
+àﬁ|â*óÃÄ^ôÙ\Ô3∞∫fTõÛVïÛØ P\˙8tN‹ûÑÅÂF©¥¿y‚ı›s∞<9È€
+ΩÚú›Ft]Kp¯∑E™ÓïÖ∑˘ìmÊ¨¬©;Ã_≠G∆ä∏=NgÿU®FÌ-Î≈&Ø“)]LZ£“Ó~ÁyÛ∞¥Ëîˆw∑ù◊Õvªç?Zsyï˙.ﬁ	ïﬁökZ8ª˙ZL∂π3©´∑xX*îsP ”≥hn‹˝”öDMg=NÓ#¶æ'‚¨«È#5€„l«È§ì2]©¢CW”¨1û(™
+”ÆåÂ
+n˛»`#ëmíÄÀUMætM¢⁄†§øï1ÌÊ∏äê≠.ùµ∏’›nØË·dâPßd†)É1—e~/»¶É4©¬⁄NõÖ≈ÛH?är*ÚÑjU≤" (4ù/∑·ÏG˝Úƒs.aX'^◊„-”éˆ…⁄ò AYﬁï÷¨¶Ç€‹©R‰Ö*Èƒ*N£Hñ5…DÆ†>å˜%È¿#L.0~}‡Ÿ—XŒÌ!·ßÒ&j®=ÉéÿpY„◊=B⁄h‹M∏ã<“´´wJÉÔ‰∫Ø\?Y‘…îãûüò§∫î]∂Ò˘©Ômf¿ΩÃ|ñJ≤e•4ô¯y£¿Æí	ü¢4]¿ìUÅPbº{'›5Ωc√¡Z·ê.Ÿçi€óÏòˆÉ‘kVæ∏bV`⁄L/0˚W—ıË¬ì∫çG^÷L—µ™¨êe*_}“¯”˙ï]2(óÆƒ%ú 1óC€/h≈∆RÓ(UÔÌFSrñ Ê “⁄Od	.ö†‘â ≠P=˚Á±À\¿Ü‰ÙΩHô∂˝Ó8¿gÃ÷ä—C·‡êΩg,ÆÁ∆ó•îÿ§Ò4IGïgÉ.`Ò∆—Å˘1ÓôÃô 3ÁÄKÌÅ˜ùÁ~Rz¢[ëäu¸˜ùΩΩÓKQéÈßÌ≈‰VÉ¬y6∆‘“f¡5	r®¨ÑP»Ë•+”¶:Â`ñ◊¶Ã ¥ÉëG-&C™“%∆àTﬁáQ%|ç—çÊ 
+—›'™ΩsªIy´Ò›GS˝†a˛]z∏áû-Wﬂ#Êë≥ª¯’’ÇÍÄÛÊ,s‹È˘Ò»M∫}‹ºp<q_úy…/gëß2®—t∆èwB≤ ]ƒ§‚-ÒãÉ¢‚Û∏KÂ:+„9√√íjÓ®œî˙KÂ]('Ç\ó?R™ñ¯;ö@ÿˆ%	‘G≤Pƒº7ºPS‡¿©/Í\1H[~‰ùP“à'‹N£I9‡âK·›!'&¶¶¸ä,Yë˘yâŸaÍ[©ÅOƒ9€;Òb•Y˙«8ŒΩ£∫"Má€€Êa>‚Àa◊ôWÿ)TgÙ˘#ÍS'ƒ&ÒF}ípÌ“ÃÛ8õœ‡å†ëy7∏¿k$zºƒû1ñ,&ÄQ2e2Gö?–œ»ßò–”;)«;.?ˇ’…áã¥zÛö°Ä¨bH!Ió¶“cÓRáR®ë+Wa9âºß•T©Nù"≠æÃi+=ñjŸÆ1„˜%æÙz¬—çMã?ƒ‡!ª^œw[C¥æE<ïÄ-Û	ª`—ƒ‚h0˜BOñ3∂=~"1`¯;}˛£H˘∂≥_ﬂ<ﬁÆÔ6AÂ~ê5≥ÔW6Å√È"(gﬁã"]~¿‹C∏ R#=∫¿Fÿ“>Å±fz|3,êÒW¶(Ûd|§•ä±BƒÆ`*•´E§K“F{À∏õ= œ»‡@#=o‰{®±JqæS8sì3E©Ô»Àµ‡(˛‡ıXEÊçP∏ıÔ•tÜ4r*©¡{nAê%ÃŒÊï!Ó'g'ÑfÌ@ßô^<ÏfËÿ{#ô¬«≠(0|L;£†è∂ØG„	µ∆Óf¡¯¡¥fD A†¬vµeÀß°ì·ÔÍ(ì'tèW]§”P:—t$21£Áù  tq	ªA8ÓQ#1È‹ÉU®V`~a0ΩmV Ωqéê!C˚=/ÚÅCÌ" /‹:‚‡s<›tBÔ◊ên2aouÿè˘È–à.)ôc
+[eÓ∫Àõ∆—≥Á∫(}O©eËı4êÔpèø˛∏Èä‰WkJüÖ+Âv»FÔ0≠lcgˇhÛ∏ç—˛[õ2›S˚rïk^äNèbµq†äï‡Pp(ÊU∏g7¡Ù∑˚Ô;á•2k≤”πÍäôd»«±T»Ëúﬂdﬁ<7ò¿—cˆÕ±Hÿ∆∑HøSqkíêﬁÏ.:tó´»^ãéÑæW¸%m:c€d®‹“Sm»Ÿp£O’πﬁ©eLê∏∆ØkéµÊlcˇ‡/ñM˘&^#ò˚±V‰^~ß÷E¸≥%¬M ççƒ:ú≤;À&E`Üe•H∑+©Ãu¿4±ôæÂk l1}+<QôiﬂïËx∂≈AÊç\Ç∏Œ¡ÅG„jÌ1k¨b÷∫Oá≈5ˇ.a±+G|ê#R¸Â/Ÿr3<eæYœ≈f‡{„ªû{¬çc˜¥tr∂Ùã?Ï.=^´8	ÙwÈ¢Ô£Ö?\Í/≈]ò˚°sxËü•n8z/uô˘∆êÛO/≈œ—“z)ª¶–€∫XB∆À∏ñ.ñ='mªRqàxΩ•Â@yÑ7ΩÇ~ûÑÜ3cXˇ¨uä∆¡æó‘KìÔ‚Û3Rr??<-Uúä≥º
+ˇ/©Ω¨Æ;}¸Á‘Ç%N3–7ˇ™ÍıÆWﬁ:Éì•u«˙XÁ•—∞µ‰|√¯)y$’<∏∏∏(_¨î√ËÏﬁ?Ä¶K˙ÙËwﬂÈ=-ÌV´Â«è◊ùJΩ∫Ï¿ˇ+¸’eW~¿æ´Oñ‘'KÙ‰ó¡Z˘·Cx˙∞º¸–-?\[≈ˇXç•jπ≤œWuóñÀèV°|˘· ⁄“zæ.ó´Àó™ïÚ˙ #x^]_≈⁄k¯Ø]^YE´ª´ÂuÄï◊÷ó Îïá‰·˙#tü_+Ø<\.//?,Ø>Üá’ul“¡∆◊ ÄÍ“Jy˘4x˛üvn~ÆT÷∫¯ñ:˜¯quÈ ZÉﬁ≠=ZÖ·ï+Àè±Àè∞rˇΩ[[[É7è*À–=÷”ïÍCÁq˘—√Ë å¢∫R^{∏˝X_.ØBÎ´–˜ıÚ#òhùÂØKÂJzZ˝ePÆV÷†'´UÏœ„Â*ÙaÖÕ– CÏtgÊ˚πZYs´8˚˙É=Z_£i][√-≥·4≠RO+ÿ•uuim›°ä7∆0» Í/•J#biè˙U°	sq#ùÜ√dÈ$Äì—wπÙ˝as”Ÿm5æ{–ØjF ⁄©´∞S	  ÿÈÒ ¡<ÇΩõ˛£™∑∏˙Ó¡Hi'Ç<íh ΩË„‘:hmq !Ë˚Ωû7¥m Ñk<≈èJÂ≤≠À +çô∆>^ù.vz„àºZóV†Wh®ª¢…ìµï8πºß?:~/ÈSûNMˇsıÔú+3ﬁ˜ﬂ=ÄÆÎãi>2ó‚CÏdK≤]$K´ŒìR`#MØYó†K^údãìı»iàõ :)ÕK?“3K9MæCiÉ.9?$e°Ω„µœ1ÍLK
+;c≤“GÇ{ïIßõ˝©"»8ß»¶[Â£–≤«ﬂ=∞u/<1Uì¿¯qÖ‘º¶cÏ2Lã∆¡ÕK†i⁄àá· O5‹‚ÄN˙»Ìx[“dL≤hp@ÆöÔ—â?t\ESZ‚ìÆoàFÒˇ  ˇˇ c>ª

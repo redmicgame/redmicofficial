@@ -367,6 +367,10 @@ export interface MerchProduct {
   regionExclusive?: "Global" | "US" | "UK";
   bonusSongIds?: string[];
   bonusSongTitles?: string[];
+  shippingDate?: GameDate; // Scheduled shipment date (must be >= 8 weeks in advance)
+  isShipped?: boolean; // Whether the shipment has already been dispatched
+  preorderUnitsSold?: number; // Pre-orders collected prior to shipment date
+  shippedWeekSales?: number; // Units delivered on shipment week for chart sales
 }
 
 export interface GeniusOffer {
@@ -2097,6 +2101,7 @@ export interface GameState {
   disableEncounters?: boolean;
   disableLoadingScreens?: boolean;
   spotifySnapshotStyle?: "normal" | "ugly" | "simplistic";
+  autoUpdateCertifications?: boolean;
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
@@ -2374,6 +2379,9 @@ export type GameAction =
     }
   | { type: "TOGGLE_ENCOUNTERS" }
   | { type: "TOGGLE_LOADING_SCREENS" }
+  | { type: "TOGGLE_AUTO_UPDATE_CERTIFICATIONS"; payload?: boolean }
+  | { type: "MANUAL_CERTIFY_ITEM"; payload: { itemId: string; format: "SINGLE" | "ALBUM"; certName: string } }
+  | { type: "MANUAL_CERTIFY_ALL"; payload: { items: { itemId: string; format: "SINGLE" | "ALBUM"; certName: string }[] } }
   | { type: "TOGGLE_SPOTIFY_SNAPSHOT_STYLE"; payload: "normal" | "ugly" }
   | {
       type: "START_SOLO_GAME";
@@ -2434,6 +2442,7 @@ export type GameAction =
       payload: { id: string; amount: number; cost?: number };
     }
   | { type: "UPDATE_MERCH_PRICE"; payload: { id: string; price: number } }
+  | { type: "UPDATE_MERCH_SHIPMENT"; payload: { id: string; shippingDate: GameDate } }
   | { type: "REMOVE_MERCH"; payload: { id: string } }
   | { type: "UPDATE_MERCH_BANNER"; payload: string }
   | { type: "UPDATE_SNAPSHOT_BANNER"; payload: { releaseId: string; bannerUrl: string } }
