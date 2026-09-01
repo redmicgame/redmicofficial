@@ -6,6 +6,7 @@ import FireIcon from "./icons/FireIcon";
 import { Artist, Group, LabelSubmission, Song } from "../types";
 import ChevronRightIcon from "./icons/ChevronRightIcon";
 import ConfirmationModal from "./ConfirmationModal";
+import { DelayReleaseModal } from "./DelayReleaseModal";
 
 const QualityBadge: React.FC<{ quality: number; showNumber: boolean }> = ({
   quality,
@@ -118,6 +119,7 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({
   submission,
 }) => {
   const { dispatch } = useGame();
+  const [showDelayModal, setShowDelayModal] = useState(false);
 
   const handlePlanRelease = () => {
     dispatch({
@@ -133,63 +135,89 @@ const SubmissionItem: React.FC<{ submission: LabelSubmission }> = ({
     });
   };
 
+  const isDelayable =
+    submission.status === "scheduled" &&
+    (submission.release.type === "Album" ||
+      submission.release.type === "EP" ||
+      submission.release.type === "Album (Deluxe)" ||
+      submission.release.type === "Compilation" ||
+      submission.release.type === "Live Album");
+
   return (
-    <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
-      <img
-        src={submission.release.coverArt}
-        alt={submission.release.title}
-        className="w-16 h-16 rounded-md object-cover flex-shrink-0"
-      />
-      <div className="flex-grow min-w-0">
-        <p className="font-bold truncate">{submission.release.title}</p>
-        <p className="text-sm text-zinc-400">
-          {submission.release.type.replace(" (Deluxe)", "")}
-        </p>
-        {submission.status === "scheduled" && submission.projectReleaseDate && (
-          <p className="text-xs text-green-300">
-            Releasing W{submission.projectReleaseDate.week},{" "}
-            {submission.projectReleaseDate.year}
+    <>
+      {showDelayModal && (
+        <DelayReleaseModal
+          submission={submission}
+          onClose={() => setShowDelayModal(false)}
+        />
+      )}
+      <div className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
+        <img
+          src={submission.release.coverArt}
+          alt={submission.release.title}
+          className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+        />
+        <div className="flex-grow min-w-0">
+          <p className="font-bold truncate">{submission.release.title}</p>
+          <p className="text-sm text-zinc-400">
+            {submission.release.type.replace(" (Deluxe)", "")}
           </p>
-        )}
-        {submission.status === "rejected" && submission.feedback && (
-          <p className="text-xs text-red-400 mt-1 line-clamp-2">
-            {submission.feedback}
-          </p>
-        )}
+          {submission.status === "scheduled" && submission.projectReleaseDate && (
+            <p className="text-xs text-green-300">
+              Releasing W{submission.projectReleaseDate.week},{" "}
+              {submission.projectReleaseDate.year}
+            </p>
+          )}
+          {submission.status === "rejected" && submission.feedback && (
+            <p className="text-xs text-red-400 mt-1 line-clamp-2">
+              {submission.feedback}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <SubmissionStatusBadge status={submission.status} />
+          {submission.status === "awaiting_player_input" && (
+            <button
+              onClick={handlePlanRelease}
+              className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600 transition-colors"
+            >
+              Plan Release
+            </button>
+          )}
+          {submission.status === "scheduled" && (
+            <div className="flex items-center gap-1.5">
+              {isDelayable && (
+                <button
+                  onClick={() => setShowDelayModal(true)}
+                  className="text-xs bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 font-bold px-2.5 py-1 rounded transition-colors"
+                >
+                  Delay
+                </button>
+              )}
+              <button
+                onClick={() =>
+                  dispatch({
+                    type: "CANCEL_SCHEDULED_RELEASE",
+                    payload: { submissionId: submission.id },
+                  })
+                }
+                className="text-xs bg-red-600/20 text-red-400 font-semibold px-2 py-1 rounded hover:bg-red-600/40 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          {submission.status === "rejected" && (
+            <button
+              onClick={handleDismiss}
+              className="text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-semibold px-3 py-1 rounded transition-colors"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
       </div>
-      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        <SubmissionStatusBadge status={submission.status} />
-        {submission.status === "awaiting_player_input" && (
-          <button
-            onClick={handlePlanRelease}
-            className="text-sm bg-blue-500 text-white font-semibold px-3 py-1 rounded-md hover:bg-blue-600 transition-colors"
-          >
-            Plan Release
-          </button>
-        )}
-        {submission.status === "scheduled" && (
-          <button
-            onClick={() =>
-              dispatch({
-                type: "CANCEL_SCHEDULED_RELEASE",
-                payload: { submissionId: submission.id },
-              })
-            }
-            className="text-xs bg-red-600/20 text-red-400 font-semibold px-2 py-1 rounded hover:bg-red-600/40 transition-colors"
-          >
-            Cancel
-          </button>
-        )}
-        {submission.status === "rejected" && (
-          <button
-            onClick={handleDismiss}
-            className="text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-semibold px-3 py-1 rounded transition-colors"
-          >
-            Dismiss
-          </button>
-        )}
-      </div>
-    </div>
+    </>
   );
 };
 

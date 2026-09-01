@@ -121,7 +121,7 @@ export const generateWeeklyXContent = (
   newTrends: XTrend[];
   newChats: XChat[];
   newMessages: { chatId: string; message: XMessage }[];
-  newComments?: { postId: string; comment: XComment }[];
+  newComments?: { postId: string; comment: XPost }[];
   newKalshiChance: number;
 } => {
   const newPosts: XPost[] = [];
@@ -905,6 +905,60 @@ export const generateWeeklyXContent = (
         likes: Math.floor(Math.random() * 20000) + 10000,
         retweets: Math.floor(Math.random() * 5000) + 1000,
         views: Math.floor(Math.random() * 500000) + 100000,
+        date,
+      });
+    }
+  }
+
+  // --- CHARTDATA: AIMING FOR FIRST BILLBOARD HOT 100 ENTRY (TWEETED THE WEEK BEFORE) - USER ONLY (IMG_8478) ---
+  const hasEverChartedHot100 =
+    !!artistData.firstChartEntry ||
+    (gameState.billboardHot100 || []).some((entry) => entry.isPlayerSong) ||
+    Object.values(gameState.chartHistory || {}).some(
+      (h) => (h as any).isPlayerSong,
+    );
+
+  if (!hasEverChartedHot100 && !artistData.hasAimingFirstHot100Tweeted) {
+    const upcomingSingle = artistData.labelSubmissions?.find(
+      (sub: any) =>
+        sub.status === "scheduled" &&
+        sub.projectReleaseDate &&
+        (sub.release?.type === "Single" || (sub.singles && sub.singles.length > 0)),
+    );
+    const unchargedReleasedSingle = artistData.songs?.find(
+      (s) =>
+        s.isReleased &&
+        (!gameState.chartHistory || !gameState.chartHistory[s.id]),
+    );
+
+    const targetSong = upcomingSingle
+      ? ((upcomingSingle as any).singles?.[0] || upcomingSingle.release)
+      : unchargedReleasedSingle;
+
+    if (targetSong) {
+      artistData.hasAimingFirstHot100Tweeted = true;
+      const targetTitle = (targetSong as any).title || "debut single";
+      const pronounPossessive =
+        (artistProfile as any)?.pronouns === "he/him"
+          ? "his"
+          : (artistProfile as any)?.pronouns === "she/her"
+          ? "her"
+          : "their";
+      const aimingPostContent = `${artistName} aiming for ${pronounPossessive} first ever charting single on the Billboard Hot 100 next week with "${targetTitle}".`;
+      const artistPic =
+        (artistProfile as any)?.image ||
+        (artistProfile as any)?.imageUrl ||
+        (artistData as any).avatar ||
+        (targetSong as any).coverArt;
+
+      newPosts.push({
+        id: crypto.randomUUID(),
+        authorId: "chartdata",
+        content: aimingPostContent,
+        image: artistPic,
+        likes: Math.floor(Math.random() * 35000) + 12000,
+        retweets: Math.floor(Math.random() * 9000) + 2000,
+        views: Math.floor(Math.random() * 450000) + 100000,
         date,
       });
     }

@@ -1,5 +1,4 @@
 export interface ActingRole {
-  [key: string]: any;
   id: string;
   title: string;
   type: 'Movie' | 'TV Show' | 'Voice Acting' | 'Tour Documentary';
@@ -29,7 +28,6 @@ export interface ActingRole {
 }
 
 export interface ActingAudition {
-  [key: string]: any;
   id: string;
   title: string;
   type: 'Movie' | 'TV Show' | 'Voice Acting' | 'Tour Documentary';
@@ -45,7 +43,6 @@ export interface ActingAudition {
 }
 
 export interface TalentAgency {
-  [key: string]: any;
   id: string;
   name: string;
   feePercent: number;
@@ -56,7 +53,6 @@ export interface TalentAgency {
 }
 
 export interface ActingOffer {
-  [key: string]: any;
   id: string;
   title: string;
   type: 'Movie' | 'TV Show' | 'Voice Acting' | 'Tour Documentary';
@@ -72,14 +68,12 @@ export interface ActingOffer {
 }
 
 export interface ImdbProfile {
-  [key: string]: any;
   bio?: string;
   headerImage?: string;
   birthDate?: string;
 }
 
 export interface Artist {
-  [key: string]: any;
   id: string;
   name: string;
   age: number;
@@ -90,7 +84,6 @@ export interface Artist {
 }
 
 export interface Group {
-  [key: string]: any;
   id: string;
   name: string;
   image: string;
@@ -99,7 +92,6 @@ export interface Group {
 }
 
 export interface ITunesVersion {
-  [key: string]: any;
   id: string;
   title: string;
   coverArt: string;
@@ -111,7 +103,6 @@ export interface ITunesVersion {
 }
 
 export interface Song {
-  [key: string]: any;
   id: string;
   title: string;
   genre: string;
@@ -260,7 +251,6 @@ export type ReleaseType =
   "Single" | "EP" | "Album" | "Album (Deluxe)" | "Compilation" | "Live Album";
 
 export interface Review {
-  [key: string]: any;
   publication: "Pitchfork";
   score: number;
   text: string;
@@ -268,7 +258,6 @@ export interface Review {
 }
 
 export interface Release {
-  [key: string]: any;
   id: string;
   title: string;
   type: ReleaseType;
@@ -324,10 +313,11 @@ export interface Release {
   rightsOwnerLabelId?: string;
   isAnnounced?: boolean;
   preorderSales?: number;
+  vinylDelayed?: boolean;
+  delayedVinylPreorders?: number;
 }
 
 export interface Video {
-  [key: string]: any;
   id: string;
   songId: string;
   title: string;
@@ -364,7 +354,6 @@ export interface Video {
 }
 
 export interface MerchProduct {
-  [key: string]: any;
   id: string;
   releaseId: string; // From an EP or Album or song
   name: string;
@@ -380,14 +369,10 @@ export interface MerchProduct {
   regionExclusive?: "Global" | "US" | "UK";
   bonusSongIds?: string[];
   bonusSongTitles?: string[];
-  shippingDate?: GameDate; // Scheduled shipment date (must be >= 8 weeks in advance)
-  isShipped?: boolean; // Whether the shipment has already been dispatched
-  preorderUnitsSold?: number; // Pre-orders collected prior to shipment date
-  shippedWeekSales?: number; // Units delivered on shipment week for chart sales
+  shipmentDate?: GameDate;
 }
 
 export interface GeniusOffer {
-  [key: string]: any;
   type: "geniusInterview";
   songId: string;
   isAccepted: boolean;
@@ -395,7 +380,6 @@ export interface GeniusOffer {
 }
 
 export interface OnTheRadarOffer {
-  [key: string]: any;
   type: "onTheRadarOffer";
   songId: string;
   isAccepted: boolean;
@@ -403,7 +387,6 @@ export interface OnTheRadarOffer {
 }
 
 export interface TrshdOffer {
-  [key: string]: any;
   type: "trshdOffer";
   songId: string;
   isAccepted: boolean;
@@ -411,7 +394,6 @@ export interface TrshdOffer {
 }
 
 export interface FallonOffer {
-  [key: string]: any;
   type: "fallonOffer";
   releaseId: string;
   offerType: "performance" | "interview" | "both";
@@ -420,7 +402,6 @@ export interface FallonOffer {
 }
 
 export interface PopBaseOffer {
-  [key: string]: any;
   type: "popBaseInterview" | "popBaseClarification";
   emailId: string;
   isAnswered: boolean;
@@ -430,7 +411,6 @@ export interface PopBaseOffer {
 }
 
 export interface BillionsClubOffer {
-  [key: string]: any;
   type: "billionsClub";
   emailId: string;
   songId: string;
@@ -439,14 +419,12 @@ export interface BillionsClubOffer {
 }
 
 export interface AmaSubmissionOffer {
-  [key: string]: any;
   type: "amaSubmission";
   emailId: string;
   isSubmitted: boolean;
 }
 
 export interface AmaNominationOffer {
-  [key: string]: any;
   type: "amaNominations";
   emailId: string;
   hasPerformanceOffer: boolean;
@@ -454,21 +432,18 @@ export interface AmaNominationOffer {
 }
 
 export interface AmaRedCarpetOffer {
-  [key: string]: any;
   type: "amaRedCarpet";
   emailId: string;
   isAttending?: boolean;
 }
 
 export interface BritSubmissionOffer {
-  [key: string]: any;
   type: "britSubmission";
   emailId: string;
   isSubmitted: boolean;
 }
 
 export interface BritNominationOffer {
-  [key: string]: any;
   type: "britNominations";
   emailId: string;
   hasPerformanceOffer?: boolean;
@@ -476,14 +451,12 @@ export interface BritNominationOffer {
 }
 
 export interface BritRedCarpetOffer {
-  [key: string]: any;
   type: "britRedCarpet";
   emailId: string;
   isAttending?: boolean;
 }
 
 export interface EventInvitationOffer {
-  [key: string]: any;
   type: "eventInvitation";
   eventName: string;
   eventType: "metGala" | "nyfw" | "afterParty" | "soundtrackPremiere";
@@ -494,14 +467,12 @@ export interface EventInvitationOffer {
 }
 
 export interface GrammySubmissionOffer {
-  [key: string]: any;
   type: "grammySubmission";
   emailId: string;
   isSubmitted: boolean;
 }
 
 export interface GrammyNominationOffer {
-  [key: string]: any;
   type: "grammyNominations";
   emailId: string;
   hasPerformanceOffer: boolean;
@@ -509,28 +480,24 @@ export interface GrammyNominationOffer {
 }
 
 export interface GrammyRedCarpetOffer {
-  [key: string]: any;
   type: "grammyRedCarpet";
   emailId: string;
   isAttending?: boolean;
 }
 
 export interface OscarsSubmissionOffer {
-  [key: string]: any;
   type: "oscarSubmission";
   emailId: string;
   isSubmitted: boolean;
 }
 
 export interface OscarRedCarpetOffer {
-  [key: string]: any;
   type: "oscarRedCarpet";
   emailId: string;
   isAttending?: boolean;
 }
 
 export interface OscarsNominationOffer {
-  [key: string]: any;
   type: "oscarNominations";
   emailId: string;
   hasPerformanceOffer: boolean;
@@ -538,25 +505,21 @@ export interface OscarsNominationOffer {
 }
 
 export interface LeakNotification {
-  [key: string]: any;
   type: "leak";
   songId: string;
 }
 
 export interface XSuspensionEmail {
-  [key: string]: any;
   type: "xSuspension";
   isSuspended: boolean; // true for suspension, false for reinstatement
 }
 
 export interface XAppealResultEmail {
-  [key: string]: any;
   type: "xAppealResult";
   isSuccessful: boolean;
 }
 
 export interface OnlyFansOffer {
-  [key: string]: any;
   type: "onlyfansRequest";
   requestType: "image" | "video";
   payout: number;
@@ -566,7 +529,6 @@ export interface OnlyFansOffer {
 }
 
 export interface FeatureVideoOffer {
-  [key: string]: any;
   type: "featureVideoOffer";
   songId: string;
   npcArtistName: string;
@@ -574,7 +536,6 @@ export interface FeatureVideoOffer {
 }
 
 export interface FifaWorldCupOffer {
-  [key: string]: any;
   type: "fifaWorldCupOffer";
   emailId: string;
   isAccepted: boolean;
@@ -582,7 +543,6 @@ export interface FifaWorldCupOffer {
 }
 
 export interface SoundtrackOffer {
-  [key: string]: any;
   type: "soundtrackOffer";
   albumTitle:
     | "F1 The Album"
@@ -603,14 +563,12 @@ export interface SoundtrackOffer {
 }
 
 export interface TouringDataUpdate {
-  [key: string]: any;
   type: "touringDataUpdate";
   tourId: string;
   venueIndex: number;
 }
 
 export interface VogueOffer {
-  [key: string]: any;
   type: "vogueOffer";
   magazine: "Vogue" | "Vogue Korea" | "Vogue Italy";
   isAccepted: boolean;
@@ -618,7 +576,6 @@ export interface VogueOffer {
 }
 
 export interface AppleMusicPlaylist {
-  [key: string]: any;
   id: string;
   title: string;
   type: 'setlist' | 'playlist';
@@ -631,7 +588,6 @@ export interface AppleMusicPlaylist {
 }
 
 export interface SpotifyPlaylistTrack {
-  [key: string]: any;
   songId: string;
   artistName: string;
   artistId: string;
@@ -643,7 +599,6 @@ export interface SpotifyPlaylistTrack {
 }
 
 export interface SpotifyPlaylist {
-  [key: string]: any;
   id: string;
   name: string;
   description: string;
@@ -656,7 +611,6 @@ export interface SpotifyPlaylist {
 }
 
 export interface FeatureOffer {
-  [key: string]: any;
   type: "featureOffer";
   npcArtistName: string;
   payout: number;
@@ -670,21 +624,18 @@ export interface FeatureOffer {
 }
 
 export interface FeatureReleaseNotification {
-  [key: string]: any;
   type: "featureRelease";
   songTitle: string;
   npcArtistName: string;
 }
 
 export interface CoachellaOffer {
-  [key: string]: any;
   type: "coachellaOffer";
   emailId: string;
   isSubmitted: boolean;
 }
 
 export interface CoachellaSelectionOffer {
-  [key: string]: any;
   type: "coachellaSelection";
   emailId: string;
   slot: "headliner" | "mid" | "small" | "opener";
@@ -693,20 +644,17 @@ export interface CoachellaSelectionOffer {
 }
 
 export interface CheatingScandalEmail {
-  [key: string]: any;
   type: "cheatingScandal";
   relationshipId: string;
   isAnswered?: boolean;
 }
 
 export interface GiveBirthEmail {
-  [key: string]: any;
   type: "giveBirth";
   isAnswered?: boolean;
 }
 
 export interface NpcContractRenewalOffer {
-  [key: string]: any;
   type: "npcContractRenewal";
   npcName: string;
   isAccepted: boolean;
@@ -723,21 +671,18 @@ export type PromoInterviewSource =
   | "KISS FM";
 
 export interface ActingTrailerUploadOffer {
-  [key: string]: any;
   type: "actingTrailerUpload";
   roleId: string;
   roleTitle: string;
 }
 
 export interface ActingCoverUploadOffer {
-  [key: string]: any;
   type: "actingCoverUpload";
   roleId: string;
   roleTitle: string;
 }
 
 export interface ActingPremiereOffer {
-  [key: string]: any;
   type: "actingPremiere";
   roleId: string;
   roleTitle: string;
@@ -745,13 +690,11 @@ export interface ActingPremiereOffer {
 }
 
 export interface PromoInterviewOffer {
-  [key: string]: any;
   type: "promoInterview";
   source: PromoInterviewSource;
 }
 
 export interface Email {
-  [key: string]: any;
   id: string;
   sender: string;
   senderIcon?:
@@ -832,14 +775,12 @@ export interface Email {
 }
 
 export interface GameDate {
-  [key: string]: any;
   day?: number;
   week: number;
   year: number;
 }
 
 export interface Promotion {
-  [key: string]: any;
   id: string;
   itemId: string; // songId, releaseId, or videoId
   itemType: "song" | "release" | "video";
@@ -852,7 +793,6 @@ export interface Promotion {
 }
 
 export interface NpcSong {
-  [key: string]: any;
   uniqueId: string;
   title: string;
   artist: string;
@@ -887,7 +827,6 @@ export interface NpcSong {
 }
 
 export interface NpcAlbum {
-  [key: string]: any;
   uniqueId: string;
   title: string;
   artist: string;
@@ -898,7 +837,6 @@ export interface NpcAlbum {
 }
 
 export interface ChartEntry {
-  [key: string]: any;
   rank: number;
   lastWeek: number | null;
   peak: number;
@@ -928,7 +866,6 @@ export interface ChartEntry {
 }
 
 export interface VideoChartEntry {
-  [key: string]: any;
   rank: number;
   lastWeek: number | null;
   peak: number;
@@ -943,7 +880,6 @@ export interface VideoChartEntry {
 }
 
 export interface AlbumChartEntry {
-  [key: string]: any;
   rank: number;
   lastWeek: number | null;
   peak: number;
@@ -964,7 +900,6 @@ export interface AlbumChartEntry {
 }
 
 export interface ChartHistory {
-  [key: string]: any;
   [uniqueId: string]: {
     peak: number;
     weeksOnChart: number;
@@ -978,7 +913,6 @@ export interface ChartHistory {
 }
 
 export interface Label {
-  [key: string]: any;
   id:
     | "umg"
     | "republic"
@@ -1023,7 +957,6 @@ export interface Label {
 }
 
 export interface SignedNpc {
-  [key: string]: any;
   id: string;
   name: string;
   contract: {
@@ -1038,7 +971,6 @@ export interface SignedNpc {
 }
 
 export interface CustomLabel {
-  [key: string]: any;
   id: string;
   name: string;
   logo: string;
@@ -1051,7 +983,6 @@ export interface CustomLabel {
 }
 
 export interface Contract {
-  [key: string]: any;
   labelId: string;
   isCustom?: boolean;
   artistId: string;
@@ -1104,7 +1035,6 @@ export interface Contract {
 }
 
 export interface LabelSubmission {
-  [key: string]: any;
   id: string;
   release: Release;
   submittedDate: GameDate;
@@ -1138,7 +1068,6 @@ export interface LabelSubmission {
 }
 
 export interface XUser {
-  [key: string]: any;
   id: string;
   name: string;
   username: string;
@@ -1167,14 +1096,12 @@ export interface XUser {
 }
 
 export interface XPollOption {
-  [key: string]: any;
   id: string;
   text: string;
   votes: number;
 }
 
 export interface TikTokVideo {
-  [key: string]: any;
   id: string;
   authorId: string;
   content: string;
@@ -1187,7 +1114,6 @@ export interface TikTokVideo {
 }
 
 export interface TikTokPromoteOrder {
-  [key: string]: any;
   id: string;
   goal: 'likes' | 'views' | 'followers' | 'profile_views';
   goalTypeCategory?: 'boost_account' | 'get_sales' | 'get_leads';
@@ -1217,7 +1143,6 @@ export interface TikTokPromoteOrder {
 }
 
 export interface InstagramPost {
-  [key: string]: any;
   id: string;
   imageUrls: string[];
   caption: string;
@@ -1227,14 +1152,12 @@ export interface InstagramPost {
 }
 
 export interface InstagramStory {
-  [key: string]: any;
   id: string;
   imageUrl: string;
   date: GameDate;
 }
 
 export interface InstagramReel {
-  [key: string]: any;
   id: string;
   videoUrl: string;
   caption: string;
@@ -1245,7 +1168,6 @@ export interface InstagramReel {
 }
 
 export interface XComment {
-  [key: string]: any;
   id: string;
   authorId: string;
   content?: string;
@@ -1256,7 +1178,6 @@ export interface XComment {
 }
 
 export interface XPost {
-  [key: string]: any;
   id: string;
   authorId: string;
   content: string;
@@ -1284,7 +1205,6 @@ export interface XPost {
 }
 
 export interface XMessage {
-  [key: string]: any;
   id: string;
   senderId: string; // 'player' or a userId
   text: string;
@@ -1293,7 +1213,6 @@ export interface XMessage {
 }
 
 export interface XChat {
-  [key: string]: any;
   id: string;
   name: string;
   avatar: string;
@@ -1304,7 +1223,6 @@ export interface XChat {
 }
 
 export interface XTrend {
-  [key: string]: any;
   id: string;
   category: string;
   title: string;
@@ -1315,14 +1233,12 @@ export type PaparazziPhotoCategory =
   "Spotted" | "Scandal" | "Fashion" | "Candid" | "TikTok Fan";
 
 export interface XMedia {
-  [key: string]: any;
   id: string;
   url: string;
   year: number;
 }
 
 export interface PaparazziPhoto {
-  [key: string]: any;
   id: string;
   image: string;
   category: PaparazziPhotoCategory;
@@ -1330,7 +1246,6 @@ export interface PaparazziPhoto {
 }
 
 export interface GrammyAward {
-  [key: string]: any;
   year: number;
   category:
     | "Best New Artist"
@@ -1376,7 +1291,6 @@ export type AmaCategoryName =
   | "Favorite Dance/Electronic Artist";
 
 export interface AmaAward {
-  [key: string]: any;
   year: number;
   category: AmaCategoryName;
   itemId: string; // releaseId, songId, or artistId
@@ -1386,7 +1300,6 @@ export interface AmaAward {
 }
 
 export interface OscarAward {
-  [key: string]: any;
   year: number;
   category: "Best Original Song" | "Best Actor/Actress (Leading Role)" | "Best Supporting Actor/Actress (Supporting Role)";
   itemId: string; // songId or roleId
@@ -1397,7 +1310,6 @@ export interface OscarAward {
 
 
 export interface GoldenGlobeAward {
-  [key: string]: any;
   year: number;
   category: "Best Actor/Actress" | "Best Supporting Actor/Actress" | "Best Voice Acting" | "Best TV Show" | "Best Movie" | "Best Soundtrack" | "Best Original Song";
   itemId: string;
@@ -1407,7 +1319,6 @@ export interface GoldenGlobeAward {
 }
 
 export interface GoldenGlobeContender {
-  [key: string]: any;
   id: string;
   name: string;
   artistName: string;
@@ -1417,14 +1328,12 @@ export interface GoldenGlobeContender {
 }
 
 export interface GoldenGlobeCategory {
-  [key: string]: any;
   name: GoldenGlobeAward["category"];
   nominees: GoldenGlobeContender[];
   winner?: GoldenGlobeContender;
 }
 
 export interface GrammyContender {
-  [key: string]: any;
   id: string;
   name: string;
   artistName: string;
@@ -1434,7 +1343,6 @@ export interface GrammyContender {
 }
 
 export interface OscarContender {
-  [key: string]: any;
   id: string;
   name: string;
   artistName: string;
@@ -1444,7 +1352,6 @@ export interface OscarContender {
 }
 
 export interface GrammyCategory {
-  [key: string]: any;
   name:
     | "Best New Artist"
     | "Record of the Year"
@@ -1461,7 +1368,6 @@ export interface GrammyCategory {
 }
 
 export interface AmaContender {
-  [key: string]: any;
   artistId: string;
   artistName: string;
   itemId: string; // releaseId, songId, or artistId
@@ -1470,7 +1376,6 @@ export interface AmaContender {
 }
 
 export interface AmaCategory {
-  [key: string]: any;
   name: AmaCategoryName;
   nominees: AmaContender[];
   winner?: AmaContender;
@@ -1488,7 +1393,6 @@ export type BritCategoryName =
   | "Best Electronic Act";
 
 export interface BritAward {
-  [key: string]: any;
   year: number;
   category: BritCategoryName;
   itemId: string; // releaseId, songId, or artistId
@@ -1498,7 +1402,6 @@ export interface BritAward {
 }
 
 export interface BritContender {
-  [key: string]: any;
   artistId: string;
   artistName: string;
   itemId: string; // releaseId, songId, or artistId
@@ -1508,14 +1411,12 @@ export interface BritContender {
 }
 
 export interface BritCategory {
-  [key: string]: any;
   name: BritCategoryName;
   nominees: BritContender[];
   winner?: BritContender;
 }
 
 export interface OscarCategory {
-  [key: string]: any;
   name: "Best Original Song" | "Best Actor/Actress" | "Best Supporting Actor/Actress" | "Best Voice Actor/Actress";
   nominees: OscarContender[];
   winner?: OscarContender;
@@ -1641,13 +1542,11 @@ export type GameView =
   | "kalshi"
   | "ukChart"
   | "ukAlbumsChart"
-  | "kaiStreamSetup"
-  | (string & {});
+  | "kaiStreamSetup";
 
 export type Tab = "Home" | "Apps" | "Charts" | "Misc" | "Business";
 
 export interface RedMicProState {
-  [key: string]: any;
   unlocked: boolean;
   subscriptionType: "yearly" | "lifetime" | "code" | null;
   subscriptionEndDate?: GameDate;
@@ -1656,7 +1555,6 @@ export interface RedMicProState {
 }
 
 export interface OnlyFansPost {
-  [key: string]: any;
   id: string;
   date: GameDate;
   caption: string;
@@ -1668,7 +1566,6 @@ export interface OnlyFansPost {
 }
 
 export interface OnlyFansProfile {
-  [key: string]: any;
   username: string;
   displayName: string;
   bio: string;
@@ -1684,7 +1581,6 @@ export interface OnlyFansProfile {
 }
 
 export interface XSuspensionStatus {
-  [key: string]: any;
   isSuspended: boolean;
   reason: "fan_war_reports" | "random";
   appealSentDate?: GameDate;
@@ -1693,7 +1589,6 @@ export interface XSuspensionStatus {
 }
 
 export interface SoundtrackTrack {
-  [key: string]: any;
   isPlayerSong: boolean;
   songId: string; // Player Song ID or NPC uniqueId
   title: string;
@@ -1706,7 +1601,6 @@ export interface SoundtrackTrack {
 }
 
 export interface SoundtrackAlbum {
-  [key: string]: any;
   id: string;
   title:
     | "F1 The Album"
@@ -1732,7 +1626,6 @@ export interface SoundtrackAlbum {
 }
 
 export interface Venue {
-  [key: string]: any;
   id: string;
   name: string;
   city: string;
@@ -1745,7 +1638,6 @@ export interface Venue {
 }
 
 export interface Tour {
-  [key: string]: any;
   id: string;
   artistId: string;
   name: string;
@@ -1771,7 +1663,6 @@ export interface Tour {
 }
 
 export interface Brand {
-  [key: string]: any;
   id: string;
   name: string;
   category: string;
@@ -1784,7 +1675,6 @@ export interface Brand {
 }
 
 export interface BrandAmbassadorContract {
-  [key: string]: any;
   id: string;
   brandId: string;
   brandName: string;
@@ -1798,7 +1688,6 @@ export interface BrandAmbassadorContract {
 }
 
 export interface SongMediaRequest {
-  [key: string]: any;
   id: string;
   mediaTitle: string;
   type: 'TV Show' | 'Trailer' | 'Promotional Campaign' | 'Web/Game';
@@ -1812,7 +1701,6 @@ export interface SongMediaRequest {
 }
 
 export interface ActiveSyncLicense {
-  [key: string]: any;
   id: string;
   songId: string;
   songTitle: string;
@@ -1824,7 +1712,6 @@ export interface ActiveSyncLicense {
 }
 
 export interface Manager {
-  [key: string]: any;
   id: string;
   name: string;
   bio: string;
@@ -1835,7 +1722,6 @@ export interface Manager {
 }
 
 export interface SecurityTeam {
-  [key: string]: any;
   id: string;
   name: string;
   weeklyCost: number;
@@ -1843,7 +1729,6 @@ export interface SecurityTeam {
 }
 
 export interface VoguePhotoshoot {
-  [key: string]: any;
   id: string;
   magazine: "Vogue" | "Vogue Korea" | "Vogue Italy";
   coverImage: string;
@@ -1853,7 +1738,6 @@ export interface VoguePhotoshoot {
 }
 
 export interface DivorceProposal {
-  [key: string]: any;
   id: string;
   proposedBy: "player" | "partner";
   custody: "player" | "joint" | "partner";
@@ -1867,7 +1751,6 @@ export interface DivorceProposal {
 }
 
 export interface DivorceCase {
-  [key: string]: any;
   id: string;
   relationshipId: string;
   partnerName: string;
@@ -1890,7 +1773,6 @@ export interface DivorceCase {
 }
 
 export interface PrenupAgreement {
-  [key: string]: any;
   id: string;
   partnerName: string;
   signedDate: GameDate;
@@ -1901,7 +1783,6 @@ export interface PrenupAgreement {
 }
 
 export interface Relationship {
-  [key: string]: any;
   id: string;
   partnerName: string;
   partnerType: "npc" | "custom";
@@ -1921,7 +1802,6 @@ export interface Relationship {
 export { formatMarriageDuration } from "./utils/relationshipUtils";
 
 export interface Kid {
-  [key: string]: any;
   id: string;
   name: string;
   birthDate: GameDate;
@@ -1930,7 +1810,6 @@ export interface Kid {
 }
 
 export interface Pregnancy {
-  [key: string]: any;
   partnerName: string;
   conceptionDate: GameDate;
   revealed: boolean;
@@ -1940,7 +1819,6 @@ export interface Pregnancy {
 }
 
 export interface RedditComment {
-  [key: string]: any;
   id: string;
   author: string;
   text: string;
@@ -1950,7 +1828,6 @@ export interface RedditComment {
 }
 
 export interface RedditPost {
-  [key: string]: any;
   id: string;
   author: string;
   timeAgo: string;
@@ -1964,7 +1841,6 @@ export interface RedditPost {
 
 
 export interface CryptoCoin {
-  [key: string]: any;
   id: string;
   name: string;
   ticker: string;
@@ -1993,7 +1869,6 @@ export interface CryptoCoin {
 }
 
 export interface ArtistData {
-  [key: string]: any;
   cryptoCoin?: CryptoCoin;
   aboutBio?: string;
   aboutImages?: string[];
@@ -2151,6 +2026,13 @@ export interface ArtistData {
   listeningNow: number;
   streamsHistory: { date: GameDate; streams: number }[];
   firstChartEntry?: { songTitle: string; rank: number; date: GameDate } | null;
+  hasEarnedFirstSoloHot100?: boolean;
+  hasEarnedFirstBillboard200No1?: boolean;
+  hasAimingFirstHot100Tweeted?: boolean;
+  hasEarnedFirstGrammyNomination?: boolean;
+  hasEarnedFirstHot100No1?: boolean;
+  debutSingleDate?: GameDate;
+  autoCertifications?: boolean;
   playlistPlacements?: {
     playlistId: string;
     playlistName: string;
@@ -2214,7 +2096,6 @@ export interface ArtistData {
 }
 
 export interface RedCarpetLook {
-  [key: string]: any;
   id: string;
   awardShow: string;
   year: number;
@@ -2222,12 +2103,10 @@ export interface RedCarpetLook {
 }
 
 export interface GameState {
-  [key: string]: any;
   timeMode?: "weekly" | "daily";
   disableEncounters?: boolean;
   disableLoadingScreens?: boolean;
   spotifySnapshotStyle?: "normal" | "ugly" | "simplistic";
-  autoUpdateCertifications?: boolean;
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
@@ -2458,7 +2337,6 @@ export interface GameState {
 }
 
 export interface EncounterChoice {
-  [key: string]: any;
   label: string;
   tweetTemplate?: string;
   authorName?: string;
@@ -2471,7 +2349,6 @@ export interface EncounterChoice {
 }
 
 export interface ActiveEncounter {
-  [key: string]: any;
   id: string;
   text: string;
   requiresImage: boolean;
@@ -2479,7 +2356,9 @@ export interface ActiveEncounter {
 }
 
 export type GameAction =
-  | { type: string; payload?: any }
+  | { type: "TOGGLE_AUTO_CERTIFICATIONS"; payload?: { enabled?: boolean } }
+  | { type: "MANUAL_CLAIM_CERTIFICATION"; payload: { itemId: string; isAlbum: boolean } }
+  | { type: "DELAY_SCHEDULED_RELEASE"; payload: { submissionId: string; delayWeeks: number } }
   | { type: "UPDATE_ARTIST_FUNDS"; payload: number }
   | { type: "UPDATE_VIDEO"; payload: { id: string; updates: Partial<Video> } }
   | { type: "LAUNCH_CRYPTO_COIN"; payload: { name: string; ticker: string; logo: string; launchPrice: number; totalSupply: number; cost: number; playerPercent?: number } }
@@ -2508,9 +2387,6 @@ export type GameAction =
     }
   | { type: "TOGGLE_ENCOUNTERS" }
   | { type: "TOGGLE_LOADING_SCREENS" }
-  | { type: "TOGGLE_AUTO_UPDATE_CERTIFICATIONS"; payload?: boolean }
-  | { type: "MANUAL_CERTIFY_ITEM"; payload: { itemId: string; format: "SINGLE" | "ALBUM"; certName: string } }
-  | { type: "MANUAL_CERTIFY_ALL"; payload: { items: { itemId: string; format: "SINGLE" | "ALBUM"; certName: string }[] } }
   | { type: "TOGGLE_SPOTIFY_SNAPSHOT_STYLE"; payload: "normal" | "ugly" }
   | {
       type: "START_SOLO_GAME";
@@ -2571,7 +2447,6 @@ export type GameAction =
       payload: { id: string; amount: number; cost?: number };
     }
   | { type: "UPDATE_MERCH_PRICE"; payload: { id: string; price: number } }
-  | { type: "UPDATE_MERCH_SHIPMENT"; payload: { id: string; shippingDate: GameDate } }
   | { type: "REMOVE_MERCH"; payload: { id: string } }
   | { type: "UPDATE_MERCH_BANNER"; payload: string }
   | { type: "UPDATE_SNAPSHOT_BANNER"; payload: { releaseId: string; bannerUrl: string } }
@@ -3264,7 +3139,6 @@ export type GameAction =
       payload: { roleId: string };
     };
 export interface PodcastEpisode {
-  [key: string]: any;
   id: string;
   title: string;
   description: string;
@@ -3278,7 +3152,6 @@ export interface PodcastEpisode {
 }
 
 export interface Podcast {
-  [key: string]: any;
   id: string;
   name: string;
   host: string;
@@ -3294,7 +3167,6 @@ export interface Podcast {
 }
 
 export interface PodcastPitchOffer {
-  [key: string]: any;
   id: string;
   podcastId: string;
   type: "podcast_pitch";
@@ -3306,7 +3178,6 @@ export interface PodcastPitchOffer {
 export type StreamLocation = 'Disneyworld' | 'Normal Stream' | 'LA Pop Up' | 'Petting Zoo';
 
 export interface TwitchStreamSchedule {
-  [key: string]: any;
     id: string;
     streamer: string;
     location: StreamLocation;
@@ -3318,5 +3189,3 @@ export interface TwitchStreamSchedule {
     hasAnnounced: boolean;
     hasStreamed: boolean;
 }
-
-export type CustomAwardShowCategory = any;

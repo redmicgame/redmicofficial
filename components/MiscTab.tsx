@@ -528,6 +528,58 @@ const MiscTab: React.FC = () => {
                     
                     <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
                         <div className="flex-grow pr-4">
+                            <p className="font-bold flex items-center gap-2">
+                                Certifications Mode
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                    activeArtistData?.autoCertifications !== false 
+                                        ? 'bg-green-900/60 text-green-300 border border-green-700/50' 
+                                        : 'bg-amber-900/60 text-amber-300 border border-amber-700/50'
+                                }`}>
+                                    {activeArtistData?.autoCertifications !== false ? 'Automatic' : 'Manual'}
+                                </span>
+                            </p>
+                            <p className="text-xs text-zinc-400">
+                                {activeArtistData?.autoCertifications !== false
+                                    ? 'Certifications (Gold, Platinum, Diamond) are automatically awarded as soon as eligible.'
+                                    : 'Certifications must be reviewed and manually claimed in the Management tab.'}
+                            </p>
+                        </div>
+                        <div className="flex items-center bg-zinc-700 p-0.5 rounded-lg">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (activeArtistData?.autoCertifications === false) {
+                                        dispatch({ type: 'TOGGLE_AUTO_CERTIFICATIONS', payload: { enabled: true } });
+                                    }
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                                    activeArtistData?.autoCertifications !== false
+                                        ? 'bg-blue-600 text-white shadow'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                Auto
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (activeArtistData?.autoCertifications !== false) {
+                                        dispatch({ type: 'TOGGLE_AUTO_CERTIFICATIONS', payload: { enabled: false } });
+                                    }
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                                    activeArtistData?.autoCertifications === false
+                                        ? 'bg-blue-600 text-white shadow'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                Manual
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
+                        <div className="flex-grow pr-4">
                             <p className="font-bold">Spotify Snapshot Style</p>
                             <p className="text-xs text-zinc-400">Choose the visual style for your Spotify snapshot images.</p>
                         </div>
@@ -542,19 +594,6 @@ const MiscTab: React.FC = () => {
                             <option value="ugly">Ugly Snapshot</option>
                             <option value="simplistic">Simplistic Snapshot</option>
                         </select>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
-                        <div className="flex-grow pr-4">
-                            <p className="font-bold">Auto Update Certifications</p>
-                            <p className="text-xs text-zinc-400">Automatically update RIAA certifications on milestone achievements. If off, manage them manually in the Manager tab.</p>
-                        </div>
-                        <button
-                            onClick={() => dispatch({ type: 'TOGGLE_AUTO_UPDATE_CERTIFICATIONS' })}
-                            className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${gameState.autoUpdateCertifications !== false ? 'bg-green-500 justify-end' : 'bg-zinc-600 justify-start'}`}
-                        >
-                            <span className="w-4 h-4 rounded-full bg-white block shadow-md"></span>
-                        </button>
                     </div>
 
                     <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">

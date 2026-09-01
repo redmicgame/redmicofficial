@@ -6,11 +6,10 @@ import { BRANDS, MEDIA_REQUESTS_PRESETS } from '../constants/brandMediaData';
 import { Manager, Brand, SongMediaRequest } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ConfirmationModal from './ConfirmationModal';
+import { CertificationsManagementSection } from './CertificationsManagementSection';
 
 const ManagementView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
-    const [activeTab, setActiveTab] = useState<'manager' | 'certifications'>('manager');
-    const [certFilter, setCertFilter] = useState<'all' | 'pending' | 'singles' | 'albums'>('all');
     const [confirmHire, setConfirmHire] = useState<{manager: Manager, years: number} | null>(null);
     const [confirmFire, setConfirmFire] = useState(false);
     const [confirmAgencySign, setConfirmAgencySign] = useState<string | null>(null);
@@ -50,90 +49,6 @@ const ManagementView: React.FC = () => {
 
     if (!activeArtistData) return null;
     const { money, manager, songs } = activeArtistData;
-
-    const getSongCert = (streams: number) => {
-        const DIAMOND = 1_200_000_000;
-        const PLATINUM = 100_000_000;
-        const GOLD = 60_000_000;
-        if (streams >= DIAMOND) return { level: "Diamond", multiplier: Math.floor(streams / DIAMOND) };
-        if (streams >= PLATINUM) return { level: "Platinum", multiplier: Math.floor(streams / PLATINUM) };
-        if (streams >= GOLD) return { level: "Gold", multiplier: 1 };
-        return null;
-    };
-
-    const getAlbumCert = (units: number) => {
-        const DIAMOND = 10_000_000;
-        const PLATINUM = 1_000_000;
-        const GOLD = 500_000;
-        if (units >= DIAMOND) return { level: "Diamond", multiplier: Math.floor(units / DIAMOND) };
-        if (units >= PLATINUM) return { level: "Platinum", multiplier: Math.floor(units / PLATINUM) };
-        if (units >= GOLD) return { level: "Gold", multiplier: 1 };
-        return null;
-    };
-
-    const formatCert = (cert: { level: string; multiplier: number } | null): string | null => {
-        if (!cert) return null;
-        if (cert.multiplier > 1 && cert.level !== "Gold") {
-            return `${cert.multiplier}x ${cert.level}`;
-        }
-        return cert.level;
-    };
-
-    const songCertItems = (activeArtistData.songs || []).filter(s => s.isReleased).map(song => {
-        const eligibleCert = getSongCert(song.streams || 0);
-        const eligibleCertStr = formatCert(eligibleCert);
-        const currentCertStr = song.lastCertification || null;
-        const isPending = !!eligibleCertStr && eligibleCertStr !== currentCertStr;
-        return {
-            id: song.id,
-            title: song.title,
-            coverArt: song.coverArt,
-            format: 'SINGLE' as const,
-            metricLabel: `${formatNumber(song.streams || 0)} Streams`,
-            metricValue: song.streams || 0,
-            currentCertStr,
-            eligibleCertStr,
-            isPending,
-        };
-    });
-
-    const albumCertItems = (activeArtistData.releases || []).filter(r => r.isReleased).map(release => {
-        const totalStreams = (release.songIds || []).reduce((acc, sId) => {
-            const s = activeArtistData.songs.find(x => x.id === sId);
-            return acc + (s?.streams || 0);
-        }, 0);
-        const rawSingleSales = (release.songIds || []).reduce((sum, sId) => {
-            const s = activeArtistData.songs.find(x => x.id === sId);
-            return sum + (s?.sales || 0);
-        }, 0);
-        const tea = Math.floor(Math.max(0, rawSingleSales) * 0.1);
-        const units = Math.floor(totalStreams / 1500) + tea + (release.sales || 0);
-        const eligibleCert = getAlbumCert(units);
-        const eligibleCertStr = formatCert(eligibleCert);
-        const currentCertStr = release.lastCertification || null;
-        const isPending = !!eligibleCertStr && eligibleCertStr !== currentCertStr;
-        return {
-            id: release.id,
-            title: release.title,
-            coverArt: release.coverArt,
-            format: 'ALBUM' as const,
-            metricLabel: `${formatNumber(units)} Units`,
-            metricValue: units,
-            currentCertStr,
-            eligibleCertStr,
-            isPending,
-        };
-    });
-
-    const allCertItems = [...songCertItems, ...albumCertItems];
-    const pendingCertItems = allCertItems.filter(item => item.isPending);
-
-    const filteredCertItems = allCertItems.filter(item => {
-        if (certFilter === 'pending') return item.isPending;
-        if (certFilter === 'singles') return item.format === 'SINGLE';
-        if (certFilter === 'albums') return item.format === 'ALBUM';
-        return true;
-    });
 
     const currentManager = manager ? MANAGERS.find(m => m.id === manager.id) : null;
 
@@ -326,30 +241,12 @@ const ManagementView: React.FC = () => {
                     </button>
                     <h1 className="text-2xl font-bold">Management</h1>
                 </header>
-
-                {/* SUB NAVIGATION TABS */}
-                <div className="flex border-b border-zinc-800 bg-zinc-900 px-4 pt-2 gap-6 sticky top-14 z-10">
-                    <button
-                        onClick={() => setActiveTab('manager')}
-                        className={`pb-3 font-bold text-sm border-b-2 transition-all ${activeTab === 'manager' ? 'border-yellow-400 text-yellow-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}
-                    >
-                        Manager & Deals
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('certifications')}
-                        className={`pb-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${activeTab === 'certifications' ? 'border-yellow-400 text-yellow-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}
-                    >
-                        <span>Certifications</span>
-                        {pendingCertItems.length > 0 && (
-                            <span className="px-2 py-0.5 bg-yellow-400 text-black text-xs font-black rounded-full animate-pulse">
-                                {pendingCertItems.length}
-                            </span>
-                        )}
-                    </button>
-                </div>
-
-                {activeTab === 'manager' ? (
                 <main className="p-4 space-y-6">
+                    {/* MANUAL CERTIFICATIONS SECTION */}
+                    {activeArtistData.autoCertifications === false && (
+                        <CertificationsManagementSection />
+                    )}
+
                     {currentManager ? (
                         <div className="bg-zinc-800 p-4 rounded-lg">
                             <h2 className="text-xl font-bold">Your Manager</h2>
@@ -782,170 +679,6 @@ const ManagementView: React.FC = () => {
                         )}
                     </div>
                 </main>
-                ) : (
-                <main className="p-4 space-y-6">
-                    {/* CERTIFICATIONS HEADER BANNER */}
-                    <div className="bg-gradient-to-r from-amber-950/40 via-zinc-800 to-amber-950/40 border border-amber-500/30 rounded-xl p-5 shadow-lg">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xl">🏆</span>
-                                    <h2 className="text-xl font-bold text-amber-300">RIAA Certifications</h2>
-                                </div>
-                                <p className="text-xs text-zinc-400 mt-1 max-w-xl">
-                                    Review milestone eligibility for Gold (60M streams / 500k units), Platinum (100M streams / 1M units), and Diamond (1.2B streams / 10M units) awards.
-                                </p>
-                            </div>
-
-                            {/* UPDATE ALL BUTTON */}
-                            <button
-                                onClick={() => {
-                                    if (pendingCertItems.length > 0) {
-                                        dispatch({
-                                            type: 'MANUAL_CERTIFY_ALL',
-                                            payload: {
-                                                items: pendingCertItems.map(p => ({
-                                                    itemId: p.id,
-                                                    format: p.format,
-                                                    certName: p.eligibleCertStr!
-                                                }))
-                                            }
-                                        });
-                                    }
-                                }}
-                                disabled={pendingCertItems.length === 0}
-                                className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 flex-shrink-0 ${
-                                    pendingCertItems.length > 0
-                                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black hover:brightness-110 active:scale-95 animate-pulse'
-                                        : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
-                                }`}
-                            >
-                                <span>{pendingCertItems.length > 0 ? `Update All (${pendingCertItems.length} Pending)` : 'All Up to Date ✓'}</span>
-                            </button>
-                        </div>
-
-                        {/* AUTO-UPDATE STATUS TOGGLE */}
-                        <div className="mt-4 pt-3 border-t border-amber-500/20 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${gameState.autoUpdateCertifications !== false ? 'bg-emerald-400 animate-ping' : 'bg-zinc-500'}`}></span>
-                                <span className="text-zinc-300">
-                                    Auto-Update Certifications: <strong className={gameState.autoUpdateCertifications !== false ? 'text-emerald-400' : 'text-zinc-400'}>
-                                        {gameState.autoUpdateCertifications !== false ? 'Enabled (Auto Certifying)' : 'Disabled (Manual Mode)'}
-                                    </strong>
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => dispatch({ type: 'TOGGLE_AUTO_UPDATE_CERTIFICATIONS' })}
-                                className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium border border-zinc-700 text-xs transition-colors"
-                            >
-                                {gameState.autoUpdateCertifications !== false ? 'Turn Off Auto' : 'Turn On Auto'}
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* FILTER PILLS */}
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                        {(['all', 'pending', 'singles', 'albums'] as const).map(filterKey => {
-                            const count = filterKey === 'all' ? allCertItems.length : filterKey === 'pending' ? pendingCertItems.length : filterKey === 'singles' ? songCertItems.length : albumCertItems.length;
-                            return (
-                                <button
-                                    key={filterKey}
-                                    onClick={() => setCertFilter(filterKey)}
-                                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                                        certFilter === filterKey
-                                            ? 'bg-amber-400 text-black shadow-md'
-                                            : 'bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700/50'
-                                    }`}
-                                >
-                                    {filterKey.charAt(0).toUpperCase() + filterKey.slice(1)} ({count})
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* CERTIFICATIONS LIST */}
-                    {filteredCertItems.length === 0 ? (
-                        <div className="bg-zinc-800/60 border border-zinc-800 rounded-xl p-8 text-center text-zinc-400">
-                            <p className="text-sm">No items found matching this filter.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {filteredCertItems.map(item => (
-                                <div
-                                    key={`${item.format}-${item.id}`}
-                                    className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
-                                        item.isPending
-                                            ? 'bg-zinc-800/90 border-amber-400/50 shadow-md shadow-amber-950/20'
-                                            : 'bg-zinc-800/50 border-zinc-700/50'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <img
-                                            src={item.coverArt}
-                                            alt={item.title}
-                                            className="w-14 h-14 rounded-lg object-cover flex-shrink-0 shadow-md"
-                                        />
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-bold text-white text-sm sm:text-base truncate">{item.title}</h4>
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                                                    item.format === 'SINGLE' ? 'bg-purple-900/60 text-purple-300 border border-purple-500/30' : 'bg-blue-900/60 text-blue-300 border border-blue-500/30'
-                                                }`}>
-                                                    {item.format}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-zinc-400 mt-0.5">{item.metricLabel}</p>
-                                            <div className="flex items-center gap-2 mt-1 text-xs">
-                                                <span className="text-zinc-500">Current:</span>
-                                                <span className={item.currentCertStr ? 'text-amber-400 font-semibold' : 'text-zinc-400'}>
-                                                    {item.currentCertStr || 'None'}
-                                                </span>
-                                                {item.eligibleCertStr && (
-                                                    <>
-                                                        <span className="text-zinc-600">•</span>
-                                                        <span className="text-zinc-500">Eligible:</span>
-                                                        <span className="text-yellow-300 font-semibold">{item.eligibleCertStr}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="self-end sm:self-center flex-shrink-0">
-                                        {item.isPending ? (
-                                            <button
-                                                onClick={() => {
-                                                    dispatch({
-                                                        type: 'MANUAL_CERTIFY_ITEM',
-                                                        payload: {
-                                                            itemId: item.id,
-                                                            format: item.format,
-                                                            certName: item.eligibleCertStr!
-                                                        }
-                                                    });
-                                                }}
-                                                className="px-4 py-2 rounded-lg font-bold text-xs bg-gradient-to-r from-amber-400 to-yellow-500 text-black hover:brightness-110 active:scale-95 shadow-md flex items-center gap-1.5"
-                                            >
-                                                <span>🏆</span>
-                                                <span>Certify {item.eligibleCertStr}</span>
-                                            </button>
-                                        ) : item.currentCertStr ? (
-                                            <div className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center gap-1">
-                                                <span>✓</span>
-                                                <span>Certified ({item.currentCertStr})</span>
-                                            </div>
-                                        ) : (
-                                            <div className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 bg-zinc-900 border border-zinc-800">
-                                                Not Yet Eligible
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </main>
-                )}
             </div>
             
             <ConfirmationModal

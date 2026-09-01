@@ -7,7 +7,6 @@ import ListBulletIcon from './icons/ListBulletIcon';
 import ArrowUpOnBoxIcon from './icons/ArrowUpOnBoxIcon';
 import StarIcon from './icons/StarIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
-import { getSpotifyTopCountdowns } from '../utils/countdownUtils';
 
 // --- TYPE DEFINITIONS ---
 interface ITunesSong extends ChartEntry {
@@ -279,68 +278,7 @@ const useItunesData = () => {
     const getArtistAlbums = (artistName: string) => allAlbums.filter(a => a.artist === artistName);
 
     const getAlbumDetails = (albumId: string) => {
-        let album = allAlbums.find(a => a.albumId === albumId || a.uniqueId === albumId);
-        
-        if (!album) {
-            // Check player submissions/releases
-            for (const artistId in artistsData) {
-                const aData = artistsData[artistId];
-                const artist = allPlayerArtists.find(a => a.id === artistId);
-                const sub = aData.labelSubmissions?.find(s => s.id === albumId || s.release?.id === albumId);
-                const rel = aData.releases?.find(r => r.id === albumId);
-                const actualRelease = rel || sub?.release;
-                if (actualRelease) {
-                    const songCount = actualRelease.songIds?.length || 10;
-                    album = {
-                        rank: 0,
-                        lastWeek: null,
-                        peak: 0,
-                        weeksOnChart: 0,
-                        albumId: actualRelease.id,
-                        uniqueId: actualRelease.id,
-                        title: actualRelease.title,
-                        artist: artist?.name || 'Unknown',
-                        coverArt: actualRelease.coverArt,
-                        isPlayerAlbum: true,
-                        isPreorder: true,
-                        songCount,
-                        price: getPrice(actualRelease.id, 'album', songCount),
-                        rating: 0,
-                        reviewCount: 0,
-                        releaseDate: sub?.projectReleaseDate || actualRelease.releaseDate || gameState.date,
-                        sales: sub?.preSaves ? Math.floor(sub.preSaves * 0.4) : 0,
-                    };
-                    break;
-                }
-            }
-        }
-
-        if (!album) {
-            // Check NPC albums
-            const npcAlbum = npcAlbums.find(a => a.uniqueId === albumId || `fake_${a.uniqueId}` === albumId || `npc_pre_${a.uniqueId}` === albumId);
-            if (npcAlbum) {
-                album = {
-                    rank: 0,
-                    lastWeek: null,
-                    peak: 0,
-                    weeksOnChart: 0,
-                    albumId: npcAlbum.uniqueId,
-                    uniqueId: npcAlbum.uniqueId,
-                    title: npcAlbum.title,
-                    artist: npcAlbum.artist,
-                    coverArt: npcAlbum.coverArt,
-                    isPlayerAlbum: false,
-                    isPreorder: true,
-                    songCount: npcAlbum.songIds?.length || 10,
-                    price: getPrice(npcAlbum.uniqueId, 'album', 10),
-                    rating: 4.2,
-                    reviewCount: 45,
-                    releaseDate: gameState.date,
-                    sales: 5000,
-                };
-            }
-        }
-
+        const album = allAlbums.find(a => a.albumId === albumId);
         if (!album) return null;
 
         let tracks: (ITunesSong & { isAvailable: boolean })[] = [];
@@ -348,23 +286,11 @@ const useItunesData = () => {
             for (const artistId in artistsData) {
                 const artistData = artistsData[artistId];
                 const release = artistData.releases.find(r => r.id === albumId);
-                const submission = artistData.labelSubmissions.find(s => s.id === albumId || s.release?.id === albumId);
+                const submission = artistData.labelSubmissions.find(s => s.id === albumId || s.release.id === albumId);
                 const actualRelease = release || submission?.release;
                 if (actualRelease) {
-                    const releasedSingles = new Set(
-                        (submission?.singlesToRelease || [])
-                            .filter(s => {
-                                const songObj = artistData.songs.find(x => x.id === s.songId);
-                                return songObj?.isReleased;
-                            })
-                            .map(s => s.songId)
-                    );
-
-                    const scheduledSingles = new Set(
-                        (submission?.singlesToRelease || []).map(s => s.songId)
-                    );
-
-                    tracks = actualRelease.songIds.map((songId, index) => {
+                    const releasedSingles = new Set(submission?.singlesToRelease?.map(s => s.songId) || []);
+                    tracks = actualRelease.songIds.map(songId => {
                         const song = artistData.songs.find(s => s.id === songId);
                         if (!song) return null;
                         const chartSongData = allSongs.find(s => s.songId === songId);
@@ -380,43 +306,19 @@ const useItunesData = () => {
                             songId: song.id,
                             uniqueId: song.id,
                             weeklyStreams: song.lastWeekStreams,
-                            price: song.itunesPrice || getPrice(song.id, 'song'),
+                            price: getPrice(song.id, 'song', 0, song.itunesPrice),
                             duration: song.duration,
                             explicit: song.explicit
                         };
-
-                        const isReleasedTrack = song.isReleased === true || releasedSingles.has(song.id);
-                        const isScheduledTrack = !isReleasedTrack && (song.isScheduled === true || (song as any).status === 'scheduled' || scheduledSingles.has(song.id) || submission?.status === 'scheduled');
-                        const isRevealedInS4A = actualRelease.isTracklistRevealed === true || (actualRelease.revealedTrackIds && actualRelease.revealedTrackIds.includes(song.id));
-
-                        let finalTitle = song.title;
-                        let isAvailable = false;
-
-                        if (isReleasedTrack) {
-                            // Released tracks that are on the album automatically show
-                            finalTitle = song.title;
-                            isAvailable = true;
-                        } else if (isScheduledTrack) {
-                            // Scheduled tracks show track name but still grayed out
-                            finalTitle = song.title;
-                            isAvailable = false;
-                        } else if (isRevealedInS4A) {
-                            // Revealed in Spotify for Artists
-                            finalTitle = song.title;
-                            isAvailable = false;
-                        } else {
-                            // Hidden / unrevealed track
-                            finalTitle = `Track ${index + 1}`;
-                            isAvailable = false;
-                        }
+                        const isRevealed = actualRelease.isTracklistRevealed || releasedSingles.has(song.id) || song.isPreReleaseSingle;
+                        const finalTitle = album.isPreorder && !isRevealed ? `Track ${actualRelease.songIds.indexOf(songId) + 1}` : song.title;
 
                         return {
                             ...itunesSongData,
                             title: finalTitle,
-                            artist: album.artist,
+                            artist: album.isPreorder && !isRevealed ? null : album.artist,
                             coverArt: song.coverArt,
-                            isAvailable,
-                            price: isAvailable ? (song.itunesPrice || getPrice(song.id, 'song')) : 'ALBUM ONLY',
+                            isAvailable: album.isPreorder ? (song.isPreReleaseSingle === true || releasedSingles.has(song.id)) : true,
                         };
                     }).filter((s): s is ITunesSong & { isAvailable: boolean } => !!s);
                     break;
@@ -460,104 +362,6 @@ const useItunesData = () => {
     };
 
     return { allSongs, allAlbums, findArtistByName, getArtistDetails, getArtistSongs, getArtistAlbums, getAlbumDetails };
-};
-
-// --- PRICE SELECTION MODAL ---
-const PriceSelectionModal: React.FC<{
-    song: ITunesSong | null;
-    onClose: () => void;
-    onSelectPrice: (priceStr: string) => void;
-}> = ({ song, onClose, onSelectPrice }) => {
-    if (!song) return null;
-
-    const prices = [
-        {
-            value: '$0.69',
-            badge: 'Discount Tier',
-            description: 'Encourages impulse downloads to boost digital chart positioning.',
-            color: 'from-amber-500/20 to-orange-500/20 border-amber-500/40 text-amber-300'
-        },
-        {
-            value: '$0.99',
-            badge: 'Standard Tier',
-            description: 'Industry standard pricing balancing volume and revenue.',
-            color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/40 text-blue-300'
-        },
-        {
-            value: '$1.29',
-            badge: 'Premium Tier',
-            description: 'Higher revenue per download for hit singles and dedicated fans.',
-            color: 'from-purple-500/20 to-pink-500/20 border-purple-500/40 text-purple-300'
-        }
-    ];
-
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in" onClick={onClose}>
-            <div 
-                className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
-                onClick={e => e.stopPropagation()}
-            >
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                    <div className="flex items-center gap-3">
-                        <img src={song.coverArt} alt={song.title} className="w-12 h-12 rounded-lg object-cover shadow-md flex-shrink-0" />
-                        <div className="min-w-0">
-                            <h3 className="font-bold text-white text-base truncate flex items-center gap-1.5">
-                                {song.title}
-                                {song.explicit && <span className="bg-red-600 text-black text-[9px] font-black px-1 rounded-sm">E</span>}
-                            </h3>
-                            <p className="text-xs text-zinc-400 truncate">{song.artist}</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-full text-xl leading-none">
-                        &times;
-                    </button>
-                </div>
-
-                <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Set iTunes Single Price</h4>
-                    <p className="text-xs text-zinc-400">
-                        Choose the pricing tier for this track on the iTunes Store.
-                    </p>
-                </div>
-
-                <div className="space-y-2.5">
-                    {prices.map(p => {
-                        const isCurrent = song.price === p.value;
-                        return (
-                            <button
-                                key={p.value}
-                                onClick={() => onSelectPrice(p.value)}
-                                className={`w-full p-3.5 rounded-xl border text-left transition-all flex items-center justify-between bg-gradient-to-r ${p.color} ${isCurrent ? 'ring-2 ring-white scale-[1.01]' : 'hover:brightness-125'}`}
-                            >
-                                <div className="space-y-0.5">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg font-black text-white">{p.value}</span>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/40 text-zinc-300">
-                                            {p.badge}
-                                        </span>
-                                        {isCurrent && (
-                                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-1.5 py-0.5 rounded">
-                                                CURRENT
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-zinc-300 leading-snug">{p.description}</p>
-                                </div>
-                                <span className="text-xl font-bold text-zinc-400 ml-2">&gt;</span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <button
-                    onClick={onClose}
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2.5 rounded-xl text-sm transition-colors"
-                >
-                    Cancel
-                </button>
-            </div>
-        </div>
-    );
 };
 
 // --- RENDER COMPONENTS ---
@@ -614,7 +418,7 @@ const Section: React.FC<{ title: string; onSeeAll: () => void; children: React.R
     </section>
 );
 
-const SongRow: React.FC<{ song: ITunesSong; onClick: () => void; onPriceClick?: (song: ITunesSong) => void }> = ({ song, onClick, onPriceClick }) => (
+const SongRow: React.FC<{ song: ITunesSong; onClick: () => void; onPriceClick?: (e: React.MouseEvent) => void }> = ({ song, onClick, onPriceClick }) => (
     <div className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
         <button onClick={onClick} className="flex flex-grow items-center gap-3 text-left">
             <img src={song.coverArt} alt={song.title} className="w-16 h-16 rounded-md object-cover" />
@@ -624,8 +428,8 @@ const SongRow: React.FC<{ song: ITunesSong; onClick: () => void; onPriceClick?: 
             </div>
         </button>
         <button 
-            onClick={() => onPriceClick && onPriceClick(song)}
-            className={`border rounded-full px-4 py-1 flex-shrink-0 text-sm font-bold ${song.isPlayerSong && onPriceClick ? 'cursor-pointer hover:bg-[#0b84fe]/20 hover:scale-105' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10 transition-transform`}
+            onClick={onPriceClick}
+            className={`border rounded-full px-4 py-1 flex-shrink-0 text-sm font-bold ${onPriceClick ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10`}
         >
             {song.price}
         </button>
@@ -652,29 +456,12 @@ const StarRating: React.FC<{ rating: number, count: number }> = ({ rating, count
     );
 };
 
-const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function; onPriceClick: (song: ITunesSong) => void }> = ({ data, navigateTo, onPriceClick }) => {
-    const { gameState, activeArtist, allPlayerArtists } = useGame();
+const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function }> = ({ data, navigateTo }) => {
+    const { activeArtist } = useGame();
     const featuredAlbums = data.allAlbums.slice(0, 5);
     const preorders = data.allAlbums.filter(a => a.isPreorder);
     const bestNewReleases = data.allAlbums.filter(a => !a.isPreorder).slice(5, 15);
     const yourReleases = activeArtist ? data.allAlbums.filter(a => a.isPlayerAlbum && a.artist === activeArtist.name) : [];
-
-    // Pre-Order New Music based on Spotify Top 10 Countdown
-    const upcomingPreorders = useMemo(() => {
-        const topCountdowns = getSpotifyTopCountdowns(gameState, allPlayerArtists);
-        return topCountdowns.map(item => ({
-            id: item.id,
-            albumId: item.albumId,
-            title: item.title,
-            artist: item.artist,
-            coverArt: item.coverArt,
-            releaseDate: item.releaseDate,
-            isPlayerAlbum: item.isPlayerAlbum,
-            isExplicit: item.isExplicit,
-            preOrders: item.preSaves,
-            price: getPrice(item.albumId, 'album', 10),
-        }));
-    }, [gameState, allPlayerArtists]);
 
     return (
         <div className="space-y-6 pb-6">
@@ -695,44 +482,6 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
                     </button>
                 ))}
             </div>
-
-            {/* PRE-ORDER NEW MUSIC SECTION (CLEAN ITUNES ROW BASED ON SPOTIFY TOP 10 COUNTDOWN) */}
-            {upcomingPreorders.length > 0 && (
-                <Section title="Pre-Order New Music" onSeeAll={() => navigateTo('albumChart', { albums: upcomingPreorders.map((p, idx) => ({ ...p, uniqueId: p.id, rank: idx + 1, weeksOnChart: 1, peak: idx + 1, lastWeek: null, weeklyActivity: p.preOrders, weeklySales: p.preOrders, rating: 0, reviewCount: 0, isPreorder: true, songCount: 10 })), title: 'Pre-Order New Music' }, 'Pre-Order New Music')}>
-                    <div className="flex gap-4 px-4 overflow-x-auto pb-4 hide-scrollbar snap-x">
-                        {upcomingPreorders.map((item) => {
-                            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                            const dateStr = `Expected ${monthNames[Math.min(11, item.releaseDate.week % 12)]} ${Math.floor((item.releaseDate.week % 4) * 7 + 1)}, ${item.releaseDate.year}`;
-                            
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => {
-                                        if (item.isPlayerAlbum) {
-                                            navigateTo('albumDetail', { albumId: item.albumId, artistName: item.artist }, item.title);
-                                        }
-                                    }}
-                                    className={`flex-shrink-0 w-36 sm:w-40 snap-start text-left group ${item.isPlayerAlbum ? 'cursor-pointer' : 'cursor-default'}`}
-                                >
-                                    <div className="relative w-36 h-36 sm:w-40 sm:h-40">
-                                        <img
-                                            src={item.coverArt}
-                                            alt={item.title}
-                                            className={`w-full h-full rounded-lg object-cover shadow ${item.isPlayerAlbum ? 'transition-transform duration-200 group-hover:scale-[1.02]' : ''}`}
-                                        />
-                                    </div>
-                                    <p className="mt-1.5 font-semibold text-white text-sm line-clamp-1 flex items-center gap-1">
-                                        {item.title}
-                                        {item.isExplicit && <span className="bg-red-600 text-black text-[9px] font-black px-1 rounded-sm">E</span>}
-                                    </p>
-                                    <p className="text-zinc-400 text-xs line-clamp-1">{item.artist}</p>
-                                    <p className="text-[11px] text-zinc-500 line-clamp-1 mt-0.5">{dateStr}</p>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </Section>
-            )}
 
             {yourReleases.length > 0 && (
                 <Section title="Your Releases" onSeeAll={() => navigateTo('albumChart', { albums: yourReleases, title: 'Your Releases' }, 'Your Releases')}>
@@ -758,7 +507,7 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
 
             <Section title="Top Songs" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
                 <div className="px-4">
-                    {data.allSongs.slice(0, 5).map((song) => (
+                    {data.allSongs.slice(0, 5).map((song, i) => (
                         <div key={song.uniqueId} className="w-full flex items-center gap-3 py-2 border-b border-zinc-800">
                              <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover" />
                              <div className="flex-grow text-left">
@@ -767,11 +516,15 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
                              </div>
                              <button 
                                  onClick={() => {
-                                     if (song.isPlayerSong) {
-                                         onPriceClick(song);
+                                     if (!song.isPlayerSong) return;
+                                     const opts = ['$0.69', '$0.99', '$1.29'];
+                                     const currentIdx = opts.indexOf(song.price) >= 0 ? opts.indexOf(song.price) : 1;
+                                     const nextIdx = (currentIdx + 1) % opts.length;
+                                     if ((window as any)._dispatch) {
+                                         (window as any)._dispatch({ type: 'UPDATE_ITUNES_PRICE', payload: { songId: song.songId || song.uniqueId, newPriceStr: opts[nextIdx] } });
                                      }
                                  }}
-                                 className={`border border-[#0b84fe] rounded-full px-4 py-1 flex-shrink-0 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20 hover:scale-105' : 'cursor-default'} transition-all`}
+                                 className={`border border-[#0b84fe] rounded-full px-4 py-1 flex-shrink-0 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'}`}
                              >
                                  {song.price}
                              </button>
@@ -783,25 +536,22 @@ const ITunesHome: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAl
     );
 };
 
-const ITunesCharts: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function; onPriceClick: (song: ITunesSong) => void }> = ({ data, navigateTo, onPriceClick }) => (
+const ITunesCharts: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunesAlbum[] }; navigateTo: Function }> = ({ data, navigateTo }) => (
     <div className="space-y-6 pt-4 pb-6">
         <Section title="Top Songs" onSeeAll={() => navigateTo('songChart', { songs: data.allSongs, title: 'Top Songs' }, 'Top Songs')}>
              <div className="px-4">
                 {data.allSongs.slice(0, 20).map((song, i) => (
-                    <div key={song.uniqueId} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
+                    <button key={song.uniqueId} className="w-full flex items-center gap-3 py-3 border-b border-zinc-800/50">
                          <div className="text-xl font-bold w-6 text-zinc-400 text-center">{i + 1}</div>
                          <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-md object-cover shadow-sm" />
                          <div className="flex-grow text-left">
                              <p className="font-semibold line-clamp-1">{song.title}</p>
                              <p className="text-zinc-400 line-clamp-1 text-sm">{song.artist}</p>
                          </div>
-                         <button 
-                             onClick={() => song.isPlayerSong && onPriceClick(song)}
-                             className={`border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'}`}
-                         >
+                         <div className="border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
                              {song.price}
-                         </button>
-                    </div>
+                         </div>
+                    </button>
                 ))}
             </div>
         </Section>
@@ -822,7 +572,8 @@ const ITunesCharts: React.FC<{ data: { allSongs: ITunesSong[], allAlbums: ITunes
     </div>
 );
 
-const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string; onPriceClick: (song: ITunesSong) => void }> = ({ songs, title, onPriceClick }) => {
+const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string }> = ({ songs, title }) => {
+    const { dispatch } = useGame();
     return (
     <div className="px-4 pb-8 pt-2">
         {songs.map((song, i) => (
@@ -832,11 +583,18 @@ const ITunesSongChart: React.FC<{ songs: ITunesSong[]; title: string; onPriceCli
                 <div className="flex-grow text-left">
                     <p className="font-semibold line-clamp-1">{song.title}</p>
                     <p className="text-zinc-400 line-clamp-1 text-sm">{song.artist}</p>
+                    {/* Fake Sales Data string */}
                     <p className="text-zinc-600 text-[10px] mt-0.5">{formatNumber(song.sales)} unit sales</p>
                 </div>
                 <button 
-                    onClick={() => song.isPlayerSong && onPriceClick(song)}
-                    className={`border rounded-full px-4 py-1 text-sm font-bold flex-shrink-0 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20 hover:scale-105' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10 transition-all`}
+                    onClick={() => {
+                        if (!song.isPlayerSong) return;
+                        const opts = ['$0.69', '$0.99', '$1.29'];
+                        const currentIdx = opts.indexOf(song.price) >= 0 ? opts.indexOf(song.price) : 1;
+                        const nextIdx = (currentIdx + 1) % opts.length;
+                        dispatch({ type: 'UPDATE_ITUNES_PRICE', payload: { songId: song.songId || song.uniqueId, newPriceStr: opts[nextIdx] } });
+                    }}
+                    className={`border rounded-full px-4 py-1 text-sm font-bold flex-shrink-0 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10`}
                 >
                     {song.price}
                 </button>
@@ -865,7 +623,7 @@ const ITunesAlbumChart: React.FC<{ albums: ITunesAlbum[]; title: string; navigat
     </div>
 );
 
-const ITunesArtistView: React.FC<{ artist: any, songs: ITunesSong[], albums: ITunesAlbum[], navigateTo: Function, onPriceClick: (song: ITunesSong) => void }> = ({ artist, songs, albums, navigateTo, onPriceClick }) => (
+const ITunesArtistView: React.FC<{ artist: any, songs: ITunesSong[], albums: ITunesAlbum[], navigateTo: Function }> = ({ artist, songs, albums, navigateTo }) => (
     <div className="space-y-4">
         <Section title="Albums" onSeeAll={() => {}}>
             <div className="flex gap-4 px-4 overflow-x-auto pb-4">
@@ -879,7 +637,15 @@ const ITunesArtistView: React.FC<{ artist: any, songs: ITunesSong[], albums: ITu
                         key={song.uniqueId} 
                         song={song} 
                         onClick={() => {}} 
-                        onPriceClick={() => song.isPlayerSong && onPriceClick(song)}
+                        onPriceClick={() => {
+                            if (!song.isPlayerSong) return;
+                            const opts = ['$0.69', '$0.99', '$1.29'];
+                            const currentIdx = opts.indexOf(song.price) >= 0 ? opts.indexOf(song.price) : 1;
+                            const nextIdx = (currentIdx + 1) % opts.length;
+                            if ((window as any)._dispatch) {
+                                (window as any)._dispatch({ type: 'UPDATE_ITUNES_PRICE', payload: { songId: song.songId || song.uniqueId, newPriceStr: opts[nextIdx] } });
+                            }
+                        }}
                     />
                 ))}
             </div>
@@ -887,8 +653,11 @@ const ITunesArtistView: React.FC<{ artist: any, songs: ITunesSong[], albums: ITu
     </div>
 );
 
-const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlbums: ITunesAlbum[]; allSongs: ITunesSong[]; onPriceClick: (song: ITunesSong) => void }> = ({ albumData, navigateTo, allAlbums, allSongs, onPriceClick }) => {
+const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlbums: ITunesAlbum[]; allSongs: ITunesSong[] }> = ({ albumData, navigateTo, allAlbums, allSongs }) => {
+    const { dispatch } = useGame();
     const { title, artist, coverArt, price, rating, reviewCount, songCount, releaseDate, isPreorder, tracks } = albumData;
+    const releaseYear = new Date(releaseDate.year, 0, 1).getFullYear();
+    const popularityMax = Math.max(...tracks.map((t: any) => t.weeklyStreams || 0), 1);
     const [tab, setTab] = useState<'songs' | 'reviews' | 'related'>('songs');
 
     const genre = tracks[0]?.genre || "Pop";
@@ -934,6 +703,19 @@ const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlb
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const expectedDateStr = isPreorder ? `Expected ${monthNames[Math.min(11, releaseDate.week % 12)]} ${Math.floor((releaseDate.week % 4) * 7 + 1)}, ${releaseDate.year}` : `Released ${monthNames[Math.min(11, releaseDate.week % 12)]} ${Math.floor((releaseDate.week % 4) * 7 + 1)}, ${releaseDate.year}`;
+
+    const handlePriceClick = (track: any) => {
+        if (!track.isPlayerSong) return;
+        const opts = ['$0.69', '$0.99', '$1.29'];
+        const currentIdx = opts.indexOf(track.price) >= 0 ? opts.indexOf(track.price) : 1;
+        const nextIdx = (currentIdx + 1) % opts.length;
+        const nextPrice = opts[nextIdx];
+        
+        dispatch({
+            type: 'UPDATE_ITUNES_PRICE',
+            payload: { songId: track.songId || track.uniqueId, newPriceStr: nextPrice }
+        });
+    };
 
     return (
         <div className="pb-8">
@@ -1026,6 +808,7 @@ const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlb
                                     <td className="py-3 text-center text-xs text-zinc-500">{track.isAvailable ? formatDuration(track.duration) : ''}</td>
                                     <td className="py-3">
                                         <div className="w-full flex justify-center opacity-70 grayscale">
+                                            {/* little barcode style bars */}
                                             <div className="flex items-end h-3 gap-[1px]">
                                                  {Array.from({length: 8}).map((_, barIdx) => (
                                                      <div key={barIdx} className="w-[1px] bg-zinc-600" style={{height: `${Math.max(20, Math.random() * 100)}%`}}></div>
@@ -1036,8 +819,8 @@ const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlb
                                     <td className="py-3 text-right">
                                         {track.isAvailable ? 
                                             <button 
-                                                onClick={() => track.isPlayerSong && onPriceClick(track)}
-                                                className={`border rounded-full px-3 py-1 text-xs font-bold ${track.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20 hover:scale-105' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10 transition-all`}
+                                                onClick={() => handlePriceClick(track)}
+                                                className={`border rounded-full px-3 py-1 text-xs font-bold ${track.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'} border-[#0b84fe] text-[#0b84fe] bg-[#0b84fe]/10`}
                                             >
                                                 {track.price}
                                             </button>
@@ -1117,17 +900,14 @@ const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlb
                         <div>
                             <h3 className="text-xl font-bold mb-4">Top Songs by {artist}</h3>
                             <div className="space-y-4 pt-2">
-                                {relatedSongs.map((song) => (
+                                {relatedSongs.map((song, i) => (
                                     <div key={song.uniqueId} className="flex gap-3 pt-2 border-t border-zinc-800/50">
                                         <img src={song.coverArt} className="w-14 h-14 rounded-md object-cover flex-shrink-0 shadow-sm" alt=""/>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-bold text-white line-clamp-1">{song.title} <span className="text-[10px] bg-red-600 text-black px-1 ml-1 rounded-sm font-black align-middle">E</span></h4>
                                             <p className="text-sm text-zinc-400 truncate">{artist} - {title}</p>
                                         </div>
-                                        <button 
-                                            onClick={() => song.isPlayerSong && onPriceClick(song)}
-                                            className={`self-center border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10 ${song.isPlayerSong ? 'cursor-pointer hover:bg-[#0b84fe]/20' : 'cursor-default'}`}
-                                        >
+                                        <button className="self-center border border-[#0b84fe] rounded-full px-4 py-1 text-sm font-bold text-[#0b84fe] bg-[#0b84fe]/10">
                                             {song.price}
                                         </button>
                                     </div>
@@ -1148,7 +928,6 @@ const ITunesView: React.FC = () => {
     const data = useItunesData();
     const [viewStack, setViewStack] = useState<{ mode: ITunesViewMode; data?: any; title?: string }[]>([{ mode: 'home', title: 'Music' }]);
     const [currentTab, setCurrentTab] = useState<'featured' | 'charts'>('featured');
-    const [selectedPriceSong, setSelectedPriceSong] = useState<ITunesSong | null>(null);
 
     const currentView = viewStack[viewStack.length - 1];
 
@@ -1170,58 +949,37 @@ const ITunesView: React.FC = () => {
             const mode = tab === 'featured' ? 'home' : 'charts';
             setViewStack([{ mode, title: 'Music' }]);
         }
-    };
-
-    const handlePriceClick = (song: ITunesSong) => {
-        if (!song.isPlayerSong) return;
-        setSelectedPriceSong(song);
-    };
-
-    const handleSelectPrice = (newPriceStr: string) => {
-        if (!selectedPriceSong) return;
-        dispatch({
-            type: 'UPDATE_ITUNES_PRICE',
-            payload: { songId: selectedPriceSong.songId || selectedPriceSong.uniqueId, newPriceStr }
-        });
-        setSelectedPriceSong(null);
-    };
+    }
 
     const renderView = () => {
         switch (currentView.mode) {
             case 'home':
             case 'charts':
                 const HomeOrCharts = currentView.mode === 'home' ? ITunesHome : ITunesCharts;
-                return <HomeOrCharts data={data} navigateTo={navigateTo} onPriceClick={handlePriceClick} />;
+                return <HomeOrCharts data={data} navigateTo={navigateTo} />;
             case 'songChart':
-                return <ITunesSongChart songs={currentView.data.songs} title={currentView.data.title} onPriceClick={handlePriceClick} />;
+                return <ITunesSongChart songs={currentView.data.songs} title={currentView.data.title} />;
             case 'albumChart':
                 return <ITunesAlbumChart albums={currentView.data.albums} title={currentView.data.title} navigateTo={navigateTo} />;
             case 'artist':
                 const artistSongs = data.getArtistSongs(currentView.data.artistName);
                 const artistAlbums = data.getArtistAlbums(currentView.data.artistName);
-                return <ITunesArtistView artist={currentView.data} songs={artistSongs} albums={artistAlbums} navigateTo={navigateTo} onPriceClick={handlePriceClick} />;
+                return <ITunesArtistView artist={currentView.data} songs={artistSongs} albums={artistAlbums} navigateTo={navigateTo} />;
             case 'albumDetail':
                 const albumData = data.getAlbumDetails(currentView.data.albumId);
                 if (!albumData) return <p className="p-4">Album not found.</p>;
-                return <ITunesAlbumDetail albumData={albumData} navigateTo={navigateTo} allAlbums={data.allAlbums} allSongs={data.allSongs} onPriceClick={handlePriceClick} />;
+                return <ITunesAlbumDetail albumData={albumData} navigateTo={navigateTo} allAlbums={data.allAlbums} allSongs={data.allSongs} />;
             default:
                 return null;
         }
     };
 
     return (
-        <div className="bg-black text-[#f1f1f1] h-full overflow-y-auto font-sans pb-24 relative">
+        <div className="bg-black text-[#f1f1f1] h-full overflow-y-auto font-sans pb-24">
             <ITunesHeader viewStack={viewStack} onBack={goBack} currentTab={currentTab} onTabChange={handleTabChange} />
             <div>
                 {renderView()}
             </div>
-
-            {/* Price Selection Modal */}
-            <PriceSelectionModal
-                song={selectedPriceSong}
-                onClose={() => setSelectedPriceSong(null)}
-                onSelectPrice={handleSelectPrice}
-            />
         </div>
     );
 };
