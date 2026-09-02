@@ -40,7 +40,7 @@ const SpotifyWrappedView: React.FC = () => {
         ];
         
         for (let i = 0; i < Math.min(availableSongs.length, personas.length); i++) {
-            personaSongs.push({ song: availableSongs[i], ...personas[i] });
+            personaSongs.push({ song: availableSongs[i], persona: personas[i].title, description: personas[i].description });
         }
 
         return {

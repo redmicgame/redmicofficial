@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import RiaaIcon from './icons/RiaaIcon';
 import ShareIcon from './icons/ArrowUpOnBoxIcon';
-import { formatNumber } from '../utils/formatters';
 import { GameDate } from '../types';
 import { LABELS } from '../constants';
 

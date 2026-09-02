@@ -10,7 +10,7 @@ import MusicNoteIcon from './icons/MusicNoteIcon';
 import SpotifyIcon from './icons/SpotifyIcon';
 import UserIcon from './icons/UserIcon';
 import VerifiedBadgeIcon from './icons/VerifiedBadgeIcon';
-import type { Song, Release, GameDate } from '../types';
+import type { Song, Release, GameDate, ArtistData, Artist } from '../types';
 import { NPC_ARTIST_IMAGES, NPC_ARTIST_NAMES, NPC_ARTIST_GENRES, getArtistImage } from '../constants';
 import SpotifyDiscographyView from './SpotifyDiscographyView';
 import SpotifyReleaseDetailView from './SpotifyReleaseDetailView';

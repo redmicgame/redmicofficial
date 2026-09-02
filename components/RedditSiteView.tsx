@@ -147,6 +147,11 @@ export const RedditSiteView: React.FC<{ initialPost?: any, onClose: () => void }
     const [commentInput, setCommentInput] = useState('');
     const [localPosts, setLocalPosts] = useState<any[]>([]);
 
+    const availableFlairs = useMemo(() => {
+        const releaseTitles = (activeArtistData?.releases || []).map(r => r.title);
+        return ["Discussion", "Rumor", "News", "Theory", "Tour", "Analysis", ...releaseTitles];
+    }, [activeArtistData?.releases]);
+
     const artistProfile = allPlayerArtists.find(a => a.id === gameState.activeArtistId);
     if (!artistProfile || !activeArtistData) return <div className="bg-gray-100 h-full flex flex-col items-center justify-center"><div className="text-gray-500 mb-4">Failed to load Reddit data.</div><button onClick={onClose} className="px-4 py-2 bg-blue-500 text-white rounded-full">Go Back</button></div>;
 

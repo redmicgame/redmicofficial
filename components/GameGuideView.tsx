@@ -584,7 +584,7 @@ const GameGuideView: React.FC = () => {
                             <div
                                 key={section.id}
                                 id={section.id}
-                                ref={el => sectionRefs.current[section.id] = el}
+                                ref={el => { sectionRefs.current[section.id] = el; }}
                                 className="bg-zinc-800 p-4 rounded-lg scroll-mt-4"
                             >
                                 <h2 className="text-2xl font-bold text-red-400 mb-4">{section.title}</h2>

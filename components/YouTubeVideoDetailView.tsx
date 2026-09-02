@@ -337,6 +337,7 @@ const YouTubeVideoDetailView: React.FC = () => {
                     name: label.youtubeChannel.name,
                     avatar: label.logo,
                     subscribers: label.youtubeChannel.subscribers,
+                    isPersonal: false,
                 };
             }
         }
@@ -345,6 +346,7 @@ const YouTubeVideoDetailView: React.FC = () => {
             name: activeArtist.name,
             avatar: activeArtist.image,
             subscribers: youtubeSubscribers,
+            isPersonal: true,
         };
     }, [video, activeArtist, youtubeSubscribers]);
 

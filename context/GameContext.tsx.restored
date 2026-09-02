@@ -56,14 +56,6 @@ import type {
   Label,
   VoguePhotoshoot,
   FeatureOffer,
-  Video,
-  BrandAmbassadorContract,
-  ActiveSyncLicense,
-  Relationship,
-  DivorceProposal,
-  DivorceCase,
-  Kid,
-  ActingOffer,
 } from "../types";
 import { formatMarriageDuration } from "../utils/relationshipUtils";
 import {
@@ -21850,15 +21842,13 @@ Let us know if you accept.`,
 
       let updatedXPosts = activeData.xPosts;
       if (song && text && text.trim() !== "" && song.aboutText !== text) {
-        const artistName = state.artists.find(a => a.id === state.activeArtistId)?.name || state.soloArtist?.name || state.group?.name || "Artist";
-        const artistImg = state.artists.find(a => a.id === state.activeArtistId)?.image || state.soloArtist?.image || state.group?.image;
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
-          content: `${artistName} reveals the meaning of the song "${song.title}":
+          content: `${activeData.name || "Artist"} reveals the meaning of the song "${song.title}":
 
 "${text}"`,
-          image: artistImg,
+          image: activeData.image,
           likes: Math.floor(Math.random() * 40000) + 10000,
           retweets: Math.floor(Math.random() * 10000) + 2000,
           views: Math.floor(Math.random() * 1000000) + 200000,
@@ -22531,7 +22521,7 @@ Let us know if you accept.`,
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
-            britBanner: typeof action.payload === 'string' ? action.payload : (action.payload as any)?.bannerUrl,
+            britBanner: action.payload.bannerUrl,
           },
         },
       };
@@ -23181,7 +23171,15 @@ Let us know if you accept.`,
     }
     case "UPDATE_ARTIST_IMAGE": {
       const { artistId, newImage } = action.payload;
-      const newState = { ...state };
+      const loadedPodcasts = action.payload.podcasts || DEFAULT_PODCASTS;
+      const mergedPodcasts = [...loadedPodcasts];
+      DEFAULT_PODCASTS.forEach((defaultPodcast) => {
+          if (!mergedPodcasts.find(p => p.id === defaultPodcast.id)) {
+              mergedPodcasts.push(defaultPodcast);
+          }
+      });
+      const newState = {
+        podcasts: mergedPodcasts, ...state };
 
       // Update solo artist
       if (newState.soloArtist?.id === artistId) {
@@ -23629,15 +23627,12 @@ Let us know if you accept.`,
         isPerformance: false,
         isCollab: true,
         coverArt: coverArt,
-        genre: "Pop",
-        isReleased: false,
         isAvailableOnStreaming: true
       };
 
-      const newRelease: Release = {
+      const newRelease = {
         id: crypto.randomUUID(),
         title: finalTitle,
-        artistId: state.activeArtistId,
         type: "Single",
         coverArt: coverArt,
         songIds: [songId],
