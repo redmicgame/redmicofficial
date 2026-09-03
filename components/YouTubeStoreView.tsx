@@ -12,6 +12,7 @@ import PlusIcon from './icons/PlusIcon';
 import TrashIcon from './icons/TrashIcon';
 // FIX: Imported ArrowLeftIcon to resolve the "Cannot find name" error.
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { Copy, Layers, Sparkles, Check } from 'lucide-react';
 
 const AddMerchModal: React.FC<{
     onClose: () => void;
@@ -94,16 +95,16 @@ const AddMerchModal: React.FC<{
         setError('');
         if (!selectedRelease) { setError('Please select a release.'); return; }
         if (!image && !selectedRelease.coverArt) { setError('Please provide an image.'); return; }
-        if (itemsForSelectedRelease >= 8) { setError('You can only have 8 product variants per release.'); return; }
+        if (merch.length >= MERCH_PRODUCT_LIMIT) { setError(`Your store is at capacity (${MERCH_PRODUCT_LIMIT} products).`); return; }
         if (money < totalCost) { setError('Not enough money to stock this inventory.'); return; }
         if (stockQty < 1 && merchType !== 'Ringtone') { setError('Must stock at least 1 unit.'); return; }
         if (price < unitCost) { setError('Price cannot be lower than unit cost.'); return; }
 
+        let finalShipmentDate = shipmentDate;
         const currentTotalWeeks = gameState.date.year * 52 + gameState.date.week;
         const shipmentTotalWeeks = shipmentDate.year * 52 + shipmentDate.week;
         if (shipmentTotalWeeks - currentTotalWeeks < 8) {
-            setError('Shipment date must be scheduled at least 8 weeks in advance.');
-            return;
+            finalShipmentDate = minShipmentDate;
         }
 
         const isScheduled = !releases.some(r => r.id === selectedRelease.id);
@@ -123,7 +124,7 @@ const AddMerchModal: React.FC<{
             image: image || selectedRelease.coverArt,
             artistId: activeArtist.id,
             isPreorder: isScheduled, // Automatically set based on release status
-            shipmentDate,
+            shipmentDate: finalShipmentDate,
             regionExclusive,
             bonusSongIds: selectedBonusSongIds.length > 0 ? selectedBonusSongIds : undefined,
             bonusSongTitles: bonusSongTitles.length > 0 ? bonusSongTitles : undefined,
@@ -140,15 +141,18 @@ const AddMerchModal: React.FC<{
                     <option value="">Select a Release...</option>
                     {availableReleases.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
                 </select>
-                {itemsForSelectedRelease >= 8 && <p className="text-sm text-red-400">This release already has the maximum of 8 product variants.</p>}
                 
                 <input type="text" value={variantName} onChange={e => setVariantName(e.target.value)} placeholder="Variant Name (e.g., Apple Red Vinyl)" className="w-full bg-zinc-700 p-2 rounded" />
                 
-                <div className={`grid ${isRingtoneEra ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
-                    <button onClick={() => handleMerchTypeChange('Vinyl')} className={`py-2 rounded ${merchType === 'Vinyl' ? 'bg-red-500' : 'bg-zinc-700'}`}>Vinyl</button>
-                    <button onClick={() => handleMerchTypeChange('CD')} className={`py-2 rounded ${merchType === 'CD' ? 'bg-red-500' : 'bg-zinc-700'}`}>CD</button>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    <button type="button" onClick={() => handleMerchTypeChange('Vinyl')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'Vinyl' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>Vinyl</button>
+                    <button type="button" onClick={() => handleMerchTypeChange('CD')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'CD' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>CD</button>
+                    <button type="button" onClick={() => handleMerchTypeChange('Cassette')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'Cassette' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>Cassette</button>
+                    <button type="button" onClick={() => handleMerchTypeChange('T-Shirt')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'T-Shirt' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>T-Shirt</button>
+                    <button type="button" onClick={() => handleMerchTypeChange('Hoodie')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'Hoodie' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>Hoodie</button>
+                    <button type="button" onClick={() => handleMerchTypeChange('Tour Exclusive Merch')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'Tour Exclusive Merch' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>Tour Merch</button>
                     {isRingtoneEra && (
-                        <button onClick={() => handleMerchTypeChange('Ringtone')} className={`py-2 rounded ${merchType === 'Ringtone' ? 'bg-red-500' : 'bg-zinc-700'}`}>Ringtone</button>
+                        <button type="button" onClick={() => handleMerchTypeChange('Ringtone')} className={`py-2 text-xs font-bold rounded-lg transition-colors ${merchType === 'Ringtone' ? 'bg-indigo-600 text-white shadow' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-650'}`}>Ringtone</button>
                     )}
                 </div>
 
@@ -277,7 +281,12 @@ const AddMerchModal: React.FC<{
                 </div>
 
                 {error && <p className="text-red-400 text-sm">{error}</p>}
-                <button onClick={handleAddMerch} disabled={!releaseId || itemsForSelectedRelease >= 8 || money < totalCost} className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-bold disabled:bg-zinc-600 transition-colors">
+                <button
+                    type="button"
+                    onClick={handleAddMerch}
+                    disabled={!selectedRelease || money < totalCost || merch.length >= MERCH_PRODUCT_LIMIT}
+                    className="w-full bg-red-600 hover:bg-red-700 p-2.5 rounded-lg font-bold disabled:bg-zinc-600 transition-colors shadow-md cursor-pointer disabled:cursor-not-allowed"
+                >
                     Add Product
                 </button>
             </div>
@@ -290,10 +299,11 @@ const RestockModal: React.FC<{
     onClose: () => void;
 }> = ({ item, onClose }) => {
     const { dispatch, activeArtistData } = useGame();
-    const [amount, setAmount] = useState(1000);
-    const unitCost = item.type === 'Vinyl' ? 12 : 3;
-    const totalCost = amount * unitCost;
+    const unitCost = item.type === 'Vinyl' ? 12 : item.type === 'CD' ? 3 : item.type === 'Cassette' ? 4 : item.type === 'T-Shirt' ? 15 : item.type === 'Hoodie' ? 25 : item.type === 'Tour Exclusive Merch' ? 20 : 3;
     const money = activeArtistData?.money || 0;
+    const maxAffordable = Math.max(0, Math.floor(money / unitCost));
+    const [amount, setAmount] = useState(() => Math.min(1000, Math.max(100, maxAffordable)));
+    const totalCost = amount * unitCost;
 
     const handleRestock = () => {
         if (amount <= 0) return;
@@ -304,23 +314,847 @@ const RestockModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-            <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold">Restock {item.name}</h2>
-                <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-400">Order Quantity <span className="float-right text-[10px] bg-zinc-700 px-1 rounded block mt-0.5">Unit Cost: ${unitCost}</span></label>
-                    <input type="range" min="100" max="50000" step="100" value={amount} onChange={e => setAmount(Number(e.target.value))} className="w-full mb-2 accent-red-500" />
-                    <input type="number" min="1" value={amount} onChange={e => setAmount(Number(e.target.value))} className="w-full bg-zinc-700 p-2 rounded" />
+            <div className="bg-zinc-800 text-white w-full max-w-md rounded-xl p-6 space-y-4 my-auto border border-zinc-700 shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h2 className="text-xl font-bold">Restock Inventory</h2>
+                        <p className="text-xs text-zinc-400">{item.name} ({item.type})</p>
+                    </div>
+                    <span className="text-xs bg-zinc-700 px-2.5 py-1 rounded-full font-semibold">
+                        Current: {formatNumber(item.stock)}
+                    </span>
                 </div>
-                <div className="bg-black/30 p-3 rounded-lg border border-black text-sm">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-zinc-400">Total Manufacturing Cost:</span>
-                        <span className="font-bold text-red-400">${formatNumber(totalCost)}</span>
+
+                <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-zinc-400 font-semibold">
+                        <span>Units to Order</span>
+                        <span>Unit Cost: ${unitCost}</span>
+                    </div>
+                    <input
+                        type="number"
+                        min="1"
+                        value={amount}
+                        onChange={e => setAmount(Math.max(1, Number(e.target.value)))}
+                        className="w-full bg-zinc-700 border border-zinc-600 p-2.5 rounded-lg font-bold text-white text-base focus:outline-none focus:border-indigo-500"
+                    />
+                    
+                    {/* Quick quantity presets */}
+                    <div className="flex gap-1.5 pt-1">
+                        {[500, 1000, 5000, 10000].map(qty => (
+                            <button
+                                key={qty}
+                                type="button"
+                                onClick={() => setAmount(qty)}
+                                className={`flex-1 py-1 text-xs font-semibold rounded border transition-colors ${
+                                    amount === qty
+                                        ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
+                                        : 'bg-zinc-700/80 hover:bg-zinc-700 text-zinc-300 border-zinc-600'
+                                }`}
+                            >
+                                +{formatNumber(qty)}
+                            </button>
+                        ))}
+                        {maxAffordable > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setAmount(maxAffordable)}
+                                className="px-2 py-1 text-[11px] font-bold rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900 transition-colors"
+                                title={`Set to maximum units you can afford (${formatNumber(maxAffordable)})`}
+                            >
+                                Max ({formatNumber(maxAffordable)})
+                            </button>
+                        )}
                     </div>
                 </div>
-                {money < totalCost && <p className="text-red-400 text-sm">Not enough money to stock this inventory. You have ${formatNumber(Math.floor(money))}.</p>}
-                <button onClick={handleRestock} disabled={amount <= 0 || money < totalCost} className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-bold disabled:bg-zinc-600 transition-colors">
-                    Pay & Restock
-                </button>
+
+                <div className="bg-black/40 p-3 rounded-lg border border-zinc-700/60 space-y-1 text-xs">
+                    <div className="flex justify-between text-zinc-400">
+                        <span>Total Manufacturing Cost:</span>
+                        <span className="font-bold text-amber-400 text-sm">${formatNumber(totalCost)}</span>
+                    </div>
+                    <div className="flex justify-between text-zinc-400">
+                        <span>Available Funds:</span>
+                        <span className={money >= totalCost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                            ${formatNumber(Math.floor(money))}
+                        </span>
+                    </div>
+                </div>
+
+                {money < totalCost && (
+                    <div className="text-red-400 text-xs bg-red-950/50 p-2.5 rounded-lg border border-red-800/50 flex justify-between items-center">
+                        <span>Insufficient funds for {formatNumber(amount)} units.</span>
+                        {maxAffordable > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setAmount(maxAffordable)}
+                                className="underline font-bold text-white hover:text-red-200 ml-2 text-xs"
+                            >
+                                Fit ({formatNumber(maxAffordable)})
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2.5 px-3 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleRestock}
+                        disabled={amount <= 0 || money < totalCost}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 text-white font-bold py-2.5 px-3 rounded-lg text-sm transition-colors shadow-md disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        Pay & Restock
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const VINYL_COLOR_PRESETS = [
+    { name: 'Onyx Black', hex: '#1A1A1A' },
+    { name: 'Ruby Red', hex: '#DC2626' },
+    { name: 'Cobalt Blue', hex: '#2563EB' },
+    { name: 'Emerald Green', hex: '#16A34A' },
+    { name: 'Royal Purple', hex: '#9333EA' },
+    { name: 'Sunset Orange', hex: '#EA580C' },
+    { name: 'Gold / Yellow', hex: '#EAB308' },
+    { name: 'Hot Pink', hex: '#EC4899' },
+    { name: 'Snow White', hex: '#F8FAFC' },
+    { name: 'Clear Aqua', hex: '#06B6D4' },
+];
+
+const CD_EDITION_PRESETS = [
+    'Deluxe Edition',
+    "Collector's Edition",
+    'Special Edition',
+    'Signed CD Edition',
+    'Target Exclusive',
+    'Tour Edition',
+    'Alternate Cover',
+];
+
+const DuplicateMerchModal: React.FC<{
+    item: MerchProduct;
+    onClose: () => void;
+}> = ({ item, onClose }) => {
+    const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
+    if (!activeArtistData || !activeArtist) return null;
+    const { merch, releases, money, songs } = activeArtistData;
+
+    const availableReleases = useMemo(() => {
+        const released = releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album' || r.type === 'Single');
+        const scheduled = (activeArtistData.labelSubmissions || [])
+            .filter(s => s.release.type === 'Album' || s.release.type === 'EP' || s.release.type === 'Album (Deluxe)' || s.release.type === 'Compilation' || s.release.type === 'Live Album' || s.release.type === 'Single')
+            .map(s => s.release);
+        return [...released, ...scheduled];
+    }, [releases, activeArtistData.labelSubmissions]);
+
+    const release = availableReleases.find(r => r.id === item.releaseId);
+    const releaseTitle = release?.title || item.name.replace(/\s*\([^)]*\)$/, '');
+    const itemsForThisRelease = merch.filter(m => m.releaseId === item.releaseId).length;
+    const maxAllowedStore = Math.max(0, MERCH_PRODUCT_LIMIT - merch.length);
+    const maxBatchCount = Math.min(maxAllowedStore, 5);
+
+    const minShipmentDate = useMemo(() => {
+        let week = gameState.date.week + 8;
+        let year = gameState.date.year;
+        while (week > 52) {
+            week -= 52;
+            year += 1;
+        }
+        return { year, week, day: gameState.date.day || 5 };
+    }, [gameState.date]);
+
+    const initialShipmentDate = useMemo(() => {
+        if (item.shipmentDate) {
+            const currentTotalWeeks = gameState.date.year * 52 + gameState.date.week;
+            const itemTotalWeeks = item.shipmentDate.year * 52 + item.shipmentDate.week;
+            if (itemTotalWeeks - currentTotalWeeks >= 8) {
+                return item.shipmentDate;
+            }
+        }
+        return minShipmentDate;
+    }, [item.shipmentDate, gameState.date, minShipmentDate]);
+
+    const getInitialVariantName = () => {
+        const match = item.name.match(/\((.*?)\)/);
+        if (match && match[1]) {
+            const cur = match[1];
+            const numMatch = cur.match(/(.*?)(\d+)$/);
+            if (numMatch) {
+                return `${numMatch[1]}${parseInt(numMatch[2], 10) + 1}`;
+            }
+            return `${cur} (Alt)`;
+        }
+        if (item.type === 'Vinyl') return 'Ruby Red Vinyl';
+        if (item.type === 'CD') return 'Deluxe Edition CD';
+        return 'Edition 2';
+    };
+
+    const [mode, setMode] = useState<'single' | 'batch'>(maxBatchCount >= 2 ? 'single' : 'single');
+    const [variantName, setVariantName] = useState(getInitialVariantName());
+    const [color, setColor] = useState(item.color || '#DC2626');
+    const [price, setPrice] = useState(item.price);
+    const [stockQty, setStockQty] = useState(item.stock > 0 && item.type !== 'Ringtone' ? Math.min(item.stock, 5000) : 1000);
+    const [regionExclusive, setRegionExclusive] = useState<'Global' | 'US' | 'UK'>(item.regionExclusive || 'Global');
+    const [selectedBonusSongIds, setSelectedBonusSongIds] = useState<string[]>(item.bonusSongIds || []);
+    const [image, setImage] = useState<string | null>(item.image || null);
+    const [shipmentDate, setShipmentDate] = useState<GameDate>(initialShipmentDate);
+    const [showShipmentCalendar, setShowShipmentCalendar] = useState(false);
+    const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+
+    // Batch setup
+    const [batchCount, setBatchCount] = useState(Math.min(Math.max(2, maxBatchCount), 3));
+    const [batchList, setBatchList] = useState<Array<{ name: string; color?: string }>>(() => {
+        if (item.type === 'Vinyl') {
+            const unused = VINYL_COLOR_PRESETS.filter(p => p.hex.toLowerCase() !== (item.color || '').toLowerCase());
+            return Array.from({ length: 5 }).map((_, idx) => {
+                const p = unused[idx % unused.length] || VINYL_COLOR_PRESETS[idx % VINYL_COLOR_PRESETS.length];
+                return {
+                    name: `${p.name} Vinyl`,
+                    color: p.hex,
+                };
+            });
+        } else {
+            return CD_EDITION_PRESETS.slice(0, 5).map(name => ({
+                name,
+                color: undefined,
+            }));
+        }
+    });
+
+    const unreleasedSongs = useMemo(() => {
+        return (songs || []).filter(s => !s.isReleased && !s.isVaulted);
+    }, [songs]);
+
+    const unitCost = item.type === 'Vinyl' ? 12 : item.type === 'CD' ? 3 : item.type === 'Cassette' ? 4 : item.type === 'T-Shirt' ? 15 : item.type === 'Hoodie' ? 25 : item.type === 'Tour Exclusive Merch' ? 20 : 0;
+    const singleTotalCost = item.type === 'Ringtone' ? 0 : stockQty * unitCost;
+    const batchTotalCost = item.type === 'Ringtone' ? 0 : batchCount * stockQty * unitCost;
+
+    const handleColorPresetClick = (p: { name: string; hex: string }) => {
+        setColor(p.hex);
+        if (!variantName || variantName.toLowerCase().includes('vinyl')) {
+            setVariantName(`${p.name} Vinyl`);
+        }
+    };
+
+    const handleBatchItemNameChange = (index: number, newName: string) => {
+        setBatchList(prev => prev.map((it, i) => i === index ? { ...it, name: newName } : it));
+    };
+
+    const handleBatchItemColorChange = (index: number, newColor: string) => {
+        setBatchList(prev => prev.map((it, i) => i === index ? { ...it, color: newColor } : it));
+    };
+
+    const validateSingle = () => {
+        setError('');
+        if (merch.length >= MERCH_PRODUCT_LIMIT) {
+            setError(`Your store has reached the maximum ${MERCH_PRODUCT_LIMIT} products.`);
+            return false;
+        }
+        if (money < singleTotalCost) {
+            setError(`Not enough money. Required: $${formatNumber(singleTotalCost)}, available: $${formatNumber(Math.floor(money))}.`);
+            return false;
+        }
+        if (stockQty < 1 && item.type !== 'Ringtone') {
+            setError('Must stock at least 1 unit.');
+            return false;
+        }
+        if (price < unitCost) {
+            setError(`Price cannot be lower than manufacturing unit cost ($${unitCost}).`);
+            return false;
+        }
+
+        const currentTotalWeeks = gameState.date.year * 52 + gameState.date.week;
+        const shipmentTotalWeeks = shipmentDate.year * 52 + shipmentDate.week;
+        if (shipmentTotalWeeks - currentTotalWeeks < 8) {
+            setShipmentDate(minShipmentDate);
+        }
+        return true;
+    };
+
+    const handleCreateSingle = (closeOnDone = true) => {
+        if (!validateSingle()) return;
+
+        const isScheduled = release ? !releases.some(r => r.id === release.id) : false;
+        const selectedBonusSongs = unreleasedSongs.filter(s => selectedBonusSongIds.includes(s.id));
+        const bonusSongTitles = selectedBonusSongs.map(s => s.title);
+
+        const newItem: MerchProduct = {
+            id: crypto.randomUUID(),
+            releaseId: item.releaseId,
+            name: `${releaseTitle}${variantName ? ` (${variantName})` : ''}`,
+            type: item.type,
+            price,
+            color: item.type === 'Vinyl' ? color : undefined,
+            stock: item.type === 'Ringtone' ? 9999999 : stockQty,
+            unitsSold: 0,
+            image: image || item.image || release?.coverArt || '',
+            artistId: activeArtist.id,
+            isPreorder: isScheduled,
+            shipmentDate,
+            regionExclusive,
+            bonusSongIds: selectedBonusSongIds.length > 0 ? selectedBonusSongIds : undefined,
+            bonusSongTitles: bonusSongTitles.length > 0 ? bonusSongTitles : undefined,
+        };
+
+        dispatch({ type: 'ADD_MERCH', payload: { item: newItem, cost: singleTotalCost } });
+
+        if (closeOnDone) {
+            onClose();
+        } else {
+            setSuccessMessage(`✓ Created "${newItem.name}"!`);
+            setTimeout(() => setSuccessMessage(''), 3000);
+            // Advance to next variant
+            if (item.type === 'Vinyl') {
+                const currentIdx = VINYL_COLOR_PRESETS.findIndex(p => p.hex.toLowerCase() === color.toLowerCase());
+                const nextPreset = VINYL_COLOR_PRESETS[(currentIdx + 1) % VINYL_COLOR_PRESETS.length];
+                setColor(nextPreset.hex);
+                setVariantName(`${nextPreset.name} Vinyl`);
+            } else {
+                setVariantName(prev => {
+                    const numMatch = prev.match(/(.*?)(\d+)$/);
+                    if (numMatch) return `${numMatch[1]}${parseInt(numMatch[2], 10) + 1}`;
+                    return `${prev} (Variant 2)`;
+                });
+            }
+        }
+    };
+
+    const handleCreateBatch = () => {
+        setError('');
+        if (merch.length + batchCount > MERCH_PRODUCT_LIMIT) {
+            setError(`Cannot add ${batchCount} products: store limit is ${MERCH_PRODUCT_LIMIT} total.`);
+            return;
+        }
+        if (money < batchTotalCost) {
+            setError(`Not enough money. Required: $${formatNumber(batchTotalCost)}, available: $${formatNumber(Math.floor(money))}.`);
+            return;
+        }
+        if (price < unitCost) {
+            setError(`Price cannot be lower than unit cost ($${unitCost}).`);
+            return;
+        }
+
+        const isScheduled = release ? !releases.some(r => r.id === release.id) : false;
+        const selectedBonusSongs = unreleasedSongs.filter(s => selectedBonusSongIds.includes(s.id));
+        const bonusSongTitles = selectedBonusSongs.map(s => s.title);
+
+        const itemsToCreate: MerchProduct[] = batchList.slice(0, batchCount).map(batchVariant => ({
+            id: crypto.randomUUID(),
+            releaseId: item.releaseId,
+            name: `${releaseTitle} (${batchVariant.name})`,
+            type: item.type,
+            price,
+            color: item.type === 'Vinyl' ? (batchVariant.color || '#DC2626') : undefined,
+            stock: stockQty,
+            unitsSold: 0,
+            image: image || item.image || release?.coverArt || '',
+            artistId: activeArtist.id,
+            isPreorder: isScheduled,
+            shipmentDate,
+            regionExclusive,
+            bonusSongIds: selectedBonusSongIds.length > 0 ? selectedBonusSongIds : undefined,
+            bonusSongTitles: bonusSongTitles.length > 0 ? bonusSongTitles : undefined,
+        }));
+
+        dispatch({
+            type: 'BATCH_ADD_MERCH',
+            payload: {
+                items: itemsToCreate,
+                totalCost: batchTotalCost,
+            },
+        });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+            <div className="bg-zinc-900 border border-zinc-700 text-white w-full max-w-lg rounded-2xl p-6 space-y-4 my-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="flex items-start justify-between border-b border-zinc-800 pb-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-indigo-950/80 border border-indigo-700/60 rounded-xl text-indigo-300">
+                            <Copy className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                Duplicate {item.type}
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 font-medium">
+                                    {merch.length}/{MERCH_PRODUCT_LIMIT} Store Capacity
+                                </span>
+                            </h2>
+                            <p className="text-xs text-zinc-400 truncate max-w-xs font-semibold">
+                                From: <span className="text-zinc-200">{item.name}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded cursor-pointer">✕</button>
+                </div>
+
+                {/* Mode Selector Tabs */}
+                <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
+                    <button
+                        type="button"
+                        onClick={() => setMode('single')}
+                        className={`flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            mode === 'single'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                    >
+                        <span>Single Variant</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMode('batch')}
+                        disabled={maxBatchCount < 2}
+                        className={`flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            mode === 'batch'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : maxBatchCount < 2
+                                ? 'text-zinc-600 cursor-not-allowed'
+                                : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                        title={maxBatchCount < 2 ? 'Store capacity reached' : 'Quickly generate multiple copies'}
+                    >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Make Multiple ({maxBatchCount} Available)</span>
+                    </button>
+                </div>
+
+                {successMessage && (
+                    <div className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 p-2.5 rounded-xl text-xs flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="font-semibold">{successMessage}</span>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="bg-red-950/80 border border-red-700/60 text-red-200 p-2.5 rounded-xl text-xs">
+                        ⚠️ {error}
+                    </div>
+                )}
+
+                {/* MODE 1: SINGLE DUPLICATE */}
+                {mode === 'single' && (
+                    <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
+                        {/* Variant Name */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                Variant / Edition Name:
+                            </label>
+                            <input
+                                type="text"
+                                value={variantName}
+                                onChange={e => setVariantName(e.target.value)}
+                                placeholder="e.g. Cobalt Blue Vinyl, Collector's Edition CD"
+                                className="w-full bg-zinc-800 border border-zinc-700 p-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                            />
+                            <p className="text-[11px] text-zinc-400">
+                                Full Title Preview: <span className="font-bold text-white">{releaseTitle} ({variantName || 'Variant'})</span>
+                            </p>
+                        </div>
+
+                        {/* Vinyl Color Palette (Only for Vinyl) */}
+                        {item.type === 'Vinyl' && (
+                            <div className="space-y-1.5 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                        Vinyl Color Palette:
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-5 h-5 rounded-full border border-white/20 shadow-inner"
+                                            style={{ backgroundColor: color }}
+                                        />
+                                        <input
+                                            type="color"
+                                            value={color}
+                                            onChange={e => setColor(e.target.value)}
+                                            className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                                            title="Custom color picker"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-5 gap-2 pt-1">
+                                    {VINYL_COLOR_PRESETS.map(p => (
+                                        <button
+                                            key={p.hex}
+                                            type="button"
+                                            onClick={() => handleColorPresetClick(p)}
+                                            className={`py-1.5 px-2 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5 transition-all ${
+                                                color.toLowerCase() === p.hex.toLowerCase()
+                                                    ? 'border-indigo-400 bg-indigo-950/60 shadow-md font-bold'
+                                                    : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <span
+                                                className="w-3 h-3 rounded-full shrink-0 border border-white/30"
+                                                style={{ backgroundColor: p.hex }}
+                                            />
+                                            <span className="truncate">{p.name.split(' ')[0]}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CD Edition Presets (Only for CD) */}
+                        {item.type === 'CD' && (
+                            <div className="space-y-1.5 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                    Quick Edition Presets:
+                                </label>
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {CD_EDITION_PRESETS.map(preset => (
+                                        <button
+                                            key={preset}
+                                            type="button"
+                                            onClick={() => setVariantName(preset)}
+                                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all ${
+                                                variantName === preset
+                                                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow'
+                                                    : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
+                                            }`}
+                                        >
+                                            {preset}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stock Quantity & Retail Price */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                    Stock Units:
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={stockQty}
+                                    onChange={e => setStockQty(Math.max(1, Number(e.target.value)))}
+                                    className="w-full bg-zinc-800 border border-zinc-700 p-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                                />
+                                <div className="flex gap-1 pt-0.5">
+                                    {[500, 1000, 2500, 5000].map(qty => (
+                                        <button
+                                            key={qty}
+                                            type="button"
+                                            onClick={() => setStockQty(qty)}
+                                            className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-semibold"
+                                        >
+                                            {qty >= 1000 ? `${qty / 1000}k` : qty}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                    Retail Price ($):
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min={unitCost}
+                                    value={price}
+                                    onChange={e => setPrice(Number(e.target.value))}
+                                    className="w-full bg-zinc-800 border border-zinc-700 p-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                                />
+                                <p className="text-[10px] text-zinc-500 pt-0.5 font-medium">
+                                    Mfg Cost: ${unitCost}/unit | Margin: ${(price - unitCost).toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Shipment Date Picker */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                Scheduled Shipment Date:
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setShowShipmentCalendar(true)}
+                                className="w-full text-left bg-zinc-800 border border-zinc-700 p-2.5 rounded-xl text-sm font-semibold flex items-center justify-between hover:bg-zinc-750 transition-colors"
+                            >
+                                <span>📦 {formatFullDateString(shipmentDate)} (Week {shipmentDate.week}, {shipmentDate.year})</span>
+                                <span className="text-xs text-indigo-400 font-bold">Change Date</span>
+                            </button>
+                            <p className="text-[10px] text-zinc-400">
+                                Minimum 8-week physical manufacturing lead time enforced.
+                            </p>
+                        </div>
+
+                        {showShipmentCalendar && (
+                            <CalendarDatePicker
+                                currentDate={gameState.date}
+                                selectedDate={shipmentDate}
+                                onSelectDate={(date) => {
+                                    setShipmentDate(date);
+                                    setShowShipmentCalendar(false);
+                                }}
+                                onClose={() => setShowShipmentCalendar(false)}
+                                title="Select Merch Shipment Date (Min 8 Weeks)"
+                                minDate={minShipmentDate}
+                            />
+                        )}
+
+                        {/* Exclusivity */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                Regional Exclusivity:
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {(['Global', 'US', 'UK'] as const).map(reg => (
+                                    <button
+                                        key={reg}
+                                        type="button"
+                                        onClick={() => setRegionExclusive(reg)}
+                                        className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                                            regionExclusive === reg
+                                                ? 'bg-indigo-600 text-white border-indigo-500 shadow'
+                                                : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700'
+                                        }`}
+                                    >
+                                        {reg === 'Global' ? 'Global' : `${reg} Exclusive`}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Bonus Songs (if any unreleased songs available) */}
+                        {unreleasedSongs.length > 0 && (
+                            <div className="space-y-1.5 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                        Exclusive Bonus Tracks (Max 3):
+                                    </label>
+                                    <span className="text-[11px] text-indigo-400 font-semibold">
+                                        {selectedBonusSongIds.length}/3 Selected
+                                    </span>
+                                </div>
+                                <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                                    {unreleasedSongs.map(song => {
+                                        const isSelected = selectedBonusSongIds.includes(song.id);
+                                        return (
+                                            <label
+                                                key={song.id}
+                                                className={`flex items-center gap-2 p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                                                    isSelected ? 'bg-indigo-950/60 border border-indigo-700/50 text-white' : 'hover:bg-zinc-900 text-zinc-300'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={e => {
+                                                        if (e.target.checked) {
+                                                            if (selectedBonusSongIds.length < 3) {
+                                                                setSelectedBonusSongIds(prev => [...prev, song.id]);
+                                                            }
+                                                        } else {
+                                                            setSelectedBonusSongIds(prev => prev.filter(id => id !== song.id));
+                                                        }
+                                                    }}
+                                                    className="rounded border-zinc-700"
+                                                />
+                                                <span className="truncate">{song.title}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Cost & Balance Summary */}
+                        <div className="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700/60 space-y-1 text-xs">
+                            <div className="flex justify-between text-zinc-400">
+                                <span>Units Manufactured:</span>
+                                <span className="font-semibold text-white">{formatNumber(stockQty)}</span>
+                            </div>
+                            <div className="flex justify-between text-zinc-400">
+                                <span>Unit Cost:</span>
+                                <span className="font-semibold text-white">${unitCost}.00</span>
+                            </div>
+                            <div className="flex justify-between text-amber-300 font-bold pt-1 border-t border-zinc-700/50">
+                                <span>Total Inventory Cost:</span>
+                                <span>${formatNumber(singleTotalCost)}</span>
+                            </div>
+                            <div className="flex justify-between text-zinc-400 text-[11px]">
+                                <span>Artist Balance:</span>
+                                <span className={money >= singleTotalCost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                                    ${formatNumber(Math.floor(money))}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => handleCreateSingle(false)}
+                                disabled={money < singleTotalCost || merch.length >= MERCH_PRODUCT_LIMIT}
+                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-indigo-300 border border-indigo-700/40 font-bold py-2.5 rounded-xl text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <PlusIcon className="w-3.5 h-3.5" />
+                                <span>Duplicate & Make Another</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleCreateSingle(true)}
+                                disabled={money < singleTotalCost || merch.length >= MERCH_PRODUCT_LIMIT}
+                                className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-lg transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Confirm Duplicate
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* MODE 2: BATCH DUPLICATE (MAKE MULTIPLE) */}
+                {mode === 'batch' && (
+                    <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
+                        <div className="bg-indigo-950/40 border border-indigo-800/40 p-3 rounded-xl text-xs text-indigo-200">
+                            ⚡️ <strong>Batch Duplicate:</strong> Quickly manufacture multiple distinct {item.type} variants in a single click with contrasting colorways or editions.
+                        </div>
+
+                        {/* Number of Copies */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                Number of Variants to Create:
+                            </label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[2, 3, 4, 5].map(cnt => {
+                                    const isDisabled = cnt > maxBatchCount;
+                                    return (
+                                        <button
+                                            key={cnt}
+                                            type="button"
+                                            disabled={isDisabled}
+                                            onClick={() => setBatchCount(cnt)}
+                                            className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                                batchCount === cnt
+                                                    ? 'bg-indigo-600 text-white border-indigo-400 shadow-lg font-black'
+                                                    : isDisabled
+                                                    ? 'bg-zinc-900/50 text-zinc-600 border-zinc-800 cursor-not-allowed'
+                                                    : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
+                                            }`}
+                                        >
+                                            {cnt} Copies
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Batch Variants Preview List */}
+                        <div className="space-y-2 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                            <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                Customize Variants ({batchCount}):
+                            </label>
+                            <div className="space-y-2">
+                                {batchList.slice(0, batchCount).map((v, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
+                                        {item.type === 'Vinyl' && (
+                                            <div className="relative flex items-center">
+                                                <input
+                                                    type="color"
+                                                    value={v.color || '#DC2626'}
+                                                    onChange={e => handleBatchItemColorChange(idx, e.target.value)}
+                                                    className="w-7 h-7 rounded cursor-pointer bg-transparent border-0"
+                                                    title="Change vinyl color"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                value={v.name}
+                                                onChange={e => handleBatchItemNameChange(idx, e.target.value)}
+                                                className="w-full bg-zinc-800 border border-zinc-750 px-2 py-1.5 rounded text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
+                                                placeholder={`Variant #${idx + 1}`}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-zinc-500 font-bold shrink-0">
+                                            #{idx + 1}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Stock & Price Per Variant */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                    Stock per Variant:
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={stockQty}
+                                    onChange={e => setStockQty(Math.max(1, Number(e.target.value)))}
+                                    className="w-full bg-zinc-800 border border-zinc-700 p-2 rounded-xl text-xs font-semibold"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                                    Retail Price per Unit ($):
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min={unitCost}
+                                    value={price}
+                                    onChange={e => setPrice(Number(e.target.value))}
+                                    className="w-full bg-zinc-800 border border-zinc-700 p-2 rounded-xl text-xs font-semibold"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Cost calculation */}
+                        <div className="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700/60 space-y-1 text-xs">
+                            <div className="flex justify-between text-zinc-400">
+                                <span>Variants Created:</span>
+                                <span className="font-semibold text-white">{batchCount} Variants</span>
+                            </div>
+                            <div className="flex justify-between text-zinc-400">
+                                <span>Total Units Combined:</span>
+                                <span className="font-semibold text-white">{formatNumber(batchCount * stockQty)} Units</span>
+                            </div>
+                            <div className="flex justify-between text-amber-300 font-bold pt-1 border-t border-zinc-700/50">
+                                <span>Combined Mfg Cost:</span>
+                                <span>${formatNumber(batchTotalCost)}</span>
+                            </div>
+                            <div className="flex justify-between text-zinc-400 text-[11px]">
+                                <span>Artist Balance:</span>
+                                <span className={money >= batchTotalCost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                                    ${formatNumber(Math.floor(money))}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Batch Action Button */}
+                        <button
+                            type="button"
+                            onClick={handleCreateBatch}
+                            disabled={money < batchTotalCost || maxBatchCount < 2}
+                            className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3 rounded-xl text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Sparkles className="w-4 h-4 text-amber-300" />
+                            <span>Create All {batchCount} Variants (${formatNumber(batchTotalCost)})</span>
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -332,7 +1166,8 @@ const EditPriceModal: React.FC<{
 }> = ({ item, onClose }) => {
     const { dispatch } = useGame();
     const [price, setPrice] = useState(item.price);
-    const unitCost = item.type === 'Vinyl' ? 12 : 3;
+    const unitCost = item.type === 'Vinyl' ? 12 : item.type === 'CD' ? 3 : item.type === 'Cassette' ? 4 : item.type === 'T-Shirt' ? 15 : item.type === 'Hoodie' ? 25 : item.type === 'Tour Exclusive Merch' ? 20 : 2.99;
+    const recommendedPrice = item.type === 'Vinyl' ? 39.98 : item.type === 'CD' ? 12.98 : item.type === 'Cassette' ? 14.98 : item.type === 'T-Shirt' ? 35.00 : item.type === 'Hoodie' ? 65.00 : item.type === 'Tour Exclusive Merch' ? 50.00 : 2.99;
 
     const handleSave = () => {
         if (price < unitCost) return;
@@ -342,16 +1177,130 @@ const EditPriceModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-            <div className="bg-zinc-800 text-white w-full max-w-md rounded-lg p-6 space-y-4 my-auto" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold">Edit Price for {item.name}</h2>
-                <div className="space-y-1">
-                    <label className="text-xs font-semibold text-zinc-400">Retail Price <span className="text-[10px] text-zinc-500">(Unit Cost: ${unitCost} | Recommended: ${item.type === 'Vinyl' ? '39.98' : '12.98'})</span></label>
-                    <input type="number" step="0.01" min={unitCost} value={price} onChange={e => setPrice(Number(e.target.value))} placeholder="Price" className="w-full bg-zinc-700 p-2 rounded" />
+            <div className="bg-zinc-800 text-white w-full max-w-md rounded-xl p-6 space-y-4 my-auto border border-zinc-700 shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h2 className="text-xl font-bold">Edit Retail Price</h2>
+                        <p className="text-xs text-zinc-400">{item.name} ({item.type})</p>
+                    </div>
+                    <button type="button" onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded cursor-pointer">✕</button>
                 </div>
-                {price < unitCost && <p className="text-red-400 text-sm">Price cannot be lower than unit cost (${unitCost}).</p>}
-                <button onClick={handleSave} disabled={price < unitCost} className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-bold disabled:bg-zinc-600 transition-colors">
-                    Save Price
-                </button>
+                
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300 flex justify-between">
+                        <span>Retail Price ($)</span>
+                        <span className="text-zinc-400">Mfg Cost: ${unitCost}</span>
+                    </label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        min={unitCost}
+                        value={price}
+                        onChange={e => setPrice(Number(e.target.value))}
+                        placeholder="Price"
+                        className="w-full bg-zinc-700 border border-zinc-600 p-2.5 rounded-lg text-white font-bold text-base focus:outline-none focus:border-indigo-500"
+                    />
+                    
+                    {/* Quick price presets */}
+                    <div className="flex gap-2 pt-1">
+                        <button
+                            type="button"
+                            onClick={() => setPrice(recommendedPrice)}
+                            className="flex-1 py-1 text-xs font-semibold rounded bg-zinc-700 hover:bg-zinc-650 text-zinc-300 border border-zinc-600 cursor-pointer"
+                        >
+                            Standard (${recommendedPrice})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPrice(Number((recommendedPrice * 1.25).toFixed(2)))}
+                            className="flex-1 py-1 text-xs font-semibold rounded bg-zinc-700 hover:bg-zinc-650 text-zinc-300 border border-zinc-600 cursor-pointer"
+                        >
+                            Premium (+25%)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPrice(Number((recommendedPrice * 0.8).toFixed(2)))}
+                            className="flex-1 py-1 text-xs font-semibold rounded bg-zinc-700 hover:bg-zinc-650 text-zinc-300 border border-zinc-600 cursor-pointer"
+                        >
+                            Sale (-20%)
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-black/30 p-2.5 rounded-lg border border-zinc-700/60 text-xs text-zinc-400 flex justify-between">
+                    <span>Profit Margin per Unit:</span>
+                    <span className={price >= unitCost ? 'font-bold text-emerald-400' : 'font-bold text-red-400'}>
+                        ${(price - unitCost).toFixed(2)}
+                    </span>
+                </div>
+
+                {price < unitCost && (
+                    <p className="text-red-400 text-xs bg-red-950/50 p-2 rounded border border-red-800/50">
+                        Price cannot be lower than unit manufacturing cost (${unitCost}).
+                    </p>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2.5 px-3 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={price < unitCost}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white font-bold py-2.5 px-3 rounded-lg text-sm transition-colors shadow-md disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        Save Price
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const DeleteConfirmModal: React.FC<{
+    item: MerchProduct;
+    onClose: () => void;
+    onConfirm: () => void;
+}> = ({ item, onClose, onConfirm }) => {
+    return (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+            <div className="bg-zinc-800 text-white w-full max-w-sm rounded-xl p-5 space-y-4 my-auto border border-zinc-700 shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 text-red-400">
+                        <TrashIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-base font-bold">Remove Product</h2>
+                        <p className="text-xs text-zinc-400">Remove from official store</p>
+                    </div>
+                </div>
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                    Are you sure you want to remove <strong className="text-white">"{item.name}"</strong> ({item.type})? Any unsold physical stock will be delisted.
+                </p>
+                <div className="flex gap-2 pt-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2 px-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onConfirm();
+                            onClose();
+                        }}
+                        className="flex-1 py-2 px-3 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-colors shadow-md cursor-pointer"
+                    >
+                        Remove
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -363,6 +1312,8 @@ const MerchStoreView: React.FC = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [restockItem, setRestockItem] = useState<MerchProduct | null>(null);
     const [priceItem, setPriceItem] = useState<MerchProduct | null>(null);
+    const [duplicateItem, setDuplicateItem] = useState<MerchProduct | null>(null);
+    const [deleteConfirmItem, setDeleteConfirmItem] = useState<MerchProduct | null>(null);
 
     if (!activeArtistData || !activeArtist) return null;
     const { merch, merchStoreBanner, youtubeStoreUnlocked, releases } = activeArtistData;
@@ -383,14 +1334,43 @@ const MerchStoreView: React.FC = () => {
             {showAddModal && <AddMerchModal onClose={() => setShowAddModal(false)} />}
             {restockItem && <RestockModal item={restockItem} onClose={() => setRestockItem(null)} />}
             {priceItem && <EditPriceModal item={priceItem} onClose={() => setPriceItem(null)} />}
+            {duplicateItem && <DuplicateMerchModal item={duplicateItem} onClose={() => setDuplicateItem(null)} />}
+            {deleteConfirmItem && (
+                <DeleteConfirmModal
+                    item={deleteConfirmItem}
+                    onClose={() => setDeleteConfirmItem(null)}
+                    onConfirm={() => dispatch({ type: 'REMOVE_MERCH', payload: { id: deleteConfirmItem.id } })}
+                />
+            )}
             <div className="bg-white text-black h-full overflow-y-auto pb-24">
                 <header className="sticky top-0 bg-white z-20 border-b border-zinc-200">
                     <div className="p-4 flex justify-between items-center">
-                        <button><MenuIcon className="w-6 h-6" /></button>
-                        <h1 className="text-2xl font-bold tracking-[0.2em] uppercase font-anton">{activeArtist.name}</h1>
-                        <div className="flex items-center gap-4">
-                            <button><SearchIcon className="w-5 h-5" /></button>
-                            <button><ShoppingBagIcon className="w-6 h-6" /></button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'youtube' })}
+                                className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-700 cursor-pointer"
+                                title="Back to YouTube"
+                            >
+                                <ArrowLeftIcon className="w-5 h-5" />
+                            </button>
+                            <div>
+                                <h1 className="text-xl md:text-2xl font-bold tracking-[0.2em] uppercase font-anton">{activeArtist.name}</h1>
+                                <p className="text-[11px] text-zinc-500 font-semibold">{merch.length}/{MERCH_PRODUCT_LIMIT} Products in Store</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {merch.length < MERCH_PRODUCT_LIMIT && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddModal(true)}
+                                    className="bg-black hover:bg-zinc-800 text-white font-bold py-1.5 px-3.5 rounded-md inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer shadow-sm"
+                                >
+                                    <PlusIcon className="w-4 h-4" /> Add Product
+                                </button>
+                            )}
+                            <button type="button" className="p-1.5 rounded hover:bg-zinc-100"><SearchIcon className="w-5 h-5" /></button>
+                            <button type="button" className="p-1.5 rounded hover:bg-zinc-100"><ShoppingBagIcon className="w-5 h-5" /></button>
                         </div>
                     </div>
                 </header>
@@ -403,22 +1383,15 @@ const MerchStoreView: React.FC = () => {
                         ) : (
                             <p className="text-zinc-500">No banner set.</p>
                         )}
-                        <button onClick={() => bannerInputRef.current?.click()} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold">
+                        <button onClick={() => bannerInputRef.current?.click()} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold cursor-pointer">
                             Upload Banner
                         </button>
                     </div>
 
                     <div className="p-4 md:p-8">
-                        {merch.length < MERCH_PRODUCT_LIMIT && (
-                            <div className="text-right mb-4">
-                                <button onClick={() => setShowAddModal(true)} className="bg-black text-white font-bold py-2 px-4 rounded-md inline-flex items-center gap-2">
-                                    <PlusIcon className="w-5 h-5" /> Add Product
-                                </button>
-                            </div>
-                        )}
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                             {merch.map(item => (
-                                <div key={item.id} className="group relative border border-zinc-200 bg-white flex flex-col">
+                                <div key={item.id} className="group relative border border-zinc-200 bg-white rounded-lg overflow-hidden flex flex-col shadow-xs hover:shadow-md transition-shadow">
                                     <div className="relative w-full aspect-[5/4] bg-zinc-100 flex items-center justify-center overflow-hidden">
                                         <div className="relative h-[75%] aspect-square mr-8"> {/* Offset so the disc is visible */}
                                             {/* Vinyl Disc */}
@@ -482,39 +1455,127 @@ const MerchStoreView: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
+                                    
                                     {item.stock <= 0 && (
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 w-full py-2 text-center text-red-500 font-extrabold tracking-widest uppercase z-30">SOLD OUT</div>
+                                        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/85 w-full py-2.5 text-center text-red-400 font-extrabold tracking-widest uppercase z-30 shadow-md">
+                                            <span>SOLD OUT</span>
+                                        </div>
                                     )}
-                                    <div className="mt-2 text-center md:text-left px-2 mb-2">
-                                        <p className="font-semibold line-clamp-1">{item.name}</p>
-                                        <p className="text-zinc-600">${item.price.toFixed(2)} USD</p>
+
+                                    {/* Product Details */}
+                                    <div className="mt-2 text-center md:text-left px-2 mb-1 flex-1">
+                                        <p className="font-semibold line-clamp-1 text-zinc-900 text-sm">{item.name}</p>
+                                        <p className="text-zinc-800 font-bold text-sm">${item.price.toFixed(2)} USD</p>
                                         {item.bonusSongTitles && item.bonusSongTitles.length > 0 && (
-                                            <p className="text-[11px] text-yellow-700 font-semibold line-clamp-1 mt-0.5">
+                                            <p className="text-[11px] text-amber-800 font-semibold line-clamp-1 mt-0.5">
                                                 Bonus: {item.bonusSongTitles.join(', ')}
                                             </p>
                                         )}
                                         <div className="flex justify-between items-center mt-1 text-xs text-zinc-500">
-                                            <span>Stock: {formatNumber(item.stock)}</span>
-                                            <span>Sold: {formatNumber(item.unitsSold || 0)}</span>
+                                            <span>Stock: <strong className={item.stock > 0 ? "text-zinc-800" : "text-red-600"}>{formatNumber(item.stock)}</strong></span>
+                                            <span>Sold: <strong className="text-zinc-800">{formatNumber(item.unitsSold || 0)}</strong></span>
                                         </div>
                                         {item.shipmentDate && (
-                                            <div className="mt-1 text-[11px] text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 inline-block font-medium">
+                                            <div className="mt-1 text-[10px] text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200 inline-block font-medium">
                                                 📦 Ships: {formatFullDateString(item.shipmentDate)} (W{item.shipmentDate.week})
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Action Buttons: Always-visible dedicated action grid */}
+                                    <div className="mt-2 px-2 pb-2.5 pt-1.5 border-t border-zinc-100 flex flex-col gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDuplicateItem(item);
+                                            }}
+                                            className="w-full py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 hover:border-indigo-300 text-indigo-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                                        >
+                                            <Copy className="w-3.5 h-3.5 text-indigo-600" />
+                                            <span>Duplicate {item.type}</span>
+                                        </button>
+
+                                        <div className="grid grid-cols-3 gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setRestockItem(item);
+                                                }}
+                                                className="py-1 px-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded text-[11px] font-bold flex items-center justify-center gap-0.5 transition-colors cursor-pointer"
+                                                title="Order more inventory"
+                                            >
+                                                <PlusIcon className="w-3 h-3 text-emerald-600" />
+                                                <span>Restock</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPriceItem(item);
+                                                }}
+                                                className="py-1 px-1 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 text-zinc-800 rounded text-[11px] font-bold flex items-center justify-center transition-colors cursor-pointer"
+                                                title="Change retail price"
+                                            >
+                                                <span>Price</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteConfirmItem(item);
+                                                }}
+                                                className="py-1 px-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded text-[11px] font-bold flex items-center justify-center gap-0.5 transition-colors cursor-pointer"
+                                                title="Remove product"
+                                            >
+                                                <TrashIcon className="w-3 h-3 text-rose-600" />
+                                                <span>Remove</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Hover overlay quick actions */}
                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-                                        <button onClick={() => {
-                                            setRestockItem(item);
-                                        }} className="p-1 px-2 bg-white/90 text-xs font-bold rounded shadow hover:bg-zinc-200">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDuplicateItem(item);
+                                            }}
+                                            className="p-1 px-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded shadow flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <Copy className="w-3 h-3" />
+                                            DUPLICATE
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setRestockItem(item);
+                                            }}
+                                            className="p-1 px-2 bg-white/95 text-zinc-900 text-xs font-bold rounded shadow hover:bg-zinc-200 cursor-pointer"
+                                        >
                                             RESTOCK
                                         </button>
-                                        <button onClick={() => {
-                                            setPriceItem(item);
-                                        }} className="p-1 px-2 bg-white/90 text-xs font-bold rounded shadow hover:bg-zinc-200">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setPriceItem(item);
+                                            }}
+                                            className="p-1 px-2 bg-white/95 text-zinc-900 text-xs font-bold rounded shadow hover:bg-zinc-200 cursor-pointer"
+                                        >
                                             PRICE
                                         </button>
-                                        <button onClick={() => { if(confirm("Remove product?")) dispatch({type: 'REMOVE_MERCH', payload: {id: item.id}}) }} className="p-1.5 bg-white/90 rounded shadow hover:bg-zinc-200">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteConfirmItem(item);
+                                            }}
+                                            className="p-1.5 bg-white/95 rounded shadow hover:bg-zinc-200 cursor-pointer"
+                                        >
                                             <TrashIcon className="w-4 h-4 text-red-600" />
                                         </button>
                                     </div>
@@ -523,7 +1584,7 @@ const MerchStoreView: React.FC = () => {
                         </div>
                     </div>
                 </main>
-                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="fixed bottom-4 left-4 bg-zinc-800 text-white p-3 rounded-full shadow-lg hover:bg-zinc-700 transition-colors z-30">
+                 <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'game'})} className="fixed bottom-4 left-4 bg-zinc-800 text-white p-3 rounded-full shadow-lg hover:bg-zinc-700 transition-colors z-30 cursor-pointer">
                      <ArrowLeftIcon className="w-6 h-6" />
                 </button>
             </div>

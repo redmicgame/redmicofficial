@@ -2152,6 +2152,7 @@ export interface RedCarpetLook {
 }
 
 export interface GameState {
+  artists?: (Artist | Group)[];
   customFeatures?: any;
   timeMode?: "weekly" | "daily";
   disableEncounters?: boolean;
@@ -2493,6 +2494,7 @@ export type GameAction =
     }
   | { type: "CREATE_VIDEO"; payload: { video: Video; cost: number } }
   | { type: "ADD_MERCH"; payload: { item: MerchProduct; cost?: number } }
+  | { type: "BATCH_ADD_MERCH"; payload: { items: MerchProduct[]; totalCost: number } }
   | {
       type: "RESTOCK_MERCH";
       payload: { id: string; amount: number; cost?: number };

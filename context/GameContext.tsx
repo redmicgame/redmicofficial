@@ -1788,7 +1788,22 @@ const gameReducerInternal = (
         ? [state.group, ...state.group.members]
         : []),
     ...(state.extraPlayableArtists || []),
+    ...(state.allPlayerArtists || []),
+    ...(state.soloArtist ? [state.soloArtist] : []),
+    ...(state.group ? [state.group] : []),
   ];
+
+  const getCurrentArtistProfile = (): (Artist | Group) | null => {
+    if (!state.activeArtistId) return null;
+    return (
+      allPlayerArtistsAndGroups.find((a) => a.id === state.activeArtistId) ||
+      (state.soloArtist?.id === state.activeArtistId ? state.soloArtist : null) ||
+      (state.group?.id === state.activeArtistId ? state.group : null) ||
+      state.soloArtist ||
+      state.group ||
+      null
+    );
+  };
   const tmzUser: XUser = {
     id: "tmz",
     name: "TMZ",
@@ -10945,20 +10960,9 @@ It is now available on your Spotify profile.
             release.firstWeekSales = totalWeeklySales;
           }
 
-          // Realistic Sales Cap per week
-          if (totalWeeklySales > 3800000) {
-            totalWeeklySales = 3800000 + Math.floor(Math.random() * 200000);
-          }
-
+          // Unlimited weekly album sales, SES, and activity (no caps)
           let weeklySES = actualStreamEquivalents;
-          if (weeklySES > 4000000) {
-            weeklySES = 4000000 + Math.floor(Math.random() * 200000);
-          }
-
           let weeklyActivity = weeklySES + totalWeeklySales;
-          if (weeklyActivity > 4500000) {
-            weeklyActivity = Math.floor(4500000 + Math.random() * 500000);
-          }
           
           release.sales = (release.sales || 0) + totalWeeklySales;
 
@@ -16717,6 +16721,77 @@ The Tonight Show Team`;
         },
       };
     }
+    case "BATCH_ADD_MERCH": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const items = action.payload.items;
+      if (!items || items.length === 0) return state;
+
+      const artistProfile = getCurrentArtistProfile();
+      const artistName = artistProfile?.name || activeData.name || "Artist";
+
+      let newPosts: XPost[] = [];
+      items.forEach((item) => {
+        const artistImage = artistProfile?.image || item.image;
+        if (item.bonusSongTitles && item.bonusSongTitles.length > 0) {
+          const release = activeData.releases.find((r) => r.id === item.releaseId);
+          const releaseTitle = release?.title || item.name;
+          const regionTag =
+            item.regionExclusive && item.regionExclusive !== "Global"
+              ? `${item.regionExclusive} `
+              : "";
+          const bonusList = item.bonusSongTitles.map((t) => `"${t}"`).join(", ");
+
+          const authorChoice = Math.random() < 0.5 ? "popcrave" : "popbase";
+          const popPost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: authorChoice,
+            content: `${artistName}'s '${releaseTitle}' ${regionTag}exclusive ${item.type.toLowerCase()} variant will feature bonus track${item.bonusSongTitles.length > 1 ? "s" : ""}, ${bonusList}.`,
+            image: artistImage,
+            image2: item.image || release?.coverArt,
+            likes: Math.floor(Math.random() * 45000) + 15000,
+            retweets: Math.floor(Math.random() * 12000) + 3000,
+            views: Math.floor(Math.random() * 1800000) + 500000,
+            date: state.date,
+          };
+          newPosts.push(popPost);
+        } else if (
+          item.regionExclusive &&
+          item.regionExclusive !== "Global" &&
+          (item.type === "Vinyl" || item.type === "CD" || item.type === "Cassette")
+        ) {
+          const release = activeData.releases.find((r) => r.id === item.releaseId);
+          const releaseTitle = release?.title || item.name;
+
+          const authorChoice = Math.random() < 0.5 ? "popcrave" : "popbase";
+          const popPost: XPost = {
+            id: crypto.randomUUID(),
+            authorId: authorChoice,
+            content: `${artistName} announces a ${item.regionExclusive} exclusive ${item.type.toLowerCase()} edition for '${releaseTitle}'.`,
+            image: artistImage,
+            image2: item.image || release?.coverArt,
+            likes: Math.floor(Math.random() * 35000) + 10000,
+            retweets: Math.floor(Math.random() * 9000) + 2000,
+            views: Math.floor(Math.random() * 1200000) + 300000,
+            date: state.date,
+          };
+          newPosts.push(popPost);
+        }
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - (action.payload.totalCost || 0),
+            merch: [...activeData.merch, ...items],
+            xPosts: [...newPosts, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
     case "RESTOCK_MERCH": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -19694,8 +19769,9 @@ We saw your recent endorsement and would love for you to perform at our upcoming
       });
 
       let newXPosts = activeData.xPosts || [];
+      const artistProfile = getCurrentArtistProfile();
       const artistName =
-        state.artists.find((a) => a.id === state.activeArtistId)?.name ||
+        artistProfile?.name ||
         state.soloArtist?.name ||
         state.group?.name ||
         activeData.name ||
@@ -20430,10 +20506,12 @@ Thank you for trusting X.`,
       const activeData = state.artistsData[state.activeArtistId];
       const { itemId, isAlbum } = action.payload;
       const artistProfile =
-        state.artists.find((a) => a.id === state.activeArtistId) ||
-        state.allPlayerArtists?.find((a) => a.id === state.activeArtistId) ||
-        (state.group?.id === state.activeArtistId ? state.group : null);
-      const artistName = artistProfile?.name || "Artist";
+        getCurrentArtistProfile() ||
+        (state.soloArtist?.id === state.activeArtistId ? state.soloArtist : null) ||
+        (state.group?.id === state.activeArtistId ? state.group : null) ||
+        state.soloArtist ||
+        state.group;
+      const artistName = artistProfile?.name || activeData.name || "Artist";
 
       let updatedSongs = [...activeData.songs];
       let updatedReleases = [...activeData.releases];
@@ -20619,10 +20697,12 @@ ${listLines}`;
       });
 
       const artistProfile =
-        state.artists.find((a) => a.id === state.activeArtistId) ||
-        state.allPlayerArtists?.find((a) => a.id === state.activeArtistId) ||
-        (state.group?.id === state.activeArtistId ? state.group : null);
-      const artistName = artistProfile?.name || "The artist";
+        getCurrentArtistProfile() ||
+        (state.soloArtist?.id === state.activeArtistId ? state.soloArtist : null) ||
+        (state.group?.id === state.activeArtistId ? state.group : null) ||
+        state.soloArtist ||
+        state.group;
+      const artistName = artistProfile?.name || activeData.name || "The artist";
 
       const releaseTypeStr = submission.release.type === "EP" ? "EP" : "album";
       const popBaseContent = `${artistName}'s upcoming ${releaseTypeStr} '${submission.release.title}' has been delayed to ${formattedDate}.`;
@@ -20889,8 +20969,8 @@ Let us know if you accept.`,
       const { releaseId, interviewType, outletName, emailId } = action.payload;
       const activeData = state.artistsData[state.activeArtistId];
       const updatedInbox = activeData.inbox.map((email) => {
-        if (email.id === emailId && email.offer?.type === "interviewOffer") {
-          return { ...email, offer: { ...email.offer, isAccepted: true } };
+        if (email.id === emailId && (email.offer as any)?.type === "interviewOffer") {
+          return { ...email, offer: { ...(email.offer as any), isAccepted: true } };
         }
         return email;
       });
@@ -20900,7 +20980,7 @@ Let us know if you accept.`,
       return {
         ...state,
         artistsData: { ...state.artistsData, [state.activeArtistId]: { ...activeData, inbox: updatedInbox } },
-        activeInterviewOffer: { releaseId, interviewType, outletName, emailId },
+        activeInterviewOffer: { releaseId, interviewType: interviewType as any, outletName, emailId },
         currentView: view as any,
       };
     }
@@ -20935,16 +21015,14 @@ Let us know if you accept.`,
         updatedData.hype = Math.max(0, Math.min(100, updatedData.hype + hypeChange));
         
         if (backlash) {
-            const article = {
+            const article: XPost = {
                 id: crypto.randomUUID(),
-                type: 'text' as const,
+                authorId: state.activeInterviewOffer.interviewType === 'magazine' ? state.activeInterviewOffer.outletName : (state.date.year <= 1999 ? 'The Daily Newspaper' : 'Global News Network'),
                 content: `${state.date.year <= 1999 ? 'NEWSPAPER REPORT' : 'BREAKING NEWS'}: ${state.soloArtist?.name || 'The artist'} faces immense backlash after a controversial ${state.activeInterviewOffer.outletName} interview. Fans are expressing disappointment.`,
                 likes: Math.floor(Math.random() * 5000) + 1000,
                 retweets: Math.floor(Math.random() * 1000) + 500,
-                replies: Math.floor(Math.random() * 500) + 200,
+                views: Math.floor(Math.random() * 80000) + 20000,
                 date: state.date,
-                isPlayer: false,
-                author: state.activeInterviewOffer.interviewType === 'magazine' ? state.activeInterviewOffer.outletName : (state.date.year <= 1999 ? 'The Daily Newspaper' : 'Global News Network')
             };
             updatedData.xPosts = [article, ...updatedData.xPosts];
         }
@@ -21081,6 +21159,7 @@ Let us know if you accept.`,
             videos: [
               {
                 id: crypto.randomUUID(),
+                artistId: state.activeArtistId,
                 songId: action.payload.songId,
                 title: `${state.activePromoInterviewOffer.source} Interview - ${state.soloArtist?.name || state.group?.name || "Artist"}`,
                 type: "Interview",
@@ -21850,8 +21929,9 @@ Let us know if you accept.`,
 
       let updatedXPosts = activeData.xPosts;
       if (song && text && text.trim() !== "" && song.aboutText !== text) {
-        const artistName = state.artists.find(a => a.id === state.activeArtistId)?.name || state.soloArtist?.name || state.group?.name || "Artist";
-        const artistImg = state.artists.find(a => a.id === state.activeArtistId)?.image || state.soloArtist?.image || state.group?.image;
+        const artistProfile = getCurrentArtistProfile();
+        const artistName = artistProfile?.name || state.soloArtist?.name || state.group?.name || activeData.name || "Artist";
+        const artistImg = artistProfile?.image || state.soloArtist?.image || state.group?.image || activeData.image;
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
@@ -22531,7 +22611,7 @@ Let us know if you accept.`,
           ...state.artistsData,
           [state.activeArtistId]: {
             ...activeData,
-            britBanner: typeof action.payload === 'string' ? action.payload : (action.payload as any)?.bannerUrl,
+            britBanner: typeof (action as any).payload === 'string' ? (action as any).payload : ((action as any).payload as any)?.bannerUrl,
           },
         },
       };
@@ -22554,8 +22634,8 @@ Let us know if you accept.`,
         };
         const activeData = state.artistsData[state.activeArtistId];
         const updatedInbox = activeData.inbox.map((email) => {
-          if (email.id === emailId && email.offer?.type === "vmaRedCarpet") {
-            return { ...email, offer: { ...email.offer, isAttending: true } };
+          if (email.id === emailId && (email.offer as any)?.type === "vmaRedCarpet") {
+            return { ...email, offer: { ...(email.offer as any), isAttending: true } };
           }
           return email;
         });
@@ -22598,9 +22678,9 @@ Let us know if you accept.`,
       const updatedInbox = activeData.inbox.map((email) => {
         if (
           email.id === action.payload.emailId &&
-          email.offer?.type === "vmaRedCarpet"
+          (email.offer as any)?.type === "vmaRedCarpet"
         ) {
-          return { ...email, offer: { ...email.offer, isAttending: false } };
+          return { ...email, offer: { ...(email.offer as any), isAttending: false } };
         }
         return email;
       });
@@ -22862,11 +22942,11 @@ Let us know if you accept.`,
       const updatedInbox = activeData.inbox.map((email) => {
         if (
           email.id === action.payload.emailId &&
-          email.offer?.type === "goldenGlobeNominations"
+          (email.offer as any)?.type === "goldenGlobeNominations"
         ) {
           return {
             ...email,
-            offer: { ...email.offer, isAttending: true },
+            offer: { ...(email.offer as any), isAttending: true },
           };
         }
         return email;
@@ -22972,8 +23052,8 @@ Let us know if you accept.`,
             };
             
             const updatedInbox = activeData.inbox.map((email) => {
-                if (email.id === emailId && email.offer?.type === "goldenGlobeRedCarpet") {
-                    return { ...email, offer: { ...email.offer, isAccepted: true } };
+                if (email.id === emailId && (email.offer as any)?.type === "goldenGlobeRedCarpet") {
+                    return { ...email, offer: { ...(email.offer as any), isAccepted: true } };
                 }
                 return email;
             });
@@ -23006,9 +23086,9 @@ Let us know if you accept.`,
       const updatedInbox = activeData.inbox.map((email) => {
         if (
           email.id === action.payload.emailId &&
-          email.offer?.type === "goldenGlobeRedCarpet"
+          (email.offer as any)?.type === "goldenGlobeRedCarpet"
         ) {
-          return { ...email, offer: { ...email.offer, isAccepted: false } };
+          return { ...email, offer: { ...(email.offer as any), isAccepted: false } };
         }
         return email;
       });
@@ -23644,8 +23724,6 @@ Let us know if you accept.`,
         releaseDate: { week: 23, year: state.date.year },
         firstWeekStreams: 0,
         firstWeekSales: 0,
-        weeksOnChart: 0,
-        peakPosition: 0,
         wikipediaSummary: `"${title}" is the official single from the FIFA World Cup ${state.date.year} Soundtrack, performed by ${state.soloArtist?.name || state.group?.name} alongside ${collabs.join(", ")} and FIFA Sound. Released ahead of the tournament, it serves as an anthem for football fans globally.`,
         certifications: [],
         isAvailableOnStreaming: true
@@ -25868,6 +25946,10 @@ Let us know if you accept.`,
         id: newKidArtistId,
         name: kid.name,
         type: "artist",
+        age: 18,
+        country: "United States",
+        pronouns: "they/them",
+        fandomName: `${kid.name} Army`,
         skills: { singing: 50, rapping: 50, writing: 50, production: 50 },
         image:
           activeArtistProfile?.image ||
