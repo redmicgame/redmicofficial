@@ -60,12 +60,16 @@ import type {
   BrandAmbassadorContract,
   ActiveSyncLicense,
   Relationship,
+  RelationshipPeriod,
+  WeddingDetails,
+  RelationshipDrama,
   DivorceProposal,
   DivorceCase,
   Kid,
+  KidActivity,
   ActingOffer,
 } from "../types";
-import { formatMarriageDuration } from "../utils/relationshipUtils";
+import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from "../utils/relationshipUtils";
 import {
   INITIAL_MONEY,
   STREAM_INCOME_MULTIPLIER,
@@ -1105,7 +1109,7 @@ const initialArtistData: ArtistData = {
   weeksUntilNextSoundtrackOffer: Math.floor(Math.random() * 13) + 12, // 12-24 weeks
 };
 
-import { getEraConfiguration } from "../utils/eraUtils";
+import { getEraConfiguration, getBillboardFormula } from "../utils/eraUtils";
 
 const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
   {
@@ -6496,32 +6500,71 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
         const viewIncome = totalWeeklyViews * VIEW_INCOME_MULTIPLIER;
 
         let merchIncome = 0;
-        if (artistData.youtubeStoreUnlocked || newDate.year >= 2005) {
+        if (artistData.youtubeStoreUnlocked || newDate.year >= 2005 || (artistData.merch && artistData.merch.length > 0)) {
           artistData.merch = artistData.merch.map((item) => {
-            let weeklySales = Math.floor(
-              (Math.max(100, artistData.youtubeSubscribers || 1000) / 50000) *
-                popularityMultiplier *
-                (Math.random() * 5 + 1),
+            // Dynamic reach based on subscribers, listeners, popularity, and hype
+            const baseReach = Math.max(
+              artistData.youtubeSubscribers || 0,
+              (artistData.monthlyListeners || 0) * 0.5,
+              (artistData.popularity || 10) * 25000,
+              2500
             );
+
+            // Demand scales with popularity and hype
+            const hypeFactor = 1 + (artistData.hype || 0) / 20;
+            let demand = (baseReach / 2000) * popularityMultiplier * hypeFactor * (Math.random() * 0.6 + 0.8);
+
+            // Check if item is tied to an album release
+            let isAlbumMerch = false;
+            let albumAgeWeeks = -1;
+            if (item.releaseId) {
+              const rel = artistData.releases.find((r) => r.id === item.releaseId);
+              if (rel && rel.releaseDate) {
+                isAlbumMerch = true;
+                albumAgeWeeks =
+                  (newDate.year - rel.releaseDate.year) * 52 +
+                  (newDate.week - rel.releaseDate.week);
+              }
+              const sub = artistData.labelSubmissions.find((s) => s.release.id === item.releaseId);
+              if (sub) {
+                isAlbumMerch = true;
+              }
+            }
+
+            // Launch week and debut window surge (weeks 0 to 4)
+            if (albumAgeWeeks >= 0 && albumAgeWeeks <= 4) {
+              const surgeMult = albumAgeWeeks <= 1 ? 5.0 : Math.max(1.5, (5 - albumAgeWeeks) * 1.2);
+              demand *= surgeMult;
+            }
+
+            // Unlimited stock absorption: if artist is popular/hyped and inventory is large, fans purchase available stock
+            if (item.stock > 1000 && (artistData.popularity > 25 || (artistData.hype || 0) > 15)) {
+              const absorptionRate = Math.min(
+                0.40,
+                0.08 + (artistData.popularity / 100) * 0.18 + ((artistData.hype || 0) / 100) * 0.14
+              );
+              const stockDrivenDemand = Math.floor(item.stock * absorptionRate * (Math.random() * 0.4 + 0.8));
+              demand = Math.max(demand, stockDrivenDemand);
+            }
 
             // Scale demand by price (higher price = lower demand)
             const recommendedPrice =
-              item.type === "Vinyl" ? 39.98 : item.type === "CD" ? 12.98 : 2.99;
+              item.type === "Vinyl" ? 39.98 : item.type === "CD" ? 12.98 : item.type === "Cassette" ? 14.98 : item.type === "T-Shirt" ? 35.00 : item.type === "Hoodie" ? 65.00 : 12.98;
             const safePrice = Math.max(0.01, item.price);
-            weeklySales = Math.floor(
-              weeklySales * Math.pow(recommendedPrice / safePrice, 2.0),
+            let weeklySales = Math.floor(
+              demand * Math.pow(recommendedPrice / safePrice, 1.25),
             );
 
             if (item.type === "Ringtone") {
               // Ringtones demand scales massively based on hype
               let ringtoneSales = Math.floor(
-                artistData.hype *
-                  2000 *
+                (artistData.hype || 10) *
+                  5000 *
                   popularityMultiplier *
                   (Math.random() * 5 + 1),
               );
               weeklySales = Math.floor(
-                ringtoneSales * Math.pow(recommendedPrice / safePrice, 2.0),
+                ringtoneSales * Math.pow(recommendedPrice / safePrice, 1.5),
               );
             }
 
@@ -6545,8 +6588,8 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklySales = Math.floor(weeklySales * 1.25);
             }
 
-            // Cap sales to available stock
-            const actualSales = Math.min(weeklySales, item.stock);
+            // Cap sales only to available stock (no artificial number limits)
+            const actualSales = Math.min(Math.max(0, weeklySales), item.stock);
 
             if (item.isPreorder) {
               const sub = artistData.labelSubmissions.find(
@@ -7407,27 +7450,7 @@ The Genius Team`,
               );
               let vinylDelayed = false;
               let delayedVinylPreorders = 0;
-              if (vinylMerch.length > 0 && Math.random() < 0.5) {
-                vinylDelayed = true;
-                delayedVinylPreorders = vinylMerch.reduce(
-                  (sum, vm) => sum + (vm.unitsSold || 0),
-                  0,
-                );
-                if (delayedVinylPreorders === 0 && sub.preorderSales) {
-                  delayedVinylPreorders = Math.floor((sub.preorderSales || 0) * 0.7);
-                }
-                const delayPost = `Vinyl shipments for ${artistProfile?.name || "The artist"}'s new album '${release.title}' have reportedly been delayed by one week due to pressing plant delays.`;
-                artistData.xPosts.unshift({
-                  id: crypto.randomUUID(),
-                  authorId: "popbase",
-                  content: delayPost,
-                  image: vinylMerch[0]?.image || release.coverArt,
-                  likes: Math.floor(Math.random() * 45000) + 15000,
-                  retweets: Math.floor(Math.random() * 10000) + 2500,
-                  views: Math.floor(Math.random() * 600000) + 200000,
-                  date: newDate,
-                });
-              }
+              // Vinyl delays no longer restrict or cap album preorder fulfillment
 
               artistData.releases.push({
                 ...release,
@@ -10168,40 +10191,57 @@ It is now available on your Spotify profile.
             );
           }
         }
-        const sales =
-          Math.floor(song.weeklyStreams / divisor) * boost +
-          additionalItunesSales;
+        const baseSales =
+          Math.floor(song.weeklyStreams / divisor) * boost;
 
         const eraConfigTemp = getEraConfiguration(state.date.year);
+        const formula = eraConfigTemp.billboardFormula || getBillboardFormula(state.date.year);
 
-        const songReleaseYear = song.releaseDate?.year || 2000;
+        // Partition track sales between digital downloads and physical singles based on the decade formula
+        let songDigitalSales = 0;
+        let songPhysicalSales = additionalPhysicalSales;
+
+        if (formula.digital + formula.physical > 0) {
+          const digFraction = formula.digital / (formula.digital + formula.physical);
+          const physFraction = formula.physical / (formula.digital + formula.physical);
+          songDigitalSales = Math.floor(baseSales * digFraction) + additionalItunesSales;
+          songPhysicalSales = Math.floor(baseSales * physFraction) + additionalPhysicalSales;
+        } else {
+          songPhysicalSales += baseSales;
+        }
+
         const hasStreamingRights = song.isAvailableOnStreaming === true;
-        const effectiveStreamingShare = hasStreamingRights
-          ? eraConfigTemp.marketShare.streaming
-          : 0;
 
-        // Billboard Hot 100 did NOT count streams until 2016
+        // Billboard Hot 100 Formulas by Decade:
+        // 1990s: Radio Airplay 70%, Physical Sales 30%, Digital Sales 0%, Streaming 0%
+        // 2000s: Radio Airplay 55%, Digital Sales 30%, Physical Sales 15%, Streaming 0%
+        // 2010s: Streaming Activity 40%, Radio Airplay 40%, Digital Sales 10%, Physical Sales 10%
+        // 2020s: Streaming Activity 65%, Radio Airplay 25%, Digital Sales 5%, Physical Sales 5%
+
+        // Streaming Points: Billboard added streaming in 2010 (formula.streaming > 0)
         const streamPoints =
-          state.date.year >= 2016
-            ? song.weeklyStreams * effectiveStreamingShare * 0.5
+          formula.streaming > 0 && hasStreamingRights
+            ? song.weeklyStreams * 0.5 * formula.streaming
             : 0;
-        const digitalPoints =
-          sales * eraConfigTemp.marketShare.digital * 150 * 0.2;
-        const physicalPoints =
-          (sales * eraConfigTemp.marketShare.physical +
-            additionalPhysicalSales) *
-          150 *
-          0.2;
-        const radioPoints =
-          (song.radioImpressions || 0) * eraConfigTemp.marketShare.radio * 0.25;
+
+        // Radio Airplay Points: All-format airplay impressions
+        const radioImpressionsCount =
+          song.radioImpressions || (song.radioPlays ? song.radioPlays * 5000 : 0);
+        const radioPoints = radioImpressionsCount * 0.25 * formula.radio;
+
+        // Digital Sales Points: Paid digital downloads (iTunes, digital tracks)
+        const digitalPoints = songDigitalSales * 60 * formula.digital;
+
+        // Physical Sales Points: Single physical formats (CDs, vinyl, cassettes)
+        const physicalPoints = songPhysicalSales * 60 * formula.physical;
 
         const points =
-          streamPoints + digitalPoints + physicalPoints + radioPoints;
+          streamPoints + radioPoints + digitalPoints + physicalPoints;
 
         return {
           ...song,
           hot100Points: points,
-          digitalSales: sales + additionalPhysicalSales,
+          digitalSales: songDigitalSales + songPhysicalSales,
           radioPlays: song.radioPlays,
           radioImpressions: song.radioImpressions,
         };
@@ -10924,20 +10964,10 @@ It is now available on your Spotify profile.
             (relDate.year * 52 + relDate.week);
 
           if (weeksSinceRel === 1) {
-            if (release.vinylDelayed) {
-              const nonVinylPreorders = Math.max(
-                0,
-                (release.preorderSales || 0) -
-                  (release.delayedVinylPreorders || (release.preorderSales || 0)),
-              );
-              totalWeeklySales += nonVinylPreorders;
-            } else {
-              totalWeeklySales += release.preorderSales || 0;
+            totalWeeklySales += release.preorderSales || 0;
+            if (release.delayedVinylPreorders) {
+              totalWeeklySales += release.delayedVinylPreorders;
             }
-          } else if (weeksSinceRel === 2 && release.vinylDelayed) {
-            const delayedPreorders =
-              release.delayedVinylPreorders || (release.preorderSales || 0);
-            totalWeeklySales += delayedPreorders;
           }
           if (deluxeVersion && deluxeVersion.releaseDate) {
             if (
@@ -25247,12 +25277,16 @@ Let us know if you accept.`,
       const updatedRelationships = (activeData.relationships || []).map((r) => {
         if (r.id === action.payload.relationshipId) {
           const isMarriage = action.payload.newStatus === "married";
+          const isEngaged = action.payload.newStatus === "engaged";
           return {
             ...r,
             status: action.payload.newStatus,
+            engagedStartYear: isEngaged ? (r.engagedStartYear || state.date.year) : r.engagedStartYear,
+            engagedStartWeek: isEngaged ? (r.engagedStartWeek || state.date.week) : r.engagedStartWeek,
             marriedStartYear: isMarriage ? (r.marriedStartYear || state.date.year) : r.marriedStartYear,
             marriedStartWeek: isMarriage ? (r.marriedStartWeek || state.date.week) : r.marriedStartWeek,
             prenup: action.payload.prenup || r.prenup,
+            affection: Math.min(100, (r.affection || 75) + 15),
           };
         }
         return r;
@@ -25304,16 +25338,33 @@ Let us know if you accept.`,
       const activeArtist = state.soloArtist || state.group;
       if (!activeArtist) return state;
 
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId
-          ? {
-              ...r,
-              endYear: state.date.year,
-              endWeek: state.date.week,
-              status: "ex" as const,
-            }
-          : r,
-      );
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId) {
+          const prevPeriods = r.periods ? [...r.periods] : [];
+          const currentPeriod: RelationshipPeriod = {
+            id: crypto.randomUUID(),
+            startDate: { year: r.startYear, week: r.startWeek || 1 },
+            endDate: { year: state.date.year, week: state.date.week },
+            finalStatus: r.status,
+            engagedStartYear: r.engagedStartYear,
+            engagedStartWeek: r.engagedStartWeek,
+            marriedStartYear: r.marriedStartYear,
+            marriedStartWeek: r.marriedStartWeek,
+            splitReason: "Broke up",
+          };
+          return {
+            ...r,
+            endYear: state.date.year,
+            endWeek: state.date.week,
+            status: "ex" as const,
+            periods: [...prevPeriods, currentPeriod],
+            timesDated: (r.timesDated || prevPeriods.length || 1),
+            affection: 30,
+            dramaLevel: Math.min(100, (r.dramaLevel || 20) + 30),
+          };
+        }
+        return r;
+      });
 
       const rel = updatedRelationships.find(
         (r) => r.id === action.payload.relationshipId,
@@ -25561,11 +25612,27 @@ Let us know if you accept.`,
           childSupportAmount: prop.childSupportAmount,
         };
 
+        const prevPeriods = targetRel.periods ? [...targetRel.periods] : [];
+        const divorcePeriod: RelationshipPeriod = {
+          id: crypto.randomUUID(),
+          startDate: { year: targetRel.startYear, week: targetRel.startWeek || 1 },
+          endDate: { year: state.date.year, week: state.date.week },
+          finalStatus: "married",
+          engagedStartYear: targetRel.engagedStartYear,
+          engagedStartWeek: targetRel.engagedStartWeek,
+          marriedStartYear: targetRel.marriedStartYear,
+          marriedStartWeek: targetRel.marriedStartWeek,
+          splitReason: "Divorced in court",
+        };
+
         const updatedRel: Relationship = {
           ...targetRel,
           status: "ex",
           endYear: state.date.year,
           endWeek: state.date.week,
+          periods: [...prevPeriods, divorcePeriod],
+          timesDated: (targetRel.timesDated || prevPeriods.length || 1),
+          coParentingStatus: targetRel.coParentingStatus || "cordial",
           divorceCase: {
             ...targetRel.divorceCase,
             currentProposal: acceptedProp,
@@ -25661,18 +25728,46 @@ Let us know if you accept.`,
       const activeArtist = state.soloArtist || state.group;
       if (!activeArtist) return state;
 
-      const updatedRelationships = (activeData.relationships || []).map((r) =>
-        r.id === action.payload.relationshipId
-          ? {
-              ...r,
-              status: "dating" as const,
-              endYear: null,
-              endWeek: undefined,
-              startYear: state.date.year,
-              startWeek: state.date.week,
-            }
-          : r,
-      );
+      const isPublic = action.payload.isPublic !== undefined ? action.payload.isPublic : true;
+
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId) {
+          const prevPeriods = r.periods ? [...r.periods] : [];
+          // If past period wasn't saved yet, archive it now
+          if (prevPeriods.length === 0 && r.endYear !== null) {
+            prevPeriods.push({
+              id: crypto.randomUUID(),
+              startDate: { year: r.startYear, week: r.startWeek || 1 },
+              endDate: { year: r.endYear || state.date.year, week: r.endWeek || state.date.week },
+              finalStatus: r.divorceCase?.isFinalized ? "married" : r.status,
+              engagedStartYear: r.engagedStartYear,
+              engagedStartWeek: r.engagedStartWeek,
+              marriedStartYear: r.marriedStartYear,
+              marriedStartWeek: r.marriedStartWeek,
+              splitReason: r.divorceCase?.isFinalized ? "Divorced" : "Broke up",
+            });
+          }
+
+          return {
+            ...r,
+            status: "dating" as const,
+            isPublic,
+            endYear: null,
+            endWeek: undefined,
+            startYear: state.date.year,
+            startWeek: state.date.week,
+            engagedStartYear: undefined,
+            engagedStartWeek: undefined,
+            marriedStartYear: undefined,
+            marriedStartWeek: undefined,
+            periods: prevPeriods,
+            timesDated: prevPeriods.length + 1,
+            affection: 85,
+            dramaLevel: 10,
+          };
+        }
+        return r;
+      });
 
       const rel = updatedRelationships.find(
         (r) => r.id === action.payload.relationshipId,
@@ -25680,7 +25775,8 @@ Let us know if you accept.`,
       let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
 
       if (rel?.isPublic) {
-        const postContext = `👀 SPOTTED: ${activeArtist.name} and ex ${rel?.partnerName} reportedly back together!`;
+        const periodNum = rel.timesDated || 2;
+        const postContext = `👀 SPOTTED: ${activeArtist.name} and ex ${rel?.partnerName} are officially back together! (Dating Period #${periodNum})`;
         const newPost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popcrave",
@@ -25805,6 +25901,762 @@ Let us know if you accept.`,
         },
       };
     }
+    case "RELATIONSHIP_ACTION": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const rel = (activeData.relationships || []).find((r) => r.id === action.payload.relationshipId);
+      if (!rel) return state;
+
+      const costs: Record<string, number> = {
+        dinner: 2500,
+        vacation: 50000,
+        gift: 30000,
+        therapy: 1500,
+      };
+      const cost = costs[action.payload.actionType] || 0;
+      if (activeData.money < cost) return state;
+
+      const updatedMoney = activeData.money - cost;
+      let addedAffection = 0;
+      let reducedDrama = 0;
+      let addedHype = 0;
+      let postMsg = "";
+
+      if (action.payload.actionType === "dinner") {
+        addedAffection = 12;
+        reducedDrama = 8;
+        addedHype = 15;
+        postMsg = `🍷 SPOTTED: ${activeArtist.name} and ${rel.partnerName} having a romantic candlelit dinner at Giorgio Baldi in Santa Monica!`;
+      } else if (action.payload.actionType === "vacation") {
+        addedAffection = 25;
+        reducedDrama = 20;
+        addedHype = 40;
+        postMsg = `🏝️ VACATION GOALS: ${activeArtist.name} and ${rel.partnerName} were seen enjoying a private luxury getaway in Amalfi!`;
+      } else if (action.payload.actionType === "gift") {
+        addedAffection = 18;
+        reducedDrama = 5;
+        addedHype = 25;
+        postMsg = `💎 ICE ON HER WRIST: ${activeArtist.name} reportedly gifted partner ${rel.partnerName} a custom diamond accessory!`;
+      } else if (action.payload.actionType === "therapy") {
+        addedAffection = 15;
+        reducedDrama = 35;
+      }
+
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId) {
+          return {
+            ...r,
+            affection: Math.min(100, (r.affection ?? 75) + addedAffection),
+            dramaLevel: Math.max(0, (r.dramaLevel ?? 10) - reducedDrama),
+          };
+        }
+        return r;
+      });
+
+      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+      if (postMsg && rel.isPublic) {
+        newPosts = [
+          {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: postMsg,
+            likes: Math.floor(Math.random() * 200000) + 40000,
+            retweets: Math.floor(Math.random() * 40000) + 8000,
+            views: Math.floor(Math.random() * 3000000) + 500000,
+            date: state.date,
+          },
+          ...newPosts,
+        ];
+      }
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: updatedMoney,
+            relationships: updatedRelationships,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + addedHype),
+            xPosts: newPosts,
+          },
+        },
+      };
+    }
+    case "PLAN_WEDDING": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const rel = (activeData.relationships || []).find((r) => r.id === action.payload.relationshipId);
+      if (!rel) return state;
+
+      const weddingCosts: Record<string, { cost: number; title: string; hype: number }> = {
+        vegas: { cost: 5000, title: "Vegas Neon Chapel Elopement", hype: 80 },
+        backyard: { cost: 25000, title: "Romantic Intimate Garden Wedding", hype: 50 },
+        tuscany: { cost: 300000, title: "Lake Como Villa Italian Destination Wedding", hype: 220 },
+        met_gala: { cost: 1500000, title: "Royal Palace Extravaganza with Live Coverage", hype: 500 },
+      };
+
+      const plan = weddingCosts[action.payload.style] || weddingCosts.backyard;
+      if (activeData.money < plan.cost) return state;
+
+      const weddingDetails: WeddingDetails = {
+        style: action.payload.style,
+        cost: plan.cost,
+        year: state.date.year,
+        week: state.date.week,
+        title: plan.title,
+      };
+
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId) {
+          return {
+            ...r,
+            status: "married" as const,
+            marriedStartYear: state.date.year,
+            marriedStartWeek: state.date.week,
+            weddingDetails,
+            prenup: action.payload.prenup || r.prenup,
+            affection: 100,
+            dramaLevel: 0,
+          };
+        }
+        return r;
+      });
+
+      const weddingPostContent = `💒 JUST MARRIED: ${activeArtist.name} and ${rel.partnerName} have tied the knot in a stunning ${plan.title}! Congratulations to the newlyweds! 💍✨`;
+      const weddingPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "tmz",
+        content: weddingPostContent,
+        image: activeArtist.image,
+        likes: Math.floor(Math.random() * 900000) + 300000,
+        retweets: Math.floor(Math.random() * 200000) + 50000,
+        views: Math.floor(Math.random() * 15000000) + 5000000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - plan.cost,
+            relationships: updatedRelationships,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + plan.hype),
+            xPosts: [weddingPost, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "INVITE_PARTNER_COLLAB": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const rel = (activeData.relationships || []).find((r) => r.id === action.payload.relationshipId);
+      if (!rel) return state;
+
+      let newSongs = activeData.songs ? [...activeData.songs] : [];
+      let postContext = "";
+      let collabTitle = "";
+
+      if (action.payload.collabType === "duet") {
+        collabTitle = `${activeArtist.name} & ${rel.partnerName} - Love Language`;
+        const artistGenre = (activeArtist as any).primaryGenre || (activeArtist as any).genre || "Pop";
+        const newSong: Song = {
+          id: crypto.randomUUID(),
+          title: collabTitle,
+          genre: artistGenre,
+          quality: 90,
+          coverArt: activeArtist.image || "",
+          isReleased: false,
+          streams: 0,
+          lastWeekStreams: 0,
+          prevWeekStreams: 0,
+          duration: 195,
+          explicit: false,
+          artistId: state.activeArtistId,
+        };
+        newSongs = [newSong, ...newSongs];
+        postContext = `🔥 IT'S HAPPENING! ${activeArtist.name} and ${rel.partnerName} just recorded an official romantic duet together titled "${collabTitle}"!`;
+      } else {
+        collabTitle = `${rel.partnerName} as Music Video Star`;
+        postContext = `🎬 FIRST LOOK: Fans are obsessed with ${rel.partnerName} starring as ${activeArtist.name}'s stunning love interest in their latest music video!`;
+      }
+
+      const updatedRelationships = (activeData.relationships || []).map((r) =>
+        r.id === action.payload.relationshipId
+          ? { ...r, hasCollaborated: true, collabTrackTitle: collabTitle, affection: Math.min(100, (r.affection ?? 75) + 20) }
+          : r
+      );
+
+      const post: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: postContext,
+        likes: Math.floor(Math.random() * 400000) + 100000,
+        retweets: Math.floor(Math.random() * 80000) + 20000,
+        views: Math.floor(Math.random() * 6000000) + 1500000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: newSongs,
+            relationships: updatedRelationships,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 100),
+            xPosts: [post, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "CELEBRATE_ANNIVERSARY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const rel = (activeData.relationships || []).find((r) => r.id === action.payload.relationshipId);
+      if (!rel) return state;
+
+      const cost = action.payload.celebrationType === "party" ? 40000 : 0;
+      if (activeData.money < cost) return state;
+
+      const yearsTogether = Math.max(1, state.date.year - rel.startYear);
+      let postMsg = "";
+      if (action.payload.celebrationType === "party") {
+        postMsg = `🥂 ANNIVERSARY BASH: ${activeArtist.name} threw a stunning star-studded ${yearsTogether}-year anniversary gala with ${rel.partnerName}!`;
+      } else if (action.payload.celebrationType === "tribute") {
+        postMsg = `🥺 "${yearsTogether} years with my soulmate." — ${activeArtist.name}'s touching anniversary post with ${rel.partnerName} has gone completely viral! ❤️`;
+      } else {
+        postMsg = `🎵 DEDICATION: ${activeArtist.name} just previewed a brand new love ballad written exclusively to celebrate ${yearsTogether} years with ${rel.partnerName}!`;
+      }
+
+      const updatedRelationships = (activeData.relationships || []).map((r) =>
+        r.id === action.payload.relationshipId
+          ? {
+              ...r,
+              affection: Math.min(100, (r.affection ?? 75) + 25),
+              dramaLevel: Math.max(0, (r.dramaLevel ?? 10) - 15),
+              anniversariesCelebrated: [...(r.anniversariesCelebrated || []), state.date.year],
+            }
+          : r
+      );
+
+      const post: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popcrave",
+        content: postMsg,
+        likes: Math.floor(Math.random() * 350000) + 80000,
+        retweets: Math.floor(Math.random() * 60000) + 15000,
+        views: Math.floor(Math.random() * 5000000) + 1000000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - cost,
+            relationships: updatedRelationships,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 80),
+            xPosts: [post, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "HANDLE_RELATIONSHIP_DRAMA": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const rel = (activeData.relationships || []).find((r) => r.id === action.payload.relationshipId);
+      if (!rel) return state;
+
+      if (action.payload.dramaAction === "split") {
+        const prevPeriods = rel.periods ? [...rel.periods] : [];
+        const currentPeriod: RelationshipPeriod = {
+          id: crypto.randomUUID(),
+          startDate: { year: rel.startYear, week: rel.startWeek || 1 },
+          endDate: { year: state.date.year, week: state.date.week },
+          finalStatus: rel.status,
+          engagedStartYear: rel.engagedStartYear,
+          engagedStartWeek: rel.engagedStartWeek,
+          marriedStartYear: rel.marriedStartYear,
+          marriedStartWeek: rel.marriedStartWeek,
+          splitReason: "Split up following media drama",
+        };
+        const updatedRelationships = (activeData.relationships || []).map((r) =>
+          r.id === action.payload.relationshipId
+            ? {
+                ...r,
+                endYear: state.date.year,
+                endWeek: state.date.week,
+                status: "ex" as const,
+                activeDrama: undefined,
+                periods: [...prevPeriods, currentPeriod],
+                timesDated: (r.timesDated || prevPeriods.length || 1),
+                affection: 25,
+                dramaLevel: 50,
+              }
+            : r
+        );
+        const splitPost: XPost = {
+          id: crypto.randomUUID(),
+          authorId: "tmz",
+          content: `💔 BREAKING: Following intense media rumors, ${activeArtist.name} and ${rel.partnerName} have officially called it quits.`,
+          image: activeArtist.image,
+          likes: Math.floor(Math.random() * 400000) + 100000,
+          retweets: Math.floor(Math.random() * 80000) + 20000,
+          views: Math.floor(Math.random() * 6000000) + 1500000,
+          date: state.date,
+        };
+        return {
+          ...state,
+          artistsData: {
+            ...state.artistsData,
+            [state.activeArtistId]: {
+              ...activeData,
+              relationships: updatedRelationships,
+              xPosts: [splitPost, ...(activeData.xPosts || [])],
+            },
+          },
+        };
+      }
+
+      let postContent = "";
+      let affectionDelta = 0;
+      let dramaDelta = 0;
+
+      if (action.payload.dramaAction === "united_front") {
+        postContent = `🤝 UNITED FRONT: ${activeArtist.name} and ${rel.partnerName} step out hand-in-hand, completely shutting down recent tabloid drama rumors!`;
+        affectionDelta = 15;
+        dramaDelta = -30;
+      } else if (action.payload.dramaAction === "deny") {
+        postContent = `📢 STATEMENT: Representatives for ${activeArtist.name} have officially denied tabloid allegations regarding their relationship with ${rel.partnerName}.`;
+        affectionDelta = 5;
+        dramaDelta = -15;
+      } else {
+        postContent = `🤐 SILENCE: ${activeArtist.name} and ${rel.partnerName} have chosen to ignore sensational media rumors, focusing entirely on their peace.`;
+        dramaDelta = -10;
+      }
+
+      const updatedRelationships = (activeData.relationships || []).map((r) =>
+        r.id === action.payload.relationshipId
+          ? {
+              ...r,
+              activeDrama: undefined,
+              affection: Math.min(100, Math.max(0, (r.affection ?? 75) + affectionDelta)),
+              dramaLevel: Math.max(0, (r.dramaLevel ?? 20) + dramaDelta),
+            }
+          : r
+      );
+
+      const post: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: postContent,
+        likes: Math.floor(Math.random() * 200000) + 50000,
+        retweets: Math.floor(Math.random() * 40000) + 10000,
+        views: Math.floor(Math.random() * 3000000) + 700000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            relationships: updatedRelationships,
+            xPosts: [post, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "TRIGGER_RANDOM_DRAMA": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const rel = (activeData.relationships || []).find((r) => r.id === action.payload.relationshipId);
+      if (!rel) return state;
+
+      const headlines = [
+        `👀 Paparazzi footage shows a heated exchange between ${activeArtist.name} and ${rel.partnerName} outside a restaurant!`,
+        `🚨 Unconfirmed rumors circulate that ${rel.partnerName} was spotted partying without ${activeArtist.name} late into the night.`,
+        `📸 Leaked photos spark debate over whether ${activeArtist.name} and ${rel.partnerName} are facing relationship troubles.`,
+      ];
+      const chosenHeadline = headlines[Math.floor(Math.random() * headlines.length)];
+
+      const newDrama: RelationshipDrama = {
+        id: crypto.randomUUID(),
+        headline: chosenHeadline,
+        outlet: "tmz",
+        type: "fighting",
+        resolved: false,
+        date: state.date,
+      };
+
+      const updatedRelationships = (activeData.relationships || []).map((r) =>
+        r.id === action.payload.relationshipId
+          ? { ...r, activeDrama: newDrama, dramaLevel: Math.min(100, (r.dramaLevel ?? 10) + 30) }
+          : r
+      );
+
+      const post: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "tmz",
+        content: `🚨 TMZ EXCLUSIVE: ${chosenHeadline}`,
+        likes: Math.floor(Math.random() * 400000) + 100000,
+        retweets: Math.floor(Math.random() * 90000) + 20000,
+        views: Math.floor(Math.random() * 6000000) + 1500000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            relationships: updatedRelationships,
+            xPosts: [post, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
+    case "UPDATE_KID_EDUCATION": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const tuitionFees: Record<string, number> = {
+        public: 0,
+        elite_private: 40000,
+        swiss_boarding: 120000,
+        performing_arts: 60000,
+        homeschool: 25000,
+      };
+      const fee = tuitionFees[action.payload.schooling] || 0;
+      if (activeData.money < fee) return state;
+
+      const updatedKids = (activeData.kids || []).map((k) => {
+        if (k.id === action.payload.kidId) {
+          const stats = k.talentStats || { singing: 50, rapping: 45, writing: 50, production: 45, charisma: 55 };
+          const bonus = { ...stats };
+          if (action.payload.schooling === "performing_arts") {
+            bonus.singing = Math.min(99, bonus.singing + 15);
+            bonus.charisma = Math.min(99, bonus.charisma + 12);
+          } else if (action.payload.schooling === "elite_private") {
+            bonus.writing = Math.min(99, bonus.writing + 12);
+            bonus.charisma = Math.min(99, bonus.charisma + 10);
+          } else if (action.payload.schooling === "swiss_boarding") {
+            bonus.writing = Math.min(99, bonus.writing + 15);
+            bonus.production = Math.min(99, bonus.production + 12);
+          } else if (action.payload.schooling === "homeschool") {
+            bonus.production = Math.min(99, bonus.production + 8);
+            bonus.writing = Math.min(99, bonus.writing + 8);
+          }
+          return {
+            ...k,
+            schooling: action.payload.schooling,
+            talentStats: bonus,
+          };
+        }
+        return k;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - fee,
+            kids: updatedKids,
+          },
+        },
+      };
+    }
+    case "ENROLL_KID_ACTIVITY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const cost = 5000;
+      if (activeData.money < cost) return state;
+
+      const activityNames: Record<string, string> = {
+        piano: "Classical Piano & Composition",
+        vocal: "Master Vocal Coaching",
+        acting: "Drama & Screen Acting Workshop",
+        sports: "Elite Junior Tennis & Athletics",
+        art: "Fine Arts & Creative Studio",
+      };
+
+      const updatedKids = (activeData.kids || []).map((k) => {
+        if (k.id === action.payload.kidId) {
+          const acts = k.activities || [];
+          if (acts.some((a) => a.type === action.payload.activityType)) return k;
+
+          const stats = k.talentStats || { singing: 50, rapping: 45, writing: 50, production: 45, charisma: 55 };
+          const bonus = { ...stats };
+          if (action.payload.activityType === "piano") bonus.production = Math.min(99, bonus.production + 12);
+          if (action.payload.activityType === "vocal") bonus.singing = Math.min(99, bonus.singing + 14);
+          if (action.payload.activityType === "acting") bonus.charisma = Math.min(99, bonus.charisma + 12);
+          if (action.payload.activityType === "sports") bonus.charisma = Math.min(99, bonus.charisma + 8);
+          if (action.payload.activityType === "art") bonus.writing = Math.min(99, bonus.writing + 10);
+
+          return {
+            ...k,
+            activities: [
+              ...acts,
+              {
+                id: crypto.randomUUID(),
+                type: action.payload.activityType,
+                name: activityNames[action.payload.activityType] || "Extracurricular Activity",
+                skillBonus: 10,
+              },
+            ],
+            talentStats: bonus,
+          };
+        }
+        return k;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - cost,
+            kids: updatedKids,
+          },
+        },
+      };
+    }
+    case "SET_KID_PRIVACY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+
+      const targetKid = (activeData.kids || []).find((k) => k.id === action.payload.kidId);
+      if (!targetKid) return state;
+
+      const updatedKids = (activeData.kids || []).map((k) =>
+        k.id === action.payload.kidId ? { ...k, privacyStatus: action.payload.privacyStatus } : k
+      );
+
+      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+      if (action.payload.privacyStatus === "spotlight" && activeArtist) {
+        newPosts = [
+          {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `🌟 MINI ICON: ${activeArtist.name} makes a rare public appearance with child ${targetKid.name}! Fans praise their sweet moment! ✨`,
+            likes: Math.floor(Math.random() * 450000) + 150000,
+            retweets: Math.floor(Math.random() * 70000) + 15000,
+            views: Math.floor(Math.random() * 8000000) + 2000000,
+            date: state.date,
+          },
+          ...newPosts,
+        ];
+      }
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            kids: updatedKids,
+            xPosts: newPosts,
+          },
+        },
+      };
+    }
+    case "CELEBRATE_KID_BIRTHDAY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+
+      const targetKid = (activeData.kids || []).find((k) => k.id === action.payload.kidId);
+      if (!targetKid) return state;
+
+      const cost = action.payload.partyType === "extravaganza" ? 50000 : 1500;
+      if (activeData.money < cost) return state;
+
+      const updatedKids = (activeData.kids || []).map((k) =>
+        k.id === action.payload.kidId ? { ...k, lastBirthdayCelebratedYear: state.date.year } : k
+      );
+
+      let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
+      if (action.payload.partyType === "extravaganza" && activeArtist) {
+        newPosts = [
+          {
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: `🎂🎈 BIRTHDAY BLOWOUT: ${activeArtist.name} spared no expense throwing an epic celebration for ${targetKid.name} with celebrity guests! 🎁✨`,
+            likes: Math.floor(Math.random() * 500000) + 100000,
+            retweets: Math.floor(Math.random() * 80000) + 15000,
+            views: Math.floor(Math.random() * 9000000) + 2000000,
+            date: state.date,
+          },
+          ...newPosts,
+        ];
+      }
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - cost,
+            kids: updatedKids,
+            hype: action.payload.partyType === "extravaganza" ? Math.min(getHypeCap(activeData), activeData.hype + 50) : activeData.hype,
+            xPosts: newPosts,
+          },
+        },
+      };
+    }
+    case "MANAGE_KID_FINANCES": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const deposit = action.payload.trustFundDeposit || 0;
+      if (deposit > 0 && activeData.money < deposit) return state;
+
+      const updatedKids = (activeData.kids || []).map((k) => {
+        if (k.id === action.payload.kidId) {
+          return {
+            ...k,
+            trustFundAmount: (k.trustFundAmount || 0) + deposit,
+            monthlyAllowance: action.payload.monthlyAllowance !== undefined ? action.payload.monthlyAllowance : k.monthlyAllowance,
+          };
+        }
+        return k;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - deposit,
+            kids: updatedKids,
+          },
+        },
+      };
+    }
+    case "CO_PARENTING_ACTION": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+
+      const costs: Record<string, number> = {
+        friendly_party: 5000,
+        extra_gift: 10000,
+        peaceful_talk: 0,
+      };
+      const cost = costs[action.payload.action] || 0;
+      if (activeData.money < cost) return state;
+
+      const updatedRelationships = (activeData.relationships || []).map((r) => {
+        if (r.id === action.payload.relationshipId) {
+          const newStatus = action.payload.action === "peaceful_talk" ? "cordial" : "supportive";
+          return {
+            ...r,
+            coParentingStatus: newStatus as "supportive" | "cordial",
+            dramaLevel: Math.max(0, (r.dramaLevel ?? 20) - 20),
+          };
+        }
+        return r;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - cost,
+            relationships: updatedRelationships,
+            publicImage: Math.min(100, (activeData.publicImage ?? 80) + 3),
+          },
+        },
+      };
+    }
+    case "DEDICATE_SONG_TO_KID": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const activeArtist = state.soloArtist || state.group;
+      if (!activeArtist) return state;
+
+      const targetKid = (activeData.kids || []).find((k) => k.id === action.payload.kidId);
+      if (!targetKid) return state;
+
+      const artistGenre = (activeArtist as any).primaryGenre || (activeArtist as any).genre || "Pop";
+      const newSong: Song = {
+        id: crypto.randomUUID(),
+        title: `${action.payload.songTitle}`,
+        genre: artistGenre,
+        quality: 94,
+        coverArt: activeArtist.image || "",
+        isReleased: false,
+        streams: 0,
+        lastWeekStreams: 0,
+        prevWeekStreams: 0,
+        duration: 210,
+        explicit: false,
+        artistId: state.activeArtistId,
+      };
+
+      const updatedKids = (activeData.kids || []).map((k) =>
+        k.id === action.payload.kidId ? { ...k, dedicatedSongTitle: action.payload.songTitle } : k
+      );
+
+      const post: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `🥺🤍 TEARS: ${activeArtist.name} wrote a heartfelt unreleased song titled "${action.payload.songTitle}" dedicated to child ${targetKid.name}!`,
+        likes: Math.floor(Math.random() * 600000) + 150000,
+        retweets: Math.floor(Math.random() * 90000) + 20000,
+        views: Math.floor(Math.random() * 10000000) + 2000000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            songs: [newSong, ...(activeData.songs || [])],
+            kids: updatedKids,
+            hype: Math.min(getHypeCap(activeData), activeData.hype + 70),
+            publicImage: Math.min(100, (activeData.publicImage ?? 80) + 5),
+            xPosts: [post, ...(activeData.xPosts || [])],
+          },
+        },
+      };
+    }
     case "START_PREGNANCY": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -25882,12 +26734,33 @@ Let us know if you accept.`,
       const activeArtist = state.soloArtist || state.group;
       if (!activeArtist) return state;
 
+      const personalityTraits = [
+        "Prodigy Musician",
+        "Fashion Trendsetter",
+        "Athletic Dynamo",
+        "Creative Genius",
+        "Sweet & Humble",
+      ] as const;
+
       const newKid: Kid = {
         id: crypto.randomUUID(),
         name: action.payload.childName,
         birthDate: state.date,
         isArtist: false,
         parentName: activeData.pregnancy?.partnerName === 'Single Parent' ? undefined : activeData.pregnancy?.partnerName,
+        schooling: "public",
+        privacyStatus: "private",
+        personalityTrait: personalityTraits[Math.floor(Math.random() * personalityTraits.length)],
+        talentStats: {
+          singing: 40 + Math.floor(Math.random() * 25),
+          rapping: 35 + Math.floor(Math.random() * 25),
+          writing: 40 + Math.floor(Math.random() * 25),
+          production: 35 + Math.floor(Math.random() * 25),
+          charisma: 50 + Math.floor(Math.random() * 25),
+        },
+        trustFundAmount: 0,
+        monthlyAllowance: 0,
+        activities: [],
       };
 
       let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];

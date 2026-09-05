@@ -1,10 +1,81 @@
+export interface BillboardHot100Formula {
+    decade: string;
+    eraTitle: string;
+    yearsSpan: string;
+    radio: number;     // 0.0 - 1.0 (Percentage weight)
+    streaming: number; // 0.0 - 1.0 (Percentage weight)
+    digital: number;   // 0.0 - 1.0 (Percentage weight)
+    physical: number;  // 0.0 - 1.0 (Percentage weight)
+    description: string;
+}
+
+export const getBillboardFormula = (year: number): BillboardHot100Formula => {
+    if (year < 2000) {
+        // 1990s: The Radio & Physical Era (1990 - 1999)
+        // Radio Airplay: 70%, Physical Sales: 30%, Digital Sales: 0%, Streaming Activity: 0%
+        return {
+            decade: '1990s',
+            eraTitle: 'The Radio & Physical Era',
+            yearsSpan: '1990 – 1999',
+            radio: 0.70,
+            streaming: 0.00,
+            digital: 0.00,
+            physical: 0.30,
+            description: 'Songs are ranked based on radio airplay (70%) and physical single sales (30%). No digital, no streaming.'
+        };
+    } else if (year < 2010) {
+        // 2000s: The Digital Transition Era (2000 - 2009)
+        // Radio Airplay: 55%, Digital Sales: 30%, Physical Sales: 15%, Streaming Activity: 0%
+        return {
+            decade: '2000s',
+            eraTitle: 'The Digital Transition Era',
+            yearsSpan: '2000 – 2009',
+            radio: 0.55,
+            streaming: 0.00,
+            digital: 0.30,
+            physical: 0.15,
+            description: 'Radio leads (55%), digital downloads are a major factor (30%), and physical sales decline (15%). No streaming.'
+        };
+    } else if (year < 2020) {
+        // 2010s: The Streaming Revolution (2010 - 2019)
+        // Streaming Activity: 40%, Radio Airplay: 40%, Digital Sales: 10%, Physical Sales: 10%
+        return {
+            decade: '2010s',
+            eraTitle: 'The Streaming Revolution',
+            yearsSpan: '2010 – 2019',
+            radio: 0.40,
+            streaming: 0.40,
+            digital: 0.10,
+            physical: 0.10,
+            description: 'Streaming (40%) and radio (40%) are the two biggest drivers. Digital downloads (10%) and physical singles (10%) have smaller weight.'
+        };
+    } else {
+        // 2020s: The All-Access Era (2020 - Present)
+        // Streaming Activity: 65%, Radio Airplay: 25%, Digital Sales: 5%, Physical Sales: 5%
+        return {
+            decade: '2020s',
+            eraTitle: 'The All-Access Era',
+            yearsSpan: '2020 – Present',
+            radio: 0.25,
+            streaming: 0.65,
+            digital: 0.05,
+            physical: 0.05,
+            description: 'Streaming is king (65%). Radio still matters (25%). Physical formats (5%) and digital downloads (5%) make up the remainder.'
+        };
+    }
+};
+
 export const getEraConfiguration = (year: number) => {
+    const billboardFormula = getBillboardFormula(year);
     return {
         // Formats
         physicalSalesActive: year < 2018, // After 2018 physical sales don't die completely but become niche/vinyl
         digitalSalesActive: year >= 2003, // iTunes era begins around 2003
-        streamingActive: year >= 2008,   // Spotify launched in 2008
+        streamingActive: year >= 2010,   // Billboard added streaming in 2010
         
+        // Billboard Hot 100 Formula
+        billboardFormula,
+
         // Platforms
         printMediaActive: year < 2015,
         myspaceAvailable: year >= 2003 && year < 2012,

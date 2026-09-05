@@ -5,6 +5,8 @@ import { useGame, formatNumber } from '../context/GameContext';
 import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ERAS, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES, SUBGENRES } from '../constants';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import { AutoWriteTracklistPreview, type AutoWriteTrack } from './AutoWriteTracklistPreview';
+import { Camera, Upload } from 'lucide-react';
 
 const MultiSelect = ({ options, selected, onChange, placeholder, max = 5 }: { options: string[], selected: string[], onChange: (val: string[]) => void, placeholder: string, max?: number }) => {
     const [isOpen, setIsOpen] = React.useState(false);
@@ -65,9 +67,29 @@ const StudioView: React.FC = () => {
     const [engineers, setEngineers] = useState<string[]>([]);
     const [anr, setAnr] = useState<string[]>([]);
     const [spotifyLink, setSpotifyLink] = useState('');
-    const [autoWriteData, setAutoWriteData] = useState<{ title: string, artist: string, image: string, tracks: {title: string, duration: number}[] } | null>(null);
+    const [autoWriteData, setAutoWriteData] = useState<{ 
+        title: string; 
+        artist: string; 
+        image: string; 
+        tracks: AutoWriteTrack[]; 
+    } | null>(null);
     const [isFetchingSpotify, setIsFetchingSpotify] = useState(false);
     const [autoWriteError, setAutoWriteError] = useState('');
+    const autoWriteCoverFileRef = React.useRef<HTMLInputElement>(null);
+
+    const handleAutoWriteCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && autoWriteData) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const res = ev.target?.result as string;
+                if (res) {
+                    setAutoWriteData(prev => prev ? { ...prev, image: res } : null);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const [samples, setSamples] = useState<{ songTitle: string; artistName: string; type: 'Sample' | 'Interpolation'; coverArt: string }[]>([]);
     const [contributorPaymentMethod, setContributorPaymentMethod] = useState<'split' | 'upfront'>('split');
@@ -649,7 +671,23 @@ const StudioView: React.FC = () => {
             const res = await fetch(`/api/spotify/album?url=${encodeURIComponent(spotifyLink)}`);
             const data = await res.json();
             if (data.error) throw new Error(data.error);
-            setAutoWriteData(data);
+
+            const initialTracks: AutoWriteTrack[] = (data.tracks || []).map((t: any, idx: number) => ({
+                id: crypto.randomUUID(),
+                title: t.title || `Track ${idx + 1}`,
+                duration: t.duration || 180000,
+                explicit: Boolean(t.explicit || isExplicit),
+                producers: [],
+                songwriters: [],
+                samples: []
+            }));
+
+            setAutoWriteData({
+                title: data.title || 'Untitled Album',
+                artist: data.artist || 'Unknown Artist',
+                image: data.image || '',
+                tracks: initialTracks
+            });
         } catch (e: any) {
             setAutoWriteError(e.message || 'Failed to fetch Spotify data');
         } finally {
@@ -662,14 +700,18 @@ const StudioView: React.FC = () => {
         
         let customImageUploads: {songTitle: string, coverArt: string}[] = [];
         let totalCost = 0;
-        let finalSongs = [];
+        let finalSongs: Song[] = [];
         
         for (const track of autoWriteData.tracks) {
             // Deduct cost per song
             totalCost += selectedStudio.cost;
             const [min, max] = selectedStudio.qualityRange;
+            const durationSec = track.duration > 1000 
+                ? Math.floor(track.duration / 1000) 
+                : (track.duration || Math.floor(Math.random() * (240 - 120 + 1)) + 120);
+
             const newSong: Song = {
-                id: crypto.randomUUID(),
+                id: track.id || crypto.randomUUID(),
                 title: track.title,
                 genre,
                 subgenre: subgenre !== 'None' ? subgenre : undefined,
@@ -680,17 +722,17 @@ const StudioView: React.FC = () => {
                 sales: 0,
                 lastWeekStreams: 0,
                 prevWeekStreams: 0,
-                duration: track.duration ? Math.floor(track.duration / 1000) : (Math.floor(Math.random() * (240 - 120 + 1)) + 120),
-                explicit: isExplicit,
+                duration: durationSec,
+                explicit: track.explicit ?? isExplicit,
                 artistId: activeArtist.id,
                 removedStreams: 0,
                 dailyStreams: [],
-                producers: [],
-                songwriters: [],
-                engineers: [],
-                anr: [],
+                producers: track.producers || [],
+                songwriters: track.songwriters || [],
+                engineers: engineers || [],
+                anr: anr || [],
                 features: [],
-                samples: [],
+                samples: track.samples || [],
                 revenue: 0,
                 weeksAtNumberOne: 0,
                 isLeadSingle: false,
@@ -1415,22 +1457,54 @@ const StudioView: React.FC = () => {
                             </div>
 
                             {autoWriteData && (
-                                <div className="bg-zinc-800 p-4 rounded-lg flex gap-4 items-center">
-                                    {autoWriteData.image && (
-                                        <div 
-                                            className="w-24 h-24 rounded-md bg-zinc-700 shrink-0 bg-cover bg-center cursor-pointer" 
-                                            style={{backgroundImage: `url(${autoWriteData.image})`}}
-                                            onClick={() => {
-                                                const newImg = prompt("Enter new cover art URL:", autoWriteData.image);
-                                                if (newImg) setAutoWriteData({...autoWriteData, image: newImg});
-                                            }}
-                                            title="Click to change cover"
-                                        />
-                                    )}
+                                <div className="bg-zinc-800/90 border border-zinc-700/70 p-4 rounded-xl flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                                    {/* Tap Cover to Upload or Change */}
+                                    <div 
+                                        className="relative group w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-zinc-700 shrink-0 overflow-hidden cursor-pointer border-2 border-zinc-600 hover:border-[#12FF80] transition-all shadow-md"
+                                        onClick={() => autoWriteCoverFileRef.current?.click()}
+                                        title="Tap to upload and change cover art"
+                                    >
+                                        {autoWriteData.image ? (
+                                            <img 
+                                                src={autoWriteData.image} 
+                                                alt={autoWriteData.title} 
+                                                className="w-full h-full object-cover" 
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 bg-zinc-800">
+                                                <Camera className="w-7 h-7 mb-1 text-zinc-500" />
+                                                <span className="text-[10px]">No Cover</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity p-1 text-center">
+                                            <Upload className="w-5 h-5 mb-1 text-[#12FF80]" />
+                                            <span className="text-[11px] font-bold leading-tight">Change Cover</span>
+                                            <span className="text-[9px] text-zinc-300">Tap to upload</span>
+                                        </div>
+                                    </div>
+                                    <input 
+                                        ref={autoWriteCoverFileRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleAutoWriteCoverUpload}
+                                    />
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-lg truncate">{autoWriteData.title}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-lg text-white truncate">{autoWriteData.title}</h3>
+                                        </div>
                                         <p className="text-zinc-400 text-sm truncate">{autoWriteData.artist}</p>
-                                        <p className="text-zinc-400 text-sm">{autoWriteData.tracks.length} tracks</p>
+                                        <p className="text-xs text-zinc-400 mt-1">{autoWriteData.tracks.length} tracks detected</p>
+                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                            <button
+                                                type="button"
+                                                onClick={() => autoWriteCoverFileRef.current?.click()}
+                                                className="text-xs text-[#12FF80] hover:underline flex items-center gap-1 font-semibold"
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                Upload cover from device
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1451,9 +1525,16 @@ const StudioView: React.FC = () => {
                                             </select>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-4 mb-2">
-                                        <input type="checkbox" id="autowrite-explicit" checked={isExplicit} onChange={e => setIsExplicit(e.target.checked)} className="rounded border-zinc-600 text-red-600 focus:ring-red-500 bg-zinc-700 w-4 h-4"/>
-                                        <label htmlFor="autowrite-explicit" className="text-sm font-medium text-zinc-300">Explicit Content</label>
+
+                                    {/* Tracklist Preview with per-track editing for producers, songwriters, interpolations & samples */}
+                                    <div className="pt-2">
+                                        <AutoWriteTracklistPreview 
+                                            tracks={autoWriteData.tracks}
+                                            onChangeTracks={(newTracks) => setAutoWriteData(prev => prev ? { ...prev, tracks: newTracks } : null)}
+                                            potentialProducers={potentialProducers}
+                                            potentialCollaborators={potentialCollaborators}
+                                            allPlayerArtists={allPlayerArtists}
+                                        />
                                     </div>
                                     
                                     <div>

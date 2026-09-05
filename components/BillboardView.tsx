@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
+import { getBillboardFormula } from '../utils/eraUtils';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
 
@@ -134,7 +135,7 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
                             <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
                         </div>
-                        {gameState.date.year >= 2016 && (
+                        {gameState.date.year >= 2010 && (
                             <>
                                 <div className="w-px h-8 bg-zinc-300"></div>
                                 <div className="text-center">
@@ -177,6 +178,15 @@ const BillboardView: React.FC = () => {
     };
 
     const currentChart = chartsData[selectedChart];
+    const [showFormulaModal, setShowFormulaModal] = useState(false);
+    const currentFormula = getBillboardFormula(date.year);
+
+    const allDecades = [
+        getBillboardFormula(1995),
+        getBillboardFormula(2005),
+        getBillboardFormula(2015),
+        getBillboardFormula(2023)
+    ];
 
     return (
         <div className="bg-[#e4e4e4] h-full font-sans relative pb-24 text-black overflow-y-auto">
@@ -199,7 +209,13 @@ const BillboardView: React.FC = () => {
                         <SearchIcon />
                     </button>
                 </div>
-                <div className="bg-black w-full py-2 px-4 flex justify-end relative">
+                <div className="bg-black w-full py-2 px-4 flex justify-between items-center relative">
+                    <button 
+                        onClick={() => setShowFormulaModal(true)}
+                        className="text-[#12FF80] uppercase font-bold text-xs border border-[#12FF80] px-3 py-1 tracking-wider hover:bg-[#12FF80]/10"
+                    >
+                        VIEW RULES
+                    </button>
                     <button 
                         onClick={() => setShowSelector(!showSelector)}
                         className="text-[#12FF80] uppercase font-bold text-xs border border-[#12FF80] px-3 py-1 tracking-wider hover:bg-[#12FF80]/10"
@@ -227,7 +243,7 @@ const BillboardView: React.FC = () => {
                 </div>
                 <div className="bg-[#12FF80] w-full py-2 flex justify-center gap-12 border-b border-black">
                     <button className="hover:scale-110 transition-transform"><CalendarIcon /></button>
-                    <button className="hover:scale-110 transition-transform"><InfoIcon /></button>
+                    <button className="hover:scale-110 transition-transform" onClick={() => setShowFormulaModal(true)} title="Billboard Hot 100 Formula"><InfoIcon /></button>
                     <button className="hover:scale-110 transition-transform"><ShareIcon /></button>
                 </div>
             </header>
@@ -244,6 +260,106 @@ const BillboardView: React.FC = () => {
                     </div>
                 )}
             </main>
+
+            {showFormulaModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-zinc-200 flex flex-col">
+                        <div className="p-5 border-b border-zinc-200 flex items-center justify-between bg-zinc-950 text-white rounded-t-2xl">
+                            <div>
+                                <h3 className="text-xl font-black tracking-tight flex items-center gap-2">
+                                    <span className="text-[#12FF80]">BILLBOARD HOT 100</span> FORMULAS
+                                </h3>
+                                <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                                    How song chart points are calculated across eras
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setShowFormulaModal(false)}
+                                className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-300 hover:text-white flex items-center justify-center font-bold text-sm hover:bg-zinc-700 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5 text-left">
+                            <div className="p-3 bg-zinc-100 rounded-xl border border-zinc-200 text-xs text-zinc-700">
+                                <span className="font-bold text-black">Current Year ({date.year}): </span>
+                                Ranked under <strong>{currentFormula.decade} ({currentFormula.eraTitle})</strong> rules.
+                            </div>
+
+                            <div className="space-y-4">
+                                {allDecades.map(dec => {
+                                    const isCurrent = dec.decade === currentFormula.decade;
+                                    return (
+                                        <div 
+                                            key={dec.decade}
+                                            className={`p-4 rounded-xl border transition-all ${
+                                                isCurrent 
+                                                    ? 'bg-emerald-50/70 border-emerald-500 shadow-sm ring-2 ring-emerald-500/20' 
+                                                    : 'bg-white border-zinc-200 opacity-90'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-0.5 rounded font-black text-xs uppercase tracking-wider ${
+                                                        isCurrent ? 'bg-black text-[#12FF80]' : 'bg-zinc-200 text-zinc-800'
+                                                    }`}>
+                                                        {dec.decade}
+                                                    </span>
+                                                    <span className="font-bold text-sm text-black">{dec.eraTitle}</span>
+                                                    <span className="text-xs text-zinc-500">({dec.yearsSpan})</span>
+                                                </div>
+                                                {isCurrent && (
+                                                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                                                        Active Era
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Formula bar breakdown */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 mb-2.5">
+                                                <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-200 text-center">
+                                                    <div className="text-[10px] uppercase font-bold text-zinc-500">Radio Airplay</div>
+                                                    <div className="text-base font-black text-cyan-600">{Math.round(dec.radio * 100)}%</div>
+                                                </div>
+                                                <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-200 text-center">
+                                                    <div className="text-[10px] uppercase font-bold text-zinc-500">Streaming</div>
+                                                    <div className="text-base font-black text-emerald-600">{Math.round(dec.streaming * 100)}%</div>
+                                                </div>
+                                                <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-200 text-center">
+                                                    <div className="text-[10px] uppercase font-bold text-zinc-500">Digital Sales</div>
+                                                    <div className="text-base font-black text-yellow-600">{Math.round(dec.digital * 100)}%</div>
+                                                </div>
+                                                <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-200 text-center">
+                                                    <div className="text-[10px] uppercase font-bold text-zinc-500">Physical Sales</div>
+                                                    <div className="text-base font-black text-purple-600">{Math.round(dec.physical * 100)}%</div>
+                                                </div>
+                                            </div>
+
+                                            <p className="text-xs text-zinc-600 mt-2 font-medium leading-relaxed">
+                                                {dec.description}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 text-[11px] text-zinc-500 leading-relaxed">
+                                Note: Billboard added streaming to the Hot 100 formula in 2010. Radio plays are converted to all-format impressions.
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-zinc-200 bg-zinc-50 rounded-b-2xl flex justify-end">
+                            <button 
+                                onClick={() => setShowFormulaModal(false)}
+                                className="px-5 py-2 rounded-lg bg-black text-white font-bold text-xs hover:bg-zinc-800 transition-colors"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

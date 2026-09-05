@@ -1822,12 +1822,43 @@ export interface PrenupAgreement {
   status: "draft" | "signed" | "rejected";
 }
 
+export interface RelationshipPeriod {
+  id: string;
+  startDate: GameDate;
+  endDate?: GameDate;
+  finalStatus: "dating" | "engaged" | "married" | "divorcing" | "ex";
+  engagedStartYear?: number;
+  engagedStartWeek?: number;
+  marriedStartYear?: number;
+  marriedStartWeek?: number;
+  splitReason?: string;
+}
+
+export interface WeddingDetails {
+  style: "vegas" | "backyard" | "tuscany" | "met_gala";
+  cost: number;
+  year: number;
+  week: number;
+  title: string;
+}
+
+export interface RelationshipDrama {
+  id: string;
+  headline: string;
+  outlet: "tmz" | "popbase";
+  type: "cheating" | "fighting" | "secret_vacation";
+  resolved: boolean;
+  date: GameDate;
+}
+
 export interface Relationship {
   id: string;
   partnerName: string;
   partnerType: "npc" | "custom";
   startYear: number;
   startWeek?: number;
+  engagedStartYear?: number;
+  engagedStartWeek?: number;
   marriedStartYear?: number;
   marriedStartWeek?: number;
   endYear: number | null;
@@ -1837,9 +1868,30 @@ export interface Relationship {
   image?: string;
   divorceCase?: DivorceCase;
   prenup?: PrenupAgreement;
+  // Tracking historical periods across multiple breakups & get backs
+  periods?: RelationshipPeriod[];
+  timesDated?: number;
+  // 10 Relationship & Children Features
+  affection?: number; // 0-100
+  dramaLevel?: number; // 0-100
+  compatibility?: number; // 0-100
+  petName?: string;
+  weddingDetails?: WeddingDetails;
+  hasCollaborated?: boolean;
+  collabTrackTitle?: string;
+  anniversariesCelebrated?: number[];
+  activeDrama?: RelationshipDrama;
+  coParentingStatus?: "supportive" | "cordial" | "tense";
 }
 
 export { formatMarriageDuration } from "./utils/relationshipUtils";
+
+export interface KidActivity {
+  id: string;
+  type: "piano" | "vocal" | "acting" | "sports" | "art";
+  name: string;
+  skillBonus: number;
+}
 
 export interface Kid {
   id: string;
@@ -1847,6 +1899,23 @@ export interface Kid {
   birthDate: GameDate;
   isArtist: boolean;
   parentName?: string;
+  // Features for children
+  schooling?: "public" | "elite_private" | "swiss_boarding" | "performing_arts" | "homeschool";
+  activities?: KidActivity[];
+  talentStats?: {
+    singing: number;
+    rapping: number;
+    writing: number;
+    production: number;
+    charisma: number;
+  };
+  privacyStatus?: "private" | "spotlight";
+  personalityTrait?: "Prodigy Musician" | "Fashion Trendsetter" | "Athletic Dynamo" | "Creative Genius" | "Sweet & Humble";
+  lastBirthdayCelebratedYear?: number;
+  trustFundAmount?: number;
+  monthlyAllowance?: number;
+  dedicatedSongTitle?: string;
+  photoUrl?: string;
 }
 
 export interface Pregnancy {
@@ -3091,7 +3160,59 @@ export type GameAction =
       type: "EVALUATE_DIVORCE_PROPOSAL";
       payload: { relationshipId: string; proposalId: string };
     }
-  | { type: "GET_BACK_WITH_EX"; payload: { relationshipId: string } }
+  | { type: "GET_BACK_WITH_EX"; payload: { relationshipId: string; isPublic?: boolean } }
+  | {
+      type: "RELATIONSHIP_ACTION";
+      payload: { relationshipId: string; actionType: "dinner" | "vacation" | "gift" | "therapy" };
+    }
+  | {
+      type: "PLAN_WEDDING";
+      payload: { relationshipId: string; style: "vegas" | "backyard" | "tuscany" | "met_gala"; prenup?: any };
+    }
+  | {
+      type: "INVITE_PARTNER_COLLAB";
+      payload: { relationshipId: string; collabType: "duet" | "music_video" };
+    }
+  | {
+      type: "CELEBRATE_ANNIVERSARY";
+      payload: { relationshipId: string; celebrationType: "party" | "tribute" | "song" };
+    }
+  | {
+      type: "HANDLE_RELATIONSHIP_DRAMA";
+      payload: { relationshipId: string; dramaAction: "deny" | "united_front" | "ignore" | "split" };
+    }
+  | {
+      type: "TRIGGER_RANDOM_DRAMA";
+      payload: { relationshipId: string };
+    }
+  | {
+      type: "UPDATE_KID_EDUCATION";
+      payload: { kidId: string; schooling: "public" | "elite_private" | "swiss_boarding" | "performing_arts" | "homeschool" };
+    }
+  | {
+      type: "ENROLL_KID_ACTIVITY";
+      payload: { kidId: string; activityType: "piano" | "vocal" | "acting" | "sports" | "art" };
+    }
+  | {
+      type: "SET_KID_PRIVACY";
+      payload: { kidId: string; privacyStatus: "private" | "spotlight" };
+    }
+  | {
+      type: "CELEBRATE_KID_BIRTHDAY";
+      payload: { kidId: string; partyType: "family" | "extravaganza" };
+    }
+  | {
+      type: "MANAGE_KID_FINANCES";
+      payload: { kidId: string; trustFundDeposit?: number; monthlyAllowance?: number };
+    }
+  | {
+      type: "CO_PARENTING_ACTION";
+      payload: { relationshipId: string; action: "friendly_party" | "extra_gift" | "peaceful_talk" };
+    }
+  | {
+      type: "DEDICATE_SONG_TO_KID";
+      payload: { kidId: string; songTitle: string };
+    }
   | {
       type: "UPDATE_RELATIONSHIP_IMAGE";
       payload: { relationshipId: string; image: string };

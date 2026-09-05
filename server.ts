@@ -122,7 +122,15 @@ async function startServer() {
              image = images[0]?.url || '';
         }
 
-        const tracks = entity.trackList ? entity.trackList.map((t: any) => ({ title: t.title, duration: t.duration })) : [{ title: entity.name, duration: entity.duration }];
+        const tracks = entity.trackList ? entity.trackList.map((t: any) => ({ 
+            title: t.title, 
+            duration: t.duration,
+            explicit: Boolean(t.isExplicit || t.explicit)
+        })) : [{ 
+            title: entity.name, 
+            duration: entity.duration,
+            explicit: Boolean(entity.isExplicit || entity.explicit)
+        }];
         
         res.json({
             title: entity.name,

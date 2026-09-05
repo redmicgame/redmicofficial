@@ -1,7 +1,7 @@
 import { NPC_ARTIST_IMAGES } from "../constants";
 import React, { useMemo } from 'react';
 import { useGame, formatNumber, formatDuration } from '../context/GameContext';
-import { getEraConfiguration } from '../utils/eraUtils';
+import { getEraConfiguration, getBillboardFormula } from '../utils/eraUtils';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
@@ -219,27 +219,41 @@ export const ChartPredictionsView: React.FC = () => {
                 currentRadioPlays = rPlays;
             }
 
-            const sales = Math.floor(song.weeklyStreams / divisor) * boost + additionalItunesSales;
+            const baseSales = Math.floor(song.weeklyStreams / divisor) * boost;
+            const formula = eraConfigTemp.billboardFormula || getBillboardFormula(gameState.date.year);
+
+            let songDigitalSales = 0;
+            let songPhysicalSales = additionalPhysicalSales;
+
+            if (formula.digital + formula.physical > 0) {
+                const digFraction = formula.digital / (formula.digital + formula.physical);
+                const physFraction = formula.physical / (formula.digital + formula.physical);
+                songDigitalSales = Math.floor(baseSales * digFraction) + additionalItunesSales;
+                songPhysicalSales = Math.floor(baseSales * physFraction) + additionalPhysicalSales;
+            } else {
+                songPhysicalSales += baseSales;
+            }
+
+            // Billboard Hot 100 Formulas by Decade:
+            // 1990s: Radio 70%, Physical 30%, Digital 0%, Streaming 0%
+            // 2000s: Radio 55%, Digital 30%, Physical 15%, Streaming 0%
+            // 2010s: Streaming 40%, Radio 40%, Digital 10%, Physical 10%
+            // 2020s: Streaming 65%, Radio 25%, Digital 5%, Physical 5%
             
-            const hasStreamingRights = true; // simplifying prediction
-            const effectiveStreamingShare = hasStreamingRights ? eraConfigTemp.marketShare.streaming : 0;
-            
-            // Billboard Hot 100 did NOT count streams until 2016
-            const streamPoints = gameState.date.year >= 2016 ? (song.weeklyStreams * effectiveStreamingShare) * 0.5 : 0;
-            const digitalPoints = (sales * eraConfigTemp.marketShare.digital) * 150 * 0.2;
-            const physicalPoints = (sales * eraConfigTemp.marketShare.physical + additionalPhysicalSales) * 150 * 0.2;
-            
-            // Approximate impressions based on plays
+            // Streaming Points: Billboard added streaming in 2010
+            const streamPoints = formula.streaming > 0 ? (song.weeklyStreams * 0.5 * formula.streaming) : 0;
             const currentRadioImpressions = currentRadioPlays * 5000;
-            const radioPoints = currentRadioImpressions * eraConfigTemp.marketShare.radio * 0.25;
+            const radioPoints = currentRadioImpressions * 0.25 * formula.radio;
+            const digitalPoints = songDigitalSales * 60 * formula.digital;
+            const physicalPoints = songPhysicalSales * 60 * formula.physical;
             
-            const points = streamPoints + digitalPoints + physicalPoints + radioPoints;
+            const points = streamPoints + radioPoints + digitalPoints + physicalPoints;
             
             return {
                 ...song,
                 points: Math.floor(points),
-                pointsDiff: 0, // removed arbitrary noise for 'high accuracy'
-                sales: sales + additionalPhysicalSales,
+                pointsDiff: 0,
+                sales: songDigitalSales + songPhysicalSales,
                 radioPlays: currentRadioPlays,
             };
         });
@@ -292,6 +306,18 @@ export const ChartPredictionsView: React.FC = () => {
                 <div className="text-center mt-2 mb-6">
                     <h2 className="text-3xl font-black tracking-tight drop-shadow-md">Early Hot 100 Predictions</h2>
                     <p className="text-base font-medium opacity-80 uppercase mt-1">Week {gameState.date.week}, {gameState.date.year} chart</p>
+                    {(() => {
+                        const currentFormula = getBillboardFormula(gameState.date.year);
+                        return (
+                            <div className="inline-flex flex-wrap items-center justify-center gap-2 mt-3 px-3 py-1 bg-black/80 text-white rounded-full text-xs font-medium backdrop-blur shadow-sm border border-white/20">
+                                <span className="bg-[#12FF80] text-black font-black px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase">{currentFormula.decade} Formula</span>
+                                {currentFormula.streaming > 0 && <span>Streams: <strong className="text-[#12FF80]">{Math.round(currentFormula.streaming * 100)}%</strong></span>}
+                                <span>Airplay: <strong className="text-cyan-300">{Math.round(currentFormula.radio * 100)}%</strong></span>
+                                {currentFormula.digital > 0 && <span>Digital: <strong className="text-yellow-300">{Math.round(currentFormula.digital * 100)}%</strong></span>}
+                                {currentFormula.physical > 0 && <span>Physical: <strong className="text-purple-300">{Math.round(currentFormula.physical * 100)}%</strong></span>}
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 <div className="bg-white/95 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-3xl border border-white/40">

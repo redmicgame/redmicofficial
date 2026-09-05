@@ -95,7 +95,6 @@ const AddMerchModal: React.FC<{
         setError('');
         if (!selectedRelease) { setError('Please select a release.'); return; }
         if (!image && !selectedRelease.coverArt) { setError('Please provide an image.'); return; }
-        if (merch.length >= MERCH_PRODUCT_LIMIT) { setError(`Your store is at capacity (${MERCH_PRODUCT_LIMIT} products).`); return; }
         if (money < totalCost) { setError('Not enough money to stock this inventory.'); return; }
         if (stockQty < 1 && merchType !== 'Ringtone') { setError('Must stock at least 1 unit.'); return; }
         if (price < unitCost) { setError('Price cannot be lower than unit cost.'); return; }
@@ -284,7 +283,7 @@ const AddMerchModal: React.FC<{
                 <button
                     type="button"
                     onClick={handleAddMerch}
-                    disabled={!selectedRelease || money < totalCost || merch.length >= MERCH_PRODUCT_LIMIT}
+                    disabled={!selectedRelease || money < totalCost}
                     className="w-full bg-red-600 hover:bg-red-700 p-2.5 rounded-lg font-bold disabled:bg-zinc-600 transition-colors shadow-md cursor-pointer disabled:cursor-not-allowed"
                 >
                     Add Product
@@ -302,7 +301,7 @@ const RestockModal: React.FC<{
     const unitCost = item.type === 'Vinyl' ? 12 : item.type === 'CD' ? 3 : item.type === 'Cassette' ? 4 : item.type === 'T-Shirt' ? 15 : item.type === 'Hoodie' ? 25 : item.type === 'Tour Exclusive Merch' ? 20 : 3;
     const money = activeArtistData?.money || 0;
     const maxAffordable = Math.max(0, Math.floor(money / unitCost));
-    const [amount, setAmount] = useState(() => Math.min(1000, Math.max(100, maxAffordable)));
+    const [amount, setAmount] = useState(() => maxAffordable >= 1000 ? 1000 : Math.max(1, maxAffordable > 0 ? maxAffordable : 100));
     const totalCost = amount * unitCost;
 
     const handleRestock = () => {
@@ -339,13 +338,13 @@ const RestockModal: React.FC<{
                     />
                     
                     {/* Quick quantity presets */}
-                    <div className="flex gap-1.5 pt-1">
-                        {[500, 1000, 5000, 10000].map(qty => (
+                    <div className="grid grid-cols-4 gap-1.5 pt-1">
+                        {[1000, 10000, 50000, 100000, 500000, 1000000].map(qty => (
                             <button
                                 key={qty}
                                 type="button"
                                 onClick={() => setAmount(qty)}
-                                className={`flex-1 py-1 text-xs font-semibold rounded border transition-colors ${
+                                className={`py-1 text-xs font-semibold rounded border transition-colors ${
                                     amount === qty
                                         ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
                                         : 'bg-zinc-700/80 hover:bg-zinc-700 text-zinc-300 border-zinc-600'
@@ -358,10 +357,10 @@ const RestockModal: React.FC<{
                             <button
                                 type="button"
                                 onClick={() => setAmount(maxAffordable)}
-                                className="px-2 py-1 text-[11px] font-bold rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900 transition-colors"
+                                className="col-span-2 py-1 text-[11px] font-bold rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900 transition-colors"
                                 title={`Set to maximum units you can afford (${formatNumber(maxAffordable)})`}
                             >
-                                Max ({formatNumber(maxAffordable)})
+                                Max Affordable ({formatNumber(maxAffordable)})
                             </button>
                         )}
                     </div>
@@ -556,10 +555,6 @@ const DuplicateMerchModal: React.FC<{
 
     const validateSingle = () => {
         setError('');
-        if (merch.length >= MERCH_PRODUCT_LIMIT) {
-            setError(`Your store has reached the maximum ${MERCH_PRODUCT_LIMIT} products.`);
-            return false;
-        }
         if (money < singleTotalCost) {
             setError(`Not enough money. Required: $${formatNumber(singleTotalCost)}, available: $${formatNumber(Math.floor(money))}.`);
             return false;
@@ -631,10 +626,6 @@ const DuplicateMerchModal: React.FC<{
 
     const handleCreateBatch = () => {
         setError('');
-        if (merch.length + batchCount > MERCH_PRODUCT_LIMIT) {
-            setError(`Cannot add ${batchCount} products: store limit is ${MERCH_PRODUCT_LIMIT} total.`);
-            return;
-        }
         if (money < batchTotalCost) {
             setError(`Not enough money. Required: $${formatNumber(batchTotalCost)}, available: $${formatNumber(Math.floor(money))}.`);
             return;
@@ -1002,7 +993,7 @@ const DuplicateMerchModal: React.FC<{
                             <button
                                 type="button"
                                 onClick={() => handleCreateSingle(false)}
-                                disabled={money < singleTotalCost || merch.length >= MERCH_PRODUCT_LIMIT}
+                                disabled={money < singleTotalCost}
                                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-indigo-300 border border-indigo-700/40 font-bold py-2.5 rounded-xl text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <PlusIcon className="w-3.5 h-3.5" />
@@ -1011,7 +1002,7 @@ const DuplicateMerchModal: React.FC<{
                             <button
                                 type="button"
                                 onClick={() => handleCreateSingle(true)}
-                                disabled={money < singleTotalCost || merch.length >= MERCH_PRODUCT_LIMIT}
+                                disabled={money < singleTotalCost}
                                 className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-lg transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Confirm Duplicate
@@ -1356,19 +1347,17 @@ const MerchStoreView: React.FC = () => {
                             </button>
                             <div>
                                 <h1 className="text-xl md:text-2xl font-bold tracking-[0.2em] uppercase font-anton">{activeArtist.name}</h1>
-                                <p className="text-[11px] text-zinc-500 font-semibold">{merch.length}/{MERCH_PRODUCT_LIMIT} Products in Store</p>
+                                <p className="text-[11px] text-zinc-500 font-semibold">{merch.length} Products in Store</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            {merch.length < MERCH_PRODUCT_LIMIT && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddModal(true)}
-                                    className="bg-black hover:bg-zinc-800 text-white font-bold py-1.5 px-3.5 rounded-md inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer shadow-sm"
-                                >
-                                    <PlusIcon className="w-4 h-4" /> Add Product
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                onClick={() => setShowAddModal(true)}
+                                className="bg-black hover:bg-zinc-800 text-white font-bold py-1.5 px-3.5 rounded-md inline-flex items-center gap-1.5 text-xs transition-colors cursor-pointer shadow-sm"
+                            >
+                                <PlusIcon className="w-4 h-4" /> Add Product
+                            </button>
                             <button type="button" className="p-1.5 rounded hover:bg-zinc-100"><SearchIcon className="w-5 h-5" /></button>
                             <button type="button" className="p-1.5 rounded hover:bg-zinc-100"><ShoppingBagIcon className="w-5 h-5" /></button>
                         </div>
@@ -1457,7 +1446,7 @@ const MerchStoreView: React.FC = () => {
                                     </div>
                                     
                                     {item.stock <= 0 && (
-                                        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/85 w-full py-2.5 text-center text-red-400 font-extrabold tracking-widest uppercase z-30 shadow-md">
+                                        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/85 w-full py-2.5 text-center text-red-400 font-extrabold tracking-widest uppercase z-30 shadow-md pointer-events-none">
                                             <span>SOLD OUT</span>
                                         </div>
                                     )}
@@ -1483,7 +1472,7 @@ const MerchStoreView: React.FC = () => {
                                     </div>
 
                                     {/* Action Buttons: Always-visible dedicated action grid */}
-                                    <div className="mt-2 px-2 pb-2.5 pt-1.5 border-t border-zinc-100 flex flex-col gap-1.5">
+                                    <div className="relative z-20 mt-2 px-2 pb-2.5 pt-1.5 border-t border-zinc-100 flex flex-col gap-1.5">
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -1536,7 +1525,7 @@ const MerchStoreView: React.FC = () => {
                                     </div>
 
                                     {/* Hover overlay quick actions */}
-                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none group-hover:pointer-events-auto">
                                         <button
                                             type="button"
                                             onClick={(e) => {

@@ -117,7 +117,7 @@ const AlbumPredictionsView: React.FC = () => {
                 const vinylSales = activeArtistData.merch
                     .filter(m => m.releaseId === sub.release.id && m.type === "Vinyl")
                     .reduce((sum, m) => sum + (m.unitsSold || 0), 0);
-                if (vinylSales >= 7000000) {
+                if (vinylSales >= 250000) {
                     return {
                         release: sub.release,
                         vinylSales
@@ -189,7 +189,7 @@ const AlbumPredictionsView: React.FC = () => {
                             Massive Pre-orders
                         </div>
                         <h2 className="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">{massiveVinylAlbum.release.title}</h2>
-                        <p className="text-xl md:text-2xl text-zinc-300 font-medium mb-4">{massiveVinylAlbum.vinylSales >= 7000000 ? "Over 7 Million Vinyls Sold!" : `${formatNumber(massiveVinylAlbum.vinylSales)} Vinyls Sold`}</p>
+                        <p className="text-xl md:text-2xl text-zinc-300 font-medium mb-4">{`${formatNumber(massiveVinylAlbum.vinylSales)} Vinyls Sold`}</p>
                         <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Releasing Soon</p>
                     </div>
                 </div>

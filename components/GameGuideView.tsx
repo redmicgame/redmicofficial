@@ -451,9 +451,24 @@ const guideSections: GuideSection[] = [
         icon: <ChartBarIcon className="w-5 h-5" />,
         content: (
             <>
-                <h3 className="font-bold text-red-400">How Charts Work</h3>
-                <p>Song charts (like the Billboard Hot 100) are based purely on weekly streams. Album charts use "album equivalent units," which combine streams from album tracks with pure sales from your merch store (vinyls, CDs).</p>
-                <p><strong>Recurrent Rule:</strong> A song is removed from the Hot 100 if it has been on the chart for 20+ weeks AND falls below position #50.</p>
+                <h3 className="font-bold text-red-400">Billboard Hot 100 Formulas by Decade</h3>
+                <p>The Billboard Hot 100 evolves across music eras, combining <strong>Streaming</strong>, <strong>Radio Airplay</strong>, <strong>Digital Sales</strong>, and <strong>Physical Sales</strong> according to decade standards:</p>
+                <div className="space-y-2 mt-2 text-xs bg-zinc-800/80 p-3 rounded-lg border border-zinc-700">
+                    <div>
+                        <span className="font-bold text-[#12FF80]">1990s (The Radio & Physical Era):</span> Radio Airplay (70%), Physical Sales (30%). No digital sales or streaming.
+                    </div>
+                    <div>
+                        <span className="font-bold text-cyan-400">2000s (The Digital Transition Era):</span> Radio Airplay (55%), Digital Sales (30%), Physical Sales (15%). No streaming.
+                    </div>
+                    <div>
+                        <span className="font-bold text-yellow-400">2010s (The Streaming Revolution):</span> Streaming (40%), Radio Airplay (40%), Digital Sales (10%), Physical Sales (10%).
+                    </div>
+                    <div>
+                        <span className="font-bold text-purple-400">2020s (The All-Access Era):</span> Streaming (65%), Radio Airplay (25%), Digital Sales (5%), Physical Sales (5%).
+                    </div>
+                </div>
+                <p className="mt-2 text-xs text-zinc-400">Album charts (Billboard 200) use album-equivalent units (streams plus pure sales from your merchandise store).</p>
+                <p><strong>Recurrent Rule:</strong> A song is removed from the Hot 100 if it has been on the chart for 20+ weeks AND falls below position #50, or 52+ weeks and below #25.</p>
                 <h3 className="font-bold text-red-400 mt-4">Merchandise & Pure Sales</h3>
                 <p>In the Shopify app, you can list physical copies (Vinyl, CDs, Cassettes) of your albums. These contribute directly to "Pure Sales", which drastically help you chart higher on the Billboard 200, especially in the early eras of the game.</p>
             </>

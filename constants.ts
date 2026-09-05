@@ -42,7 +42,7 @@ export const SUBSCRIBER_THRESHOLD_VERIFIED = 1000000;
 export const VIEWS_THRESHOLD_VERIFIED = 10000000;
 
 // Merch Constants
-export const MERCH_PRODUCT_LIMIT = 30;
+export const MERCH_PRODUCT_LIMIT = 500;
 
 // Economy Constants
 export const STREAM_INCOME_MULTIPLIER = 0.004; // $0.004 per stream

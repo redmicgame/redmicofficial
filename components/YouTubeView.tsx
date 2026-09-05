@@ -12,6 +12,7 @@ import CameraIcon from './icons/CameraIcon';
 import HomeIcon from './icons/HomeIcon';
 import UserGroupIcon from './icons/UserGroupIcon';
 import YouTubeIcon from './icons/YouTubeIcon';
+import ShoppingBagIcon from './icons/ShoppingBagIcon';
 
 const formatTimeAgo = (releaseDate: { week: number, year: number }, currentDate: { week: number, year: number }): string => {
     const weeksAgo = (currentDate.year * 52 + currentDate.week) - (releaseDate.year * 52 + releaseDate.week);
@@ -296,11 +297,7 @@ const YouTubeChannelView: React.FC = () => {
     };
 
     const handleVisitStore = () => {
-        if (youtubeStoreUnlocked) {
-            dispatch({ type: 'CHANGE_VIEW', payload: 'merchStore' });
-        } else {
-            alert(`Store unlocks at ${formatNumber(SUBSCRIBER_THRESHOLD_STORE)} subscribers!`);
-        }
+        dispatch({ type: 'CHANGE_VIEW', payload: 'merchStore' });
     };
 
     return (
@@ -374,8 +371,9 @@ const YouTubeChannelView: React.FC = () => {
                     <button className="w-full bg-white text-black font-semibold py-2 rounded-full">Subscribe</button>
                     {channelData.isPersonal && (
                         <>
-                        <button onClick={handleVisitStore} className={`w-full font-semibold py-2 rounded-full ${youtubeStoreUnlocked ? 'bg-zinc-800 hover:bg-zinc-700' : 'bg-zinc-800/50 text-zinc-500 cursor-not-allowed'}`}>
-                            Visit store
+                        <button onClick={handleVisitStore} className="w-full font-semibold py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer transition-colors flex items-center justify-center gap-2">
+                            <ShoppingBagIcon className="w-4 h-4" />
+                            <span>Visit Official Store</span>
                         </button>
                          <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'youtubeStudio' })} className="w-full font-semibold py-2 rounded-full bg-zinc-800 hover:bg-zinc-700">
                             YouTube Studio
