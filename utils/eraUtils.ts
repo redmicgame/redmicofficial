@@ -51,16 +51,16 @@ export const getBillboardFormula = (year: number): BillboardHot100Formula => {
         };
     } else {
         // 2020s: The All-Access Era (2020 - Present)
-        // Streaming Activity: 65%, Radio Airplay: 25%, Digital Sales: 5%, Physical Sales: 5%
+        // Streaming Activity: ~78%, Radio Airplay: ~20%, Sales: ~2% (Digital 1%, Physical 1%)
         return {
             decade: '2020s',
             eraTitle: 'The All-Access Era',
             yearsSpan: '2020 – Present',
-            radio: 0.25,
-            streaming: 0.65,
-            digital: 0.05,
-            physical: 0.05,
-            description: 'Streaming is king (65%). Radio still matters (25%). Physical formats (5%) and digital downloads (5%) make up the remainder.'
+            radio: 0.20,
+            streaming: 0.78,
+            digital: 0.01,
+            physical: 0.01,
+            description: 'Streaming dominates the chart (~78%). Radio accounts for ~20%, and sales make up the remaining ~2% (~1% digital, ~1% physical).'
         };
     }
 };

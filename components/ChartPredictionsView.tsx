@@ -238,7 +238,7 @@ export const ChartPredictionsView: React.FC = () => {
             // 1990s: Radio 70%, Physical 30%, Digital 0%, Streaming 0%
             // 2000s: Radio 55%, Digital 30%, Physical 15%, Streaming 0%
             // 2010s: Streaming 40%, Radio 40%, Digital 10%, Physical 10%
-            // 2020s: Streaming 65%, Radio 25%, Digital 5%, Physical 5%
+            // 2020s: Streaming 78%, Radio 20%, Sales 2% (Digital 1%, Physical 1%)
             
             // Streaming Points: Billboard added streaming in 2010
             const streamPoints = formula.streaming > 0 ? (song.weeklyStreams * 0.5 * formula.streaming) : 0;

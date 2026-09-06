@@ -10216,7 +10216,7 @@ It is now available on your Spotify profile.
         // 1990s: Radio Airplay 70%, Physical Sales 30%, Digital Sales 0%, Streaming 0%
         // 2000s: Radio Airplay 55%, Digital Sales 30%, Physical Sales 15%, Streaming 0%
         // 2010s: Streaming Activity 40%, Radio Airplay 40%, Digital Sales 10%, Physical Sales 10%
-        // 2020s: Streaming Activity 65%, Radio Airplay 25%, Digital Sales 5%, Physical Sales 5%
+        // 2020s: Streaming Activity 78%, Radio Airplay 20%, Sales 2% (Digital 1%, Physical 1%)
 
         // Streaming Points: Billboard added streaming in 2010 (formula.streaming > 0)
         const streamPoints =
