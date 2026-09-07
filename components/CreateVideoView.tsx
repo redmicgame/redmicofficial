@@ -1,8 +1,9 @@
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame, formatNumber } from '../context/GameContext';
 import { VIDEO_COSTS, NPC_ARTIST_NAMES, LABELS } from '../constants';
+import { calculateYouTubeViews } from '../utils/youtubeViews';
 import type { Video } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -65,6 +66,36 @@ const CreateVideoView: React.FC = () => {
             setCustomTitle('');
         }
     }, [songId, songs, videoType]);
+
+    const selectedSong = useMemo(() => songs.find(s => s.id === songId), [songs, songId]);
+
+    const estimatedFirstWeek = useMemo(() => {
+        if (!selectedSong) return null;
+        const songGenre = selectedSong.genre || activeArtistData.genre || activeArtist.genre || 'Pop';
+        const songSubgenre = selectedSong.subgenre || '';
+        return calculateYouTubeViews({
+            subscribers: activeArtistData.youtubeSubscribers || 0,
+            popularity: activeArtistData.popularity || 10,
+            isFirstWeek: true,
+            videoAgeWeeks: 1,
+            genre: songGenre,
+            subgenre: songSubgenre,
+            artistGenre: activeArtistData.genre || activeArtist.genre || '',
+            year: date.year,
+            videoType: videoType,
+            songQuality: selectedSong.quality || 70,
+            songHype: selectedSong.hype || 50,
+            difficulty: gameState.difficultyMode,
+            applyVariance: false,
+        });
+    }, [selectedSong, activeArtistData, activeArtist, date.year, videoType, gameState.difficultyMode]);
+
+    const isKPopSong = Boolean(selectedSong && (
+        /k-?pop/i.test(selectedSong.genre || '') ||
+        /k-?pop/i.test(selectedSong.subgenre || '') ||
+        /k-?pop/i.test(activeArtistData.genre || '') ||
+        /k-?pop/i.test(activeArtist.genre || '')
+    ));
 
     const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -208,13 +239,34 @@ const CreateVideoView: React.FC = () => {
                     />
                 </div>
 
-                <div className="bg-zinc-800 p-4 rounded-lg">
-                    <h3 className="font-bold text-lg mb-2">Summary</h3>
-                     <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p className="text-zinc-400">Video Type:</p><p>{videoType}</p>
-                        <p className="text-zinc-400">Song:</p><p>{songs.find(s => s.id === songId)?.title || 'N/A'}</p>
-                        <p className="text-zinc-400">Cost:</p><p className="text-red-400">-${cost.toLocaleString()}</p>
-                        <p className="text-zinc-400">Your Money:</p><p className="text-green-400">${money.toLocaleString()}</p>
+                <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
+                    <h3 className="font-bold text-lg">Summary & Reach Projections</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                        <p className="text-zinc-400">Video Type:</p><p className="font-medium text-white">{videoType}</p>
+                        <p className="text-zinc-400">Song:</p><p className="font-medium text-white">{selectedSong?.title || 'N/A'}</p>
+                        <p className="text-zinc-400">Song Genre:</p>
+                        <p className="font-medium text-white flex items-center gap-1.5">
+                            {selectedSong?.genre || activeArtist.genre || 'Pop'}
+                            {isKPopSong && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                    K-Pop Debut Boost 🔥
+                                </span>
+                            )}
+                        </p>
+                        <p className="text-zinc-400">Subscribers Reach:</p>
+                        <p className="font-medium text-white">{formatNumber(activeArtistData.youtubeSubscribers || 0)} subscribers</p>
+                        <p className="text-zinc-400">Artist Popularity:</p>
+                        <p className="font-medium text-white">{activeArtistData.popularity}/100</p>
+                        {estimatedFirstWeek !== null && (
+                            <>
+                                <p className="text-zinc-400 font-medium">Est. 1st Week Views:</p>
+                                <p className="text-purple-400 font-bold text-base">
+                                    ~{formatNumber(estimatedFirstWeek)} views
+                                </p>
+                            </>
+                        )}
+                        <p className="text-zinc-400">Cost:</p><p className="text-red-400 font-medium">-${cost.toLocaleString()}</p>
+                        <p className="text-zinc-400">Your Money:</p><p className="text-green-400 font-medium">${money.toLocaleString()}</p>
                     </div>
                 </div>
 

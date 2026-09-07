@@ -104,6 +104,7 @@ import { generateWeeklyXContent, formatChartDataHot100Post } from "../utils/xCon
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
+import { calculateYouTubeViews } from "../utils/youtubeViews";
 
 function createGovernmentDivorceEmail(
   artistName: string,
@@ -6368,59 +6369,43 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           const videoPromo = artistData.promotions.find(
             (p) => p.itemId === video.id && p.itemType === "video",
           );
-          let weeklyViews;
 
-          if (videoPromo && videoPromo.boostMultiplier === -1) {
-            // Synergy Campaign
+          const releaseWeekAbs = (video.releaseDate?.year ?? newDate.year) * 52 + (video.releaseDate?.week ?? newDate.week);
+          const currentWeekAbs = newDate.year * 52 + newDate.week;
+          const videoAgeWeeks = Math.max(1, currentWeekAbs - releaseWeekAbs);
+          const isFirstWeek = videoAgeWeeks <= 1 || !video.firstWeekViews;
+
+          let payolaMultiplier = 1.0;
+          if (videoPromo) {
+            payolaMultiplier = videoPromo.boostMultiplier === -1 ? 2.0 : (videoPromo.boostMultiplier || 1.0);
+          }
+
+          const songGenre = song.genre || artistData.genre || state.soloArtist?.genre || state.group?.genre || "Pop";
+          const songSubgenre = song.subgenre || "";
+          const artistGenre = artistData.genre || state.soloArtist?.genre || state.group?.genre || "";
+
+          let weeklyViews = calculateYouTubeViews({
+            subscribers: artistData.youtubeSubscribers || 0,
+            popularity: artistData.popularity || 10,
+            isFirstWeek,
+            videoAgeWeeks,
+            payolaMultiplier,
+            genre: songGenre,
+            subgenre: songSubgenre,
+            artistGenre,
+            year: newDate.year,
+            videoType: video.type,
+            songQuality: song.quality,
+            songHype: song.hype,
+            difficulty: state.difficultyMode,
+            pitchforkBoost: !!song.pitchforkBoost,
+            interviewBoost: !!song.interviewBoost,
+            applyVariance: true,
+          });
+
+          if (videoPromo && videoPromo.boostMultiplier === -1 && song.lastWeekStreams > weeklyViews) {
+            // Synergy Campaign guarantee: at least matches song streams
             weeklyViews = song.lastWeekStreams;
-          } else {
-            let videoTypeMultiplier = 1;
-            switch (video.type) {
-              case "Music Video":
-                videoTypeMultiplier = 2;
-                break;
-              case "Lyric Video":
-                videoTypeMultiplier = 1;
-                break;
-              case "Visualizer":
-                videoTypeMultiplier = 0.5;
-                break;
-              case "Genius Verified":
-                videoTypeMultiplier = 0.3;
-                break;
-              case "Live Performance":
-                videoTypeMultiplier = 2.5;
-                break;
-              case "Interview":
-                videoTypeMultiplier = 0.375;
-                break;
-            }
-            const difficulty = state.difficultyMode || "normal";
-            let diffMultiplier = 1;
-            if (difficulty === "easy") diffMultiplier = 2.0;
-            else if (difficulty === "hard") diffMultiplier = 0.6;
-            else if (difficulty === "extreme") diffMultiplier = 0.3;
-
-            weeklyViews = Math.floor(
-              song.quality ** 2 *
-                10 *
-                videoTypeMultiplier *
-                hypeMultiplier *
-                popularityMultiplier *
-                diffMultiplier *
-                (Math.random() * 0.4 + 0.8),
-            );
-          }
-
-          if (song.pitchforkBoost && (state.difficultyMode === "easy" || state.difficultyMode === "original")) {
-            weeklyViews = Math.floor(weeklyViews * (Math.random() * 2 + 2));
-          }
-          if (song.interviewBoost) {
-            weeklyViews = Math.floor(weeklyViews * (Math.random() * 2 + 2));
-          }
-
-          if (videoPromo && videoPromo.boostMultiplier !== -1) {
-            weeklyViews = Math.floor(weeklyViews * videoPromo.boostMultiplier);
           }
 
           const isMtvPre2008 = video.isMtv && newDate.year < 2008;
@@ -6448,12 +6433,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           }
 
           let firstWeekViewsData = {};
-          if (
-            newDate.year * 52 +
-              newDate.week -
-              (video.releaseDate?.year * 52 + video.releaseDate?.week) ===
-            1
-          ) {
+          if (isFirstWeek || !video.firstWeekViews) {
             firstWeekViewsData = { firstWeekViews: weeklyViews };
           }
 
@@ -10470,11 +10450,9 @@ It is now available on your Spotify profile.
       const topGlobalSongs = [...allContenders].sort((a, b) => b.weeklyStreams - a.weeklyStreams).slice(0, 100);
       topGlobalSongs.forEach((song, index) => {
         if (!song.isPlayerSong) {
-          // Fake some music video views based on their streams
-          // Top #1 should be ~ 5M views. If #1 stream is ~ 40M, 40M * 0.125 = 5M
-          // Let's use a non-linear scaling so #30 is ~300k
-          
-          let baseMultiplier = 0.125 * (Math.pow(0.92, index));
+          const isKPop = song.genre === 'K-Pop' || ['BTS', 'BLACKPINK', 'NewJeans', 'Stray Kids', 'TWICE', 'SEVENTEEN', 'LE SSERAFIM', '(G)I-DLE', 'Jungkook', 'Jennie', 'Lisa', 'aespa'].includes(song.artist);
+          const eraMult = newDate.year >= 2020 ? 1.0 : newDate.year >= 2010 ? 0.95 : newDate.year >= 2008 ? 0.28 : 0.08;
+          let baseMultiplier = 0.50 * (Math.pow(0.95, index)) * (isKPop ? 2.5 : 1.0) * eraMult;
           const fakeViews = Math.floor(song.weeklyStreams * baseMultiplier);
           
           if (fakeViews > 5000) {
