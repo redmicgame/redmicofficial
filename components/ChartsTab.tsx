@@ -12,7 +12,17 @@ const ChartItemPreview: React.FC<{
 }> = ({ rank, coverArt, title, artist }) => (
     <div className="flex items-center gap-4">
         <div className="text-2xl font-bold w-8 text-center text-zinc-400">{rank}</div>
-        <img src={coverArt} alt={title} className="w-14 h-14 rounded-md object-cover"/>
+        <img 
+            src={getArtistImage(artist, coverArt)} 
+            alt={title} 
+            onError={(e) => {
+                const fallback = getArtistImage(artist);
+                if (e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                }
+            }}
+            className="w-14 h-14 rounded-md object-cover"
+        />
         <div className="flex-grow min-w-0">
             <p className="font-bold truncate">{title}</p>
             <p className="text-sm text-zinc-400 truncate">{artist}</p>

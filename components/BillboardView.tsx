@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
 import { getBillboardFormula } from '../utils/eraUtils';
+import { getArtistImage } from '../constants';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
 
@@ -79,7 +80,17 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                     {renderMovement()}
                 </div>
                 
-                <img src={coverArt} alt={title} className="w-[84px] h-[84px] object-cover bg-zinc-200 border border-zinc-100 flex-shrink-0" />
+                <img 
+                    src={getArtistImage(artist, coverArt)} 
+                    alt={title} 
+                    onError={(e) => {
+                        const fallback = getArtistImage(artist);
+                        if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                        }
+                    }}
+                    className="w-[84px] h-[84px] object-cover bg-zinc-200 border border-zinc-100 flex-shrink-0" 
+                />
                 
                 <div className="flex-grow flex flex-col justify-center min-w-0 pr-2">
                     <h3 className={`text-xl font-black mt-1 leading-tight truncate ${isPlayerItem ? 'text-red-600' : 'text-black'}`}>{title}</h3>

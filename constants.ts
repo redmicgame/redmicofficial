@@ -132,7 +132,12 @@ export const NPC_ARTIST_NAMES = [
     'Coldplay', 'Imagine Dragons', 'Maroon 5', 'OneRepublic', 'Arctic Monkeys',
     'The 1975', 'Tame Impala', 'Glass Animals', 'FINNEAS', 'Jack Harlow',
     'Sabrina Carpenter', 'Tate McRae', 'Chappell Roan', 'Ice Spice', '21 Savage',
-    'Future', 'Metro Boomin', 'Morgan Wallen', 'Luke Combs', 'Zach Bryan',
+    'Future', 'Metro Boomin',
+    // Country Artists
+    'Ella Langley', 'Riley Green', 'Morgan Wallen', 'Luke Combs', 'Zach Bryan',
+    'Kacey Musgraves', 'Chris Stapleton', 'Lainey Wilson', 'Jelly Roll', 'Bailey Zimmerman',
+    'Shaboozey', 'Tyler Childers', 'Cody Johnson', 'Megan Moroney', 'Kane Brown',
+    'Carrie Underwood', 'Dolly Parton', 'Johnny Cash', 'Shania Twain',
     'Peso Pluma', 'Karol G', 'Shakira', 'Rauw Alejandro', 'Anitta',
     // Added for more collaboration options
     // Female Rappers
@@ -152,9 +157,12 @@ export const NPC_ARTIST_NAMES = [
     'Burna Boy', 'Wizkid', 'Davido', 'Rema', 'Tems', 'Asake', 'Omah Lay',
     // Indie Artists
     
+    // Additional Hall of Fame & Core Pop/Hip-Hop/Rock NPCs
+    'AC/DC', 'Missy Elliott', 'Christina Aguilera', 'Snoop Dogg', 'Mariah Carey',
 ];
 
 export const NPC_ARTIST_GENRES: Record<string, string> = {
+    'AC/DC': 'Rock', 'Missy Elliott': 'Hip Hop', 'Christina Aguilera': 'Pop', 'Snoop Dogg': 'Hip Hop', 'Mariah Carey': 'R&B',
     'Zara Larsson': 'Pop', 'Taylor Swift': 'Pop', 'Ariana Grande': 'Pop', 'Billie Eilish': 'Pop', 'The Weeknd': 'Pop', 'Drake': 'Hip Hop', 
     'Justin Bieber': 'Pop', 'Ed Sheeran': 'Pop', 'Beyoncé': 'R&B', 'Rihanna': 'Pop', 'Adele': 'Pop', 
     'Post Malone': 'Hip Hop', 'Dua Lipa': 'Pop', 'Olivia Rodrigo': 'Pop', 'Harry Styles': 'Pop', 'Bad Bunny': 'Latin',
@@ -166,7 +174,12 @@ export const NPC_ARTIST_GENRES: Record<string, string> = {
     'Coldplay': 'Rock', 'Imagine Dragons': 'Rock', 'Maroon 5': 'Pop', 'OneRepublic': 'Pop', 'Arctic Monkeys': 'Rock',
     'The 1975': 'Rock', 'Tame Impala': 'Indie', 'Glass Animals': 'Indie', 'FINNEAS': 'Indie', 'Jack Harlow': 'Hip Hop',
     'Sabrina Carpenter': 'Pop', 'Tate McRae': 'Pop', 'Chappell Roan': 'Pop', 'Ice Spice': 'Hip Hop', '21 Savage': 'Hip Hop',
-    'Future': 'Hip Hop', 'Metro Boomin': 'Hip Hop', 'Morgan Wallen': 'Country', 'Luke Combs': 'Country', 'Zach Bryan': 'Country',
+    'Future': 'Hip Hop', 'Metro Boomin': 'Hip Hop',
+    'Ella Langley': 'Country', 'Riley Green': 'Country', 'Morgan Wallen': 'Country', 'Luke Combs': 'Country', 'Zach Bryan': 'Country',
+    'Kacey Musgraves': 'Country', 'Chris Stapleton': 'Country', 'Lainey Wilson': 'Country', 'Jelly Roll': 'Country',
+    'Bailey Zimmerman': 'Country', 'Shaboozey': 'Country', 'Tyler Childers': 'Country', 'Cody Johnson': 'Country',
+    'Megan Moroney': 'Country', 'Kane Brown': 'Country', 'Carrie Underwood': 'Country', 'Dolly Parton': 'Country',
+    'Johnny Cash': 'Country', 'Shania Twain': 'Country',
     'Peso Pluma': 'Latin', 'Karol G': 'Latin', 'Shakira': 'Latin', 'Rauw Alejandro': 'Latin', 'Anitta': 'Latin',
     'Latto': 'Hip Hop', 'GloRilla': 'Hip Hop', 'Sexyy Red': 'Hip Hop', 'Coi Leray': 'Hip Hop', 'Flo Milli': 'Hip Hop',
     'Charlie Puth': 'Pop', 'Katy Perry': 'Pop', 'Troye Sivan': 'Pop', 'ZAYN': 'Pop', 'Conan Gray': 'Pop', 'Kesha': 'Pop',
@@ -674,7 +687,8 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Cyndi Lauper": "https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg",
   "Cher": "https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg",
   "Def Leppard": "https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg",
-  "AC/DC": "https://e-cdns-images.dzcdn.net/images/artist/b2fa8bc635583b27b3e839e9fc1f912a/250x250-000000-80-0-0.jpg",
+  "AC/DC": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
+  "ACDC": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
   "Bruce Springsteen": "https://e-cdns-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg",
   "U2": "https://e-cdns-images.dzcdn.net/images/artist/1e74880c54bb9b5f818fdfcb796b4121/250x250-000000-80-0-0.jpg",
   "George Michael": "https://e-cdns-images.dzcdn.net/images/artist/d8832a820b2d69ee016259b3f3630f9c/250x250-000000-80-0-0.jpg",
@@ -690,14 +704,20 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Red Hot Chili Peppers": "https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg",
   "Oasis": "https://e-cdns-images.dzcdn.net/images/artist/6b539c3e21820dfa19b882eb727284b1/250x250-000000-80-0-0.jpg",
   "Radiohead": "https://e-cdns-images.dzcdn.net/images/artist/066fbc4b25dfed465814e59049a40fb0/250x250-000000-80-0-0.jpg",
-  "Snoop Dogg": "https://e-cdns-images.dzcdn.net/images/artist/05175971939ecb0dc0e2eb4bcbb03960/250x250-000000-80-0-0.jpg",
+  "Snoop Dogg": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "Snoop Dog": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "snoop dog": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
   "Destiny's Child": "https://e-cdns-images.dzcdn.net/images/artist/2bf7019f86cc93e9ed8a834e565bf7ef/250x250-000000-80-0-0.jpg",
-  "Christina Aguilera": "https://e-cdns-images.dzcdn.net/images/artist/3ff402daee9c78d5ce8084a77b75ecb0/250x250-000000-80-0-0.jpg",
+  "Christina Aguilera": "https://cdn-images.dzcdn.net/images/artist/3ccd1f43e9ff3cfd2f7dda86419414e7/500x500-000000-80-0-0.jpg",
   "Kelly Clarkson": "https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg",
   "Avril Lavigne": "https://e-cdns-images.dzcdn.net/images/artist/a1be2e68449c25f4ab36181b5fbce306/250x250-000000-80-0-0.jpg",
   "P!nk": "https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg",
   "Justin Timberlake": "https://e-cdns-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg",
-  "Missy Elliott": "https://e-cdns-images.dzcdn.net/images/artist/bdab4cc8dbad3a9dae88ff39ccb36ce9/250x250-000000-80-0-0.jpg",
+  "Missy Elliott": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "Missy Elliot": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "missy Elliot": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "Mariah Carey": "https://cdn-images.dzcdn.net/images/artist/818c27b3e5a6179d4cd2f053df9abaf1/500x500-000000-80-0-0.jpg",
+  "mariah carey": "https://cdn-images.dzcdn.net/images/artist/818c27b3e5a6179d4cd2f053df9abaf1/500x500-000000-80-0-0.jpg",
   "Linkin Park": "https://e-cdns-images.dzcdn.net/images/artist/3fb10668f448c4125b203cbe31fa3831/250x250-000000-80-0-0.jpg",
   "Alicia Keys": "https://e-cdns-images.dzcdn.net/images/artist/0bf5d2db26be4ec0a69a589be282f183/250x250-000000-80-0-0.jpg",
   "Usher": "https://e-cdns-images.dzcdn.net/images/artist/90e5fa80c354e66c243ee2df448654a9/250x250-000000-80-0-0.jpg",
@@ -739,21 +759,22 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Stunna Sandy": "https://cdn-images.dzcdn.net/images/artist/af776cd99efbc010c3782030df0e7e1e/250x250-000000-80-0-0.jpg",
   "TRIM": "https://cdn-images.dzcdn.net/images/artist/fbcdfa1a7a00f2e0be5b84d436a5f782/250x250-000000-80-0-0.jpg",
 
-  "Charlie Puth": "https://cdn-images.dzcdn.net/images/artist/9f38f83196c81faeab5a59f518e9cff2/250x250-000000-80-0-0.jpg",
+  "Charlie Puth": "https://cdn-images.dzcdn.net/images/artist/c355b366638e0c5f20f4b265f0f12646/500x500-000000-80-0-0.jpg",
   "Katy Perry": "https://cdn-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg",
   "Troye Sivan": "https://cdn-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg",
   "ZAYN": "https://cdn-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg",
   "Conan Gray": "https://cdn-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg",
-  "Kesha": "https://cdn-images.dzcdn.net/images/artist/08ff5f3e956e12e752945a0b74da17e0/250x250-000000-80-0-0.jpg",
-  "Playboi Carti": "https://cdn-images.dzcdn.net/images/artist/fbcdfa1a7a00f2e0be5b84d436a5f782/250x250-000000-80-0-0.jpg",
+  "Kesha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "Ke$ha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "Playboi Carti": "https://cdn-images.dzcdn.net/images/artist/b90097972a60d9d8598a79a786be1a3a/500x500-000000-80-0-0.jpg",
   "Lil Uzi Vert": "https://cdn-images.dzcdn.net/images/artist/738df5b3a4a75ab280ec5e4277b960b7/250x250-000000-80-0-0.jpg",
-  "Young Thug": "https://cdn-images.dzcdn.net/images/artist/ef8c5b058095da9d10eefcd6ec800201/250x250-000000-80-0-0.jpg",
+  "Young Thug": "https://cdn-images.dzcdn.net/images/artist/89833703db63ec93f85f7979c2fb37f3/500x500-000000-80-0-0.jpg",
   "A$AP Rocky": "https://cdn-images.dzcdn.net/images/artist/cf109c91f1cdb6ff8d8b9dce9ba4dfb2/250x250-000000-80-0-0.jpg",
   "Lil Yachty": "https://cdn-images.dzcdn.net/images/artist/43fc7dcdfb847e909a96e8140db79f64/250x250-000000-80-0-0.jpg",
   "Pop Smoke": "https://cdn-images.dzcdn.net/images/artist/a2a4c148e69d76e469d4a6e344ee4dff/250x250-000000-80-0-0.jpg",
   "Juice WRLD": "https://cdn-images.dzcdn.net/images/artist/bd126b89de9363065b21be3e4d9b6264/250x250-000000-80-0-0.jpg",
   "Gunna": "https://cdn-images.dzcdn.net/images/artist/e1b6f6f9479b03f0b2f7902d131ec5e9/250x250-000000-80-0-0.jpg",
-  "Lil Baby": "https://cdn-images.dzcdn.net/images/artist/488d01115de62a742880099516639c00/250x250-000000-80-0-0.jpg",
+  "Lil Baby": "https://cdn-images.dzcdn.net/images/artist/6065a31e166b08e9b03711d8d7a8efa3/500x500-000000-80-0-0.jpg",
   "Zara Larsson": "https://cdn-images.dzcdn.net/images/artist/f1917f16bf6a066635c6f140fb0aa2bb/250x250-000000-80-0-0.jpg",
   "Taylor Swift": "https://cdn-images.dzcdn.net/images/artist/e528e270424103b527f8a27ac625563b/250x250-000000-80-0-0.jpg",
   "Ariana Grande": "https://cdn-images.dzcdn.net/images/artist/3504ffe2519090026bc359b689d22e20/250x250-000000-80-0-0.jpg",
@@ -861,13 +882,54 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Rema": "https://cdn-images.dzcdn.net/images/artist/45262002b65a0bb0157aff134106c72b/250x250-000000-80-0-0.jpg",
   "Tems": "https://cdn-images.dzcdn.net/images/artist/6afe2edff567600abf781c3d8a29344b/250x250-000000-80-0-0.jpg",
   "Asake": "https://cdn-images.dzcdn.net/images/artist/29baf235626c8cd1cdc782c6d467aca8/250x250-000000-80-0-0.jpg",
-  "Omah Lay": "https://cdn-images.dzcdn.net/images/artist/e8ce64479eb3d7fc2853f7fd694cc999/250x250-000000-80-0-0.jpg"
+  "Omah Lay": "https://cdn-images.dzcdn.net/images/artist/e8ce64479eb3d7fc2853f7fd694cc999/250x250-000000-80-0-0.jpg",
+  "Avicii": "https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/250x250-000000-80-0-0.jpg",
+  "Ella Langley": "https://cdn-images.dzcdn.net/images/artist/77aa9c0c9d9789bb43151a3882166d20/250x250-000000-80-0-0.jpg",
+  "Riley Green": "https://cdn-images.dzcdn.net/images/artist/432eda6fc1dcf5d3643d52130c5717bd/250x250-000000-80-0-0.jpg",
+  "Morgan Wallen": "https://cdn-images.dzcdn.net/images/artist/74d538e146eb4a0fe0f65ce139886a8a/250x250-000000-80-0-0.jpg",
+  "Luke Combs": "https://cdn-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg",
+  "Zach Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "Zack Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "zack bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "Kacey Musgraves": "https://cdn-images.dzcdn.net/images/artist/229fe42ffc5b16b51112ffee967453e1/250x250-000000-80-0-0.jpg",
+  "Chris Stapleton": "https://cdn-images.dzcdn.net/images/artist/b6996bc45e793d05f9fffce17b97ad2c/250x250-000000-80-0-0.jpg",
+  "Lainey Wilson": "https://cdn-images.dzcdn.net/images/artist/b0e44295204ab831d9e8744236c3cf27/250x250-000000-80-0-0.jpg",
+  "Jelly Roll": "https://cdn-images.dzcdn.net/images/artist/eca4bdf7b3ae6eb6869c243623e2fb4c/250x250-000000-80-0-0.jpg",
+  "Bailey Zimmerman": "https://cdn-images.dzcdn.net/images/artist/336817422be12ab136e48df89b987cc5/250x250-000000-80-0-0.jpg",
+  "Shaboozey": "https://cdn-images.dzcdn.net/images/artist/9174d458d92286fa767cfaafd4ef9e54/250x250-000000-80-0-0.jpg",
+  "Tyler Childers": "https://cdn-images.dzcdn.net/images/artist/d9f479230d72413e23ffb97a3f5ac45c/250x250-000000-80-0-0.jpg",
+  "Cody Johnson": "https://cdn-images.dzcdn.net/images/artist/ed5bde5911bc13defa938521d72062c0/250x250-000000-80-0-0.jpg",
+  "Megan Moroney": "https://cdn-images.dzcdn.net/images/artist/80e2b4588aa126ca5f55ce341ed8bc1c/250x250-000000-80-0-0.jpg",
+  "Kane Brown": "https://cdn-images.dzcdn.net/images/artist/031a975249b648d21f34c5b2bbd3c877/250x250-000000-80-0-0.jpg",
+  "Carrie Underwood": "https://cdn-images.dzcdn.net/images/artist/5d7c70c8d9d47e2c928b93ac0ff8d4fe/250x250-000000-80-0-0.jpg",
+  "Dolly Parton": "https://cdn-images.dzcdn.net/images/artist/e0e4946c2e4149aa1421ec181e1e1fc6/250x250-000000-80-0-0.jpg",
+  "Johnny Cash": "https://cdn-images.dzcdn.net/images/artist/b6ebc29521306f6f21c395c7ac9a5f78/250x250-000000-80-0-0.jpg",
+  "Shania Twain": "https://cdn-images.dzcdn.net/images/artist/ebbfb131981fc4745fba7a215a151c40/250x250-000000-80-0-0.jpg"
 };
 export const NPC_ERAS: Record<string, { start: number, end: number, genre: string, image: string }> = {
   "Tyler, the Creator": {"start":2009,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/5eceecd683beab6dd901a7931294a121/250x250-000000-80-0-0.jpg"},
   "XXXTENTACION": {"start":2016,"end":2018,"genre":"Hip Hop","image":"https://cdn-images.dzcdn.net/images/artist/8d8316146026d7e6ce377e314536df62/250x250-000000-80-0-0.jpg"},
   "Mac Miller": {"start":2010,"end":2018,"genre":"Hip Hop","image":"https://cdn-images.dzcdn.net/images/artist/5eceecd683beab6dd901a7931294a121/250x250-000000-80-0-0.jpg"},
-  "Avicii": {"start":2010,"end":2018,"genre":"Electronic","image":"https://cdn-images.dzcdn.net/images/artist/3o7aCUotvbVq8WZEzK/250x250-000000-80-0-0.jpg"},
+  "Avicii": {"start":2010,"end":2018,"genre":"Electronic","image":"https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/250x250-000000-80-0-0.jpg"},
+  "Ella Langley": {"start":2021,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/77aa9c0c9d9789bb43151a3882166d20/250x250-000000-80-0-0.jpg"},
+  "Riley Green": {"start":2018,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/432eda6fc1dcf5d3643d52130c5717bd/250x250-000000-80-0-0.jpg"},
+  "Morgan Wallen": {"start":2016,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/74d538e146eb4a0fe0f65ce139886a8a/250x250-000000-80-0-0.jpg"},
+  "Luke Combs": {"start":2016,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg"},
+  "Zach Bryan": {"start":2019,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg"},
+  "Kacey Musgraves": {"start":2012,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/229fe42ffc5b16b51112ffee967453e1/250x250-000000-80-0-0.jpg"},
+  "Chris Stapleton": {"start":2015,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/b6996bc45e793d05f9fffce17b97ad2c/250x250-000000-80-0-0.jpg"},
+  "Lainey Wilson": {"start":2018,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/b0e44295204ab831d9e8744236c3cf27/250x250-000000-80-0-0.jpg"},
+  "Jelly Roll": {"start":2010,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/eca4bdf7b3ae6eb6869c243623e2fb4c/250x250-000000-80-0-0.jpg"},
+  "Bailey Zimmerman": {"start":2021,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/336817422be12ab136e48df89b987cc5/250x250-000000-80-0-0.jpg"},
+  "Shaboozey": {"start":2018,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/9174d458d92286fa767cfaafd4ef9e54/250x250-000000-80-0-0.jpg"},
+  "Tyler Childers": {"start":2017,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/d9f479230d72413e23ffb97a3f5ac45c/250x250-000000-80-0-0.jpg"},
+  "Cody Johnson": {"start":2011,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/ed5bde5911bc13defa938521d72062c0/250x250-000000-80-0-0.jpg"},
+  "Megan Moroney": {"start":2022,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/80e2b4588aa126ca5f55ce341ed8bc1c/250x250-000000-80-0-0.jpg"},
+  "Kane Brown": {"start":2015,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/031a975249b648d21f34c5b2bbd3c877/250x250-000000-80-0-0.jpg"},
+  "Carrie Underwood": {"start":2005,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/5d7c70c8d9d47e2c928b93ac0ff8d4fe/250x250-000000-80-0-0.jpg"},
+  "Dolly Parton": {"start":1967,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/e0e4946c2e4149aa1421ec181e1e1fc6/250x250-000000-80-0-0.jpg"},
+  "Johnny Cash": {"start":1955,"end":2003,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/b6ebc29521306f6f21c395c7ac9a5f78/250x250-000000-80-0-0.jpg"},
+  "Shania Twain": {"start":1993,"end":2050,"genre":"Country","image":"https://cdn-images.dzcdn.net/images/artist/ebbfb131981fc4745fba7a215a151c40/250x250-000000-80-0-0.jpg"},
   "Amy Winehouse": {"start":2003,"end":2011,"genre":"R&B","image":"https://cdn-images.dzcdn.net/images/artist/8994d3be1a59a72f887f1f8afd2d4c6c/250x250-000000-80-0-0.jpg"},
   "George Michael": {"start":1981,"end":2016,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/d8832a820b2d69ee016259b3f3630f9c/250x250-000000-80-0-0.jpg"},
   "David Bowie": {"start":1967,"end":2016,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/d1297593da1e9cb1df1ff206a4a0f443/250x250-000000-80-0-0.jpg"},
@@ -890,7 +952,7 @@ export const NPC_ERAS: Record<string, { start: number, end: number, genre: strin
   "Janet Jackson": {"start":1982,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/3fbf9a0937a89bc213ee8bdfcb78912e/250x250-000000-80-0-0.jpg"},
   "Oasis": {"start":1994,"end":2009,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/6b539c3e21820dfa19b882eb727284b1/250x250-000000-80-0-0.jpg"},
   "Radiohead": {"start":1992,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/066fbc4b25dfed465814e59049a40fb0/250x250-000000-80-0-0.jpg"},
-  "Snoop Dogg": {"start":1992,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/05175971939ecb0dc0e2eb4bcbb03960/250x250-000000-80-0-0.jpg"},
+  "Snoop Dogg": {"start":1992,"end":2050,"genre":"Hip Hop","image":"https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg"},
   "Destiny's Child": {"start":1997,"end":2005,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/2bf7019f86cc93e9ed8a834e565bf7ef/250x250-000000-80-0-0.jpg"},
   "Linkin Park": {"start":2000,"end":2017,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/3fb10668f448c4125b203cbe31fa3831/250x250-000000-80-0-0.jpg"},
   "Alicia Keys": {"start":2001,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/0bf5d2db26be4ec0a69a589be282f183/250x250-000000-80-0-0.jpg"},
@@ -1365,91 +1427,91 @@ export const NPC_ERAS: Record<string, { start: number, end: number, genre: strin
     "start": 2015,
     "end": 2050,
     "genre": "Pop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/c355b366638e0c5f20f4b265f0f12646/500x500-000000-80-0-0.jpg"
   },
   "Katy Perry": {
     "start": 2008,
     "end": 2050,
     "genre": "Pop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg"
   },
   "Troye Sivan": {
     "start": 2014,
     "end": 2050,
     "genre": "Pop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg"
   },
   "ZAYN": {
     "start": 2016,
     "end": 2050,
     "genre": "Pop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg"
   },
   "Conan Gray": {
     "start": 2020,
     "end": 2050,
     "genre": "Pop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg"
   },
   "Kesha": {
     "start": 2009,
     "end": 2050,
     "genre": "Pop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg"
   },
   "Playboi Carti": {
     "start": 2017,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/b90097972a60d9d8598a79a786be1a3a/500x500-000000-80-0-0.jpg"
   },
   "Lil Uzi Vert": {
     "start": 2016,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/738df5b3a4a75ab280ec5e4277b960b7/250x250-000000-80-0-0.jpg"
   },
   "Young Thug": {
     "start": 2014,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/89833703db63ec93f85f7979c2fb37f3/500x500-000000-80-0-0.jpg"
   },
   "A$AP Rocky": {
     "start": 2011,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/cf109c91f1cdb6ff8d8b9dce9ba4dfb2/250x250-000000-80-0-0.jpg"
   },
   "Lil Yachty": {
     "start": 2016,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/43fc7dcdfb847e909a96e8140db79f64/250x250-000000-80-0-0.jpg"
   },
   "Pop Smoke": {
     "start": 2019,
     "end": 2020,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/a2a4c148e69d76e469d4a6e344ee4dff/250x250-000000-80-0-0.jpg"
   },
   "Juice WRLD": {
     "start": 2018,
     "end": 2019,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/bd126b89de9363065b21be3e4d9b6264/250x250-000000-80-0-0.jpg"
   },
   "Gunna": {
     "start": 2018,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/e1b6f6f9479b03f0b2f7902d131ec5e9/250x250-000000-80-0-0.jpg"
   },
   "Lil Baby": {
     "start": 2018,
     "end": 2050,
     "genre": "Hip Hop",
-    "image": ""
+    "image": "https://cdn-images.dzcdn.net/images/artist/6065a31e166b08e9b03711d8d7a8efa3/500x500-000000-80-0-0.jpg"
   },
   "BTS": {
     "start": 2013,
@@ -1686,14 +1748,37 @@ export const NPC_ERAS: Record<string, { start: number, end: number, genre: strin
 
 // moreImages patch
 
-Object.entries({"Charlie Puth":"https://cdn-images.dzcdn.net/images/artist/9f38f83196c81faeab5a59f518e9cff2/250x250-000000-80-0-0.jpg","Katy Perry":"https://cdn-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg","Troye Sivan":"https://cdn-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg","ZAYN":"https://cdn-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg","Conan Gray":"https://cdn-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg","Kesha":"https://cdn-images.dzcdn.net/images/artist/11cc7c5a08bd2f7fa7fb2930eb5a6e25/250x250-000000-80-0-0.jpg","Playboi Carti":"https://cdn-images.dzcdn.net/images/artist/c17b8f0417934c9f131a4fa62baac816/250x250-000000-80-0-0.jpg","Lil Uzi Vert":"https://cdn-images.dzcdn.net/images/artist/c60010cc39f3ebc6731932ea48cf9f0e/250x250-000000-80-0-0.jpg","Young Thug":"https://cdn-images.dzcdn.net/images/artist/19eb2e0cfcd08534125b29b63486b72d/250x250-000000-80-0-0.jpg","A$AP Rocky":"https://cdn-images.dzcdn.net/images/artist/733979fdb23145d2e0523ed60912fbbd/250x250-000000-80-0-0.jpg","Lil Yachty":"https://cdn-images.dzcdn.net/images/artist/4ab0eb922c2a2dcff6d8cfd3d3a033ec/250x250-000000-80-0-0.jpg","Pop Smoke":"https://cdn-images.dzcdn.net/images/artist/230cc9eebfc8fc72e4ebef9eb98b4b74/250x250-000000-80-0-0.jpg","Juice WRLD":"https://cdn-images.dzcdn.net/images/artist/683fb08d01d166ec7cda3a81763138b7/250x250-000000-80-0-0.jpg","Gunna":"https://cdn-images.dzcdn.net/images/artist/6c03e4c7c36800897fd468633286db24/250x250-000000-80-0-0.jpg","Lil Baby":"https://cdn-images.dzcdn.net/images/artist/845115c5bd4a22c5e53be126742512f4/250x250-000000-80-0-0.jpg"}).forEach(([name, image]) => {
+Object.entries({
+  "Charlie Puth": "https://cdn-images.dzcdn.net/images/artist/c355b366638e0c5f20f4b265f0f12646/500x500-000000-80-0-0.jpg",
+  "Katy Perry": "https://cdn-images.dzcdn.net/images/artist/01a4bcbc8c3e8705f4305ec7cb6d31bb/250x250-000000-80-0-0.jpg",
+  "Troye Sivan": "https://cdn-images.dzcdn.net/images/artist/d17b20de840938ff56a237f374edfc45/250x250-000000-80-0-0.jpg",
+  "ZAYN": "https://cdn-images.dzcdn.net/images/artist/bcbebd7480a0fb9c656641e7d23d8c19/250x250-000000-80-0-0.jpg",
+  "Conan Gray": "https://cdn-images.dzcdn.net/images/artist/cc5056e180d70ce379b1df092ff991d3/250x250-000000-80-0-0.jpg",
+  "Kesha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "Ke$ha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "Playboi Carti": "https://cdn-images.dzcdn.net/images/artist/b90097972a60d9d8598a79a786be1a3a/500x500-000000-80-0-0.jpg",
+  "Lil Uzi Vert": "https://cdn-images.dzcdn.net/images/artist/738df5b3a4a75ab280ec5e4277b960b7/250x250-000000-80-0-0.jpg",
+  "Young Thug": "https://cdn-images.dzcdn.net/images/artist/89833703db63ec93f85f7979c2fb37f3/500x500-000000-80-0-0.jpg",
+  "A$AP Rocky": "https://cdn-images.dzcdn.net/images/artist/cf109c91f1cdb6ff8d8b9dce9ba4dfb2/250x250-000000-80-0-0.jpg",
+  "Lil Yachty": "https://cdn-images.dzcdn.net/images/artist/43fc7dcdfb847e909a96e8140db79f64/250x250-000000-80-0-0.jpg",
+  "Pop Smoke": "https://cdn-images.dzcdn.net/images/artist/a2a4c148e69d76e469d4a6e344ee4dff/250x250-000000-80-0-0.jpg",
+  "Juice WRLD": "https://cdn-images.dzcdn.net/images/artist/bd126b89de9363065b21be3e4d9b6264/250x250-000000-80-0-0.jpg",
+  "Gunna": "https://cdn-images.dzcdn.net/images/artist/e1b6f6f9479b03f0b2f7902d131ec5e9/250x250-000000-80-0-0.jpg",
+  "Lil Baby": "https://cdn-images.dzcdn.net/images/artist/6065a31e166b08e9b03711d8d7a8efa3/500x500-000000-80-0-0.jpg",
+  "AC/DC": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
+  "Missy Elliott": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "Christina Aguilera": "https://cdn-images.dzcdn.net/images/artist/3ccd1f43e9ff3cfd2f7dda86419414e7/500x500-000000-80-0-0.jpg",
+  "Zach Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "Snoop Dogg": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "Mariah Carey": "https://cdn-images.dzcdn.net/images/artist/818c27b3e5a6179d4cd2f053df9abaf1/500x500-000000-80-0-0.jpg"
+}).forEach(([name, image]) => {
   if (image) {
     NPC_ARTIST_IMAGES[name] = image;
   }
 });
 
 // Eras new additions
-Object.assign(NPC_ERAS, {"Aretha Franklin":{"start":1961,"end":2018,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg"},"Diana Ross":{"start":1970,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"},"Bee Gees":{"start":1965,"end":2003,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/4ebef891bc86ff542b6f5cf1de36f875/250x250-000000-80-0-0.jpg"},"The Rolling Stones":{"start":1962,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/1e74880c54bb9b5f818fdfcb796b4121/250x250-000000-80-0-0.jpg"},"Eagles":{"start":1971,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/c1a6f8742cc65a8df241dcd79fcbd9fa/250x250-000000-80-0-0.jpg"},"Donna Summer":{"start":1974,"end":2012,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"},"Tina Turner":{"start":1984,"end":2023,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/f1fb89eb8e390c5003c20c0dcfe63f45/250x250-000000-80-0-0.jpg"},"Cyndi Lauper":{"start":1983,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"},"Cher":{"start":1965,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg"},"Def Leppard":{"start":1980,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg"},"AC/DC":{"start":1973,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/b2fa8bc635583b27b3e839e9fc1f912a/250x250-000000-80-0-0.jpg"},"Shania Twain":{"start":1993,"end":2050,"genre":"Country","image":"https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"},"No Doubt":{"start":1992,"end":2012,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"},"Aaliyah":{"start":1994,"end":2001,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/81005a39626c8cd1cf9c9f28ecb3a2a6/250x250-000000-80-0-0.jpg"},"Lauryn Hill":{"start":1998,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"},"Pearl Jam":{"start":1991,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/43e74ff1f3bf78b4d08e56314ff9478e/250x250-000000-80-0-0.jpg"},"Red Hot Chili Peppers":{"start":1984,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg"},"Eminem":{"start":1999,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg"},"Christina Aguilera":{"start":1999,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/3ff402daee9c78d5ce8084a77b75ecb0/250x250-000000-80-0-0.jpg"},"Kelly Clarkson":{"start":2002,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg"},"Avril Lavigne":{"start":2002,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/a1be2e68449c25f4ab36181b5fbce306/250x250-000000-80-0-0.jpg"},"P!nk":{"start":2000,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg"},"Justin Timberlake":{"start":2002,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg"},"Missy Elliott":{"start":1997,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/bdab4cc8dbad3a9dae88ff39ccb36ce9/250x250-000000-80-0-0.jpg"}}, {
+Object.assign(NPC_ERAS, {"Aretha Franklin":{"start":1961,"end":2018,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg"},"Diana Ross":{"start":1970,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"},"Bee Gees":{"start":1965,"end":2003,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/4ebef891bc86ff542b6f5cf1de36f875/250x250-000000-80-0-0.jpg"},"The Rolling Stones":{"start":1962,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/1e74880c54bb9b5f818fdfcb796b4121/250x250-000000-80-0-0.jpg"},"Eagles":{"start":1971,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/c1a6f8742cc65a8df241dcd79fcbd9fa/250x250-000000-80-0-0.jpg"},"Donna Summer":{"start":1974,"end":2012,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"},"Tina Turner":{"start":1984,"end":2023,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/f1fb89eb8e390c5003c20c0dcfe63f45/250x250-000000-80-0-0.jpg"},"Cyndi Lauper":{"start":1983,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/8cc53ff33be927164ccb6ce2ec9e4ba6/250x250-000000-80-0-0.jpg"},"Cher":{"start":1965,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/b28096f9bf11b66ebbb1296c6b412140/250x250-000000-80-0-0.jpg"},"Def Leppard":{"start":1980,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/f9630c33ad78a834c9c22eb430dcb989/250x250-000000-80-0-0.jpg"},"AC/DC":{"start":1973,"end":2050,"genre":"Rock","image":"https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg"},"Shania Twain":{"start":1993,"end":2050,"genre":"Country","image":"https://e-cdns-images.dzcdn.net/images/artist/7e4a77b311319dbf678cded0c67e1a38/250x250-000000-80-0-0.jpg"},"No Doubt":{"start":1992,"end":2012,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/23c14d485ee414cae818bbd0a79040db/250x250-000000-80-0-0.jpg"},"Aaliyah":{"start":1994,"end":2001,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/81005a39626c8cd1cf9c9f28ecb3a2a6/250x250-000000-80-0-0.jpg"},"Lauryn Hill":{"start":1998,"end":2050,"genre":"R&B","image":"https://e-cdns-images.dzcdn.net/images/artist/b6f1ca33fbe40d348a27d2194cf3eec9/250x250-000000-80-0-0.jpg"},"Pearl Jam":{"start":1991,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/43e74ff1f3bf78b4d08e56314ff9478e/250x250-000000-80-0-0.jpg"},"Red Hot Chili Peppers":{"start":1984,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/6b68596fde6be6ecab39cb32eefdd920/250x250-000000-80-0-0.jpg"},"Eminem":{"start":1999,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg"},"Christina Aguilera":{"start":1999,"end":2050,"genre":"Pop","image":"https://cdn-images.dzcdn.net/images/artist/3ccd1f43e9ff3cfd2f7dda86419414e7/500x500-000000-80-0-0.jpg"},"Kelly Clarkson":{"start":2002,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/7733cc50d87edfa15739c9df382fb2e4/250x250-000000-80-0-0.jpg"},"Avril Lavigne":{"start":2002,"end":2050,"genre":"Rock","image":"https://e-cdns-images.dzcdn.net/images/artist/a1be2e68449c25f4ab36181b5fbce306/250x250-000000-80-0-0.jpg"},"P!nk":{"start":2000,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/b7a2d6742512f45037d453715c0a373b/250x250-000000-80-0-0.jpg"},"Justin Timberlake":{"start":2002,"end":2050,"genre":"Pop","image":"https://e-cdns-images.dzcdn.net/images/artist/818fdfcb796b41217e74880c54bb9b5f/250x250-000000-80-0-0.jpg"},"Missy Elliott":{"start":1997,"end":2050,"genre":"Hip Hop","image":"https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg"}}, {
   "David Bowie": {
     "start": 1969,
     "end": 2016,
@@ -2349,24 +2434,140 @@ export const MUSIC_COVER_FALLBACKS = [
   "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop"
 ];
 
-export function getArtistImage(artistName?: string, coverArtFallback?: string): string {
-  if (coverArtFallback && !coverArtFallback.includes("ui-avatars.com") && coverArtFallback.trim() !== "") {
-    return coverArtFallback;
+export const ARTIST_NAME_ALIASES: Record<string, string> = {
+  "kesha": "Kesha",
+  "ke$ha": "Kesha",
+  "keha": "Kesha",
+  "ac/dc": "AC/DC",
+  "acdc": "AC/DC",
+  "ac dc": "AC/DC",
+  "missy elliot": "Missy Elliott",
+  "missy elliott": "Missy Elliott",
+  "christina aguilera": "Christina Aguilera",
+  "xtina": "Christina Aguilera",
+  "zack bryan": "Zach Bryan",
+  "zach bryan": "Zach Bryan",
+  "zac bryan": "Zach Bryan",
+  "lil baby": "Lil Baby",
+  "lilbaby": "Lil Baby",
+  "playboi carti": "Playboi Carti",
+  "playboy carti": "Playboi Carti",
+  "carti": "Playboi Carti",
+  "snoop dog": "Snoop Dogg",
+  "snoop dogg": "Snoop Dogg",
+  "snoop lion": "Snoop Dogg",
+  "mariah carey": "Mariah Carey",
+  "charlie puth": "Charlie Puth",
+  "young thug": "Young Thug",
+  "youngthug": "Young Thug",
+};
+
+export const KNOWN_BROKEN_IMAGE_HASHES: string[] = [
+  "11cc7c5a08bd2f7fa7fb2930eb5a6e25",
+  "08ff5f3e956e12e752945a0b74da17e0",
+  "b2fa8bc635583b27b3e839e9fc1f912a",
+  "bdab4cc8dbad3a9dae88ff39ccb36ce9",
+  "3ff402daee9c78d5ce8084a77b75ecb0",
+  "99f187a7d4a234b6b6ec86eb58eefdd3",
+  "845115c5bd4a22c5e53be126742512f4",
+  "488d01115de62a742880099516639c00",
+  "c17b8f0417934c9f131a4fa62baac816",
+  "fbcdfa1a7a00f2e0be5b84d436a5f782",
+  "05175971939ecb0dc0e2eb4bcbb03960",
+  "f56641e7d23d8c1995a329d675bb2f69",
+  "9f38f83196c81faeab5a59f518e9cff2",
+  "19eb2e0cfcd08534125b29b63486b72d",
+  "ef8c5b058095da9d10eefcd6ec800201",
+];
+
+export function isBrokenOrGenericCover(url?: string): boolean {
+  if (!url || typeof url !== "string") return true;
+  const trimmed = url.trim();
+  if (!trimmed) return true;
+  if (trimmed.includes("ui-avatars.com")) return true;
+  if (MUSIC_COVER_FALLBACKS.includes(trimmed)) return true;
+  for (const hash of KNOWN_BROKEN_IMAGE_HASHES) {
+    if (trimmed.includes(hash)) return true;
   }
-  if (!artistName) {
+  return false;
+}
+
+function resolveSingleArtistImage(name: string): string | undefined {
+  if (!name) return undefined;
+  const trimmed = name.trim();
+  if (!trimmed) return undefined;
+
+  // Check alias dictionary
+  const normalizedKey = trimmed.toLowerCase();
+  const aliasedName = ARTIST_NAME_ALIASES[normalizedKey] || trimmed;
+
+  // Direct match with alias or original
+  if (NPC_ARTIST_IMAGES[aliasedName] && !isBrokenOrGenericCover(NPC_ARTIST_IMAGES[aliasedName])) {
+    return NPC_ARTIST_IMAGES[aliasedName];
+  }
+  if (NPC_ERAS[aliasedName]?.image && !isBrokenOrGenericCover(NPC_ERAS[aliasedName].image)) {
+    return NPC_ERAS[aliasedName].image;
+  }
+  if (NPC_ARTIST_IMAGES[trimmed] && !isBrokenOrGenericCover(NPC_ARTIST_IMAGES[trimmed])) {
+    return NPC_ARTIST_IMAGES[trimmed];
+  }
+  if (NPC_ERAS[trimmed]?.image && !isBrokenOrGenericCover(NPC_ERAS[trimmed].image)) {
+    return NPC_ERAS[trimmed].image;
+  }
+
+  // Case-insensitive lookup in NPC_ARTIST_IMAGES
+  const lowerAliased = aliasedName.toLowerCase();
+  for (const [key, url] of Object.entries(NPC_ARTIST_IMAGES)) {
+    if ((key.toLowerCase() === normalizedKey || key.toLowerCase() === lowerAliased) && url && !isBrokenOrGenericCover(url)) {
+      return url;
+    }
+  }
+
+  // Case-insensitive lookup in NPC_ERAS
+  for (const [key, era] of Object.entries(NPC_ERAS)) {
+    if ((key.toLowerCase() === normalizedKey || key.toLowerCase() === lowerAliased) && era.image && !isBrokenOrGenericCover(era.image)) {
+      return era.image;
+    }
+  }
+
+  return undefined;
+}
+
+export function getArtistImage(artistName?: string, coverArtFallback?: string): string {
+  const hasValidFallback = coverArtFallback && !isBrokenOrGenericCover(coverArtFallback);
+
+  if (!artistName || !artistName.trim()) {
+    if (hasValidFallback) return coverArtFallback;
     return MUSIC_COVER_FALLBACKS[0];
   }
-  const name = artistName.trim();
-  if (NPC_ARTIST_IMAGES[name]) return NPC_ARTIST_IMAGES[name];
-  if (NPC_ERAS[name]?.image) return NPC_ERAS[name].image;
 
-  let clean = name.split(/ feat\.? | featuring | & |, | x | X /i)[0].trim();
-  if (NPC_ARTIST_IMAGES[clean]) return NPC_ARTIST_IMAGES[clean];
-  if (NPC_ERAS[clean]?.image) return NPC_ERAS[clean].image;
+  const rawName = artistName.trim();
 
+  // 1. Try resolving direct artist name or alias
+  const directMatch = resolveSingleArtistImage(rawName);
+  if (directMatch) return directMatch;
+
+  // 2. Collab / feature split: "Artist A, Artist B", "Artist A feat. Artist B", etc.
+  const parts = rawName.split(/\s*(?:,\s*|\s+(?:feat\.?|ft\.?|featuring|with|and|&|x|\+|\/)\s+)\s*/i).map(p => p.trim()).filter(Boolean);
+  for (const part of parts) {
+    const partMatch = resolveSingleArtistImage(part);
+    if (partMatch) return partMatch;
+  }
+
+  // 3. If a valid custom cover art was provided (e.g., custom album cover art created by player), use it
+  if (hasValidFallback) {
+    return coverArtFallback;
+  }
+
+  // 4. If coverArtFallback was provided and not totally empty and not broken, return it
+  if (coverArtFallback && coverArtFallback.trim() !== "" && !isBrokenOrGenericCover(coverArtFallback)) {
+    return coverArtFallback;
+  }
+
+  // 5. Deterministic fallback based on artist name hash
   let hash = 0;
-  for (let i = 0; i < clean.length; i++) {
-    hash = (hash << 5) - hash + clean.charCodeAt(i);
+  for (let i = 0; i < rawName.length; i++) {
+    hash = (hash << 5) - hash + rawName.charCodeAt(i);
     hash |= 0;
   }
   const index = Math.abs(hash) % MUSIC_COVER_FALLBACKS.length;

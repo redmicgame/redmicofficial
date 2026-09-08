@@ -4,6 +4,7 @@
 import React, { useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { AlbumChartEntry } from '../types';
+import { getArtistImage } from '../constants';
 import CalendarIcon from './icons/CalendarIcon';
 import InformationCircleIcon from './icons/InformationCircleIcon';
 import ArrowUpTrayIcon from './icons/ArrowUpTrayIcon';
@@ -24,7 +25,17 @@ const AlbumChartEntryItem: React.FC<{ entry: AlbumChartEntry }> = ({ entry }) =>
             </div>
             
             {/* Art */}
-            <img src={coverArt} alt={title} className="w-24 h-24 shadow-md object-cover flex-shrink-0" />
+            <img 
+                src={getArtistImage(artist, coverArt)} 
+                alt={title} 
+                onError={(e) => {
+                    const fallback = getArtistImage(artist);
+                    if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback;
+                    }
+                }}
+                className="w-24 h-24 shadow-md object-cover flex-shrink-0" 
+            />
             
             {/* Info */}
             <div className="flex-grow min-w-0">

@@ -1,4 +1,4 @@
-import { NPC_ARTIST_IMAGES } from "../constants";
+import { getArtistImage } from "../constants";
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -103,7 +103,17 @@ const ChartHistoryView: React.FC = () => {
     return (
         <div className="absolute inset-0 bg-zinc-900 text-white overflow-y-auto pb-24">
             <div className="relative h-64">
-                <img src={activeArtist.image} alt={activeArtist.name} className="w-full h-full object-cover opacity-30" />
+                <img 
+                    src={getArtistImage(activeArtist.name, activeArtist.image)} 
+                    alt={activeArtist.name} 
+                    onError={(e) => {
+                        const fallback = getArtistImage(activeArtist.name);
+                        if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                        }
+                    }}
+                    className="w-full h-full object-cover opacity-30" 
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="absolute top-4 left-4 p-2 bg-black/30 rounded-full hover:bg-black/50 z-10">
                     <ArrowLeftIcon className="w-6 h-6" />
@@ -173,7 +183,17 @@ const ChartHistoryView: React.FC = () => {
                             >
                                 <div className="w-8 text-center text-zinc-400 font-semibold">{index + 1}</div>
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <img src={'coverArt' in item ? item.coverArt : ''} alt={item.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
+                                    <img 
+                                        src={getArtistImage(activeArtist.name, 'coverArt' in item ? item.coverArt : undefined)} 
+                                        alt={item.title} 
+                                        onError={(e) => {
+                                            const fallback = getArtistImage(activeArtist.name);
+                                            if (e.currentTarget.src !== fallback) {
+                                                e.currentTarget.src = fallback;
+                                            }
+                                        }}
+                                        className="w-12 h-12 rounded-md object-cover flex-shrink-0" 
+                                    />
                                     <p className="font-bold truncate">{item.title}</p>
                                 </div>
                                 <div className="w-20 text-center font-bold text-2xl">{stats.peak}</div>

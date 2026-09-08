@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { getArtistImage } from '../constants';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import InformationCircleIcon from './icons/InformationCircleIcon';
 import PlayIcon from './icons/PlayIcon';
@@ -87,7 +88,17 @@ const UKChartView: React.FC = () => {
                                 </div>
                                 
                                 <div className="relative flex-shrink-0">
-                                    <img src={entry.coverArt} className="w-20 h-20 md:w-24 md:h-24 object-cover rounded shadow-sm" alt="cover" />
+                                    <img 
+                                        src={getArtistImage(entry.artist, entry.coverArt)} 
+                                        onError={(e) => {
+                                            const fallback = getArtistImage(entry.artist);
+                                            if (e.currentTarget.src !== fallback) {
+                                                e.currentTarget.src = fallback;
+                                            }
+                                        }}
+                                        className="w-20 h-20 md:w-24 md:h-24 object-cover rounded shadow-sm" 
+                                        alt="cover" 
+                                    />
                                     <div className="absolute inset-0 bg-black/10 flex items-center justify-center rounded">
                                         <div className="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 border-white flex items-center justify-center bg-white/30 backdrop-blur-sm">
                                             <PlayIcon className="w-5 h-5 md:w-6 md:h-6 text-white ml-0.5" />
@@ -138,7 +149,17 @@ const UKChartView: React.FC = () => {
                         
                         <div className="p-5 space-y-5">
                             <div className="flex gap-4 items-center">
-                                <img src={selectedItem.coverArt} className="w-20 h-20 object-cover rounded-lg shadow" alt="cover" />
+                                <img 
+                                    src={getArtistImage(selectedItem.artist, selectedItem.coverArt)} 
+                                    onError={(e) => {
+                                        const fallback = getArtistImage(selectedItem.artist);
+                                        if (e.currentTarget.src !== fallback) {
+                                            e.currentTarget.src = fallback;
+                                        }
+                                    }}
+                                    className="w-20 h-20 object-cover rounded-lg shadow" 
+                                    alt="cover" 
+                                />
                                 <div className="flex flex-col justify-center">
                                     <p className="text-xs text-zinc-500 uppercase font-semibold tracking-wider">Current Rank</p>
                                     <p className="text-3xl font-black text-[#0024f0]">#{selectedItem.rank}</p>

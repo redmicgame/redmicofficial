@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import { getArtistImage } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import { Song, Release, ChartHistory } from '../types';
@@ -191,8 +192,14 @@ const BillboardChartHistoryView: React.FC = () => {
                 {/* Artist Portrait Card */}
                 <div className="relative w-full aspect-square max-w-sm mx-auto mb-6 rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/20 bg-zinc-900">
                     <img
-                        src={activeArtist.image}
+                        src={getArtistImage(activeArtist.name, activeArtist.image)}
                         alt={activeArtist.name}
+                        onError={(e) => {
+                            const fallback = getArtistImage(activeArtist.name);
+                            if (e.currentTarget.src !== fallback) {
+                                e.currentTarget.src = fallback;
+                            }
+                        }}
                         className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -292,13 +299,17 @@ const BillboardChartHistoryView: React.FC = () => {
                                     >
                                         {/* Song/Album Title and Artist Header */}
                                         <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
-                                            {item.coverArt && (
-                                                <img
-                                                    src={item.coverArt}
-                                                    alt={item.title}
-                                                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover shrink-0 shadow-sm border border-zinc-200"
-                                                />
-                                            )}
+                                            <img
+                                                src={getArtistImage(item.artist, item.coverArt)}
+                                                alt={item.title}
+                                                onError={(e) => {
+                                                    const fallback = getArtistImage(item.artist);
+                                                    if (e.currentTarget.src !== fallback) {
+                                                        e.currentTarget.src = fallback;
+                                                    }
+                                                }}
+                                                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover shrink-0 shadow-sm border border-zinc-200"
+                                            />
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="text-base sm:text-lg font-black text-black tracking-tight leading-snug break-words">
                                                     {item.title}

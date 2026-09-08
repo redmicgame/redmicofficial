@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
+import { getArtistImage } from '../constants';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -63,7 +64,17 @@ const ChartEntryItem: React.FC<{ entry: ChartEntry }> = ({ entry }) => {
                         {renderStatus()}
                     </div>
                 </div>
-                <img src={coverArt} alt={title} className="w-16 h-16 object-cover flex-shrink-0" />
+                <img 
+                    src={getArtistImage(artist, coverArt)} 
+                    alt={title} 
+                    onError={(e) => {
+                        const fallback = getArtistImage(artist);
+                        if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                        }
+                    }}
+                    className="w-16 h-16 object-cover flex-shrink-0" 
+                />
                 <div className="flex-grow min-w-0">
                     <p className={`font-bold text-xl truncate ${isPlayerSong ? 'text-red-600' : 'text-black'}`}>{title}</p>
                     <p className="text-zinc-600 text-base truncate">{artist}</p>

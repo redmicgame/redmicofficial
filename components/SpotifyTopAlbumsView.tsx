@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { AlbumChartEntry } from '../types';
+import { getArtistImage } from '../constants';
 import SpotifyIcon from './icons/SpotifyIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
@@ -42,7 +43,17 @@ const ChartRow: React.FC<{ entry: AlbumChartEntry; isDaily: boolean }> = ({ entr
             <div className="font-semibold text-zinc-400 w-6 text-center">{rank}</div>
             <div className="w-8 flex items-center justify-center">{renderMovement()}</div>
             <div className="flex items-center gap-3 min-w-0">
-                <img src={coverArt} alt={title} className="w-10 h-10 rounded-sm object-cover flex-shrink-0" />
+                <img 
+                    src={getArtistImage(artist, coverArt)} 
+                    alt={title} 
+                    onError={(e) => {
+                        const fallback = getArtistImage(artist);
+                        if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                        }
+                    }}
+                    className="w-10 h-10 rounded-sm object-cover flex-shrink-0" 
+                />
                 <div className="min-w-0">
                     <p className="font-semibold truncate">{title}</p>
                     <p className="text-xs text-zinc-400 truncate">{artist}</p>

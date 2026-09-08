@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { getArtistImage } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PlusIcon from './icons/PlusIcon';
 import InformationCircleIcon from './icons/InformationCircleIcon';
@@ -209,8 +210,14 @@ const UkChartHistoryView: React.FC = () => {
             {/* Top Interactive Banner Header */}
             <div className="relative w-full h-64 sm:h-80 bg-zinc-950 overflow-hidden group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <img
-                    src={bannerUrl}
+                    src={getArtistImage(activeArtist.name, bannerUrl)}
                     alt={activeArtist.name}
+                    onError={(e) => {
+                        const fallback = getArtistImage(activeArtist.name);
+                        if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                        }
+                    }}
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                 />
                 
@@ -408,8 +415,14 @@ const UkChartHistoryView: React.FC = () => {
                                                         {/* Thumbnail / Cover Art with Play Button Overlay */}
                                                         <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden shrink-0 shadow-sm bg-zinc-200">
                                                             <img
-                                                                src={item.coverArt}
+                                                                src={getArtistImage(item.artist, item.coverArt)}
                                                                 alt={item.title}
+                                                                onError={(e) => {
+                                                                    const fallback = getArtistImage(item.artist);
+                                                                    if (e.currentTarget.src !== fallback) {
+                                                                        e.currentTarget.src = fallback;
+                                                                    }
+                                                                }}
                                                                 className="w-full h-full object-cover"
                                                             />
                                                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
@@ -500,8 +513,14 @@ const UkChartHistoryView: React.FC = () => {
                                                         {/* Cover Art */}
                                                         <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden shrink-0 shadow-sm bg-zinc-200">
                                                             <img
-                                                                src={item.coverArt}
+                                                                src={getArtistImage(item.artist, item.coverArt)}
                                                                 alt={item.title}
+                                                                onError={(e) => {
+                                                                    const fallback = getArtistImage(item.artist);
+                                                                    if (e.currentTarget.src !== fallback) {
+                                                                        e.currentTarget.src = fallback;
+                                                                    }
+                                                                }}
                                                                 className="w-full h-full object-cover"
                                                             />
                                                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
@@ -552,7 +571,17 @@ const UkChartHistoryView: React.FC = () => {
                 <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedDetailItem(null)}>
                     <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl text-zinc-900" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-4 mb-4">
-                            <img src={selectedDetailItem.coverArt} alt={selectedDetailItem.title} className="w-16 h-16 rounded-xl object-cover shadow" />
+                            <img 
+                                src={getArtistImage(selectedDetailItem.artist, selectedDetailItem.coverArt)} 
+                                alt={selectedDetailItem.title} 
+                                onError={(e) => {
+                                    const fallback = getArtistImage(selectedDetailItem.artist);
+                                    if (e.currentTarget.src !== fallback) {
+                                        e.currentTarget.src = fallback;
+                                    }
+                                }}
+                                className="w-16 h-16 rounded-xl object-cover shadow" 
+                            />
                             <div>
                                 <h3 className="text-xl font-black text-zinc-950 uppercase leading-tight">{selectedDetailItem.title}</h3>
                                 <p className="text-sm italic text-zinc-600">{selectedDetailItem.artist}</p>

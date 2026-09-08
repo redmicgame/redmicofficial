@@ -2,6 +2,7 @@
 import React from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry } from '../types';
+import { getArtistImage } from '../constants';
 import SpotifyIcon from './icons/SpotifyIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
@@ -42,7 +43,17 @@ const ChartRow: React.FC<{ entry: ChartEntry; isDaily: boolean }> = ({ entry, is
             <div className="font-bold text-gray-900 w-6 text-center">{rank} {(!lastWeek && weeksOnChart === 1) && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold ml-1">New</span>}</div>
             <div className="w-12 flex items-center justify-center">{renderMovement()}</div>
             <div className="flex items-center gap-3 min-w-0">
-                <img src={coverArt} alt={title} className="w-12 h-12 rounded-sm object-cover flex-shrink-0" />
+                <img 
+                    src={getArtistImage(artist, coverArt)} 
+                    alt={title} 
+                    onError={(e) => {
+                        const fallback = getArtistImage(artist);
+                        if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                        }
+                    }}
+                    className="w-12 h-12 rounded-sm object-cover flex-shrink-0" 
+                />
                 <div className="min-w-0">
                     <p className="font-bold text-gray-900 truncate">{title}</p>
                     <p className="text-xs text-gray-500 truncate">{artist}</p>
