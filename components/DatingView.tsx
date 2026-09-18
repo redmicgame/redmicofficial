@@ -51,6 +51,8 @@ const DatingView: React.FC = () => {
     const [kidSongModal, setKidSongModal] = useState<Kid | null>(null);
     const [songTitleInput, setSongTitleInput] = useState<string>('');
     const [coParentingModalRel, setCoParentingModalRel] = useState<Relationship | null>(null);
+    const [showPartnerActionsModal, setShowPartnerActionsModal] = useState(false);
+    const [selectedKidForActions, setSelectedKidForActions] = useState<Kid | null>(null);
 
     if (!activeArtistData) return null;
 
@@ -97,6 +99,18 @@ const DatingView: React.FC = () => {
             reader.onloadend = () => {
                 const newImage = reader.result as string;
                 dispatch({ type: 'UPDATE_RELATIONSHIP_IMAGE', payload: { relationshipId, image: newImage } });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleKidImageUpload = (e: React.ChangeEvent<HTMLInputElement>, kidId: string) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newImage = reader.result as string;
+                dispatch({ type: 'UPDATE_KID_IMAGE', payload: { kidId, image: newImage } });
             };
             reader.readAsDataURL(file);
         }
@@ -149,8 +163,13 @@ const DatingView: React.FC = () => {
                                 <div className="flex gap-4 items-center">
                                     <label htmlFor={`image-upload-${activeRelationship.id}`} className="cursor-pointer group relative flex-shrink-0">
                                         <div className="w-16 h-16 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden">
-                                            {activeRelationship.image ? (
-                                                <img src={activeRelationship.image} alt={activeRelationship.partnerName} className="w-full h-full object-cover"/>
+                                            {activeRelationship.image || getArtistImage(activeRelationship.partnerName) ? (
+                                                <img 
+                                                    src={activeRelationship.image || getArtistImage(activeRelationship.partnerName)} 
+                                                    alt={activeRelationship.partnerName} 
+                                                    className="w-full h-full object-cover"
+                                                    referrerPolicy="no-referrer"
+                                                />
                                             ) : (
                                                 <span className="text-zinc-500 font-bold text-2xl">{activeRelationship.partnerName.charAt(0)}</span>
                                             )}
@@ -228,162 +247,31 @@ const DatingView: React.FC = () => {
 
                             {/* Active Tabloid Drama Banner */}
                             {activeRelationship.activeDrama && (
-                                <div className="p-3 bg-red-950/80 border border-red-500/70 rounded-xl space-y-2">
-                                    <div className="flex items-center gap-2 text-red-300 text-xs font-bold uppercase tracking-wider">
-                                        <span className="animate-pulse">🚨</span> Tabloid Controversy: {activeRelationship.activeDrama.type.toUpperCase()}
+                                <div className="p-3.5 bg-red-950/80 border border-red-500/70 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2 text-red-300 text-xs font-bold uppercase tracking-wider">
+                                            <span className="animate-pulse">🚨</span> Tabloid Controversy: {activeRelationship.activeDrama.type.toUpperCase()}
+                                        </div>
+                                        <p className="text-sm font-medium text-red-100">{activeRelationship.activeDrama.headline}</p>
                                     </div>
-                                    <p className="text-sm font-medium text-red-100">{activeRelationship.activeDrama.headline}</p>
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        <button
-                                            onClick={() => dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'united_front' } })}
-                                            className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm"
-                                        >
-                                            🤝 United Front (Red Carpet)
-                                        </button>
-                                        <button
-                                            onClick={() => dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'deny' } })}
-                                            className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm"
-                                        >
-                                            📢 Public PR Denial
-                                        </button>
-                                        <button
-                                            onClick={() => dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'ignore' } })}
-                                            className="bg-zinc-700 hover:bg-zinc-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm"
-                                        >
-                                            🤐 Stay Silent
-                                        </button>
-                                        <button
-                                            onClick={() => dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'split' } })}
-                                            className="bg-red-800 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm"
-                                        >
-                                            💔 Break Up Under Media Pressure
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => setShowPartnerActionsModal(true)}
+                                        className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow whitespace-nowrap self-start sm:self-auto transition-all"
+                                    >
+                                        Respond in Actions Modal →
+                                    </button>
                                 </div>
                             )}
 
-                            <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-700">
-                                {!activeRelationship.isPublic && (
-                                    <button 
-                                        onClick={() => setRelationshipToReveal(activeRelationship.id)}
-                                        className="bg-white text-black px-4 py-2 rounded-full font-bold text-sm"
-                                    >
-                                        Reveal Relationship
-                                    </button>
-                                )}
-                                
-                                {activeRelationship.isPublic && activeRelationship.status === 'dating' && (
-                                    <button 
-                                        onClick={() => dispatch({ type: 'ADVANCE_RELATIONSHIP', payload: { relationshipId: activeRelationship.id, newStatus: 'engaged' } })}
-                                        className="bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm"
-                                    >
-                                        Get Engaged
-                                    </button>
-                                )}
-                                
-                                {activeRelationship.isPublic && activeRelationship.status === 'engaged' && (
-                                    <>
-                                        <button 
-                                            onClick={() => setShowWeddingModal(true)}
-                                            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-md flex items-center gap-1.5 transition-all"
-                                        >
-                                            <span>💍</span> Plan Wedding Extravaganza
-                                        </button>
-                                        <button 
-                                            onClick={() => setShowPrenupModal(true)}
-                                            className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-2 rounded-full font-bold text-sm shadow-md flex items-center gap-1.5 transition-all"
-                                        >
-                                            <span>📜</span> Get Married & Sign Prenup
-                                        </button>
-                                    </>
-                                )}
-
-                                {/* Date Night & Gifts Button */}
-                                <button
-                                    onClick={() => setShowDateNightModal(true)}
-                                    className="bg-rose-600/80 hover:bg-rose-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-sm flex items-center gap-1.5 transition-all"
+                            <div className="pt-4 border-t border-zinc-700/80">
+                                <button 
+                                    onClick={() => setShowPartnerActionsModal(true)}
+                                    className="w-full bg-gradient-to-r from-red-600 via-pink-600 to-purple-600 hover:from-red-500 hover:to-purple-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2.5 transition-all active:scale-[0.99] text-sm"
                                 >
-                                    <span>🍷</span> Date Night & Gifts
+                                    <span>💖</span>
+                                    <span>Relationship Options & Actions</span>
+                                    <span className="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-mono">Open Menu</span>
                                 </button>
-
-                                {/* Music Collaboration Button */}
-                                <button
-                                    onClick={() => setShowCollabModal(true)}
-                                    className="bg-indigo-600/80 hover:bg-indigo-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-sm flex items-center gap-1.5 transition-all"
-                                >
-                                    <span>🎙️</span> Music Collab
-                                </button>
-
-                                {/* Anniversary Celebration Button */}
-                                {(activeRelationship.status === 'married' || activeRelationship.status === 'dating' || activeRelationship.status === 'engaged') && (
-                                    <button
-                                        onClick={() => setShowAnniversaryModal(true)}
-                                        className="bg-amber-600/80 hover:bg-amber-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-sm flex items-center gap-1.5 transition-all"
-                                    >
-                                        <span>🥂</span> Celebrate Anniversary
-                                    </button>
-                                )}
-
-                                {/* Trigger Media Drama */}
-                                <button
-                                    onClick={() => dispatch({ type: 'TRIGGER_RANDOM_DRAMA', payload: { relationshipId: activeRelationship.id } })}
-                                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 px-3.5 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all"
-                                    title="Trigger a tabloid rumor or scandal"
-                                >
-                                    <span>⚡</span> Media Rumors
-                                </button>
-
-                                {activeRelationship.prenup && (
-                                    <button
-                                        onClick={() => setShowViewPrenupModal(true)}
-                                        className="bg-amber-900/60 hover:bg-amber-800/80 text-amber-200 border border-amber-600/50 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-1.5 transition-all shadow-sm"
-                                    >
-                                        <span>📜</span> View Signed Prenup
-                                    </button>
-                                )}
-
-                                {!activeArtistData.pregnancy && activeRelationship.status !== 'divorcing' && (
-                                    <button 
-                                        onClick={() => dispatch({ type: 'START_PREGNANCY', payload: { partnerName: activeRelationship.partnerName } })}
-                                        className="bg-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-pink-400"
-                                    >
-                                        Try for Baby
-                                    </button>
-                                )}
-
-                                 {activeArtistData.pregnancy && (
-                                    <button 
-                                        onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'pregnancyTracker' })}
-                                        className="bg-rose-500 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-rose-400 flex items-center gap-1"
-                                    >
-                                        📱 Open Pregnancy Tracker App
-                                    </button>
-                                )}
-
-                                {activeArtistData.pregnancy && !activeArtistData.pregnancy.revealed && (
-                                    <button 
-                                        onClick={() => dispatch({ type: 'REVEAL_PREGNANCY' })}
-                                        className="bg-pink-600 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-pink-500"
-                                    >
-                                        Reveal Pregnancy
-                                    </button>
-                                )}
-
-                                {activeRelationship.status === 'married' ? (
-                                    <button 
-                                        onClick={() => setShowDivorceConfirmModal(true)}
-                                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-full font-bold text-sm transition-colors shadow-lg shadow-red-950/40"
-                                    >
-                                        Filed For Divorce
-                                    </button>
-                                ) : activeRelationship.status !== 'divorcing' ? (
-                                    <button 
-                                        onClick={() => dispatch({ type: 'BREAK_UP', payload: { relationshipId: activeRelationship.id } })}
-                                        className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-full font-bold text-sm"
-                                    >
-                                        Break Up
-                                    </button>
-                                ) : null}
                             </div>
 
                             {/* Court Legal Battle Section */}
@@ -639,8 +527,13 @@ const DatingView: React.FC = () => {
                                             <div className="flex gap-3.5 items-center">
                                                 <label htmlFor={`image-upload-${rel.id}`} className="cursor-pointer group relative flex-shrink-0">
                                                     <div className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden border border-zinc-600">
-                                                        {rel.image ? (
-                                                            <img src={rel.image} alt={rel.partnerName} className="w-full h-full object-cover"/>
+                                                        {rel.image || getArtistImage(rel.partnerName) ? (
+                                                            <img 
+                                                                src={rel.image || getArtistImage(rel.partnerName)} 
+                                                                alt={rel.partnerName} 
+                                                                className="w-full h-full object-cover"
+                                                                referrerPolicy="no-referrer"
+                                                            />
                                                         ) : (
                                                             <span className="text-zinc-400 font-black text-xl">{rel.partnerName.charAt(0)}</span>
                                                         )}
@@ -782,41 +675,64 @@ const DatingView: React.FC = () => {
                                 
                                 return (
                                     <div key={kid.id} className="bg-zinc-800 p-5 rounded-2xl border border-zinc-700 space-y-4 shadow-xl">
-                                        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-                                            <div>
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <h3 className="text-2xl font-black text-pink-400">{kid.name}</h3>
-                                                    {kid.personalityTrait && (
-                                                        <span className="bg-pink-900/50 text-pink-200 border border-pink-700/50 px-2 py-0.5 rounded-full text-xs font-bold">
-                                                            {kid.personalityTrait}
+                                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                            <div className="flex gap-4 items-start">
+                                                {/* Child Profile Picture with Upload */}
+                                                <label htmlFor={`kid-avatar-upload-${kid.id}`} className="cursor-pointer group relative flex-shrink-0 mt-1">
+                                                    <div className="w-16 h-16 rounded-full bg-zinc-700 border-2 border-pink-500/50 flex items-center justify-center overflow-hidden shadow-inner">
+                                                        {kid.photoUrl || kid.image ? (
+                                                            <img src={kid.photoUrl || kid.image} alt={kid.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-pink-300 font-black text-2xl">{kid.name.charAt(0)}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center rounded-full text-center">
+                                                        <span className="text-white text-[9px] font-bold">Upload Photo</span>
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        id={`kid-avatar-upload-${kid.id}`}
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                        onChange={(e) => handleKidImageUpload(e, kid.id)}
+                                                    />
+                                                </label>
+
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h3 className="text-2xl font-black text-pink-400">{kid.name}</h3>
+                                                        {kid.personalityTrait && (
+                                                            <span className="bg-pink-900/50 text-pink-200 border border-pink-700/50 px-2 py-0.5 rounded-full text-xs font-bold">
+                                                                {kid.personalityTrait}
+                                                            </span>
+                                                        )}
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${kid.privacySetting === 'spotlight' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
+                                                            {kid.privacySetting === 'spotlight' ? '📸 Spotlight Superstar' : '🛡️ Protected from Press'}
                                                         </span>
+                                                        {kid.isArtist && (
+                                                            <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full text-xs font-semibold uppercase">
+                                                                Music Artist
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-zinc-400 text-sm mt-0.5">
+                                                        Age: {ageInYears} yrs {remMonths > 0 ? `${remMonths} mos` : ''} • Born Wk {kid.birthDate.week}, {kid.birthDate.year}
+                                                    </p>
+                                                    {kid.parentName && (
+                                                        <p className="text-zinc-400 text-xs">
+                                                            Co-parent: <span className="text-zinc-200 font-semibold">{kid.parentName}</span>
+                                                        </p>
                                                     )}
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${kid.privacySetting === 'spotlight' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
-                                                        {kid.privacySetting === 'spotlight' ? '📸 Spotlight Superstar' : '🛡️ Protected from Press'}
-                                                    </span>
-                                                    {kid.isArtist && (
-                                                        <span className="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full text-xs font-semibold uppercase">
-                                                            Music Artist
-                                                        </span>
+                                                    {kid.dedicatedSongTitle && (
+                                                        <p className="text-xs text-rose-400 mt-1 font-semibold flex items-center gap-1">
+                                                            <span>🎵</span> Dedicated Track: "{kid.dedicatedSongTitle}"
+                                                        </p>
                                                     )}
                                                 </div>
-                                                <p className="text-zinc-400 text-sm mt-0.5">
-                                                    Age: {ageInYears} yrs {remMonths > 0 ? `${remMonths} mos` : ''} • Born Wk {kid.birthDate.week}, {kid.birthDate.year}
-                                                </p>
-                                                {kid.parentName && (
-                                                    <p className="text-zinc-400 text-xs">
-                                                        Co-parent: <span className="text-zinc-200 font-semibold">{kid.parentName}</span>
-                                                    </p>
-                                                )}
-                                                {kid.dedicatedSongTitle && (
-                                                    <p className="text-xs text-rose-400 mt-1 font-semibold flex items-center gap-1">
-                                                        <span>🎵</span> Dedicated Track: "{kid.dedicatedSongTitle}"
-                                                    </p>
-                                                )}
                                             </div>
 
                                             {/* Financial Overview */}
-                                            <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-700/60 text-xs min-w-[170px] space-y-1">
+                                            <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-700/60 text-xs min-w-[170px] space-y-1 self-stretch sm:self-auto">
                                                 <div className="flex justify-between text-zinc-400">
                                                     <span>Trust Fund:</span>
                                                     <span className="font-bold text-emerald-400">${(kid.trustFundAmount || 0).toLocaleString()}</span>
@@ -896,61 +812,16 @@ const DatingView: React.FC = () => {
                                             )}
                                         </div>
 
-                                        {/* Action Buttons for Child */}
-                                        <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-700/60">
+                                        {/* Action Button for Child (Opens Options Modal) */}
+                                        <div className="pt-3 border-t border-zinc-700/60">
                                             <button 
-                                                onClick={() => setKidEduModal(kid)}
-                                                className="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 border border-cyan-700/40 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 transition-colors"
+                                                onClick={() => setSelectedKidForActions(kid)}
+                                                className="w-full bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] text-xs sm:text-sm"
                                             >
-                                                <span>🎓</span> Schooling
+                                                <span>🌟</span>
+                                                <span>Child Options & Activities</span>
+                                                <span className="bg-white/20 text-white text-[11px] px-2 py-0.5 rounded-full font-mono">Open Menu</span>
                                             </button>
-                                            <button 
-                                                onClick={() => setKidActivityModal(kid)}
-                                                className="bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-700/40 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 transition-colors"
-                                            >
-                                                <span>🎹</span> Extracurricular
-                                            </button>
-                                            <button 
-                                                onClick={() => setKidPartyModal(kid)}
-                                                className="bg-pink-900/60 hover:bg-pink-800 text-pink-200 border border-pink-700/40 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 transition-colors"
-                                            >
-                                                <span>🎂</span> Birthday Party
-                                            </button>
-                                            <button 
-                                                onClick={() => setKidFinanceModal(kid)}
-                                                className="bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/40 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 transition-colors"
-                                            >
-                                                <span>💰</span> Trust Fund & Allowance
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    setKidSongModal(kid);
-                                                    setSongTitleInput(`Song for ${kid.name}`);
-                                                }}
-                                                className="bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-700/40 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 transition-colors"
-                                            >
-                                                <span>🎶</span> Dedicate Song
-                                            </button>
-                                            <button 
-                                                onClick={() => dispatch({
-                                                    type: 'SET_KID_PRIVACY',
-                                                    payload: {
-                                                        kidId: kid.id,
-                                                        privacySetting: kid.privacySetting === 'spotlight' ? 'private' : 'spotlight'
-                                                    }
-                                                })}
-                                                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 transition-colors"
-                                            >
-                                                <span>🛡️</span> {kid.privacySetting === 'spotlight' ? 'Shield from Press' : 'Put in Spotlight'}
-                                            </button>
-                                            {ageInYears >= 10 && !kid.isArtist && (
-                                                <button 
-                                                    onClick={() => dispatch({ type: 'START_KID_CAREER', payload: { kidId: kid.id } })}
-                                                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 py-1.5 rounded-full font-black text-xs shadow-md transition-all flex items-center gap-1"
-                                                >
-                                                    <span>🎤</span> Launch Solo Music Career
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                 );
@@ -982,8 +853,8 @@ const DatingView: React.FC = () => {
                         </div>
 
                         {partnerType === 'npc' ? (
-                            <div className="mb-6">
-                                <label className="block text-sm font-bold text-zinc-400 mb-2">Select Artist</label>
+                            <div className="mb-6 space-y-3">
+                                <label className="block text-sm font-bold text-zinc-400">Select Artist</label>
                                 <select 
                                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-white outline-none focus:border-red-500"
                                     value={selectedNpcId}
@@ -994,6 +865,27 @@ const DatingView: React.FC = () => {
                                         <option key={n.uniqueId} value={n.uniqueId}>{n.artist}</option>
                                     ))}
                                 </select>
+                                {(() => {
+                                    const selectedNpc = sortedNpcs.find(n => n.uniqueId === selectedNpcId);
+                                    if (!selectedNpc) return null;
+                                    const artistImg = getArtistImage(selectedNpc.artist, selectedNpc.coverArt);
+                                    return (
+                                        <div className="flex items-center gap-3 p-3 bg-zinc-800/80 rounded-xl border border-zinc-700/80 mt-2">
+                                            <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-700 flex-shrink-0 border border-zinc-600">
+                                                <img 
+                                                    src={artistImg} 
+                                                    alt={selectedNpc.artist} 
+                                                    className="w-full h-full object-cover" 
+                                                    referrerPolicy="no-referrer"
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-white text-sm truncate">{selectedNpc.artist}</h4>
+                                                <p className="text-xs text-zinc-400">Fellow Music Artist</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         ) : (
                             <div className="mb-6">
@@ -1383,8 +1275,13 @@ const DatingView: React.FC = () => {
                         <div className="bg-zinc-900 border border-red-600/70 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-white space-y-4 my-auto max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center gap-4 border-b border-zinc-800 pb-4">
                                 <div className="w-16 h-16 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-red-500">
-                                    {rekindleModalRel.image ? (
-                                        <img src={rekindleModalRel.image} alt={rekindleModalRel.partnerName} className="w-full h-full object-cover" />
+                                    {rekindleModalRel.image || getArtistImage(rekindleModalRel.partnerName) ? (
+                                        <img 
+                                            src={rekindleModalRel.image || getArtistImage(rekindleModalRel.partnerName)} 
+                                            alt={rekindleModalRel.partnerName} 
+                                            className="w-full h-full object-cover" 
+                                            referrerPolicy="no-referrer"
+                                        />
                                     ) : (
                                         <span className="text-2xl font-black text-white">{rekindleModalRel.partnerName.charAt(0)}</span>
                                     )}
@@ -2084,6 +1981,557 @@ const DatingView: React.FC = () => {
                             className="w-full bg-zinc-800 hover:bg-zinc-750 text-white font-bold py-2.5 rounded-xl text-xs"
                         >
                             Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Partner Relationship Options & Actions Modal */}
+            {showPartnerActionsModal && activeRelationship && (
+                <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowPartnerActionsModal(false)}>
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+                            <div>
+                                <h2 className="text-xl font-black text-white flex items-center gap-2">
+                                    <span>💖</span> Relationship Options
+                                </h2>
+                                <p className="text-xs text-zinc-400">
+                                    Manage life, romance, and decisions with <span className="text-white font-bold">{activeRelationship.partnerName}</span>
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setShowPartnerActionsModal(false)}
+                                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center font-bold text-sm"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Partner Profile Summary Card */}
+                        <div className="flex items-center gap-3.5 p-3.5 bg-zinc-800/80 rounded-2xl border border-zinc-700/80">
+                            <div className="w-14 h-14 rounded-full overflow-hidden bg-zinc-700 flex-shrink-0 border border-zinc-600">
+                                {activeRelationship.image || getArtistImage(activeRelationship.partnerName) ? (
+                                    <img 
+                                        src={activeRelationship.image || getArtistImage(activeRelationship.partnerName)} 
+                                        alt={activeRelationship.partnerName} 
+                                        className="w-full h-full object-cover" 
+                                        referrerPolicy="no-referrer" 
+                                    />
+                                ) : (
+                                    <span className="w-full h-full flex items-center justify-center font-bold text-xl text-zinc-400">
+                                        {activeRelationship.partnerName.charAt(0)}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-black text-white text-base truncate">{activeRelationship.partnerName}</h3>
+                                    <StatusBadge status={activeRelationship.status} isPublic={activeRelationship.isPublic} />
+                                </div>
+                                <p className="text-xs text-zinc-400 capitalize mt-0.5">
+                                    {activeRelationship.partnerType === 'npc' ? 'Fellow Music Artist' : 'Civilian'} • Affection: {activeRelationship.affection ?? 100}%
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Tabloid Drama Section inside modal if active */}
+                        {activeRelationship.activeDrama && (
+                            <div className="p-4 bg-red-950/70 border border-red-500/60 rounded-2xl space-y-3">
+                                <div className="flex items-center gap-2 text-red-300 text-xs font-black uppercase tracking-wider">
+                                    <span className="animate-pulse">🚨</span> Active Tabloid Crisis: {activeRelationship.activeDrama.type}
+                                </div>
+                                <p className="text-xs font-semibold text-red-100">{activeRelationship.activeDrama.headline}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'united_front' } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all text-left"
+                                    >
+                                        🤝 United Front
+                                        <span className="block text-[10px] text-emerald-200 font-normal">Walk red carpet hand-in-hand</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'deny' } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all text-left"
+                                    >
+                                        📢 Public PR Denial
+                                        <span className="block text-[10px] text-blue-200 font-normal">Issue official denial statement</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'ignore' } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all text-left"
+                                    >
+                                        🤐 Stay Silent
+                                        <span className="block text-[10px] text-zinc-400 font-normal">Let media speculation fade</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'HANDLE_RELATIONSHIP_DRAMA', payload: { relationshipId: activeRelationship.id, dramaAction: 'split' } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-red-800 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all text-left"
+                                    >
+                                        💔 Break Up Over Media Pressure
+                                        <span className="block text-[10px] text-red-200 font-normal">End it due to constant scrutiny</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Romance & Lifestyle */}
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Romance & Lifestyle</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => {
+                                        setShowPartnerActionsModal(false);
+                                        setShowDateNightModal(true);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all group"
+                                >
+                                    <div className="font-bold text-sm text-pink-300 flex items-center gap-1.5">
+                                        <span>🍷</span> Date Night & Luxury Gifts
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Go on private dates or buy designer gifts.</p>
+                                </button>
+
+                                {(activeRelationship.status === 'married' || activeRelationship.status === 'dating' || activeRelationship.status === 'engaged') && (
+                                    <button
+                                        onClick={() => {
+                                            setShowPartnerActionsModal(false);
+                                            setShowAnniversaryModal(true);
+                                        }}
+                                        className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all group"
+                                    >
+                                        <div className="font-bold text-sm text-amber-300 flex items-center gap-1.5">
+                                            <span>🥂</span> Celebrate Anniversary
+                                        </div>
+                                        <p className="text-[11px] text-zinc-400 mt-0.5">Celebrate milestones with a luxury getaway.</p>
+                                    </button>
+                                )}
+
+                                {!activeArtistData.pregnancy && activeRelationship.status !== 'divorcing' && (
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'START_PREGNANCY', payload: { partnerName: activeRelationship.partnerName } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                    >
+                                        <div className="font-bold text-sm text-rose-300 flex items-center gap-1.5">
+                                            <span>👶</span> Try for Baby
+                                        </div>
+                                        <p className="text-[11px] text-zinc-400 mt-0.5">Start or grow your family together.</p>
+                                    </button>
+                                )}
+
+                                {activeArtistData.pregnancy && (
+                                    <button
+                                        onClick={() => {
+                                            setShowPartnerActionsModal(false);
+                                            dispatch({ type: 'CHANGE_VIEW', payload: 'pregnancyTracker' });
+                                        }}
+                                        className="bg-rose-950/40 hover:bg-rose-900/40 border border-rose-600/50 p-3 rounded-xl text-left transition-all"
+                                    >
+                                        <div className="font-bold text-sm text-rose-300 flex items-center gap-1.5">
+                                            <span>📱</span> Open Pregnancy Tracker
+                                        </div>
+                                        <p className="text-[11px] text-rose-200 mt-0.5">Track trimesters, scans, and nursery prep.</p>
+                                    </button>
+                                )}
+
+                                {activeArtistData.pregnancy && !activeArtistData.pregnancy.revealed && (
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'REVEAL_PREGNANCY' });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-pink-950/40 hover:bg-pink-900/40 border border-pink-600/50 p-3 rounded-xl text-left transition-all"
+                                    >
+                                        <div className="font-bold text-sm text-pink-300 flex items-center gap-1.5">
+                                            <span>📸</span> Reveal Pregnancy to Public
+                                        </div>
+                                        <p className="text-[11px] text-pink-200 mt-0.5">Announce pregnancy photoshoot on socials.</p>
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => {
+                                        setShowPartnerActionsModal(false);
+                                        setShowCollabModal(true);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-indigo-300 flex items-center gap-1.5">
+                                        <span>🎙️</span> Music Collaboration
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Record a duet or feature them on a track.</p>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Status & Commitment */}
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Commitment & Publicity</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {!activeRelationship.isPublic && (
+                                    <button
+                                        onClick={() => {
+                                            setShowPartnerActionsModal(false);
+                                            setRelationshipToReveal(activeRelationship.id);
+                                        }}
+                                        className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                    >
+                                        <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                                            <span>📢</span> Reveal Relationship
+                                        </div>
+                                        <p className="text-[11px] text-zinc-400 mt-0.5">Hard-launch your romance to the press.</p>
+                                    </button>
+                                )}
+
+                                {activeRelationship.isPublic && activeRelationship.status === 'dating' && (
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'ADVANCE_RELATIONSHIP', payload: { relationshipId: activeRelationship.id, newStatus: 'engaged' } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="bg-purple-950/40 hover:bg-purple-900/40 border border-purple-600/50 p-3 rounded-xl text-left transition-all"
+                                    >
+                                        <div className="font-bold text-sm text-purple-300 flex items-center gap-1.5">
+                                            <span>💍</span> Propose (Get Engaged)
+                                        </div>
+                                        <p className="text-[11px] text-purple-200 mt-0.5">Pop the question with a diamond ring.</p>
+                                    </button>
+                                )}
+
+                                {activeRelationship.isPublic && activeRelationship.status === 'engaged' && (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setShowPartnerActionsModal(false);
+                                                setShowWeddingModal(true);
+                                            }}
+                                            className="bg-pink-950/40 hover:bg-pink-900/40 border border-pink-500/50 p-3 rounded-xl text-left transition-all"
+                                        >
+                                            <div className="font-bold text-sm text-pink-300 flex items-center gap-1.5">
+                                                <span>💒</span> Plan Wedding Extravaganza
+                                            </div>
+                                            <p className="text-[11px] text-pink-200 mt-0.5">Select venues, themes, and wedding styles.</p>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowPartnerActionsModal(false);
+                                                setShowPrenupModal(true);
+                                            }}
+                                            className="bg-amber-950/40 hover:bg-amber-900/40 border border-amber-500/50 p-3 rounded-xl text-left transition-all"
+                                        >
+                                            <div className="font-bold text-sm text-amber-300 flex items-center gap-1.5">
+                                                <span>📜</span> Get Married & Sign Prenup
+                                            </div>
+                                            <p className="text-[11px] text-amber-200 mt-0.5">Tie the knot with legal financial protection.</p>
+                                        </button>
+                                    </>
+                                )}
+
+                                {activeRelationship.prenup && (
+                                    <button
+                                        onClick={() => {
+                                            setShowPartnerActionsModal(false);
+                                            setShowViewPrenupModal(true);
+                                        }}
+                                        className="bg-zinc-800 hover:bg-zinc-750 border border-amber-600/40 p-3 rounded-xl text-left transition-all"
+                                    >
+                                        <div className="font-bold text-sm text-amber-300 flex items-center gap-1.5">
+                                            <span>📜</span> View Signed Prenup
+                                        </div>
+                                        <p className="text-[11px] text-zinc-400 mt-0.5">Review asset division and custody clauses.</p>
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => {
+                                        dispatch({ type: 'TRIGGER_RANDOM_DRAMA', payload: { relationshipId: activeRelationship.id } });
+                                        setShowPartnerActionsModal(false);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-orange-300 flex items-center gap-1.5">
+                                        <span>⚡</span> Trigger Media Rumor
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Stir up paparazzi buzz and headlines.</p>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Danger Zone: Separation */}
+                        <div className="space-y-2 pt-2 border-t border-zinc-800">
+                            <h3 className="text-xs font-bold text-red-400 uppercase tracking-wider">Separation & End</h3>
+                            <div>
+                                {activeRelationship.status === 'married' ? (
+                                    <button
+                                        onClick={() => {
+                                            setShowPartnerActionsModal(false);
+                                            setShowDivorceConfirmModal(true);
+                                        }}
+                                        className="w-full bg-red-950/40 hover:bg-red-900/60 border border-red-700/60 p-3 rounded-xl text-left transition-all text-red-200"
+                                    >
+                                        <div className="font-bold text-sm flex items-center gap-1.5">
+                                            <span>⚖️</span> File For Divorce
+                                        </div>
+                                        <p className="text-[11px] text-red-300/80 mt-0.5">Enter high-stakes court proceedings and asset division.</p>
+                                    </button>
+                                ) : activeRelationship.status !== 'divorcing' ? (
+                                    <button
+                                        onClick={() => {
+                                            dispatch({ type: 'BREAK_UP', payload: { relationshipId: activeRelationship.id } });
+                                            setShowPartnerActionsModal(false);
+                                        }}
+                                        className="w-full bg-red-950/40 hover:bg-red-900/60 border border-red-700/60 p-3 rounded-xl text-left transition-all text-red-200"
+                                    >
+                                        <div className="font-bold text-sm flex items-center gap-1.5">
+                                            <span>💔</span> Break Up
+                                        </div>
+                                        <p className="text-[11px] text-red-300/80 mt-0.5">End the dating relationship and go your separate ways.</p>
+                                    </button>
+                                ) : (
+                                    <p className="text-xs text-red-400">A legal divorce case is currently in court.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowPartnerActionsModal(false)}
+                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors"
+                        >
+                            Close Menu
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Child Options & Activities Modal */}
+            {selectedKidForActions && (
+                <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedKidForActions(null)}>
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        {/* Header with Photo Upload */}
+                        <div className="flex justify-between items-start border-b border-zinc-800 pb-4">
+                            <div className="flex gap-3.5 items-center">
+                                <label htmlFor="modal-kid-avatar-upload" className="cursor-pointer group relative flex-shrink-0">
+                                    <div className="w-16 h-16 rounded-full bg-zinc-700 border-2 border-pink-500/60 flex items-center justify-center overflow-hidden shadow-inner">
+                                        {selectedKidForActions.photoUrl || selectedKidForActions.image ? (
+                                            <img src={selectedKidForActions.photoUrl || selectedKidForActions.image} alt={selectedKidForActions.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-pink-300 font-black text-2xl">{selectedKidForActions.name.charAt(0)}</span>
+                                        )}
+                                    </div>
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center rounded-full text-center">
+                                        <span className="text-white text-[9px] font-bold">Change</span>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        id="modal-kid-avatar-upload"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            handleKidImageUpload(e, selectedKidForActions.id);
+                                            // update local selectedKid reference image
+                                            if (e.target.files && e.target.files[0]) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                    setSelectedKidForActions(prev => prev ? { ...prev, image: reader.result as string, photoUrl: reader.result as string } : null);
+                                                };
+                                                reader.readAsDataURL(e.target.files[0]);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                                <div>
+                                    <h2 className="text-xl font-black text-white flex items-center gap-2">
+                                        <span>🌟</span> {selectedKidForActions.name}'s Options
+                                    </h2>
+                                    <p className="text-xs text-zinc-400">
+                                        {selectedKidForActions.parentName ? `Co-parent: ${selectedKidForActions.parentName}` : 'Parent: You'} • Tap photo to change picture
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedKidForActions(null)}
+                                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center font-bold text-sm"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Education & Activities */}
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Growth & Activities</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => {
+                                        setKidEduModal(selectedKidForActions);
+                                        setSelectedKidForActions(null);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-cyan-300 flex items-center gap-1.5">
+                                        <span>🎓</span> Schooling & Academics
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Choose public, private prep, boarding, or tutors.</p>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setKidActivityModal(selectedKidForActions);
+                                        setSelectedKidForActions(null);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-purple-300 flex items-center gap-1.5">
+                                        <span>🎹</span> Extracurricular Lessons
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Vocal coaching, piano, debate, rap camp, etc.</p>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setKidPartyModal(selectedKidForActions);
+                                        setSelectedKidForActions(null);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-pink-300 flex items-center gap-1.5">
+                                        <span>🎂</span> Birthday Party
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Throw intimate or star-studded mega bashes.</p>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setKidFinanceModal(selectedKidForActions);
+                                        setSelectedKidForActions(null);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-emerald-300 flex items-center gap-1.5">
+                                        <span>💰</span> Trust Fund & Allowance
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Set monthly pocket money and bank trust funds.</p>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setKidSongModal(selectedKidForActions);
+                                        setSongTitleInput(`Song for ${selectedKidForActions.name}`);
+                                        setSelectedKidForActions(null);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-rose-300 flex items-center gap-1.5">
+                                        <span>🎶</span> Dedicate Song
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">Write and dedicate an emotional track to them.</p>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        dispatch({
+                                            type: 'SET_KID_PRIVACY',
+                                            payload: {
+                                                kidId: selectedKidForActions.id,
+                                                privacySetting: selectedKidForActions.privacySetting === 'spotlight' ? 'private' : 'spotlight'
+                                            }
+                                        });
+                                        setSelectedKidForActions(prev => prev ? {
+                                            ...prev,
+                                            privacySetting: prev.privacySetting === 'spotlight' ? 'private' : 'spotlight',
+                                            privacyStatus: prev.privacySetting === 'spotlight' ? 'private' : 'spotlight'
+                                        } : null);
+                                    }}
+                                    className="bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 p-3 rounded-xl text-left transition-all"
+                                >
+                                    <div className="font-bold text-sm text-yellow-300 flex items-center gap-1.5">
+                                        <span>🛡️</span> {selectedKidForActions.privacySetting === 'spotlight' ? 'Shield from Press' : 'Put in Spotlight'}
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                                        Current: {selectedKidForActions.privacySetting === 'spotlight' ? 'Spotlight Superstar' : 'Protected from Press'}
+                                    </p>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Career Section */}
+                        {(() => {
+                            const ageInWeeks = (gameState.date.year * 52 + gameState.date.week) - (selectedKidForActions.birthDate.year * 52 + selectedKidForActions.birthDate.week);
+                            const ageInYears = Math.floor(ageInWeeks / 52);
+
+                            if (ageInYears >= 10 && !selectedKidForActions.isArtist) {
+                                return (
+                                    <div className="space-y-2 pt-2 border-t border-zinc-800">
+                                        <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider">Music Industry Launch</h3>
+                                        <button
+                                            onClick={() => {
+                                                dispatch({ type: 'START_KID_CAREER', payload: { kidId: selectedKidForActions.id } });
+                                                setSelectedKidForActions(null);
+                                            }}
+                                            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold p-3.5 rounded-xl shadow-lg flex items-center justify-between text-left transition-all"
+                                        >
+                                            <div>
+                                                <div className="text-sm font-black flex items-center gap-1.5">
+                                                    <span>🎤</span> Launch Solo Music Career
+                                                </div>
+                                                <p className="text-[11px] text-purple-200 mt-0.5">
+                                                    {selectedKidForActions.name} is {ageInYears} years old and ready for their debut single!
+                                                </p>
+                                            </div>
+                                            <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-black">
+                                                Debut
+                                            </span>
+                                        </button>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
+
+                        {/* Direct Photo Upload Button in Modal */}
+                        <div className="pt-2 border-t border-zinc-800">
+                            <label 
+                                htmlFor="modal-kid-avatar-upload-btn"
+                                className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors border border-zinc-700"
+                            >
+                                <span>📷</span> Upload Child Profile Picture
+                            </label>
+                            <input
+                                type="file"
+                                id="modal-kid-avatar-upload-btn"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    handleKidImageUpload(e, selectedKidForActions.id);
+                                    if (e.target.files && e.target.files[0]) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            setSelectedKidForActions(prev => prev ? { ...prev, image: reader.result as string, photoUrl: reader.result as string } : null);
+                                        };
+                                        reader.readAsDataURL(e.target.files[0]);
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        <button
+                            onClick={() => setSelectedKidForActions(null)}
+                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors"
+                        >
+                            Close Menu
                         </button>
                     </div>
                 </div>

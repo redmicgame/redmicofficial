@@ -4,6 +4,7 @@ import GoldenGlobeRedCarpetView from './components/GoldenGlobeRedCarpetView';
 import KaiStreamSetupView from "./components/KaiStreamSetupView";
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 import { Analytics } from '@vercel/analytics/react';
+import ShutdownTopBanner from './components/ShutdownTopBanner';
 
 
 import React from 'react';
@@ -412,8 +413,9 @@ const AppContent: React.FC = () => {
     };
 
     return (
-        <div className={`bg-black min-h-[100dvh] h-[100dvh] w-full flex items-center justify-center ${isGoldTheme ? 'gold-theme' : ''}`}>
-             <div className="relative bg-zinc-900 text-white w-full h-full overflow-hidden">
+        <div className={`bg-black min-h-[100dvh] h-[100dvh] w-full flex flex-col items-center justify-center ${isGoldTheme ? 'gold-theme' : ''}`}>
+             <ShutdownTopBanner />
+             <div className="relative bg-zinc-900 text-white w-full flex-1 overflow-hidden">
                 {renderView()}
                 {gameState.activeEncounter && <EncounterModalView />}
              </div>

@@ -21,6 +21,7 @@ import ImageIcon from "./icons/ImageIcon";
 import ConfirmationModal from "./ConfirmationModal";
 import XPremiumModal from "./XPremiumModal";
 import { SpotifySnapshotCard } from "./SpotifySnapshotCard";
+import { getArtistImage } from "../constants";
 
 // Sub-component for the Year End Chart visualization
 const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, activeArtist?: any): XUser => {
@@ -455,6 +456,79 @@ export const Post: React.FC<{
   const isLeaderboardPost = post.image && post.image.startsWith("leaderboard:");
   const isTmzPost = author.id === "tmz";
 
+  const partnerOrChildDualImage = useMemo(() => {
+    if (isTmzPost) return null;
+    if (post.image && post.image2) {
+      return { img1: post.image, img2: post.image2 };
+    }
+    if (!activeArtistData) return null;
+    const contentLower = (post.content || "").toLowerCase();
+    const playerImg =
+      activeArtist?.image ||
+      activeArtistData.artistImages?.[0] ||
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+
+    // 1. Check kids
+    const kids = activeArtistData.kids || [];
+    for (const kid of kids) {
+      const kidName = (kid.name || "").toLowerCase();
+      const isKidMentioned =
+        (kidName && contentLower.includes(kidName)) ||
+        (contentLower.includes("child") &&
+          (contentLower.includes("birthday") ||
+            contentLower.includes("baby") ||
+            contentLower.includes("rare public appearance") ||
+            contentLower.includes("dedicated") ||
+            contentLower.includes("mini icon") ||
+            contentLower.includes("spared no expense")));
+
+      if (isKidMentioned) {
+        const kidImg =
+          kid.photoUrl ||
+          kid.image ||
+          (post.image && !post.image.startsWith("chart:") && !post.image.startsWith("snapshot:")
+            ? post.image
+            : "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=500&h=500&fit=crop");
+        return {
+          img1: kidImg,
+          img2: playerImg,
+        };
+      }
+    }
+
+    // 2. Check partner
+    const relationships = activeArtistData.relationships || [];
+    for (const rel of relationships) {
+      const partnerName = (rel.partnerName || "").toLowerCase();
+      const isPartnerMentioned =
+        (partnerName && contentLower.includes(partnerName)) ||
+        ((contentLower.includes("dating") ||
+          contentLower.includes("engaged") ||
+          contentLower.includes("wedding") ||
+          contentLower.includes("married") ||
+          contentLower.includes("anniversary") ||
+          contentLower.includes("duet") ||
+          contentLower.includes("soulmate") ||
+          contentLower.includes("expecting a baby with")) &&
+          (rel.status === "dating" || rel.status === "engaged" || rel.status === "married"));
+
+      if (isPartnerMentioned) {
+        const partnerImg =
+          rel.image ||
+          getArtistImage(rel.partnerName) ||
+          (post.image && !post.image.startsWith("chart:") && !post.image.startsWith("snapshot:")
+            ? post.image
+            : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop");
+        return {
+          img1: partnerImg,
+          img2: playerImg,
+        };
+      }
+    }
+
+    return null;
+  }, [post.content, post.image, post.image2, isTmzPost, activeArtistData, activeArtist]);
+
   return (
     <div className="flex gap-3 p-3 border-b border-zinc-700/70">
       <button onClick={handleViewProfile}>
@@ -634,17 +708,34 @@ export const Post: React.FC<{
             muted
             playsInline
           />
+        ) : !isTmzPost && partnerOrChildDualImage ? (
+          <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
+            <img
+              src={partnerOrChildDualImage.img1}
+              alt="Post image 1"
+              className="w-1/2 h-full object-cover border-r border-zinc-700"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              src={partnerOrChildDualImage.img2}
+              alt="Post image 2"
+              className="w-1/2 h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </div>
         ) : post.image && post.image2 ? (
           <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
             <img
               src={post.image}
               alt="Post image 1"
               className="w-1/2 h-full object-cover border-r border-zinc-700"
+              referrerPolicy="no-referrer"
             />
             <img
               src={post.image2}
               alt="Post image 2"
               className="w-1/2 h-full object-cover"
+              referrerPolicy="no-referrer"
             />
           </div>
         ) : post.image ? (

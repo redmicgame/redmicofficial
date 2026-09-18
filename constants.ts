@@ -1873,7 +1873,7 @@ Object.assign(NPC_ERAS, {"Aretha Franklin":{"start":1961,"end":2018,"genre":"R&B
     "start": 1990,
     "end": 2050,
     "genre": "R&B",
-    "image": "https://e-cdns-images.dzcdn.net/images/artist/f56641e7d23d8c1995a329d675bb2f69/250x250-000000-80-0-0.jpg"
+    "image": "https://cdn-images.dzcdn.net/images/artist/818c27b3e5a6179d4cd2f053df9abaf1/500x500-000000-80-0-0.jpg"
   },
   "Celine Dion": {
     "start": 1990,
@@ -2441,25 +2441,37 @@ export const ARTIST_NAME_ALIASES: Record<string, string> = {
   "ac/dc": "AC/DC",
   "acdc": "AC/DC",
   "ac dc": "AC/DC",
+  "ac-dc": "AC/DC",
   "missy elliot": "Missy Elliott",
   "missy elliott": "Missy Elliott",
+  "missy": "Missy Elliott",
+  "missyelliot": "Missy Elliott",
+  "missyelliott": "Missy Elliott",
   "christina aguilera": "Christina Aguilera",
   "xtina": "Christina Aguilera",
+  "christina": "Christina Aguilera",
   "zack bryan": "Zach Bryan",
   "zach bryan": "Zach Bryan",
   "zac bryan": "Zach Bryan",
+  "zachary bryan": "Zach Bryan",
   "lil baby": "Lil Baby",
   "lilbaby": "Lil Baby",
   "playboi carti": "Playboi Carti",
   "playboy carti": "Playboi Carti",
   "carti": "Playboi Carti",
+  "playboicarti": "Playboi Carti",
   "snoop dog": "Snoop Dogg",
   "snoop dogg": "Snoop Dogg",
   "snoop lion": "Snoop Dogg",
+  "snoop": "Snoop Dogg",
   "mariah carey": "Mariah Carey",
+  "mariah": "Mariah Carey",
   "charlie puth": "Charlie Puth",
+  "charlie": "Charlie Puth",
   "young thug": "Young Thug",
   "youngthug": "Young Thug",
+  "thugger": "Young Thug",
+  "jeffery": "Young Thug",
 };
 
 export const KNOWN_BROKEN_IMAGE_HASHES: string[] = [
@@ -2491,6 +2503,57 @@ export function isBrokenOrGenericCover(url?: string): boolean {
   }
   return false;
 }
+
+// Explicit mappings for requested artists and common variants
+const EXPLICIT_NPC_ARTIST_IMAGE_MAPPINGS: Record<string, string> = {
+  "Kesha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "kesha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "Ke$ha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "ke$ha": "https://cdn-images.dzcdn.net/images/artist/5bcb0869e99326aace7292e7e4c415df/500x500-000000-80-0-0.jpg",
+  "AC/DC": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
+  "ac/dc": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
+  "ACDC": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
+  "acdc": "https://cdn-images.dzcdn.net/images/artist/7dbc950be70f997ba0cd2b39de7f2aa7/500x500-000000-80-0-0.jpg",
+  "Missy Elliott": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "Missy Elliot": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "missy elliot": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "missy Elliot": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "missy elliott": "https://cdn-images.dzcdn.net/images/artist/e2028aa97337e6ebb6dc9219b5edd600/500x500-000000-80-0-0.jpg",
+  "Christina Aguilera": "https://cdn-images.dzcdn.net/images/artist/3ccd1f43e9ff3cfd2f7dda86419414e7/500x500-000000-80-0-0.jpg",
+  "christina aguilera": "https://cdn-images.dzcdn.net/images/artist/3ccd1f43e9ff3cfd2f7dda86419414e7/500x500-000000-80-0-0.jpg",
+  "Zach Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "Zack Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "zack bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "zach bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
+  "Lil Baby": "https://cdn-images.dzcdn.net/images/artist/6065a31e166b08e9b03711d8d7a8efa3/500x500-000000-80-0-0.jpg",
+  "lil baby": "https://cdn-images.dzcdn.net/images/artist/6065a31e166b08e9b03711d8d7a8efa3/500x500-000000-80-0-0.jpg",
+  "Lil baby": "https://cdn-images.dzcdn.net/images/artist/6065a31e166b08e9b03711d8d7a8efa3/500x500-000000-80-0-0.jpg",
+  "Playboi Carti": "https://cdn-images.dzcdn.net/images/artist/b90097972a60d9d8598a79a786be1a3a/500x500-000000-80-0-0.jpg",
+  "playboi carti": "https://cdn-images.dzcdn.net/images/artist/b90097972a60d9d8598a79a786be1a3a/500x500-000000-80-0-0.jpg",
+  "Snoop Dogg": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "snoop dogg": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "Snoop Dog": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "snoop dog": "https://cdn-images.dzcdn.net/images/artist/5e53a969faf1fc8e9dee3811df20c617/500x500-000000-80-0-0.jpg",
+  "Mariah Carey": "https://cdn-images.dzcdn.net/images/artist/818c27b3e5a6179d4cd2f053df9abaf1/500x500-000000-80-0-0.jpg",
+  "mariah carey": "https://cdn-images.dzcdn.net/images/artist/818c27b3e5a6179d4cd2f053df9abaf1/500x500-000000-80-0-0.jpg",
+  "Charlie Puth": "https://cdn-images.dzcdn.net/images/artist/c355b366638e0c5f20f4b265f0f12646/500x500-000000-80-0-0.jpg",
+  "charlie puth": "https://cdn-images.dzcdn.net/images/artist/c355b366638e0c5f20f4b265f0f12646/500x500-000000-80-0-0.jpg",
+  "Young Thug": "https://cdn-images.dzcdn.net/images/artist/89833703db63ec93f85f7979c2fb37f3/500x500-000000-80-0-0.jpg",
+  "young thug": "https://cdn-images.dzcdn.net/images/artist/89833703db63ec93f85f7979c2fb37f3/500x500-000000-80-0-0.jpg",
+};
+
+Object.assign(NPC_ARTIST_IMAGES, EXPLICIT_NPC_ARTIST_IMAGE_MAPPINGS);
+
+// Also populate lowercase versions for all existing NPC_ARTIST_IMAGES
+Object.keys(NPC_ARTIST_IMAGES).forEach((k) => {
+  const url = NPC_ARTIST_IMAGES[k];
+  if (url && !isBrokenOrGenericCover(url)) {
+    const lk = k.toLowerCase().trim();
+    if (!NPC_ARTIST_IMAGES[lk]) {
+      NPC_ARTIST_IMAGES[lk] = url;
+    }
+  }
+});
 
 function resolveSingleArtistImage(name: string): string | undefined {
   if (!name) return undefined;

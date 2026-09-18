@@ -25182,6 +25182,7 @@ Let us know if you accept.`,
         endWeek: undefined,
         status: "dating",
         isPublic: false,
+        image: getArtistImage(action.payload.partnerName),
       };
       return {
         ...state,
@@ -25217,11 +25218,15 @@ Let us know if you accept.`,
           ? `Pop Base has exclusively learned that ${activeArtist.name} is dating ${rel?.partnerName}.`
           : `Sources tell TMZ that ${activeArtist.name} and ${rel?.partnerName} are officially an item.`;
 
+      const partnerImg = rel?.image || getArtistImage(rel?.partnerName || "") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+      const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
+
       const newPost: XPost = {
         id: crypto.randomUUID(),
         authorId: action.payload.outlet,
         content: postContext,
-        image: activeArtist.image,
+        image: action.payload.outlet === "tmz" ? playerImg : partnerImg,
+        image2: action.payload.outlet === "tmz" ? undefined : playerImg,
         likes: Math.floor(Math.random() * 300000) + 100000,
         retweets: Math.floor(Math.random() * 80000) + 20000,
         views: Math.floor(Math.random() * 5000000) + 2000000,
@@ -25282,11 +25287,15 @@ Let us know if you accept.`,
             ? `💍 ${activeArtist.name} and ${rel?.partnerName} are officially engaged!`
             : `💒 ${activeArtist.name} and ${rel?.partnerName} are officially married!`;
 
+        const partnerImg = rel?.image || getArtistImage(rel?.partnerName || "") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+        const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
+
         const newPost: XPost = {
           id: crypto.randomUUID(),
-          authorId: "tmz",
+          authorId: "popbase",
           content: postContext,
-          image: activeArtist.image,
+          image: partnerImg,
+          image2: playerImg,
           likes: Math.floor(Math.random() * 500000) + 200000,
           retweets: Math.floor(Math.random() * 100000) + 40000,
           views: Math.floor(Math.random() * 8000000) + 3000000,
@@ -25700,6 +25709,24 @@ Let us know if you accept.`,
         },
       };
     }
+    case "UPDATE_KID_IMAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            kids: (activeData.kids || []).map((k) =>
+              k.id === action.payload.kidId
+                ? { ...k, photoUrl: action.payload.image, image: action.payload.image }
+                : k,
+            ),
+          },
+        },
+      };
+    }
     case "GET_BACK_WITH_EX": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
@@ -26008,11 +26035,14 @@ Let us know if you accept.`,
       });
 
       const weddingPostContent = `💒 JUST MARRIED: ${activeArtist.name} and ${rel.partnerName} have tied the knot in a stunning ${plan.title}! Congratulations to the newlyweds! 💍✨`;
+      const partnerImg = rel.image || getArtistImage(rel.partnerName) || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+      const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
       const weddingPost: XPost = {
         id: crypto.randomUUID(),
-        authorId: "tmz",
+        authorId: "popbase",
         content: weddingPostContent,
-        image: activeArtist.image,
+        image: partnerImg,
+        image2: playerImg,
         likes: Math.floor(Math.random() * 900000) + 300000,
         retweets: Math.floor(Math.random() * 200000) + 50000,
         views: Math.floor(Math.random() * 15000000) + 5000000,
@@ -26076,10 +26106,15 @@ Let us know if you accept.`,
           : r
       );
 
+      const partnerImgCollab = rel.image || getArtistImage(rel.partnerName) || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+      const playerImgCollab = activeArtist.image || activeData.artistImages?.[0] || "";
+
       const post: XPost = {
         id: crypto.randomUUID(),
         authorId: "popbase",
         content: postContext,
+        image: partnerImgCollab,
+        image2: playerImgCollab,
         likes: Math.floor(Math.random() * 400000) + 100000,
         retweets: Math.floor(Math.random() * 80000) + 20000,
         views: Math.floor(Math.random() * 6000000) + 1500000,
@@ -26133,10 +26168,15 @@ Let us know if you accept.`,
           : r
       );
 
+      const partnerImgAnniv = rel.image || getArtistImage(rel.partnerName) || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+      const playerImgAnniv = activeArtist.image || activeData.artistImages?.[0] || "";
+
       const post: XPost = {
         id: crypto.randomUUID(),
         authorId: "popcrave",
         content: postMsg,
+        image: partnerImgAnniv,
+        image2: playerImgAnniv,
         likes: Math.floor(Math.random() * 350000) + 80000,
         retweets: Math.floor(Math.random() * 60000) + 15000,
         views: Math.floor(Math.random() * 5000000) + 1000000,
@@ -26437,17 +26477,22 @@ Let us know if you accept.`,
       const targetKid = (activeData.kids || []).find((k) => k.id === action.payload.kidId);
       if (!targetKid) return state;
 
+      const newStatus = action.payload.privacyStatus || (action.payload as any).privacySetting || "private";
       const updatedKids = (activeData.kids || []).map((k) =>
-        k.id === action.payload.kidId ? { ...k, privacyStatus: action.payload.privacyStatus } : k
+        k.id === action.payload.kidId ? { ...k, privacyStatus: newStatus, privacySetting: newStatus } : k
       );
 
       let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
-      if (action.payload.privacyStatus === "spotlight" && activeArtist) {
+      if (newStatus === "spotlight" && activeArtist) {
+        const kidImg = targetKid.photoUrl || targetKid.image || "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=500&h=500&fit=crop";
+        const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
         newPosts = [
           {
             id: crypto.randomUUID(),
             authorId: "popbase",
             content: `🌟 MINI ICON: ${activeArtist.name} makes a rare public appearance with child ${targetKid.name}! Fans praise their sweet moment! ✨`,
+            image: kidImg,
+            image2: playerImg,
             likes: Math.floor(Math.random() * 450000) + 150000,
             retweets: Math.floor(Math.random() * 70000) + 15000,
             views: Math.floor(Math.random() * 8000000) + 2000000,
@@ -26486,11 +26531,15 @@ Let us know if you accept.`,
 
       let newPosts = activeData.xPosts ? [...activeData.xPosts] : [];
       if (action.payload.partyType === "extravaganza" && activeArtist) {
+        const kidImg = targetKid.photoUrl || targetKid.image || "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=500&h=500&fit=crop";
+        const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
         newPosts = [
           {
             id: crypto.randomUUID(),
             authorId: "popbase",
             content: `🎂🎈 BIRTHDAY BLOWOUT: ${activeArtist.name} spared no expense throwing an epic celebration for ${targetKid.name} with celebrity guests! 🎁✨`,
+            image: kidImg,
+            image2: playerImg,
             likes: Math.floor(Math.random() * 500000) + 100000,
             retweets: Math.floor(Math.random() * 80000) + 15000,
             views: Math.floor(Math.random() * 9000000) + 2000000,
@@ -26610,10 +26659,14 @@ Let us know if you accept.`,
         k.id === action.payload.kidId ? { ...k, dedicatedSongTitle: action.payload.songTitle } : k
       );
 
+      const kidImg = targetKid.photoUrl || targetKid.image || "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=500&h=500&fit=crop";
+      const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
       const post: XPost = {
         id: crypto.randomUUID(),
         authorId: "popbase",
         content: `🥺🤍 TEARS: ${activeArtist.name} wrote a heartfelt unreleased song titled "${action.payload.songTitle}" dedicated to child ${targetKid.name}!`,
+        image: kidImg,
+        image2: playerImg,
         likes: Math.floor(Math.random() * 600000) + 150000,
         retweets: Math.floor(Math.random() * 90000) + 20000,
         views: Math.floor(Math.random() * 10000000) + 2000000,
@@ -26750,10 +26803,14 @@ Let us know if you accept.`,
               ? "her"
               : "their";
         const postContext = `👶🍼 IT'S A BABY! ${activeArtist.name} has officially welcomed ${pronounPossessive} new baby, ${newKid.name}!`;
+        const kidImg = "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=500&h=500&fit=crop";
+        const playerImg = activeArtist.image || activeData.artistImages?.[0] || "";
         const newPost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
           content: postContext,
+          image: kidImg,
+          image2: playerImg,
           likes: Math.floor(Math.random() * 800000) + 100000,
           retweets: Math.floor(Math.random() * 100000) + 20000,
           views: Math.floor(Math.random() * 12000000) + 2000000,

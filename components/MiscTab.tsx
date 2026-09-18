@@ -5,6 +5,7 @@ import ChevronRightIcon from './icons/ChevronRightIcon';
 import { PaparazziPhoto, PaparazziPhotoCategory } from '../types';
 import { db, getActiveSaveId } from '../db/db';
 import BookOpenIcon from './icons/BookOpenIcon';
+import { RedMicProCodeModal } from './RedMicProCodeModal';
 
 const MiscTab: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
@@ -12,6 +13,7 @@ const MiscTab: React.FC = () => {
     const { date } = gameState;
     const [showEndCareerConfirm, setShowEndCareerConfirm] = useState(false);
     const [showExportOptions, setShowExportOptions] = useState(false);
+    const [showProCodeModal, setShowProCodeModal] = useState(false);
     
     // State for paparazzi photos
     const [paparazziImage, setPaparazziImage] = useState<string | null>(null);
@@ -348,11 +350,16 @@ const MiscTab: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="bg-zinc-800 p-4 rounded-lg">
-                    <h3 className="font-bold text-lg mb-2">Red Mic Pro</h3>
+                <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700/60">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-lg">Red Mic Pro</h3>
+                        <span className="text-[10px] bg-red-600/30 text-red-400 border border-red-500/50 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                            Discontinued
+                        </span>
+                    </div>
                     {activeArtistData.redMicPro.unlocked ? (
                         <>
-                            <p className="text-sm text-green-400 mb-2">You have Red Mic Pro! Enjoy exclusive features.</p>
+                            <p className="text-sm text-green-400 mb-2 font-medium">You have active Red Mic Pro access (Legacy Member).</p>
                             <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'redMicProDashboard' })} className="w-full bg-yellow-500/20 text-yellow-300 p-3 rounded-lg text-left hover:bg-yellow-500/30 transition-colors flex justify-between items-center">
                                 <span>Open Pro Dashboard</span>
                                 <ChevronRightIcon className="w-6 h-6" />
@@ -360,11 +367,24 @@ const MiscTab: React.FC = () => {
                         </>
                     ) : (
                         <>
-                            <p className="text-sm text-zinc-400 mb-2">Unlock exclusive features to supercharge your career.</p>
-                            <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'redMicProUnlock' })} className="w-full bg-red-900/50 p-3 rounded-lg text-left text-red-300 hover:bg-red-900 transition-colors flex justify-between items-center">
-                                <span>Learn More & Unlock</span>
-                                <ChevronRightIcon className="w-6 h-6" />
-                            </button>
+                            <p className="text-xs text-red-300 font-bold mb-1">
+                                Red Mic Pro is now discontinued for new members.
+                            </p>
+                            <p className="text-xs text-zinc-400 mb-3">
+                                Old members may still be able to use their code if their subscription is still active.
+                            </p>
+                            <div className="flex gap-2">
+                                <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'redMicProUnlock' })} className="flex-1 bg-red-900/50 p-3 rounded-lg text-left text-red-300 hover:bg-red-900 transition-colors flex justify-between items-center text-sm font-medium">
+                                    <span>Learn More</span>
+                                    <ChevronRightIcon className="w-5 h-5" />
+                                </button>
+                                <button 
+                                    onClick={() => setShowProCodeModal(true)} 
+                                    className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-4 py-2.5 rounded-lg text-xs transition-colors shrink-0 shadow-sm"
+                                >
+                                    Enter Code
+                                </button>
+                            </div>
                         </>
                     )}
                 </div>
@@ -712,6 +732,11 @@ const MiscTab: React.FC = () => {
                 </div>
                 <p className="text-center text-zinc-500 text-sm mt-8">Red Mic v1.0.0</p>
             </div>
+
+            <RedMicProCodeModal 
+                isOpen={showProCodeModal} 
+                onClose={() => setShowProCodeModal(false)} 
+            />
         </>
     );
 };

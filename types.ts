@@ -1916,6 +1916,7 @@ export interface Kid {
   monthlyAllowance?: number;
   dedicatedSongTitle?: string;
   photoUrl?: string;
+  image?: string;
 }
 
 export interface Pregnancy {
@@ -3216,6 +3217,10 @@ export type GameAction =
   | {
       type: "UPDATE_RELATIONSHIP_IMAGE";
       payload: { relationshipId: string; image: string };
+    }
+  | {
+      type: "UPDATE_KID_IMAGE";
+      payload: { kidId: string; image: string };
     }
   | { type: "START_PREGNANCY"; payload: { partnerName: string } }
   | { type: "REVEAL_PREGNANCY" }
