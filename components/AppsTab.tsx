@@ -59,6 +59,7 @@ const appCategories: AppCategory[] = [
         apps: [
             { name: 'MySpace', description: 'A place for friends', icon: <span className="font-bold text-xl text-[#003399]">My</span>, view: 'myspace', bgColor: '#e9e9e9' },
             { name: 'IMDb', description: 'Movies, TV and Celebrities', icon: <span className="font-bold text-xl text-black">IMDb</span>, view: 'imdb', bgColor: '#f5c518' },
+            { name: 'TV & Film', description: 'Start your own shows & movies', icon: <span className="font-bold text-xl text-amber-400">TV</span>, view: 'tvAndFilm', bgColor: '#18181b' },
             { name: 'TikTok', description: 'Make short videos', icon: <TikTokIcon className="w-8 h-8"/>, view: 'tiktok', bgColor: '#000000', iconColor: '#25F4EE' },
             { name: 'Instagram', description: 'Share photos visually', icon: <span className="font-bold text-2xl font-serif text-white">Ig</span>, view: 'instagram', bgColor: '#E1306C' },
             { name: 'Google', description: 'Search the web', icon: <GoogleIcon className="w-8 h-8"/>, view: 'google', bgColor: '#FFFFFF', iconColor: '#000000' },
@@ -98,6 +99,7 @@ const appCategories: AppCategory[] = [
         apps: [
             { name: 'Official UK Charts', description: 'Official Singles & Albums Chart', icon: <span className="font-bold text-xl text-white">UK</span>, view: 'ukChart', bgColor: '#0024f0' },
             { name: 'Spotify Charts', description: 'Top 50 Global', icon: <SpotifyIcon className="w-8 h-8"/>, view: 'spotifyChart', bgColor: '#1DB954', iconColor: '#000000' },
+            { name: 'Kworb Data', description: 'Spotify streaming data & weekly leaderboards', icon: <span className="font-black text-xl text-white">kw</span>, view: 'kworbData', bgColor: '#00247d' },
             { name: 'Apple Music for Artists', description: 'Artist Dashboard', icon: <ITunesIcon className="w-8 h-8"/>, view: 'itunesDashboard', bgColor: '#ffffff', textColor: '#fa243c' as any },
                         { name: 'Spotify Podcasts', description: 'Top podcasts', icon: <SpotifyIcon className="w-8 h-8 text-[#a970ff]"/>, view: 'spotifyPodcasts', bgColor: '#000000' },
             { name: 'Spotify for Creators', description: 'Manage podcasts', icon: <SpotifyIcon className="w-8 h-8 text-[#a970ff]"/>, view: 'spotifyForCreators', bgColor: '#000000' },

@@ -97,6 +97,7 @@ import ManagementView from './components/ManagementView';
 import SecurityView from './components/SecurityView';
 import SpotifyTopSongsView from './components/SpotifyTopSongsView';
 import SpotifyTopAlbumsView from './components/SpotifyTopAlbumsView';
+import { KworbDataView } from './components/KworbDataView';
 import CreateVogueFeatureView from './components/CreateVogueFeatureView';
 import SpotifyWrappedView from './components/SpotifyWrappedView';
 import HotPopSongsView from './components/HotPopSongsView';
@@ -135,6 +136,7 @@ import { ChartPredictionsView } from './components/ChartPredictionsView';
 import KalshiView from './components/KalshiView';
 import ImdbView from './components/ImdbView';
 import ActingCareerView from './components/ActingCareerView';
+import { TvAndFilmProductionView } from './components/TvAndFilmProductionView';
 import AlbumPredictionsView from './components/AlbumPredictionsView';
 import { getEraConfiguration } from './utils/eraUtils';
 import UKChartView from './components/UKChartView';
@@ -243,6 +245,9 @@ const AppContent: React.FC = () => {
                 return <SpotifyTopSongsView />;
             case 'spotifyTopAlbums':
                 return <SpotifyTopAlbumsView />;
+            case 'kworbData':
+            case 'kworb':
+                return <KworbDataView />;
             case 'gigs':
                 return <GigsView />;
             case 'tours':
@@ -380,6 +385,8 @@ const AppContent: React.FC = () => {
                 return <ImdbView />;
             case 'actingCareer':
                 return <ActingCareerView />;
+            case 'tvAndFilm':
+                return <TvAndFilmProductionView />;
             case 'onlyfansSetup':
                 return <OnlyFansSetupView />;
             case 'onlyfans':

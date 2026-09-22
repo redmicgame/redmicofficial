@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
 import { getBillboardFormula } from '../utils/eraUtils';
 import { getArtistImage } from '../constants';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
+import { getSpotifySongDetails } from '../utils/spotifyCredits';
 
 const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
@@ -20,12 +21,17 @@ const PlusIcon = ({ expanded }: { expanded: boolean }) => (
 const RightArrowIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
 
 
-const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entry, isAlbumChart }) => {
+const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?: boolean }> = ({ entry, isAlbumChart, isSpotify }) => {
     const { rank, lastWeek, peak, weeksOnChart, title, artist, coverArt } = entry;
     const isPlayerItem = isAlbumChart ? entry.isPlayerAlbum : entry.isPlayerSong;
     const weeklyStreams = isAlbumChart ? entry.weeklyActivity : (entry.weeklyStreams || 0);
     const [expanded, setExpanded] = useState(false);
     const { gameState } = useGame();
+
+    const spotifyDetails = useMemo(() => {
+        if (!isSpotify) return null;
+        return getSpotifySongDetails(entry, gameState, false);
+    }, [entry, gameState, isSpotify]);
     
     const renderMovement = () => {
         const isNewEntry = lastWeek === null && weeksOnChart === 1;
@@ -113,8 +119,50 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean }> = ({ entr
                 </div>
             </div>
 
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out bg-[#f4f4f4] ${expanded ? 'max-h-40 opacity-100 py-3' : 'max-h-0 opacity-0'}`}>
-                {isAlbumChart ? (
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out bg-[#f4f4f4] ${expanded ? 'max-h-96 opacity-100 py-3' : 'max-h-0 opacity-0'}`}>
+                {isSpotify && spotifyDetails ? (
+                    <div className="bg-white p-4 mx-2 rounded border border-zinc-200 text-xs">
+                        <div className="grid grid-cols-[110px_1fr] sm:grid-cols-[150px_1fr] gap-y-3 gap-x-3 text-zinc-800">
+                            <div className="font-bold text-black">Producers</div>
+                            <div>{spotifyDetails.producers.length > 0 ? spotifyDetails.producers.join(', ') : '—'}</div>
+                            
+                            <div className="font-bold text-black">Songwriters</div>
+                            <div className="leading-relaxed">
+                                {spotifyDetails.songwriters.length > 0 ? (
+                                    spotifyDetails.songwriters.map((writer, i) => (
+                                        <span key={i}>
+                                            <span className="underline decoration-zinc-400 hover:text-black cursor-pointer">
+                                                {writer}
+                                            </span>
+                                            {i < spotifyDetails.songwriters.length - 1 ? ', ' : ''}
+                                        </span>
+                                    ))
+                                ) : '—'}
+                            </div>
+
+                            <div className="font-bold text-black">Source</div>
+                            <div className="font-bold text-zinc-900">{spotifyDetails.source}</div>
+
+                            <div className="font-bold text-black">Peak</div>
+                            <div>{spotifyDetails.peak}</div>
+
+                            <div className="font-bold text-black">Prev Week</div>
+                            <div>{spotifyDetails.lastRank ?? '—'}</div>
+
+                            <div className="font-bold text-black">Streak</div>
+                            <div>{spotifyDetails.streak}</div>
+
+                            <div className="font-bold text-black">Streams</div>
+                            <div className="font-medium">{spotifyDetails.streams.toLocaleString()}</div>
+
+                            <div className="font-bold text-black">Release Date</div>
+                            <div>{spotifyDetails.releaseDate}</div>
+
+                            <div className="font-bold text-black">First entry date</div>
+                            <div>{spotifyDetails.firstEntryDate}</div>
+                        </div>
+                    </div>
+                ) : isAlbumChart ? (
                     <div className="flex px-4 items-center justify-around">
                         <div className="text-center">
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">PURE SALES</p>
@@ -262,7 +310,7 @@ const BillboardView: React.FC = () => {
             <main className="mx-auto max-w-3xl pt-2 px-2 relative z-0">
                 {currentChart.data.length > 0 ? (
                     currentChart.data.map(entry => (
-                        <ChartEntryItem key={entry.uniqueId} entry={entry} isAlbumChart={currentChart.isAlbum} />
+                        <ChartEntryItem key={entry.uniqueId} entry={entry} isAlbumChart={currentChart.isAlbum} isSpotify={selectedChart === 'spotify'} />
                     ))
                 ) : (
                     <div className="text-center py-20 text-zinc-500 bg-white rounded-md mt-4 shadow-sm border border-gray-200">

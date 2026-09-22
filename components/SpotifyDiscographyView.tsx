@@ -17,11 +17,42 @@ const ReleaseItem: React.FC<{ release: Release, large?: boolean, onClick: () => 
     const titleSize = large ? 'text-xl' : 'text-lg';
 
     let labelName = getIndependentLabelName(release.id);
-    if (release.rightsOwnerLabelId && release.rightsSoldPercent && release.rightsSoldPercent > 50) {
+    if (release.releasingLabel?.exclusiveLicenseTo) {
+        labelName = release.releasingLabel.exclusiveLicenseTo;
+    } else if (release.releasingLabel?.dealWithMajor) {
+        labelName = release.releasingLabel.dealWithMajor;
+    } else if (release.rightsOwnerLabelId && release.rightsSoldPercent && release.rightsSoldPercent > 50) {
         const ownerLabel = LABELS.find(l => l.id === release.rightsOwnerLabelId);
         if (ownerLabel) labelName = ownerLabel.name;
-    } else if (release.releasingLabel) {
+    } else if (release.releasingLabel?.name) {
         labelName = release.releasingLabel.name;
+    } else if (activeArtistData?.contract) {
+        const major = LABELS.find(l => l.id === activeArtistData.contract?.labelId);
+        if (major) {
+            labelName = major.name;
+        } else {
+            const cl = activeArtistData.customLabels?.find(l => l.id === activeArtistData.contract?.labelId);
+            if (cl?.exclusiveLicenseId) {
+                const exc = LABELS.find(l => l.id === cl.exclusiveLicenseId);
+                if (exc) labelName = exc.name;
+            } else if (cl?.dealWithMajorId) {
+                const maj = LABELS.find(l => l.id === cl.dealWithMajorId);
+                if (maj) labelName = maj.name;
+            } else if (cl) {
+                labelName = cl.name;
+            }
+        }
+    } else if (activeArtistData?.customLabels && activeArtistData.customLabels.length > 0) {
+        const cl = activeArtistData.customLabels[0];
+        if (cl.exclusiveLicenseId) {
+            const exc = LABELS.find(l => l.id === cl.exclusiveLicenseId);
+            if (exc) labelName = exc.name;
+        } else if (cl.dealWithMajorId) {
+            const maj = LABELS.find(l => l.id === cl.dealWithMajorId);
+            if (maj) labelName = maj.name;
+        } else {
+            labelName = cl.name;
+        }
     }
 
     const featureSong = activeArtistData?.songs.find(s => release.songIds.includes(s.id) && s.isFeatureToNpc);

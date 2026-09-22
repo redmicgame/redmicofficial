@@ -9,6 +9,7 @@ import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlusIcon from './icons/PlusIcon';
 import ArrowUpTrayIcon from './icons/ArrowUpTrayIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
+import { ChartRow } from './SpotifyTopSongsView';
 
 const formatGameDateToMonthDay = (gameDate: { week: number; year: number }) => {
     const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
@@ -25,6 +26,7 @@ const SpotifyChartView: React.FC = () => {
     const { gameState, dispatch, allPlayerArtists } = useGame();
     const { spotifyGlobal = [], billboardTopAlbums, chartHistory, albumChartHistory, date } = gameState;
     const [activeSlide, setActiveSlide] = useState(0);
+    const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
 
     const upcomingCountdowns = useMemo(() => {
         const countdowns: { id: string, title: string, artistName: string, coverArt: string, releaseDate: GameDate, preSaves: number, isExplicit: boolean }[] = [];
@@ -254,18 +256,32 @@ const SpotifyChartView: React.FC = () => {
                 </button>
 
                 {topSong && (
-                    <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'spotifyTopSongs'})} className="w-full bg-[#a03fec] p-4 rounded-lg text-left">
-                        <p className="font-bold text-lg">Weekly Top Songs</p>
-                        <p>Global & Regional</p>
-                        <div className="mt-4 flex items-center gap-3">
-                            <img src={topSong.coverArt} className="w-16 h-16 rounded-md" />
+                    <div className="w-full bg-white rounded-2xl overflow-hidden shadow-lg border border-zinc-200 text-black">
+                        <div className="bg-[#a03fec] p-4 text-white flex justify-between items-center">
                             <div>
-                                <p className="font-bold text-sm">#1 THIS WEEK</p>
-                                <p className="text-lg">{topSong.title}</p>
-                                <p className="text-sm opacity-80">{topSong.artist}</p>
+                                <p className="font-bold text-lg">Weekly Top Songs</p>
+                                <p className="text-white/80 text-xs">Global & Regional · Tap any position to inspect credits</p>
                             </div>
+                            <button 
+                                onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'spotifyTopSongs'})} 
+                                className="bg-white text-black font-bold text-xs px-3.5 py-1.5 rounded-full hover:bg-zinc-100 transition-colors shadow-sm"
+                            >
+                                View Chart
+                            </button>
                         </div>
-                    </button>
+                        <div className="p-3 divide-y divide-gray-100">
+                            {spotifyGlobal.slice(0, 5).map(entry => (
+                                <ChartRow
+                                    key={entry.uniqueId}
+                                    entry={entry}
+                                    isDaily={false}
+                                    isExpanded={expandedSongId === entry.uniqueId}
+                                    onToggle={() => setExpandedSongId(prev => prev === entry.uniqueId ? null : entry.uniqueId)}
+                                    gameState={gameState}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 )}
 
                  {topAlbum && (
@@ -282,6 +298,18 @@ const SpotifyChartView: React.FC = () => {
                         </div>
                     </button>
                 )}
+                {/* Kworb Streaming Data Link */}
+                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'kworbData'})} className="w-full bg-[#00247d] text-white p-4 rounded-xl text-left shadow-lg flex items-center justify-between border border-blue-900/50 hover:bg-[#001d66] transition-all">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-white text-[#00247d] text-[10px] font-black px-1.5 py-0.5 rounded">KWORB</span>
+                            <p className="font-bold text-base">Kworb Spotify Data</p>
+                        </div>
+                        <p className="text-xs text-blue-200 mt-1">Weekly artist streams, solo vs feature breakdowns & album rankings</p>
+                    </div>
+                    <span className="bg-white/10 text-white font-bold text-xs px-3 py-1.5 rounded-lg">View Data →</span>
+                </button>
+
                 {date.year >= 2016 && gameState.ukSinglesChart && gameState.ukSinglesChart.length > 0 && (
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'ukChart'})} className="w-full bg-blue-700 p-4 rounded-lg text-left mt-4 border border-blue-600">
                         <p className="font-bold text-lg">Official Singles Chart</p>

@@ -391,6 +391,18 @@ const ActingCareerView: React.FC = () => {
             </p>
           </div>
         </div>
+        <button
+          onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'tvAndFilm' })}
+          className="w-full mt-3 py-2 px-3 bg-gradient-to-r from-amber-500/20 via-zinc-900 to-zinc-900 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-between hover:bg-amber-500/30 transition shadow-md"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-base">🎬</span>
+            <span>Produce Your Own TV Shows & Movies</span>
+          </span>
+          <span className="text-[10px] bg-amber-400 text-black px-2 py-0.5 rounded font-black tracking-wide">
+            STUDIO
+          </span>
+        </button>
       </div>
 
       {/* Tab Navigation */}

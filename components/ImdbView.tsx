@@ -213,12 +213,21 @@ const ImdbView: React.FC = () => {
                 <div className="mt-2 p-4 pt-0">
                     <div className="flex items-center justify-between mb-4 border-l-4 border-[#f5c518] pl-2">
                         <h2 className="text-xl font-bold">Credits</h2>
-                        <button
-                            onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'actingCareer' })}
-                            className="text-xs bg-[#f5c518] text-black font-bold px-2.5 py-1 rounded hover:bg-yellow-400"
-                        >
-                            Hollywood Hub
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'tvAndFilm' })}
+                                className="text-xs bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold px-2.5 py-1 rounded hover:brightness-110 shadow-sm flex items-center gap-1"
+                            >
+                                <span>🎬</span>
+                                <span>Produce</span>
+                            </button>
+                            <button
+                                onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'actingCareer' })}
+                                className="text-xs bg-[#f5c518] text-black font-bold px-2.5 py-1 rounded hover:bg-yellow-400"
+                            >
+                                Hollywood Hub
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-6">

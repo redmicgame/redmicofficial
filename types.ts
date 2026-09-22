@@ -1448,6 +1448,7 @@ export interface OscarCategory {
 }
 
 export type GameView =
+  | "tvAndFilm"
   | "actingCareer"
   | "pregnancyTracker"
   | "crypto"
@@ -1524,6 +1525,8 @@ export type GameView =
   | "security"
   | "spotifyTopSongs"
   | "spotifyTopAlbums"
+  | "kworbData"
+  | "kworb"
   | "createVogueFeature"
   | "spotifyWrapped"
   | "hotPopSongs"
@@ -1978,6 +1981,62 @@ export interface CryptoCoin {
   launchedDate: GameDate;
 }
 
+export type TvShowCategory = 'Reality TV' | 'Comedy' | 'Drama' | 'Romance' | 'Horror / Thriller' | 'Sci-Fi / Fantasy' | 'Docuseries';
+export type MovieCategory = 'Comedy' | 'Romance' | 'Drama' | 'Action' | 'Horror' | 'Sci-Fi' | 'Thriller';
+
+export interface CastMember {
+  id: string;
+  name: string;
+  roleType: 'main' | 'recurring' | 'guest';
+  relationType: 'partner' | 'ex' | 'child' | 'artist' | 'celebrity' | 'friend' | 'group_member';
+  image?: string;
+  isFree: boolean;
+  cost?: number;
+  popularityBonus?: number;
+}
+
+export interface TvEpisode {
+  episodeNumber: number;
+  seasonNumber: number;
+  title: string;
+  synopsis?: string;
+  airDate?: GameDate;
+  viewers: number;
+  rating: number;
+  highlights: string[];
+  thumbnailUrl?: string;
+  youtubeVideoId?: string;
+}
+
+export interface TvAndFilmProject {
+  id: string;
+  title: string;
+  type: 'tv' | 'movie';
+  category: TvShowCategory | MovieCategory;
+  synopsis: string;
+  coverUrl: string;
+  status: 'in_production' | 'airing' | 'completed' | 'canceled';
+  releaseDate?: GameDate;
+  seasonsCount?: number;
+  currentSeason?: number;
+  episodesPerSeason?: number;
+  episodesAiredInSeason?: number;
+  episodes?: TvEpisode[];
+  cast?: CastMember[];
+  isRenewed?: boolean;
+  canBeRenewed?: boolean;
+  isRealityTv?: boolean;
+  hasYouTubeDeal?: boolean;
+  youtubeEpisodeThumbnails?: { [episodeNum: number]: string };
+  budget?: number;
+  network?: string;
+  imdbRating?: number;
+  totalViewers?: number;
+  boxOfficeRevenue?: number;
+  productionWeeksRemaining?: number;
+  hypeBoost?: number;
+}
+
 export interface ArtistData {
   followersHistory?: any;
   name?: string;
@@ -2212,6 +2271,7 @@ export interface ArtistData {
   activeActingOffer?: ActingOffer | null;
   filmingGig?: (ActingRole & { remainingWeeks: number; weeklyEvents?: string[]; soundtrackCover?: string; soundtrackSongId?: string; pay?: number }) | null;
   twitchStreams?: TwitchStreamSchedule[];
+  tvAndFilmProjects?: TvAndFilmProject[];
 }
 
 export interface RedCarpetLook {
@@ -3345,7 +3405,13 @@ export type GameAction =
   | { type: "SUBMIT_INTERVIEW"; payload: { answers: any[] } }
   | { type: "UPDATE_GAME_STATE"; payload: Partial<GameState> }
   | { type: "CREATE_CUSTOM_AWARD_SHOW"; payload: { customAwardShow: any } }
-  | { type: "ACCEPT_MOVIE_PREMIERE_RED_CARPET"; payload: { emailId: string; lookUrl: string; location: string } };
+  | { type: "ACCEPT_MOVIE_PREMIERE_RED_CARPET"; payload: { emailId: string; lookUrl: string; location: string } }
+  | { type: "CREATE_TV_FILM_PROJECT"; payload: { project: TvAndFilmProject } }
+  | { type: "RENEW_TV_SHOW"; payload: { projectId: string; episodesCount: number; newCast?: CastMember[]; coverUrl?: string } }
+  | { type: "ADD_GUEST_CAST_MEMBER"; payload: { projectId: string; castMember: CastMember } }
+  | { type: "UPDATE_EPISODE_YOUTUBE_THUMBNAIL"; payload: { projectId: string; episodeNumber: number; thumbnailUrl: string } }
+  | { type: "SIGN_YOUTUBE_DEAL"; payload: { projectId: string } }
+  | { type: "DELETE_TV_FILM_PROJECT"; payload: { projectId: string } };
 export interface PodcastEpisode {
   id: string;
   title: string;

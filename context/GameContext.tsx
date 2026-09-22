@@ -68,6 +68,7 @@ import type {
   Kid,
   KidActivity,
   ActingOffer,
+  ActingRole,
 } from "../types";
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from "../utils/relationshipUtils";
 import {
@@ -6363,8 +6364,17 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
         let totalWeeklyViews = 0;
         const updatedVideos = artistData.videos.map((video) => {
           if (video.isScheduled) return video;
-          const song = updatedSongs.find((s) => s.id === video.songId);
-          if (!song) return video;
+          const song = updatedSongs.find((s) => s.id === video.songId) || {
+            id: video.songId || video.id,
+            title: video.title,
+            genre: artistData.genre || "Pop",
+            subgenre: "",
+            quality: 85,
+            hype: artistData.hype || 50,
+            lastWeekStreams: 0,
+            pitchforkBoost: false,
+            interviewBoost: true,
+          };
 
           const videoPromo = artistData.promotions.find(
             (p) => p.itemId === video.id && p.itemType === "video",
@@ -9316,6 +9326,296 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             });
             artistData.popularity = Math.min(100, artistData.popularity + (gig.type === 'Movie' ? 3 : 1));
           }
+        }
+
+        // --- TV SHOWS & MOVIES WEEKLY PROGRESSION ---
+        if (artistData.tvAndFilmProjects && artistData.tvAndFilmProjects.length > 0) {
+          artistData.tvAndFilmProjects = artistData.tvAndFilmProjects.map((project: any) => {
+            // 1. Airing TV Show Episode
+            if (project.type === 'tv' && project.status === 'airing') {
+              const currentSeason = project.currentSeason || 1;
+              const episodesInSeason = project.episodesPerSeason || 10;
+              const nextEpNum = (project.episodesAiredInSeason || 0) + 1;
+              const artistPop = artistData.popularity || 10;
+              const artistHype = artistData.hype || 50;
+
+              // Cast calculation
+              let castScore = 0;
+              let hasPartner = false;
+              let hasEx = false;
+              let hasChild = false;
+
+              (project.cast || []).forEach((c: any) => {
+                const mult = c.roleType === 'main' ? 1.0 : c.roleType === 'recurring' ? 0.6 : 0.4;
+                if (c.relationType === 'partner') {
+                  castScore += 35 * mult;
+                  hasPartner = true;
+                } else if (c.relationType === 'ex') {
+                  castScore += 45 * mult; // Huge reality drama boost!
+                  hasEx = true;
+                } else if (c.relationType === 'child') {
+                  castScore += 25 * mult;
+                  hasChild = true;
+                } else {
+                  castScore += (c.popularityBonus || 20) * mult;
+                }
+              });
+
+              if (hasPartner && hasEx) {
+                castScore *= 1.35; // Massive viral love-triangle / ex drama bonus
+              }
+
+              const realityMult = project.isRealityTv ? 1.3 : 1.0;
+              const baseViewers = (artistPop * 55000 + 420000) * (0.8 + (artistHype / 150)) * realityMult;
+              const castMultiplier = 1 + (castScore / 100);
+              const variance = 0.88 + Math.random() * 0.26;
+              const episodeViewers = Math.max(300000, Math.floor(baseViewers * castMultiplier * variance));
+              const rating = Math.min(9.8, Math.max(6.5, parseFloat((7.0 + (castScore / 80) + (Math.random() * 1.4 - 0.4)).toFixed(1))));
+
+              // Highlights
+              const possibleHighlights: string[] = [];
+              if (project.isRealityTv) {
+                if (hasPartner && hasEx) {
+                  possibleHighlights.push(`Heated and tense confrontation between your current partner and your ex at the private dinner party.`);
+                }
+                if (hasEx) {
+                  possibleHighlights.push(`Emotional tell-all confession revealing unreleased secrets about your past relationship.`);
+                }
+                if (hasPartner) {
+                  possibleHighlights.push(`High-glamour romantic getaway date night and candid discussion about future plans.`);
+                }
+                if (hasChild) {
+                  possibleHighlights.push(`Heartwarming parenting moments and family milestones balancing celebrity life.`);
+                }
+                possibleHighlights.push(`Behind-the-scenes recording studio chaos as a major deadline looms.`);
+                possibleHighlights.push(`Explosive cast argument that led to worldwide #1 trending hashtags on X.`);
+                possibleHighlights.push(`Paparazzi showdown outside an exclusive VIP lounge that shook Hollywood.`);
+                possibleHighlights.push(`Uncensored confessional booth interview calling out rival industry figures.`);
+              } else {
+                possibleHighlights.push(`Major dramatic cliffhanger that left audience forums and Reddit buzzing.`);
+                possibleHighlights.push(`Stellar comedic timing from ${artistProfileForEmail?.name || 'the lead'}.`);
+                possibleHighlights.push(`Unexpected character revelation driving season-high live viewership.`);
+              }
+
+              const chosenHighlights = possibleHighlights.sort(() => 0.5 - Math.random()).slice(0, 3);
+              const epThumbnail = project.youtubeEpisodeThumbnails?.[nextEpNum] || project.coverUrl;
+              let ytVideoId: string | undefined;
+
+              // YouTube Deal (Reality TV Only): Publish episode video
+              if (project.isRealityTv && project.hasYouTubeDeal) {
+                ytVideoId = crypto.randomUUID();
+                const ytViews = calculateYouTubeViews({
+                  subscribers: artistData.youtubeSubscribers || 50000,
+                  popularity: artistPop,
+                  isFirstWeek: true,
+                  videoAgeWeeks: 1,
+                  payolaMultiplier: 1.0,
+                  genre: "Pop",
+                  subgenre: "",
+                  artistGenre: "Pop",
+                  year: newDate.year,
+                  videoType: "Interview",
+                  songQuality: 88,
+                  songHype: artistHype,
+                  difficulty: state.difficultyMode,
+                  pitchforkBoost: false,
+                  interviewBoost: true,
+                  applyVariance: true,
+                });
+
+                const epVideo: any = {
+                  id: ytVideoId,
+                  songId: "reality_tv_" + project.id,
+                  title: `${project.title} | S${currentSeason}E${nextEpNum}: ${chosenHighlights[0].slice(0, 48)}...`,
+                  type: "Interview",
+                  views: ytViews,
+                  thumbnail: epThumbnail,
+                  releaseDate: newDate,
+                  artistId: artistId,
+                  channelId: artistData.youtubeChannel?.id,
+                  description: `Full Official Episode of ${project.title} (Season ${currentSeason}, Episode ${nextEpNum}).\n\nStarring: ${(project.cast || []).map((c: any) => c.name).join(', ') || artistProfileForEmail?.name}.\nStream in full 4K on YouTube!`,
+                  firstWeekViews: ytViews,
+                  lastWeekViews: ytViews,
+                };
+
+                artistData.videos = [epVideo, ...(artistData.videos || [])];
+              }
+
+              const newEpisodeRecord: any = {
+                episodeNumber: nextEpNum,
+                seasonNumber: currentSeason,
+                title: `Episode ${nextEpNum}: ${chosenHighlights[0].slice(0, 40)}`,
+                synopsis: chosenHighlights[0],
+                airDate: newDate,
+                viewers: episodeViewers,
+                rating,
+                highlights: chosenHighlights,
+                thumbnailUrl: epThumbnail,
+                youtubeVideoId: ytVideoId,
+              };
+
+              const updatedEpisodes = [...(project.episodes || []), newEpisodeRecord];
+              const isSeasonComplete = nextEpNum >= episodesInSeason;
+
+              // Detailed Email Report to Inbox
+              const emailText = `
+Dear ${artistProfileForEmail?.name || 'Executive Producer'},
+
+Here is the official Ratings & Viewership Analytics Report for Episode ${nextEpNum} of "${project.title}" (Season ${currentSeason}):
+
+📊 VIEWERSHIP & AUDIENCE RATINGS:
+• Total Live + Same-Day Viewers: ${(episodeViewers / 1000000).toFixed(2)} Million (${episodeViewers.toLocaleString()} viewers)
+• Adults 18-49 Demographic: ${(rating / 3.6).toFixed(2)} Rating (Ranked #1 in Cable Primetime)
+• Critical & Audience Score: ${rating}/10
+${project.hasYouTubeDeal ? `• YouTube Deal Streaming: Episode video was successfully uploaded to your official YouTube channel with instant viral engagement!\n` : ''}
+
+🌟 KEY EPISODE HIGHLIGHTS & DRAMA:
+${chosenHighlights.map(h => `• ${h}`).join('\n')}
+
+👥 CAST POPULARITY BREAKDOWN:
+${(project.cast || []).slice(0, 5).map((c: any) => `• ${c.name} [${c.roleType.toUpperCase()}${c.relationType !== 'artist' && c.relationType !== 'celebrity' ? ` - ${c.relationType}` : ''}]: High engagement and audience discussion.`).join('\n')}
+
+${isSeasonComplete 
+  ? `🏆 SEASON ${currentSeason} FINALE CONCLUDED!
+All ${episodesInSeason} episodes of Season ${currentSeason} have officially aired. The season accumulated a staggering ${((updatedEpisodes.reduce((acc: number, ep: any) => acc + (ep.viewers || 0), 0)) / 1000000).toFixed(1)} Million total viewers!
+The network has formally opened Season ${currentSeason + 1} Renewal. You can renew the show, set new episode orders, and adjust cast members in the TV & Film Studio.`
+  : `The next episode (Episode ${nextEpNum + 1}) will air next week. Maintain promotional momentum!`
+}
+
+Best regards,
+Television Ratings & Broadcast Operations
+${project.network || 'Entertainment Network'}
+              `.trim();
+
+              newEmails.push({
+                id: crypto.randomUUID(),
+                sender: project.network || (project.isRealityTv ? "E! Entertainment & Peacock" : "Television Studios"),
+                senderIcon: "imdb",
+                subject: isSeasonComplete
+                  ? `🏆 [FINALE RATINGS] "${project.title}" Season ${currentSeason} Hits ${(episodeViewers / 1000000).toFixed(2)}M Viewers! Renewal Ready`
+                  : `📺 [RATINGS] "${project.title}" S${currentSeason}E${nextEpNum}: ${(episodeViewers / 1000000).toFixed(2)}M Viewers`,
+                body: emailText,
+                content: emailText,
+                date: newDate,
+                isRead: false,
+              });
+
+              artistData.hype = Math.min(100, (artistData.hype || 50) + (isSeasonComplete ? 5 : 2));
+              artistData.popularity = Math.min(100, (artistData.popularity || 10) + (isSeasonComplete ? 2 : 1));
+
+              // Pop Base Finale tweet
+              if (isSeasonComplete) {
+                artistData.xPosts = [
+                  {
+                    id: crypto.randomUUID(),
+                    authorId: "popbase",
+                    content: `The season finale of ${artistProfileForEmail?.name}'s '${project.title}' drew over ${(episodeViewers / 1000000).toFixed(1)}M viewers, concluding a massively viral season for the show.`,
+                    image: project.coverUrl,
+                    likes: Math.floor(Math.random() * 55000) + 30000,
+                    retweets: Math.floor(Math.random() * 14000) + 4000,
+                    views: Math.floor(Math.random() * 1000000) + 400000,
+                    date: newDate,
+                  },
+                  ...(artistData.xPosts || [])
+                ];
+              }
+
+              return {
+                ...project,
+                episodesAiredInSeason: nextEpNum,
+                episodes: updatedEpisodes,
+                totalViewers: (project.totalViewers || 0) + episodeViewers,
+                status: isSeasonComplete ? 'completed' : 'airing',
+                canBeRenewed: isSeasonComplete,
+                imdbRating: rating,
+              };
+            }
+
+            // 2. Movie In Production
+            if (project.type === 'movie' && project.status === 'in_production') {
+              const remaining = (project.productionWeeksRemaining ?? 1) - 1;
+              if (remaining <= 0) {
+                const artistPop = artistData.popularity || 10;
+                const boxOffice = Math.floor(artistPop * 4200000 + Math.random() * 120000000 + 45000000);
+                const rating = Math.min(9.8, Math.max(6.6, parseFloat((7.4 + Math.random() * 2.0).toFixed(1))));
+
+                const movieEmail = `
+Dear ${artistProfileForEmail?.name || 'Producer'},
+
+"${project.title}" has officially premiered in theaters and streaming worldwide!
+
+🎬 OPENING WEEKEND BOX OFFICE & REVIEWS:
+• Worldwide Box Office Gross: $${(boxOffice / 1000000).toFixed(1)} Million
+• Domestic Box Office: $${((boxOffice * 0.45) / 1000000).toFixed(1)} Million
+• Rotten Tomatoes Score: ${Math.floor(rating * 10)}% Certified Fresh
+• IMDb User Rating: ${rating}/10
+• Category: ${project.category}
+
+Critics rave about your standout screen presence and filmmaking vision. This establishes substantial momentum for award season!
+
+Best regards,
+Hollywood Theatrical Distribution
+                `.trim();
+
+                newEmails.push({
+                  id: crypto.randomUUID(),
+                  sender: "Hollywood Theatrical Distribution",
+                  senderIcon: "imdb",
+                  subject: `🎬 [BOX OFFICE] "${project.title}" Debuts with $${(boxOffice / 1000000).toFixed(1)}M Worldwide!`,
+                  body: movieEmail,
+                  content: movieEmail,
+                  date: newDate,
+                  isRead: false,
+                });
+
+                artistData.xPosts = [
+                  {
+                    id: crypto.randomUUID(),
+                    authorId: "popbase",
+                    content: `${artistProfileForEmail?.name}'s new ${project.category} film '${project.title}' grossed $${(boxOffice / 1000000).toFixed(1)}M at the worldwide box office in its opening weekend with a ${Math.floor(rating * 10)}% Rotten Tomatoes score.`,
+                    image: project.coverUrl,
+                    likes: Math.floor(Math.random() * 65000) + 35000,
+                    retweets: Math.floor(Math.random() * 16000) + 5000,
+                    views: Math.floor(Math.random() * 1300000) + 600000,
+                    date: newDate,
+                  },
+                  ...(artistData.xPosts || [])
+                ];
+
+                const newActingRole: ActingRole = {
+                  id: project.id,
+                  title: project.title,
+                  type: 'Movie',
+                  roleName: 'Lead / Star & Producer',
+                  roleType: 'Leading Role',
+                  year: newDate.year,
+                  status: 'Released',
+                  coverUrl: project.coverUrl,
+                  genre: (project.category as any) || 'Drama',
+                  boxOfficeDomestic: Math.floor(boxOffice * 0.45),
+                  boxOfficeWorldwide: boxOffice,
+                  imdbRating: rating,
+                  rating,
+                };
+                artistData.actingRoles = [...(artistData.actingRoles || []), newActingRole];
+
+                return {
+                  ...project,
+                  status: 'completed',
+                  productionWeeksRemaining: 0,
+                  boxOfficeRevenue: boxOffice,
+                  imdbRating: rating,
+                };
+              } else {
+                return {
+                  ...project,
+                  productionWeeksRemaining: remaining,
+                };
+              }
+            }
+
+            return project;
+          });
         }
 
         artistData.inbox.push(...newEmails);
@@ -28026,6 +28326,258 @@ Statement Given: "${reason.toUpperCase()}"`,
           [state.activeArtistId]: {
             ...activeData,
             videos: updatedVideos,
+          }
+        }
+      };
+    }
+    case "CREATE_TV_FILM_PROJECT": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData?.[state.activeArtistId];
+      if (!activeData) return state;
+      const project = action.payload.project;
+      const artist = state.artistsData?.[state.activeArtistId] || (state.careerMode === 'solo' ? state.soloArtist : state.group);
+      const artistName = activeData.artistName || activeData.name || artist?.name || "The Artist";
+
+      // Deduct budget and any cast fees if project has cost
+      const castCosts = (project.cast || []).reduce((acc: number, c: any) => acc + (c.cost || 0), 0);
+      const totalCost = (project.budget || 0) + castCosts;
+      const newMoney = Math.max(0, activeData.money - totalCost);
+
+      // Pop Base Announcement Tweet
+      let tweetContent = "";
+      if (project.isRealityTv) {
+        tweetContent = `BREAKING: Pop Base confirms that ${artistName} is executive producing and starring in an unscripted Reality TV series titled '${project.title}'! The series will give fans an all-access look into their personal life, relationships, and music career.`;
+      } else if (project.type === 'tv') {
+        tweetContent = `ANNOUNCEMENT: ${artistName} has officially greenlit a brand-new ${project.category} television series titled '${project.title}'. Episodes will begin broadcast soon!`;
+      } else {
+        tweetContent = `BREAKING: ${artistName} is developing and starring in a major new ${project.category} feature film titled '${project.title}'! The project enters production this week.`;
+      }
+
+      const announcementTweet = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: tweetContent,
+        image: project.coverUrl,
+        likes: Math.floor(Math.random() * 85000) + 40000,
+        retweets: Math.floor(Math.random() * 20000) + 8000,
+        views: Math.floor(Math.random() * 1800000) + 700000,
+        date: state.date,
+      };
+
+      const actingRoleEntry: ActingRole = {
+        id: project.id,
+        title: project.title,
+        type: project.type === 'movie' ? 'Movie' : 'TV Show',
+        roleName: project.isRealityTv ? 'Self / Executive Producer' : 'Lead Role & Creator',
+        roleType: 'Leading Role',
+        year: state.date?.year || 2024,
+        status: 'Filming',
+        coverUrl: project.coverUrl,
+        genre: (project.category as any) || 'Drama',
+        imdbRating: 8.5,
+        rating: 8.5,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            tvAndFilmProjects: [project, ...(activeData.tvAndFilmProjects || [])],
+            actingRoles: [...(activeData.actingRoles || []), actingRoleEntry],
+            xPosts: [announcementTweet, ...(activeData.xPosts || [])],
+            hype: Math.min(100, (activeData.hype || 50) + 6),
+          }
+        }
+      };
+    }
+    case "RENEW_TV_SHOW": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData?.[state.activeArtistId];
+      if (!activeData) return state;
+      const artist = state.artistsData?.[state.activeArtistId] || (state.careerMode === 'solo' ? state.soloArtist : state.group);
+      const artistName = activeData.artistName || activeData.name || artist?.name || "The Artist";
+
+      const updatedProjects = (activeData.tvAndFilmProjects || []).map(p => {
+        if (p.id === action.payload.projectId) {
+          const nextSeason = (p.currentSeason || 1) + 1;
+          return {
+            ...p,
+            currentSeason: nextSeason,
+            seasonsCount: Math.max(p.seasonsCount || 1, nextSeason),
+            episodesPerSeason: action.payload.episodesCount,
+            episodesAiredInSeason: 0,
+            status: 'airing' as const,
+            canBeRenewed: false,
+            cast: action.payload.newCast || p.cast,
+            coverUrl: action.payload.coverUrl || p.coverUrl,
+          };
+        }
+        return p;
+      });
+
+      const renewedProject = updatedProjects.find(p => p.id === action.payload.projectId);
+      const renewalTweet = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `OFFICIAL: Following record-breaking viewership, ${artistName}'s hit series '${renewedProject?.title || 'Show'}' has officially been renewed for Season ${(renewedProject?.currentSeason || 2)} with ${action.payload.episodesCount} episodes ordered!`,
+        image: renewedProject?.coverUrl,
+        likes: Math.floor(Math.random() * 75000) + 35000,
+        retweets: Math.floor(Math.random() * 18000) + 6000,
+        views: Math.floor(Math.random() * 1500000) + 600000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            tvAndFilmProjects: updatedProjects,
+            xPosts: [renewalTweet, ...(activeData.xPosts || [])],
+            hype: Math.min(100, (activeData.hype || 50) + 5),
+          }
+        }
+      };
+    }
+    case "ADD_GUEST_CAST_MEMBER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData?.[state.activeArtistId];
+      if (!activeData) return state;
+      const { projectId, castMember } = action.payload;
+
+      let projectTitle = "Show";
+      let projectCover = "";
+      const updatedProjects = (activeData.tvAndFilmProjects || []).map(p => {
+        if (p.id === projectId) {
+          projectTitle = p.title;
+          projectCover = p.coverUrl;
+          return {
+            ...p,
+            cast: [...(p.cast || []), castMember],
+          };
+        }
+        return p;
+      });
+
+      const guestTweet = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `CASTING: ${castMember.name} has officially joined the cast of '${projectTitle}' as a special guest star!`,
+        image: castMember.image || projectCover,
+        likes: Math.floor(Math.random() * 45000) + 20000,
+        retweets: Math.floor(Math.random() * 10000) + 3000,
+        views: Math.floor(Math.random() * 800000) + 300000,
+        date: state.date,
+      };
+
+      const guestFee = castMember.cost || 0;
+      const newMoney = Math.max(0, activeData.money - guestFee);
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            tvAndFilmProjects: updatedProjects,
+            xPosts: [guestTweet, ...(activeData.xPosts || [])],
+          }
+        }
+      };
+    }
+    case "UPDATE_EPISODE_YOUTUBE_THUMBNAIL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData?.[state.activeArtistId];
+      if (!activeData) return state;
+      const { projectId, episodeNumber, thumbnailUrl } = action.payload;
+
+      const updatedProjects = (activeData.tvAndFilmProjects || []).map(p => {
+        if (p.id === projectId) {
+          return {
+            ...p,
+            youtubeEpisodeThumbnails: {
+              ...(p.youtubeEpisodeThumbnails || {}),
+              [episodeNumber]: thumbnailUrl,
+            }
+          };
+        }
+        return p;
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            tvAndFilmProjects: updatedProjects,
+          }
+        }
+      };
+    }
+    case "SIGN_YOUTUBE_DEAL": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData?.[state.activeArtistId];
+      if (!activeData) return state;
+      const { projectId } = action.payload;
+      const artist = state.artistsData?.[state.activeArtistId] || (state.careerMode === 'solo' ? state.soloArtist : state.group);
+      const artistName = activeData.artistName || activeData.name || artist?.name || "The Artist";
+
+      let projectTitle = "Show";
+      let projectCover = "";
+      const updatedProjects = (activeData.tvAndFilmProjects || []).map(p => {
+        if (p.id === projectId) {
+          projectTitle = p.title;
+          projectCover = p.coverUrl;
+          return {
+            ...p,
+            hasYouTubeDeal: true,
+          };
+        }
+        return p;
+      });
+
+      const dealTweet = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `DEAL ALERT: YouTube has signed an exclusive multi-million dollar streaming agreement for ${artistName}'s hit reality show '${projectTitle}'! Full episodes will now stream directly to YouTube.`,
+        image: projectCover,
+        likes: Math.floor(Math.random() * 90000) + 45000,
+        retweets: Math.floor(Math.random() * 22000) + 7000,
+        views: Math.floor(Math.random() * 2200000) + 800000,
+        date: state.date,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            tvAndFilmProjects: updatedProjects,
+            xPosts: [dealTweet, ...(activeData.xPosts || [])],
+            money: activeData.money + 500000, // $500,000 YouTube streaming deal advance!
+            hype: Math.min(100, (activeData.hype || 50) + 10),
+          }
+        }
+      };
+    }
+    case "DELETE_TV_FILM_PROJECT": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData?.[state.activeArtistId];
+      if (!activeData) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            tvAndFilmProjects: (activeData.tvAndFilmProjects || []).filter(p => p.id !== action.payload.projectId),
           }
         }
       };

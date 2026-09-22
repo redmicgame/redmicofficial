@@ -3,6 +3,7 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { useGame } from '../context/GameContext';
 import { Relationship, Artist, PrenupAgreement, Kid, RelationshipDrama } from '../types';
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from '../utils/relationshipUtils';
+import { getArtistImage } from '../constants';
 
 const DatingView: React.FC = () => {
     const { gameState, dispatch, activeArtistData } = useGame();
