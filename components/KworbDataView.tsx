@@ -21,6 +21,111 @@ interface KworbAlbum {
     isDeluxeOrCompilation?: boolean;
 }
 
+/**
+ * Computes the accurate weekly Spotify streams for a song based on:
+ * 1. Official Spotify Global chart entry (if currently charting)
+ * 2. Rolling 7-day sum from dailyStreams (Daily Mode or rolling window)
+ * 3. Actual streams earned during the previous week (actualLastWeekStreams)
+ * 4. Simulated weekly stream volume (lastWeekStreams)
+ * 5. Last day streams scaled to 7 days
+ * 6. Release week debut streams for brand new releases
+ * 7. Decayed catalog streaming formula from GameContext
+ */
+export function computeSongWeeklyStreams(
+    song: any,
+    gameState: any,
+    artistData: any
+): number {
+    if (!song) return 0;
+
+    // If song was taken down or removed from streaming
+    if (song.isTakenDown || song.isAvailableOnStreaming === false) {
+        return 0;
+    }
+
+    const totalStreams = typeof song.streams === 'number' ? song.streams : 0;
+    if (totalStreams === 0 && !song.isReleased) {
+        return 0;
+    }
+
+    // 1. Check if the song has an entry on Spotify Global Chart
+    const spotifyGlobal = gameState?.spotifyGlobal || [];
+    const chartMatch = spotifyGlobal.find((e: any) => 
+        (e.songId && e.songId === song.id) ||
+        (e.uniqueId && e.uniqueId === song.id) ||
+        (e.title && song.title && e.title.trim().toLowerCase() === song.title.trim().toLowerCase())
+    );
+    if (chartMatch && typeof chartMatch.weeklyStreams === 'number' && chartMatch.weeklyStreams > 0) {
+        return totalStreams > 0 ? Math.min(chartMatch.weeklyStreams, totalStreams) : chartMatch.weeklyStreams;
+    }
+
+    // 2. Check rolling dailyStreams (Daily Mode or rolling 7-day window)
+    if (Array.isArray(song.dailyStreams) && song.dailyStreams.length > 0) {
+        const last7 = song.dailyStreams.slice(-7);
+        if (last7.length >= 7) {
+            const sum7 = last7.reduce((a: number, b: number) => a + (Number(b) || 0), 0);
+            if (sum7 > 0) {
+                return totalStreams > 0 ? Math.min(sum7, totalStreams) : sum7;
+            }
+        } else if (last7.length > 0) {
+            const sum = last7.reduce((a: number, b: number) => a + (Number(b) || 0), 0);
+            if (sum > 0) {
+                const pace = Math.round((sum / last7.length) * 7);
+                return totalStreams > 0 ? Math.min(pace, totalStreams) : pace;
+            }
+        }
+    }
+
+    // 3. Check actualLastWeekStreams (exact streaming units logged in last simulated week)
+    if (typeof song.actualLastWeekStreams === 'number' && song.actualLastWeekStreams > 0) {
+        return totalStreams > 0 ? Math.min(song.actualLastWeekStreams, totalStreams) : song.actualLastWeekStreams;
+    }
+
+    // 4. Check lastWeekStreams (simulated weekly stream volume from GameContext)
+    if (typeof song.lastWeekStreams === 'number' && song.lastWeekStreams > 0) {
+        return totalStreams > 0 ? Math.min(song.lastWeekStreams, totalStreams) : song.lastWeekStreams;
+    }
+
+    // 5. Check lastDayStreams (scale 1 day to 7 days)
+    if (typeof song.lastDayStreams === 'number' && song.lastDayStreams > 0) {
+        const projected = song.lastDayStreams * 7;
+        return totalStreams > 0 ? Math.min(projected, totalStreams) : projected;
+    }
+
+    // 6. Check weeklyStreams property if present on the song object
+    if (typeof song.weeklyStreams === 'number' && song.weeklyStreams > 0) {
+        return totalStreams > 0 ? Math.min(song.weeklyStreams, totalStreams) : song.weeklyStreams;
+    }
+
+    // 7. Check firstWeekStreams (if in debut release period)
+    if (typeof song.firstWeekStreams === 'number' && song.firstWeekStreams > 0) {
+        return totalStreams > 0 ? Math.min(song.firstWeekStreams, totalStreams) : song.firstWeekStreams;
+    }
+
+    // 8. If the song is recently released (debut week / within 1-2 weeks of release date)
+    const currentDate = gameState?.date || { year: 2026, week: 1 };
+    const releaseDate = song.releaseDate;
+    if (releaseDate && totalStreams > 0) {
+        const ageInWeeks = (currentDate.year - releaseDate.year) * 52 + (currentDate.week - releaseDate.week);
+        if (ageInWeeks <= 1) {
+            return totalStreams;
+        }
+    }
+
+    // 9. Catalog stream fallback using the official game formulas from GameContext.tsx
+    if (song.isReleased && totalStreams > 0) {
+        const pop = artistData?.popularity || 10;
+        const hype = artistData?.hype || 0;
+        const quality = song.quality || 50;
+        const baseWeekly = Math.floor((quality ** 2) * 20 * (pop / 40 + 0.5) * (1 + hype / 200));
+        // Catalog streams are a realistic percentage of total catalog volume
+        const realisticWeekly = Math.min(baseWeekly, Math.floor(totalStreams * 0.25));
+        return Math.max(100, Math.min(realisticWeekly, totalStreams));
+    }
+
+    return 0;
+}
+
 export const KworbDataView: React.FC = () => {
     const { gameState, activeArtist, activeArtistData, allPlayerArtists, dispatch } = useGame();
     const [activeTab, setActiveTab] = useState<'songs' | 'albums'>('songs');
@@ -48,14 +153,14 @@ export const KworbDataView: React.FC = () => {
         };
     }, [selectedArtistId, allPlayerArtists, activeArtist, activeArtistData, gameState.artistsData]);
 
-    // Compute song list for current selected artist
+    // Compute song list for current selected artist with accurate weekly streams
     const songsData = useMemo<KworbSong[]>(() => {
         const rawSongs = currentArtistData?.songs || [];
         const artistNameLower = currentArtistName.toLowerCase();
 
         const mapped: KworbSong[] = rawSongs.map(song => {
             const isNpcFeature = Boolean(song.isFeatureToNpc);
-            const titleLower = song.title.toLowerCase();
+            const titleLower = (song.title || '').toLowerCase();
             const isCollabFeature = Boolean(
                 song.collaboration && 
                 (song.collaboration as any).isMainArtist === false
@@ -73,12 +178,9 @@ export const KworbDataView: React.FC = () => {
             const isLead = !isFeature;
             const isSolo = isLead && !hasGuestArtists;
 
-            const streams = song.streams || 0;
-            // Weekly streams: ensure weekly streams are present and sensible
-            let weekly = song.weeklyStreams || 0;
-            if (weekly === 0 && streams > 0) {
-                weekly = Math.max(1000, Math.round(streams * 0.008));
-            }
+            const streams = typeof song.streams === 'number' ? song.streams : 0;
+            // Use accurate weekly stream calculation
+            const weekly = computeSongWeeklyStreams(song, gameState, currentArtistData);
 
             const prefix = isFeature ? '* ' : '';
             return {
@@ -97,9 +199,9 @@ export const KworbDataView: React.FC = () => {
             return mapped.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
         }
         return mapped.sort((a, b) => b.streams - a.streams);
-    }, [currentArtistData, currentArtistName, sortMode]);
+    }, [currentArtistData, currentArtistName, gameState, sortMode]);
 
-    // Compute albums data for current selected artist
+    // Compute albums data for current selected artist with accurate weekly streams
     const albumsData = useMemo<KworbAlbum[]>(() => {
         const releases = currentArtistData?.releases || [];
         const songMap = new Map((currentArtistData?.songs || []).map(s => [s.id, s]));
@@ -114,13 +216,30 @@ export const KworbDataView: React.FC = () => {
                     const song = songMap.get(sId);
                     if (song) {
                         totalAlbumStreams += song.streams || 0;
-                        totalAlbumWeekly += song.weeklyStreams || Math.round((song.streams || 0) * 0.008);
+                        totalAlbumWeekly += computeSongWeeklyStreams(song, gameState, currentArtistData);
                     }
                 });
 
+                // Fallback for releases without individual track mappings (e.g. legacy saves or copies sold)
                 if (totalAlbumStreams === 0 && rel.copiesSold) {
                     totalAlbumStreams = rel.copiesSold * 1500;
-                    totalAlbumWeekly = Math.round(totalAlbumStreams * 0.015);
+                    // Check if on Billboard Top Albums chart
+                    const albumEntry = gameState?.billboardTopAlbums?.find((a: any) => 
+                        (a.albumId && a.albumId === rel.id) ||
+                        (a.title && rel.title && a.title.trim().toLowerCase() === rel.title.trim().toLowerCase())
+                    );
+                    if (albumEntry && albumEntry.weeklySES) {
+                        totalAlbumWeekly = albumEntry.weeklySES * 1500;
+                    } else if (albumEntry && albumEntry.weeklyActivity) {
+                        totalAlbumWeekly = albumEntry.weeklyActivity * 1500;
+                    } else {
+                        totalAlbumWeekly = Math.min(totalAlbumStreams, Math.round(totalAlbumStreams * 0.05));
+                    }
+                }
+
+                // Ensure weekly streams never exceed total streams
+                if (totalAlbumStreams > 0 && totalAlbumWeekly > totalAlbumStreams) {
+                    totalAlbumWeekly = totalAlbumStreams;
                 }
 
                 const isDeluxe = rel.title.toLowerCase().includes('deluxe') || 
@@ -143,7 +262,7 @@ export const KworbDataView: React.FC = () => {
             return mapped.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
         }
         return mapped.sort((a, b) => b.streams - a.streams);
-    }, [currentArtistData, sortMode]);
+    }, [currentArtistData, gameState, sortMode]);
 
     // Compute Summary Table metrics (Streams, Weekly, Tracks separated by Total, As lead, Solo, As feature (*))
     const summaryMetrics = useMemo(() => {
