@@ -1,5 +1,6 @@
 import React from "react";
 import { useGame } from "../context/GameContext";
+import { calculateKalshiOdds } from "../utils/xContentGenerator";
 
 const KalshiView: React.FC = () => {
   const { gameState, dispatch } = useGame();
@@ -19,28 +20,10 @@ const KalshiView: React.FC = () => {
     }[],
     tieScore: number = 2,
   ) => {
-    // Add noise to score based on week
-    const noise = Math.sin(gameState.date.week * 1.5) * 0.2; // +/- 20%
-    let total =
-      nominees.reduce(
-        (sum, n) =>
-          sum + Math.max(0, n.score * (1 + Math.random() * 0.1 + noise)),
-        0,
-      ) + tieScore;
-
-    // Convert to percentages
-    let withPercents = nominees
-      .map((n) => {
-        const noisyScore = Math.max(
-          0,
-          n.score * (1 + Math.random() * 0.1 + noise),
-        );
-        return {
-          ...n,
-          percent: Math.round((noisyScore / total) * 100),
-        };
-      })
-      .sort((a, b) => b.percent - a.percent);
+    const withPercents = calculateKalshiOdds(nominees, gameState.date.week, tieScore).map((item) => ({
+      ...item.nominee,
+      percent: item.percent,
+    }));
 
     const totalPercent = withPercents.reduce((sum, n) => sum + n.percent, 0);
     const tiePercent = Math.max(0, 100 - totalPercent);

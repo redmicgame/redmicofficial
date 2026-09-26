@@ -1881,7 +1881,7 @@ The Red Mic Team`,
         name: "chart data",
         username: "chartdata",
         avatar:
-          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImNoYXJ0RGF0YVJpbmciIHgxPSIxMCUiIHkxPSIwJSIgeDI9IjkwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRjU5RTBCIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjMwJSIgc3RvcC1jb2xvcj0iI0Y0M0Y1RSIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8Y2xpcFBhdGggaWQ9ImlubmVyQ2lyY2xlIj4KICAgIDxyY2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkxIiAvPgogICAgPC9jbGlwUGF0aD4KICA8L2RlZnM+CiAgCiAgPCEtLSBPdXRlciBSaW5nIHdpdGggR3JhZGllbnQgLS0+CiAgPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI5NCIgc3Ryb2tlPSJ1cmwoI2NoYXJ0RGF0YVJpbmcpIiBzdHJva2Utd2lkdGg9IjYuNSIgZmlsbD0iIzAwMDAwMCIgLz4KICAKICA8IS0tIFBpYW5vIGtleXMgLyBDaGFydCBiYXJzIHJvdGF0ZWQgYnkgLTI3IGRlZyAtLT4KICA8ZyBjbGlwLXBhdGg9InVybCgjaW5uZXJDaXJjbGUpIj4KICAgIDxnIHRyYW5zZm9ybT0icm90YXRlKC0yNyAxMDAgMTAwKSI+CiAgICAgIDwhLS0gUm93IDEgKHRvcCkgLS0+CiAgICAgIDxyZWN0IHg9IjcwIiB5PSIyMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICAKICAgICAgPCEtLSBSb3cgMiAtLT4KICAgICAgPHJlY3QgeD0iLTEwIiB5PSI0NyIgd2lkdGg9IjEwNSIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGRkZGRiIgLz4KICAgICAgPHJlY3QgeD0iMTAxIiB5PSI0NyIgd2lkdGg9IjYwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICAKICAgICAgPCEtLSBSb3cgMyAtLT4KICAgICAgPHJlY3QgeD0iLTMwIiB5PSI3MiIgd2lkdGg9IjU1IiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICA8cmVjdCB4PSIzMSIgeT0iNzIiIHdpZHRoPSIxMjUiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkZGRkYiIC8+CiAgICAgIAogICAgICA8IS0tIFJvdyA0IC0tPgogICAgICA8cmVjdCB4PSItMjAiIHk9Ijk3IiB3aWR0aD0iMTA1IiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICA8cmVjdCB4PSI5MSIgeT0iOTciIHdpZHRoPSI2MCIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGRkZGRiIgLz4KICAgICAgCiAgICAgIDwhLS0gUm93IDUgLS0+CiAgICAgIDxyZWN0IHg9Ii0zMCIgeT0iMTIyIiB3aWR0aD0iNjUiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkZGRkYiIC8+CiAgICAgIDxyZWN0IHg9IjQxIiB5PSIxMjIiIHdpZHRoPSIxMDAiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkZGRkYiIC8+CiAgICAgIAogICAgICA8IS0tIFJvdyA2IC0tPgogICAgICA8cmVjdCB4PSItMjAiIHk9IjE0NyIgd2lkdGg9Ijg1IiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+",
         isVerified: true,
         bio: "facts & stats",
         followersCount: 2300000,
@@ -2163,7 +2163,7 @@ The Red Mic Team`,
         name: "chart data",
         username: "chartdata",
         avatar:
-          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNjQgMzJBNzIgNzIgMCAwMS04IDMyQTcyIDcyIDAgMDE2NCAzMnoiIGZpbGw9IiMxZDFkMWQiLz48cGF0aCBkPSJNMCAzMkE3MiA3MiAwIDAwNzIgMzJBNzIgNzIgMCAwMDAtMzJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImNoYXJ0RGF0YVJpbmciIHgxPSIxMCUiIHkxPSIwJSIgeDI9IjkwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRjU5RTBCIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjMwJSIgc3RvcC1jb2xvcj0iI0Y0M0Y1RSIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8Y2xpcFBhdGggaWQ9ImlubmVyQ2lyY2xlIj4KICAgIDxyY2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkxIiAvPgogICAgPC9jbGlwUGF0aD4KICA8L2RlZnM+CiAgCiAgPCEtLSBPdXRlciBSaW5nIHdpdGggR3JhZGllbnQgLS0+CiAgPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI5NCIgc3Ryb2tlPSJ1cmwoI2NoYXJ0RGF0YVJpbmcpIiBzdHJva2Utd2lkdGg9IjYuNSIgZmlsbD0iIzAwMDAwMCIgLz4KICAKICA8IS0tIFBpYW5vIGtleXMgLyBDaGFydCBiYXJzIHJvdGF0ZWQgYnkgLTI3IGRlZyAtLT4KICA8ZyBjbGlwLXBhdGg9InVybCgjaW5uZXJDaXJjbGUpIj4KICAgIDxnIHRyYW5zZm9ybT0icm90YXRlKC0yNyAxMDAgMTAwKSI+CiAgICAgIDwhLS0gUm93IDEgKHRvcCkgLS0+CiAgICAgIDxyZWN0IHg9IjcwIiB5PSIyMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICAKICAgICAgPCEtLSBSb3cgMiAtLT4KICAgICAgPHJlY3QgeD0iLTEwIiB5PSI0NyIgd2lkdGg9IjEwNSIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGRkZGRiIgLz4KICAgICAgPHJlY3QgeD0iMTAxIiB5PSI0NyIgd2lkdGg9IjYwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICAKICAgICAgPCEtLSBSb3cgMyAtLT4KICAgICAgPHJlY3QgeD0iLTMwIiB5PSI3MiIgd2lkdGg9IjU1IiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICA8cmVjdCB4PSIzMSIgeT0iNzIiIHdpZHRoPSIxMjUiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkZGRkYiIC8+CiAgICAgIAogICAgICA8IS0tIFJvdyA0IC0tPgogICAgICA8cmVjdCB4PSItMjAiIHk9Ijk3IiB3aWR0aD0iMTA1IiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgICA8cmVjdCB4PSI5MSIgeT0iOTciIHdpZHRoPSI2MCIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGRkZGRiIgLz4KICAgICAgCiAgICAgIDwhLS0gUm93IDUgLS0+CiAgICAgIDxyZWN0IHg9Ii0zMCIgeT0iMTIyIiB3aWR0aD0iNjUiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkZGRkYiIC8+CiAgICAgIDxyZWN0IHg9IjQxIiB5PSIxMjIiIHdpZHRoPSIxMDAiIGhlaWdodD0iMjAiIGZpbGw9IiNGRkZGRkYiIC8+CiAgICAgIAogICAgICA8IS0tIFJvdyA2IC0tPgogICAgICA8cmVjdCB4PSItMjAiIHk9IjE0NyIgd2lkdGg9Ijg1IiBoZWlnaHQ9IjIwIiBmaWxsPSIjRkZGRkZGIiAvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+",
         isVerified: true,
         bio: "facts & stats",
         followersCount: 2300000,
@@ -10677,7 +10677,7 @@ It is now available on your Spotify profile.
               const aStreams = region === "Global" ? a.weeklyStreams : (a.regionalStreams?.[region] || 0);
               const bStreams = region === "Global" ? b.weeklyStreams : (b.regionalStreams?.[region] || 0);
               return bStreams - aStreams;
-          }).slice(0, 100);
+          }).slice(0, region === "Global" ? 200 : 100);
 
           const pMap = new Map((prevChart || []).map((entry) => [entry.uniqueId, entry.rank]));
           const chart: ChartEntry[] = [];
@@ -11735,6 +11735,145 @@ It is now available on your Spotify profile.
           });
         }
       });
+
+      // --- POP BASE SPOTIFY DEBUTS & BIGGEST DEBUTS (DUAL IMAGE) ---
+      newSpotifyGlobal.forEach((song) => {
+        if (!song.isPlayerSong) return;
+
+        // Check if this is a debut on Global Spotify
+        const isDebut = song.lastWeek === null || song.weeksOnChart === 1;
+        if (!isDebut) return;
+
+        // Find the player song object
+        const songObj = allPlayerSongsFlat.find((s) => s.id === song.songId);
+        if (!songObj) return;
+
+        // Prevent duplicate debut tweets for the same song
+        if (songObj.hasGlobalSpotifyDebutTweeted) return;
+        songObj.hasGlobalSpotifyDebutTweeted = true;
+
+        const artistId = songObj.artistId || state.activeArtistId;
+        const aData = updatedArtistsData[artistId];
+        if (!aData) return;
+
+        // Sync flag back to artist's songs array
+        const songInArtistData = aData.songs?.find((s) => s.id === song.songId);
+        if (songInArtistData) {
+          songInArtistData.hasGlobalSpotifyDebutTweeted = true;
+        }
+
+        const playerArtist =
+          allPlayerArtistsAndGroups.find((a) => a.id === artistId) ||
+          activeArtistProfile;
+
+        let pronounPossessive = "their";
+        const p = (playerArtist as any)?.pronouns || (activeArtistProfile as any)?.pronouns;
+        if (p === "he/him") pronounPossessive = "his";
+        else if (p === "she/her") pronounPossessive = "her";
+        else if (p === "they/them") pronounPossessive = "their";
+
+        const rawStreams = song.weeklyStreams || 0;
+        let streamText = "";
+        if (rawStreams >= 1000000) {
+          const mVal = (rawStreams / 1000000).toLocaleString("en-US", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 3,
+          });
+          streamText = `${mVal} million`;
+        } else if (rawStreams >= 1000) {
+          streamText = `${(rawStreams / 1000).toFixed(1)} thousand`;
+        } else {
+          streamText = `${rawStreams.toLocaleString()}`;
+        }
+
+        // Check if it also charted on US Spotify
+        const usSong = newSpotifyUS.find(
+          (u) => (song.songId && u.songId === song.songId) || u.uniqueId === song.uniqueId
+        );
+        let usText = "";
+        if (usSong && (usSong.lastWeek === null || usSong.weeksOnChart === 1)) {
+          const usStreams = usSong.weeklyStreams || 0;
+          let usStreamText = "";
+          if (usStreams >= 1000000) {
+            const usMVal = (usStreams / 1000000).toLocaleString("en-US", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 3,
+            });
+            usStreamText = `${usMVal} million`;
+          } else if (usStreams >= 1000) {
+            usStreamText = `${(usStreams / 1000).toFixed(1)} thousand`;
+          } else {
+            usStreamText = `${usStreams.toLocaleString()}`;
+          }
+          usText = `\n\nIt also debuts at #${usSong.rank} on the US Spotify chart with ${usStreamText} streams.`;
+        }
+
+        // Dual image: song cover on the left & profile picture on the right
+        const songCover =
+          song.coverArt ||
+          songObj.coverArt ||
+          "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop";
+        const artistPic =
+          (playerArtist as any)?.image ||
+          (playerArtist as any)?.imageUrl ||
+          aData.avatar ||
+          aData.artistImages?.[0] ||
+          (activeArtistProfile as any)?.image ||
+          (activeArtistProfile as any)?.imageUrl ||
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop";
+
+        // TWEET 1: Pop Base Global Spotify Debut (dual image)
+        const debutContent = `"${song.title}" by ${song.artist} debuts at #${song.rank} on the global Spotify chart with ${streamText} streams.${usText}`;
+        npcPopBasePosts.push({
+          id: crypto.randomUUID(),
+          authorId: "popbase",
+          content: debutContent,
+          image: songCover,
+          image2: artistPic,
+          likes: Math.floor(Math.random() * 85000) + 35000,
+          retweets: Math.floor(Math.random() * 22000) + 6000,
+          views: Math.floor(Math.random() * 1800000) + 500000,
+          date: newDate,
+        });
+
+        // Initialize historical debut record if not already recorded
+        if (aData.biggestGlobalSpotifyDebutStreams === undefined) {
+          let maxExisting = 0;
+          (aData.songs || []).forEach((s) => {
+            if (s.id !== song.songId && s.isReleased) {
+              const sStreams = s.firstWeekStreams || s.peakWeeklyStreams || s.lastWeekStreams || 0;
+              if (sStreams > maxExisting) maxExisting = sStreams;
+            }
+          });
+          if (maxExisting > 0) {
+            aData.biggestGlobalSpotifyDebutStreams = maxExisting;
+          }
+        }
+
+        // TWEET 2: Biggest Debut on Global Spotify (dual image)
+        const prevDebutRecord = aData.biggestGlobalSpotifyDebutStreams || 0;
+        if (rawStreams > prevDebutRecord) {
+          aData.biggestGlobalSpotifyDebutStreams = rawStreams;
+          aData.biggestGlobalSpotifyDebutSongId = song.songId;
+          songObj.hasGlobalSpotifyBiggestDebutTweeted = true;
+          if (songInArtistData) {
+            songInArtistData.hasGlobalSpotifyBiggestDebutTweeted = true;
+          }
+
+          const biggestDebutContent = `"${song.title}" by ${song.artist} marks ${pronounPossessive} biggest debut on the global Spotify chart with ${streamText} streams (#${song.rank}).`;
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "popbase",
+            content: biggestDebutContent,
+            image: songCover,
+            image2: artistPic,
+            likes: Math.floor(Math.random() * 95000) + 40000,
+            retweets: Math.floor(Math.random() * 25000) + 7000,
+            views: Math.floor(Math.random() * 2200000) + 800000,
+            date: newDate,
+          });
+        }
+      });
       const hot100One = newBillboardHot100[0];
       const topAlbumsOne = newBillboardTopAlbums[0];
 
@@ -12129,6 +12268,150 @@ It is now available on your Spotify profile.
           date: newDate,
         });
       }
+
+      // --- BILLBOARD 200 RE-ENTRY (CHART DATA) - USER ONLY ---
+      newBillboardTopAlbums.forEach((album) => {
+        if (!album.isPlayerAlbum) return;
+        const prevChartEntry = prevBillboardAlbumsMap.get(album.uniqueId);
+        const history = newAlbumChartHistory[album.uniqueId];
+        // Re-entry: not on the chart last week, but has charted in a previous week (weeksOnChart > 1)
+        if (!prevChartEntry && history && history.weeksOnChart > 1) {
+          const possessive = album.artist.endsWith('s') ? `${album.artist}'` : `${album.artist}'s`;
+          const reEntryContent = `${possessive} '${album.title}' re-enters this week's Billboard 200.`;
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content: reEntryContent,
+            image: album.coverArt,
+            likes: Math.floor(Math.random() * 50000) + 20000,
+            retweets: Math.floor(Math.random() * 12000) + 3000,
+            views: Math.floor(Math.random() * 800000) + 200000,
+            date: newDate,
+          });
+        }
+      });
+
+      // --- HIGHEST CHARTING HOT 100 SONG OF ALL-TIME - USER ONLY ---
+      newBillboardHot100.forEach((entry) => {
+        if (!entry.isPlayerSong || !entry.songId) return;
+
+        const songObj = allPlayerSongsFlat.find((s) => s.id === entry.songId);
+        if (!songObj) return;
+
+        const artistId = songObj.artistId || state.activeArtistId;
+        const aData = updatedArtistsData[artistId];
+        if (!aData) return;
+
+        // Initialize historical best if not yet recorded
+        if (!aData.highestHot100SongTitle || !aData.highestHot100PeakRank) {
+          let bestPeak = 999;
+          let bestTitle = "";
+          (aData.songs || []).forEach((s) => {
+            if (s.id !== songObj.id) {
+              const hist = state.chartHistory?.[s.id] || (s.title ? state.chartHistory?.[s.title] : null);
+              const p = hist?.peak ?? 999;
+              if (p < bestPeak) {
+                bestPeak = p;
+                bestTitle = s.title;
+              }
+            }
+          });
+          if (bestTitle && bestPeak < 999) {
+            aData.highestHot100PeakRank = bestPeak;
+            aData.highestHot100SongTitle = bestTitle;
+          }
+        }
+
+        const prevBestRank = aData.highestHot100PeakRank;
+        const prevBestTitle = aData.highestHot100SongTitle;
+
+        // Has it surpassed the previous highest charting song? (entry.rank < prevBestRank means higher position)
+        if (prevBestTitle && prevBestRank && entry.rank < prevBestRank && entry.title !== prevBestTitle) {
+          const possessive = entry.artist.endsWith('s') ? `${entry.artist}'` : `${entry.artist}'s`;
+          const content = `"${entry.title}" is now ${possessive} highest charting song of all-time on the Hot 100, surpassing "${prevBestTitle}".`;
+
+          aData.highestHot100PeakRank = entry.rank;
+          aData.highestHot100SongTitle = entry.title;
+
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content,
+            image: entry.coverArt || songObj.coverArt,
+            likes: Math.floor(Math.random() * 85000) + 30000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 1500000) + 500000,
+            date: newDate,
+          });
+        } else if (!aData.highestHot100PeakRank || entry.rank < aData.highestHot100PeakRank) {
+          // If first charting song, record it so subsequent songs can surpass it
+          aData.highestHot100PeakRank = entry.rank;
+          aData.highestHot100SongTitle = entry.title;
+        }
+      });
+
+      // --- UK SINGLES CHART NEW PEAK / FIRST TOP 10 - USER ONLY ---
+      newUkSinglesChart.forEach((song) => {
+        if (!song.isPlayerSong) return;
+
+        const prevUkPeak = state.ukSinglesChartHistory?.[song.uniqueId]?.peak ?? 999;
+        // Check if this song reached a new peak on the UK singles chart
+        if (song.rank < prevUkPeak) {
+          const songObj = allPlayerSongsFlat.find((s) => s.id === song.songId);
+          const artistId = songObj?.artistId || state.activeArtistId;
+          const aData = updatedArtistsData[artistId];
+          if (!aData) return;
+
+          // Check if this is the newest / active single
+          const releasedSingles = (aData.songs || []).filter(
+            (s) => s.isReleased && (s.singleType || s.isPreReleaseSingle || !s.releaseId)
+          );
+          let isNewestSingle = true;
+          if (releasedSingles.length > 0) {
+            const sortedSingles = [...releasedSingles].sort((a, b) => {
+              const aVal = (a.releaseDate?.year || 0) * 52 + (a.releaseDate?.week || 0);
+              const bVal = (b.releaseDate?.year || 0) * 52 + (b.releaseDate?.week || 0);
+              return bVal - aVal;
+            });
+            const newestSingleId = sortedSingles[0]?.id;
+            if (newestSingleId && song.songId && newestSingleId !== song.songId) {
+              isNewestSingle = false;
+            }
+          }
+
+          if (isNewestSingle || releasedSingles.length <= 1) {
+            const playerArtist =
+              allPlayerArtistsAndGroups.find((a) => a.id === artistId) ||
+              activeArtistProfile;
+
+            let pronounPossessive = "their";
+            const p = (playerArtist as any)?.pronouns || (activeArtistProfile as any)?.pronouns;
+            if (p === "he/him") pronounPossessive = "his";
+            else if (p === "she/her") pronounPossessive = "her";
+            else if (p === "they/them") pronounPossessive = "their";
+
+            const possessive = song.artist.endsWith('s') ? `${song.artist}'` : `${song.artist}'s`;
+            let peakContent = `${possessive} "${song.title}" reaches a new peak of #${song.rank} on this week's UK singles chart.`;
+
+            // If it reaches top 10 and it's their first ever top 10 on the UK charts
+            if (song.rank <= 10 && !aData.hasEarnedFirstUkTop10) {
+              aData.hasEarnedFirstUkTop10 = true;
+              peakContent += `\n\nIt marks ${pronounPossessive} first ever top 10 hit.`;
+            }
+
+            npcPopBasePosts.push({
+              id: crypto.randomUUID(),
+              authorId: "chartdata",
+              content: peakContent,
+              image: song.coverArt || songObj?.coverArt,
+              likes: Math.floor(Math.random() * 80000) + 30000,
+              retweets: Math.floor(Math.random() * 18000) + 4000,
+              views: Math.floor(Math.random() * 1200000) + 400000,
+              date: newDate,
+            });
+          }
+        }
+      });
 
       if (npcPopBasePosts.length > 0) {
         Object.values(updatedArtistsData).forEach((d) => {
@@ -14403,7 +14686,7 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
         state.grammyCurrentYearNominations;
 
       // Week 45: Determine Grammy Nominations
-      if (newDate.week === 45 && (state.grammySubmissions?.length || 0) > 0) {
+      if (newDate.week === 45) {
         const newNominations: GrammyCategory[] = [];
         const categories: GrammyAward["category"][] = [
           "Record of the Year",

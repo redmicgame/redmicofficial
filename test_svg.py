@@ -1,0 +1,47 @@
+svg_content = '''<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="chartDataRing" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="30%" stop-color="#F43F5E" />
+      <stop offset="70%" stop-color="#A855F7" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+    <clipPath id="innerCircle">
+      <circle cx="100" cy="100" r="91" />
+    </clipPath>
+  </defs>
+  
+  <!-- Outer Ring with Gradient -->
+  <circle cx="100" cy="100" r="94" stroke="url(#chartDataRing)" stroke-width="6.5" fill="#000000" />
+  
+  <!-- Piano keys / Chart bars rotated by -27 deg -->
+  <g clip-path="url(#innerCircle)">
+    <g transform="rotate(-27 100 100)">
+      <!-- Row 1 (top) -->
+      <rect x="70" y="22" width="60" height="20" fill="#FFFFFF" />
+      
+      <!-- Row 2 -->
+      <rect x="-10" y="47" width="105" height="20" fill="#FFFFFF" />
+      <rect x="101" y="47" width="60" height="20" fill="#FFFFFF" />
+      
+      <!-- Row 3 -->
+      <rect x="-30" y="72" width="55" height="20" fill="#FFFFFF" />
+      <rect x="31" y="72" width="125" height="20" fill="#FFFFFF" />
+      
+      <!-- Row 4 -->
+      <rect x="-20" y="97" width="105" height="20" fill="#FFFFFF" />
+      <rect x="91" y="97" width="60" height="20" fill="#FFFFFF" />
+      
+      <!-- Row 5 -->
+      <rect x="-30" y="122" width="65" height="20" fill="#FFFFFF" />
+      <rect x="41" y="122" width="100" height="20" fill="#FFFFFF" />
+      
+      <!-- Row 6 -->
+      <rect x="-20" y="147" width="85" height="20" fill="#FFFFFF" />
+    </g>
+  </g>
+</svg>'''
+
+with open("public/chartdata_avatar.svg", "w") as f:
+    f.write(svg_content)
+print("SVG created successfully")

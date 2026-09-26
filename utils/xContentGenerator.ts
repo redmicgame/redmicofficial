@@ -9,10 +9,44 @@ import {
   XChat,
   XMessage,
   XComment,
+  GrammyAward,
 } from "../types";
 import { formatNumber } from "../context/GameContext";
 import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES, getArtistImage, NPC_ERAS } from "../constants";
 import { ARTIST_GIFS } from "../data/artistGifs";
+
+export function calculateKalshiOdds<T extends { name: string; artistName?: string; score: number }>(
+  nominees: T[],
+  week: number,
+  tieScore: number = 2
+): { nominee: T; percent: number }[] {
+  const noise = Math.sin(week * 1.5) * 0.2; // +/- 20% based on week
+  
+  const getDeterministicNoise = (name: string) => {
+    let hash = 0;
+    const str = `${name}-${week}`;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(Math.sin(hash)) * 0.08; // 0% to 8% subtle variation
+  };
+
+  const scores = nominees.map((n) => {
+    const nomineeNoise = getDeterministicNoise(n.name);
+    const noisyScore = Math.max(0, n.score * (1 + nomineeNoise + noise));
+    return { nominee: n, noisyScore };
+  });
+
+  const total = scores.reduce((sum, item) => sum + item.noisyScore, 0) + tieScore;
+
+  return scores
+    .map(({ nominee, noisyScore }) => ({
+      nominee,
+      percent: total > 0 ? Math.round((noisyScore / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.percent - a.percent);
+}
 
 export type PlayerSongWithChart = Song & {
   chartRank?: number;
@@ -165,116 +199,62 @@ export const generateWeeklyXContent = (
   const hasHave = pronouns === "they/them" ? "have" : "has";
 
   // --- GRAMMY PREDICTION POST (WEEK 50) ---
-  if (date.week === 50) {
+  if (date.week === 50 && gameState.grammyCurrentYearNominations && gameState.grammyCurrentYearNominations.length > 0) {
     const chartDataUser = artistData.xUsers.find((u) => u.id === "chartdata");
-    if (chartDataUser) {
-      const categories: Array<{
-        name:
-          | "Record of the Year"
-          | "Song of the Year"
-          | "Album of the Year"
-          | "Best New Artist";
-        getContenders: () => Array<{
-          name: string;
-          artist: string;
-          image?: string;
-        }>;
-      }> = [
-        {
-          name: "Record of the Year",
-          getContenders: () =>
-            gameState.billboardHot100.slice(0, 5).map((s) => ({
-              name: s.title,
-              artist: s.artist,
-              image: s.coverArt,
-            })),
-        },
-        {
-          name: "Song of the Year",
-          getContenders: () =>
-            gameState.billboardHot100.slice(0, 5).map((s) => ({
-              name: s.title,
-              artist: s.artist,
-              image: s.coverArt,
-            })),
-        },
-        {
-          name: "Album of the Year",
-          getContenders: () =>
-            gameState.billboardTopAlbums.slice(0, 5).map((a) => ({
-              name: a.title,
-              artist: a.artist,
-              image: a.coverArt,
-            })),
-        },
-        {
-          name: "Best New Artist",
-          getContenders: () => {
-            const bnaNpcs = [
-              "Sabrina Carpenter",
-              "Tate McRae",
-              "Chappell Roan",
-              "Ice Spice",
-              "Zach Bryan",
-            ];
-            const contenders = bnaNpcs
-              .map((name) => {
-                const song = gameState.billboardHot100.find(
-                  (s) => s.artist === name,
-                );
-                const album = gameState.billboardTopAlbums.find(
-                  (a) => a.artist === name,
-                );
-                return {
-                  name: name,
-                  artist: name,
-                  image: song?.coverArt || album?.coverArt,
-                };
-              })
-              .filter(
-                (c): c is { name: string; artist: string; image: string } =>
-                  !!c.image,
-              );
-            return contenders;
-          },
-        },
-      ];
+    const authorId = chartDataUser ? chartDataUser.id : "chartdata";
 
-      for (const categoryToPost of categories) {
-        const contenders = categoryToPost.getContenders();
+    const targetCategories: GrammyAward["category"][] = [
+      "Record of the Year",
+      "Song of the Year",
+      "Album of the Year",
+      "Best New Artist",
+    ];
 
-        if (contenders.length >= 2) {
-          const predictedWinner = contenders[0];
-          const shouldWinIndex =
-            Math.floor(Math.random() * (contenders.length - 1)) + 1;
-          const shouldWin = contenders[shouldWinIndex];
+    for (const catName of targetCategories) {
+      const category = gameState.grammyCurrentYearNominations.find((c) => c.name === catName);
+      if (!category || !category.nominees || category.nominees.length < 2) continue;
 
-          if (predictedWinner && shouldWin) {
-            const formatContender = (contender: {
-              name: string;
-              artist: string;
-              image?: string;
-            }) => {
-              if (categoryToPost.name === "Best New Artist") {
-                return contender.artist;
-              }
-              return `${contender.artist}'s "${contender.name}"`;
-            };
+      // Matches Kalshi odds: nominee with highest probability is predicted to win
+      const kalshiOdds = calculateKalshiOdds(category.nominees, date.week);
+      if (kalshiOdds.length < 2) continue;
 
-            const content = `Rolling Stone predicts ${formatContender(predictedWinner)} will win '${categoryToPost.name}' at this year's #GRAMMYs.\n\nThe publication states ${formatContender(shouldWin)} "should" win.`;
+      const predictedWinner = kalshiOdds[0].nominee;
 
-            newPosts.push({
-              id: crypto.randomUUID(),
-              authorId: chartDataUser.id,
-              content,
-              image: shouldWin.image,
-              likes: Math.floor(Math.random() * 25000) + 10000,
-              retweets: Math.floor(Math.random() * 6000) + 2000,
-              views: Math.floor(Math.random() * 600000) + 200000,
-              date,
-            });
+      // Choose who they want to win ("should" win) at random from the other nominees
+      const otherNominees = category.nominees.filter((n) => n.id !== predictedWinner.id);
+      const shouldWin =
+        otherNominees.length > 0
+          ? otherNominees[Math.floor(Math.random() * otherNominees.length)]
+          : predictedWinner;
+
+      if (predictedWinner && shouldWin) {
+        const formatContender = (contender: { name: string; artistName?: string }) => {
+          if (catName === "Best New Artist") {
+            return contender.artistName || contender.name;
           }
-        }
+          const artist = contender.artistName || "Artist";
+          const possessive = artist.endsWith("s") ? `${artist}'` : `${artist}'s`;
+          return `${possessive} "${contender.name}"`;
+        };
+
+        const content = `Rolling Stone predicts ${formatContender(predictedWinner)} will win '${catName}' at this year's #GRAMMYs.\n\nThe publication states ${formatContender(shouldWin)} "should" win.`;
+
+        const image =
+          shouldWin.coverArt ||
+          getArtistImage(shouldWin.artistName) ||
+          predictedWinner.coverArt ||
+          getArtistImage(predictedWinner.artistName);
+
+        newPosts.push({
+          id: crypto.randomUUID(),
+          authorId,
+          content,
+          image,
+          likes: Math.floor(Math.random() * 25000) + 10000,
+          retweets: Math.floor(Math.random() * 6000) + 2000,
+          views: Math.floor(Math.random() * 600000) + 200000,
+          date,
+        });
       }
     }
   }

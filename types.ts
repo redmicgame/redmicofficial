@@ -239,6 +239,8 @@ export interface Song {
   hasTweetedBillionStreams?: boolean;
   hasBillionsClubEmail?: boolean;
   hasBillionsClubPerformance?: boolean;
+  hasGlobalSpotifyDebutTweeted?: boolean;
+  hasGlobalSpotifyBiggestDebutTweeted?: boolean;
   regionalStreams?: {
     "US": number;
     "Canada": number;
@@ -2067,6 +2069,11 @@ export interface ArtistData {
   peakHype?: number;
   numberOneDebuts?: number;
   hasTweetedBillionTotalStreams?: boolean;
+  biggestGlobalSpotifyDebutStreams?: number;
+  biggestGlobalSpotifyDebutSongId?: string;
+  highestHot100SongTitle?: string;
+  highestHot100PeakRank?: number;
+  hasEarnedFirstUkTop10?: boolean;
   publicImage: number;
   popularity: number;
   regionalPopularity?: {
