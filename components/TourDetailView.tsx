@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import TicketIcon from './icons/TicketIcon';
+import TouringView from './TouringView';
 import { Tour } from '../types';
 import { VENUES } from '../constants';
 
@@ -11,6 +13,8 @@ const TourDetailView: React.FC = () => {
     const [error, setError] = useState('');
     const [isEditingSetlist, setIsEditingSetlist] = useState(false);
     const [tempSetlist, setTempSetlist] = useState<string[]>([]);
+    const [activeTab, setActiveTab] = useState<'overview' | 'seatMap'>('overview');
+    const [selectedVenueForMap, setSelectedVenueForMap] = useState<string | undefined>(undefined);
     
     if (!activeTourId || !activeArtistData) {
         dispatch({ type: 'CHANGE_VIEW', payload: 'tours' });
@@ -97,7 +101,43 @@ const TourDetailView: React.FC = () => {
                     </button>
                     <h1 className="absolute bottom-4 left-4 text-4xl font-black">{tour.name}</h1>
                 </header>
+
+                <div className="flex border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10 px-4">
+                    <button
+                        onClick={() => setActiveTab('overview')}
+                        className={`px-4 py-3 text-xs font-bold tracking-wider uppercase border-b-2 transition-colors ${
+                            activeTab === 'overview' ? 'border-white text-white' : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                        }`}
+                    >
+                        Tour Overview
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (!selectedVenueForMap && tour.venues.length > 0) {
+                                setSelectedVenueForMap(tour.venues[tour.currentVenueIndex]?.id || tour.venues[0]?.id);
+                            }
+                            setActiveTab('seatMap');
+                        }}
+                        className={`px-4 py-3 text-xs font-bold tracking-wider uppercase border-b-2 transition-colors flex items-center gap-1.5 ${
+                            activeTab === 'seatMap' ? 'border-blue-500 text-blue-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                        }`}
+                    >
+                        <TicketIcon className="w-3.5 h-3.5" />
+                        <span>Venue & Seat Maps</span>
+                    </button>
+                </div>
+
                 <main className="p-4 space-y-6">
+                    {activeTab === 'seatMap' ? (
+                        <TouringView
+                            initialTourId={tour.id}
+                            initialVenueId={selectedVenueForMap || tour.venues[tour.currentVenueIndex]?.id || tour.venues[0]?.id}
+                            onBack={() => setActiveTab('overview')}
+                            isEmbedded={true}
+                            theme="dark"
+                        />
+                    ) : (
+                        <>
                     {tour.status === 'cancelled' && (
                         <div className="bg-red-900/50 text-red-100 p-4 rounded-xl border border-red-500 text-center font-medium">
                             This tour was cancelled.
@@ -204,17 +244,31 @@ const TourDetailView: React.FC = () => {
                         
                         return (
                             <div key={v.id} className={`p-4 rounded-xl shadow-md ${isCurrent ? 'bg-blue-900/30 border border-blue-500/30' : 'bg-zinc-800'}`}>
-                                <div className="flex justify-between items-center mb-2">
+                                 <div className="flex justify-between items-center mb-2">
                                     <div>
                                         <p className="font-bold text-lg">{v.name}</p>
                                         <p className="text-sm text-zinc-400">{v.city}</p>
                                     </div>
-                                    {isCompleted && (
-                                        <div className="text-right">
-                                            <p className={`font-semibold ${v.soldOut ? 'text-yellow-400' : 'text-green-400'}`}>${formatNumber(v.revenue)}</p>
-                                            <p className="text-xs text-zinc-400">{formatNumber(v.ticketsSold)} / {formatNumber(v.capacity)}</p>
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedVenueForMap(v.id);
+                                                setActiveTab('seatMap');
+                                            }}
+                                            className="px-2.5 py-1 rounded-lg bg-zinc-700/60 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-600/40 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                                            title="View Seating Map & Box Office"
+                                        >
+                                            <TicketIcon className="w-3.5 h-3.5 text-blue-400" />
+                                            <span>Seat Map</span>
+                                        </button>
+                                        {isCompleted && (
+                                            <div className="text-right">
+                                                <p className={`font-semibold ${v.soldOut ? 'text-yellow-400' : 'text-green-400'}`}>${formatNumber(v.revenue)}</p>
+                                                <p className="text-xs text-zinc-400">{formatNumber(v.ticketsSold)} / {formatNumber(v.capacity)}</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 
                                 {!isCompleted && (
@@ -304,6 +358,8 @@ const TourDetailView: React.FC = () => {
                     </div>
                     <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </div>
+                </>
+                )}
             </main>
 
             {isEditingSetlist && (

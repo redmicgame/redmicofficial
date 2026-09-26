@@ -251,10 +251,14 @@ const AppContent: React.FC = () => {
             case 'gigs':
                 return <GigsView />;
             case 'tours':
+            case 'ticketmaster':
                 return <ToursView />;
             case 'createTour':
                 return <CreateTourView />;
             case 'tourDetail':
+            case 'touring':
+            case 'touringView':
+            case 'seatMap':
                 return <TourDetailView />;
             case 'labels':
                 return <LabelsView />;

@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import TicketIcon from './icons/TicketIcon';
+import TouringView from './TouringView';
 import { Tour } from '../types';
 
 const ChevronDownIcon = ({className}: {className?: string}) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="6 9 12 15 18 9"></polyline></svg>;
@@ -11,7 +13,7 @@ const ChevronRightIcon = ({className}: {className?: string}) => <svg width="24" 
 
 const ToursView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
-    const [activeTab, setActiveTab] = useState<'ABOUT' | 'SETLISTS' | 'BOX OFFICE' | 'FAQS' | 'REVIEWS'>('SETLISTS');
+    const [activeTab, setActiveTab] = useState<'ABOUT' | 'SEAT MAP' | 'SETLISTS' | 'BOX OFFICE' | 'FAQS' | 'REVIEWS'>('ABOUT');
     const [expandedSetlistTourId, setExpandedSetlistTourId] = useState<string | null>(null);
 
     if (!activeArtistData || !activeArtist) return null;
@@ -96,7 +98,7 @@ const ToursView: React.FC = () => {
             </header>
 
             <div className="flex px-4 border-b border-gray-200 overflow-x-auto no-scrollbar pt-2 bg-white sticky top-0 z-10">
-                {['ABOUT', 'SETLISTS', 'BOX OFFICE', 'FAQS', 'REVIEWS'].map(tab => (
+                {['ABOUT', 'SEAT MAP', 'SETLISTS', 'BOX OFFICE', 'FAQS', 'REVIEWS'].map(tab => (
                     <button 
                         key={tab} 
                         onClick={() => setActiveTab(tab as any)}
@@ -107,7 +109,12 @@ const ToursView: React.FC = () => {
                 ))}
             </div>
 
-            <main className="p-5 pb-32">
+            <main className={`p-5 pb-16 ${activeTab === 'SEAT MAP' ? '!p-2' : ''}`}>
+                {activeTab === 'SEAT MAP' && (
+                    <div className="w-full bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+                        <TouringView isEmbedded={true} onBack={() => setActiveTab('ABOUT')} />
+                    </div>
+                )}
                 {activeTab === 'SETLISTS' && (
                     <div className="space-y-6">
                         <h2 className="text-2xl font-bold tracking-tight">SETLISTS</h2>
@@ -159,8 +166,38 @@ const ToursView: React.FC = () => {
                 
                 {activeTab === 'ABOUT' && (
                     <div className="space-y-6">
-                        <h2 className="text-2xl font-bold tracking-tight">TOURS</h2>
-                        <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'createTour'})} className="w-full bg-[#0055FF] text-white p-4 rounded-full font-bold text-base hover:bg-blue-700 transition-colors">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold tracking-tight">TOURS</h2>
+                            <button 
+                                onClick={() => setActiveTab('SEAT MAP')}
+                                className="px-3.5 py-1.5 rounded-full bg-[#026cdf] hover:bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                            >
+                                <TicketIcon className="w-4 h-4" />
+                                <span>Venue Seat Maps</span>
+                            </button>
+                        </div>
+
+                        {/* Interactive Seat Map Feature Card */}
+                        <div 
+                            onClick={() => setActiveTab('SEAT MAP')}
+                            className="border border-blue-200 bg-blue-50/70 hover:bg-blue-100/80 p-4 rounded-xl cursor-pointer transition-colors flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
+                                    <TicketIcon className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-sm text-blue-950">Venue & Seating Maps</span>
+                                        <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase">Interactive</span>
+                                    </div>
+                                    <p className="text-xs text-blue-800/80 mt-0.5">Explore stadium seating layouts, price levels, and ticket availability.</p>
+                                </div>
+                            </div>
+                            <span className="text-lg font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform">→</span>
+                        </div>
+
+                        <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'createTour'})} className="w-full bg-[#0055FF] text-white p-4 rounded-full font-bold text-base hover:bg-blue-700 transition-colors shadow-lg">
                             Plan a New Tour
                         </button>
                         
@@ -230,13 +267,6 @@ const ToursView: React.FC = () => {
                      </div>
                 )}
             </main>
-
-            <div className="fixed bottom-20 left-0 right-0 flex justify-center pointer-events-none px-4">
-                <button className="bg-[#0055FF] pointer-events-auto text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm md:text-base">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                    Events Around the World
-                </button>
-            </div>
         </div>
     );
 };
