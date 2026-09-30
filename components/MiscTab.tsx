@@ -600,6 +600,35 @@ const MiscTab: React.FC = () => {
 
                     <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
                         <div className="flex-grow pr-4">
+                            <p className="font-bold">Spotify Snapshot Frequency</p>
+                            <p className="text-xs text-zinc-400">Toggle whether Spotify snapshots display daily or weekly stats.</p>
+                        </div>
+                        <div className="flex bg-zinc-800 p-1 rounded-lg border border-zinc-700 shrink-0">
+                            <button
+                                onClick={() => dispatch({ type: 'SET_SPOTIFY_SNAPSHOT_TIMEFRAME', payload: 'weekly' })}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                                    (gameState.spotifySnapshotTimeframe || 'weekly') === 'weekly'
+                                        ? 'bg-blue-600 text-white shadow'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                Weekly
+                            </button>
+                            <button
+                                onClick={() => dispatch({ type: 'SET_SPOTIFY_SNAPSHOT_TIMEFRAME', payload: 'daily' })}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                                    gameState.spotifySnapshotTimeframe === 'daily'
+                                        ? 'bg-blue-600 text-white shadow'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                Daily
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4 border-b border-zinc-700 pb-4">
+                        <div className="flex-grow pr-4">
                             <p className="font-bold">Spotify Snapshot Style</p>
                             <p className="text-xs text-zinc-400">Choose the visual style for your Spotify snapshot images.</p>
                         </div>

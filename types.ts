@@ -1228,7 +1228,7 @@ export interface XPost {
     isEnded?: boolean;
   };
   billionsClubSongTitle?: string;
-  spotifySnapshotAlbums?: { rank: number; title: string; streams: number; coverArt: string; move: number | string; percentChange: number }[];
+  spotifySnapshotAlbums?: { rank: number; title: string; streams: number; dailyStreams?: number; coverArt: string; move: number | string; percentChange: number }[];
 }
 
 export interface XMessage {
@@ -2299,6 +2299,7 @@ export interface GameState {
   disableEncounters?: boolean;
   disableLoadingScreens?: boolean;
   spotifySnapshotStyle?: "normal" | "ugly" | "simplistic";
+  spotifySnapshotTimeframe?: "weekly" | "daily";
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;
   cloudSaveId?: string;
@@ -2580,7 +2581,9 @@ export type GameAction =
     }
   | { type: "TOGGLE_ENCOUNTERS" }
   | { type: "TOGGLE_LOADING_SCREENS" }
-  | { type: "TOGGLE_SPOTIFY_SNAPSHOT_STYLE"; payload: "normal" | "ugly" }
+  | { type: "TOGGLE_SPOTIFY_SNAPSHOT_STYLE"; payload: "normal" | "ugly" | "simplistic" }
+  | { type: "SET_SPOTIFY_SNAPSHOT_TIMEFRAME"; payload: "weekly" | "daily" }
+  | { type: "TOGGLE_SPOTIFY_SNAPSHOT_TIMEFRAME"; payload?: "weekly" | "daily" }
   | {
       type: "START_SOLO_GAME";
       payload: {

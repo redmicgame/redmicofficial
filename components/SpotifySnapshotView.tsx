@@ -44,6 +44,7 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
     }
 
     const hasDeluxe = deluxeSongs.length > 0;
+    const isDaily = gameState.spotifySnapshotTimeframe === 'daily' || gameState.timeMode === 'daily';
 
     const getRowData = (song: Song) => {
         if (song.isTakenDown) {
@@ -55,8 +56,14 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                 netWeekly: 0,
             };
         }
-        const weekStreams = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
-        const prevStreams = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
+        const fullWeekStreams = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
+        const fullPrevStreams = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
+
+        const dailyStream = song.lastDayStreams || (song.dailyStreams?.[song.dailyStreams.length - 1]) || Math.round(fullWeekStreams / 7);
+        const prevDailyStream = song.prevDayStreams || (song.dailyStreams && song.dailyStreams.length > 1 ? song.dailyStreams[song.dailyStreams.length - 2] : Math.round(fullPrevStreams / 7));
+
+        const weekStreams = isDaily ? dailyStream : fullWeekStreams;
+        const prevStreams = isDaily ? prevDailyStream : fullPrevStreams;
         
         let changePercentDisplay = '-';
         let changeDisplay = '-';
@@ -108,13 +115,11 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         const totalStreams = releaseSongs.reduce((acc, song) => acc + (song.streams || 0), 0);
         const totalWeeklyStreams = releaseSongs.reduce((acc, song) => {
             if (song.isTakenDown) return acc;
-            const w = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
-            return acc + w;
+            return acc + getRowData(song).weekStreams;
         }, 0);
         const totalPrevWeeklyStreams = releaseSongs.reduce((acc, song) => {
             if (song.isTakenDown) return acc;
-            const p = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
-            return acc + p;
+            return acc + getRowData(song).prevStreams;
         }, 0);
 
         const overallNetChange = totalWeeklyStreams - totalPrevWeeklyStreams;
@@ -160,10 +165,10 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
 
                             {/* 3 Metric Cards Row */}
                             <div className="grid grid-cols-3 gap-1.5 sm:gap-4 items-center">
-                                {/* Weekly Streams */}
+                                {/* Weekly / Daily Streams */}
                                 <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl sm:rounded-2xl p-2 sm:p-4 flex flex-col justify-center">
                                     <span className="text-[8px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">
-                                        WEEKLY STREAMS
+                                        {isDaily ? 'DAILY STREAMS' : 'WEEKLY STREAMS'}
                                     </span>
                                     <span className="text-xs sm:text-2xl md:text-3xl font-black text-white tracking-tight tabular-nums truncate">
                                         {totalWeeklyStreams.toLocaleString()}
@@ -202,7 +207,7 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                             {/* Header Row */}
                             <div className="grid grid-cols-[1.5rem_1fr_6rem_5rem_5rem_6.5rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6.5rem_8.5rem] gap-1.5 sm:gap-2 pb-2.5 text-[10px] sm:text-xs font-bold text-zinc-400 border-b border-zinc-800 uppercase tracking-wider shrink-0">
                                 <div className="col-span-2">TRACK</div>
-                                <div className="text-right">WEEKLY STREAMS</div>
+                                <div className="text-right">{isDaily ? 'DAILY STREAMS' : 'WEEKLY STREAMS'}</div>
                                 <div className="text-right">CHANGE</div>
                                 <div className="text-right">% CHANGE</div>
                                 <div className="text-right">TOTAL</div>
@@ -274,12 +279,12 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
     if (isUglyStyle) {
         const totalStreams = releaseSongs.reduce((acc, song) => acc + (song.streams || 0), 0);
         const totalWeeklyStreams = releaseSongs.reduce((acc, song) => {
-            const w = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
-            return acc + w;
+            if (song.isTakenDown) return acc;
+            return acc + getRowData(song).weekStreams;
         }, 0);
         const totalPrevWeeklyStreams = releaseSongs.reduce((acc, song) => {
-            const p = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
-            return acc + p;
+            if (song.isTakenDown) return acc;
+            return acc + getRowData(song).prevStreams;
         }, 0);
 
         const overallNetChange = totalWeeklyStreams - totalPrevWeeklyStreams;
@@ -350,7 +355,7 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                             {/* Header Row */}
                             <div className="grid grid-cols-[2rem_1fr_6.5rem_5.5rem_5rem_6.5rem] sm:grid-cols-[2.5rem_1fr_8rem_6.5rem_6rem_8rem] gap-2 p-2 text-xs sm:text-sm font-bold text-[#22c55e] border-b border-zinc-800 font-mono uppercase tracking-wider shrink-0">
                                 <div className="col-span-2">TRACK</div>
-                                <div className="text-right">WEEKLY STREAMS</div>
+                                <div className="text-right">{isDaily ? 'DAILY STREAMS' : 'WEEKLY STREAMS'}</div>
                                 <div className="text-right">CHANGE</div>
                                 <div className="text-right">%CHANGE</div>
                                 <div className="text-right">TOTAL</div>
@@ -449,12 +454,12 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
     const renderSubtotal = (songsList: Song[], label: string, bgColor: string) => {
         const totalStreams = songsList.reduce((acc, song) => acc + (song.streams || 0), 0);
         const totalWeeklyStreams = songsList.reduce((acc, song) => {
-            const w = song.actualLastWeekStreams !== undefined ? song.actualLastWeekStreams : (song.lastWeekStreams || 0);
-            return acc + w;
+            if (song.isTakenDown) return acc;
+            return acc + getRowData(song).weekStreams;
         }, 0);
         const totalPrevWeeklyStreams = songsList.reduce((acc, song) => {
-            const p = song.actualPrevWeekStreams !== undefined ? song.actualPrevWeekStreams : (song.prevWeekStreams || 0);
-            return acc + p;
+            if (song.isTakenDown) return acc;
+            return acc + getRowData(song).prevStreams;
         }, 0);
 
         let changePercentDisplay = '-';
@@ -543,7 +548,7 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
 
                 {/* Date Row */}
                 <div className="p-2 text-center text-white font-bold tracking-wide" style={{ backgroundColor: dominantColor }}>
-                    Week {date.week}, {date.year}
+                    {isDaily ? `Day ${((date?.week || 1) - 1) * 7 + (date?.day !== undefined ? date.day : 7)}, ${date?.year || 2026}` : `Week ${date?.week || 1}, ${date?.year || 2026}`}
                 </div>
 
                 {/* Table */}
@@ -553,7 +558,7 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
                             <tr>
                                 <th className="text-center p-3 font-bold border border-gray-600">Song</th>
                                 <th className="text-center p-3 font-bold border border-gray-600">Total Streams</th>
-                                <th className="text-center p-3 font-bold border border-gray-600">Weekly Streams</th>
+                                <th className="text-center p-3 font-bold border border-gray-600">{isDaily ? 'Daily Streams' : 'Weekly Streams'}</th>
                                 <th className="text-center p-3 font-bold border border-gray-600">% Change</th>
                                 <th className="text-center p-3 font-bold border border-gray-600">Net Change</th>
                             </tr>

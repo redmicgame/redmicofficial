@@ -725,11 +725,13 @@ export const generateWeeklyXContent = (
   }
 
 
-  // Spotify Snapshot Weekly Top Albums
-  if (date.week % 2 === 0 && gameState.billboardTopAlbums && gameState.billboardTopAlbums.length >= 15) {
+  // Spotify Snapshot Weekly / Daily Top Albums
+  const isDailySnapshot = gameState.spotifySnapshotTimeframe === "daily" || gameState.timeMode === "daily";
+  if ((isDailySnapshot || date.week % 2 === 0) && gameState.billboardTopAlbums && gameState.billboardTopAlbums.length >= 15) {
     const topAlbums = gameState.billboardTopAlbums.slice(0, 15);
     const spotifySnapshotAlbums = topAlbums.map(album => {
-      const streams = Math.floor((album.weeklySES || (album.weeklyActivity * 0.85)) * 1500);
+      const fullStreams = Math.floor((album.weeklySES || (album.weeklyActivity * 0.85)) * 1500);
+      const streams = isDailySnapshot ? Math.floor(fullStreams / 7) : fullStreams;
       const percentChange = (Math.random() * 20 - 10).toFixed(2);
       let move: string | number = '-';
       if (album.lastWeek) {
@@ -742,6 +744,7 @@ export const generateWeeklyXContent = (
          rank: album.rank,
          title: album.title,
          streams: streams,
+         dailyStreams: isDailySnapshot ? streams : Math.floor(streams / 7),
          coverArt: album.coverArt || `https://api.dicebear.com/7.x/shapes/svg?seed=${album.title.replace(/ /g, '')}`,
          move: move,
          percentChange: parseFloat(percentChange)
@@ -751,7 +754,9 @@ export const generateWeeklyXContent = (
     newPosts.push({
       id: `spotify_snapshot_${date.year}_${date.week}`,
       authorId: "spotify_snapshot",
-      content: `Weekly Top Albums Update (${date.week}w ${date.year}) 🔥\n\nWho are you streaming the most this week? 👇`,
+      content: isDailySnapshot
+        ? `Daily Top Albums Update (${date.week}w ${date.year}) 🔥\n\nWho are you streaming the most today? 👇`
+        : `Weekly Top Albums Update (${date.week}w ${date.year}) 🔥\n\nWho are you streaming the most this week? 👇`,
       date: date,
       likes: Math.floor(Math.random() * 50000) + 10000,
       retweets: Math.floor(Math.random() * 10000) + 5000,

@@ -1597,6 +1597,8 @@ const initialState: GameState = {
   date: { week: 1, year: 2024 },
   currentView: "game",
   activeTab: "Home",
+  spotifySnapshotStyle: "normal",
+  spotifySnapshotTimeframe: "weekly",
   activeYoutubeChannel: "artist",
   npcs: [],
   npcAlbums: [],
@@ -12695,7 +12697,7 @@ HFPA`,
           (a) => a.id === artistId,
         );
 
-        const isDailyMode = state.timeMode === "daily";
+        const isDailyMode = state.spotifySnapshotTimeframe === "daily" || state.timeMode === "daily";
 
         // For songs
         artistData.songs.forEach((song) => {
@@ -27537,6 +27539,16 @@ Let us know if you accept.`,
         ...state,
         spotifySnapshotStyle: action.payload,
       };
+    case "SET_SPOTIFY_SNAPSHOT_TIMEFRAME":
+    case "TOGGLE_SPOTIFY_SNAPSHOT_TIMEFRAME": {
+      const nextTimeframe =
+        action.payload ||
+        (state.spotifySnapshotTimeframe === "daily" ? "weekly" : "daily");
+      return {
+        ...state,
+        spotifySnapshotTimeframe: nextTimeframe,
+      };
+    }
     case "SET_ACTIVE_TMZ_POST":
       return {
         ...state,

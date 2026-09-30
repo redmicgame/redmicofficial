@@ -578,12 +578,24 @@ export const Post: React.FC<{
             {/* Left Column - #1 */}
             <div className="w-full sm:w-[45%] p-4 flex flex-col relative bg-[#91a8af] justify-between">
               <div>
-                <div className="font-bold text-lg sm:text-xl uppercase mb-4 tracking-tight drop-shadow-md">Weekly Top Albums</div>
+                <div className="font-bold text-lg sm:text-xl uppercase mb-4 tracking-tight drop-shadow-md">
+                  {(gameState?.spotifySnapshotTimeframe === "daily" || gameState?.timeMode === "daily") ? "Daily Top Albums" : "Weekly Top Albums"}
+                </div>
                 <img src={post.spotifySnapshotAlbums[0].coverArt} alt={post.spotifySnapshotAlbums[0].title} className="w-[80%] mx-auto aspect-square object-cover mb-4 shadow-[0_10px_20px_rgba(0,0,0,0.3)] rounded-sm" />
                 <div className="flex flex-col items-center">
                    <div className="bg-[#a8bcc3] text-white font-bold px-4 py-1 text-lg mb-2 shadow-sm rounded-sm">#1</div>
                    <div className="text-center font-bold text-xl mb-3 leading-tight drop-shadow-sm px-2">{post.spotifySnapshotAlbums[0].title}</div>
-                   <div className="bg-[#a8bcc3] w-full text-center py-2 font-bold text-xl mb-3 rounded-sm shadow-sm">{post.spotifySnapshotAlbums[0].streams > 0 ? `+${post.spotifySnapshotAlbums[0].streams.toLocaleString()}` : '0'}</div>
+                   <div className="bg-[#a8bcc3] w-full text-center py-2 font-bold text-xl mb-3 rounded-sm shadow-sm">
+                     {(() => {
+                       const isDailySnapshot = gameState?.spotifySnapshotTimeframe === "daily" || gameState?.timeMode === "daily";
+                       const streamVal = isDailySnapshot
+                         ? (post.spotifySnapshotAlbums[0].dailyStreams !== undefined
+                             ? post.spotifySnapshotAlbums[0].dailyStreams
+                             : Math.round((post.spotifySnapshotAlbums[0].streams || 0) / 7))
+                         : post.spotifySnapshotAlbums[0].streams;
+                       return streamVal > 0 ? `+${streamVal.toLocaleString()}` : '0';
+                     })()}
+                   </div>
                    <div className="text-center font-bold text-lg drop-shadow-sm">{post.spotifySnapshotAlbums[0].percentChange > 0 ? `+${post.spotifySnapshotAlbums[0].percentChange}%` : `${post.spotifySnapshotAlbums[0].percentChange}%`}</div>
                 </div>
               </div>
