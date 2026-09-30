@@ -14,6 +14,7 @@ import {
 import { formatNumber } from "../context/GameContext";
 import { LABELS, NPC_ARTIST_NAMES, NPC_ARTIST_IMAGES, getArtistImage, NPC_ERAS } from "../constants";
 import { ARTIST_GIFS } from "../data/artistGifs";
+import { generateSmartFanPosts, getSmartCommentTemplates } from "./smartXFanContent";
 
 export function calculateKalshiOdds<T extends { name: string; artistName?: string; score: number }>(
   nominees: T[],
@@ -1768,6 +1769,11 @@ export const generateWeeklyXContent = (
           }
         }
 
+        const smartReplies = getSmartCommentTemplates(artistData, isHater);
+        if (smartReplies.length > 0 && Math.random() < 0.65) {
+          commentTemplates.push(...smartReplies);
+        }
+
         newComments.push({
           postId: playerPost.id,
           comment: {
@@ -1842,6 +1848,10 @@ export const generateWeeklyXContent = (
       date,
     });
   }
+
+  // Smart X Fan & Hater Posts (Instagram, OnlyFans, Broadcast Channels, TikTok, Public Image, Kids, Exes & Relationships)
+  const smartFanPosts = generateSmartFanPosts(artistData, artistName, date);
+  newPosts.push(...smartFanPosts);
 
   // 2. Chart Post if applicable
   const chartedSongs = playerSongs

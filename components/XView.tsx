@@ -22,6 +22,7 @@ import ConfirmationModal from "./ConfirmationModal";
 import XPremiumModal from "./XPremiumModal";
 import { SpotifySnapshotCard } from "./SpotifySnapshotCard";
 import { getArtistImage } from "../constants";
+import { getSmartCommentTemplates } from "../utils/smartXFanContent";
 
 // Sub-component for the Year End Chart visualization
 const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, activeArtist?: any): XUser => {
@@ -448,6 +449,13 @@ export const Post: React.FC<{
             "https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YNOy0YQR8P45ejaiaE/giphy.gif",
             "https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/anmCO7MaRD6QunWAYj/giphy.gif",
           ]);
+      }
+
+      if (activeArtistData) {
+        const smartReplies = getSmartCommentTemplates(activeArtistData, isHater);
+        if (smartReplies.length > 0 && random() < 0.6) {
+          content = pickRandom(smartReplies);
+        }
       }
       generated.push({
         id: `fake-${post.id}-${i}`,

@@ -8,6 +8,7 @@ import CommentIcon from './icons/CommentIcon';
 import HomeIcon from './icons/HomeIcon';
 import { InstagramPost, InstagramReel, InstagramStory } from '../types';
 import { NPC_ARTIST_NAMES, getArtistImage } from '../constants';
+import InstagramChannelView from './InstagramChannelView';
 
 const VerifiedBadge = () => (
     <svg aria-label="Verified" className="ml-1" fill="#0095F6" height="12" viewBox="0 0 40 40" width="12"><title>Verified</title><path d="M19.998 3.094 14.638 0l-2.972 5.15H5.432v6.354L0 14.64 3.094 20 0 25.359l5.432 3.137v5.905h5.975L14.638 40l5.36-3.094L25.358 40l3.232-5.6h6.162v-6.01L40 25.359 36.905 20 40 14.641l-5.248-3.03v-6.46h-6.419L25.358 0l-5.36 3.094Zm7.415 11.225 2.254 2.287-11.43 11.5-6.835-6.93 2.244-2.258 4.587 4.581 9.18-9.18Z" fillRule="evenodd"></path></svg>
@@ -124,6 +125,7 @@ const InstagramView: React.FC = () => {
 
     const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
     const [communityName, setCommunityName] = useState('');
+    const [isViewingChannel, setIsViewingChannel] = useState(false);
     const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
     const [selectedReel, setSelectedReel] = useState<InstagramReel | null>(null);
 
@@ -163,6 +165,7 @@ const InstagramView: React.FC = () => {
         if (!communityName.trim()) return;
         dispatch({ type: 'CREATE_INSTAGRAM_COMMUNITY', payload: { name: communityName } });
         setIsCreatingCommunity(false);
+        setIsViewingChannel(true);
     };
 
     if (!activeArtist || !activeArtistData) return null;
@@ -171,6 +174,16 @@ const InstagramView: React.FC = () => {
     const myReels = activeArtistData.instagramReels || [];
     const myStories = activeArtistData.instagramStories || [];
     const username = activeArtist.name.replace(/\s/g, '').toLowerCase();
+
+    if (isViewingChannel) {
+        return (
+            <InstagramChannelView
+                onBack={() => setIsViewingChannel(false)}
+                onViewPost={(post) => setSelectedPost(post)}
+                onViewReel={(reel) => setSelectedReel(reel)}
+            />
+        );
+    }
     if (selectedPost) {
 
         return (
@@ -255,7 +268,22 @@ const InstagramView: React.FC = () => {
                     {currentTab === 'followers' && <span>Followers</span>}
                     {currentTab === 'following' && <span>Following</span>}
                 </div>
-                <div className="w-6 h-6"></div>
+                {activeArtistData.instagramCommunityName ? (
+                    <button
+                        onClick={() => setIsViewingChannel(true)}
+                        className="text-white hover:text-zinc-300 p-1 rounded-full hover:bg-zinc-800 transition-colors"
+                        title="Broadcast Channel"
+                    >
+                        <div className="relative">
+                            <svg aria-label="Direct" fill="currentColor" height="22" viewBox="0 0 24 24" width="22">
+                                <line fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" x1="22" x2="9.218" y1="3" y2="10.083"></line>
+                                <polygon fill="none" points="11.698 20.334 22 3.001 2 3.001 9.218 10.084 11.698 20.334" stroke="currentColor" strokeLinejoin="round" strokeWidth="2"></polygon>
+                            </svg>
+                        </div>
+                    </button>
+                ) : (
+                    <div className="w-6 h-6"></div>
+                )}
             </div>
 
             {/* Content Area */}
@@ -405,12 +433,20 @@ const InstagramView: React.FC = () => {
                             </div>
 
                             {activeArtistData.instagramCommunityName ? (
-                                <div className="mb-4 bg-zinc-900 rounded-lg p-2 flex items-center gap-2 cursor-pointer hover:bg-zinc-800">
-                                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center">💬</div>
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold text-sm">{activeArtistData.instagramCommunityName}</span>
-                                        <span className="text-xs text-zinc-400">{formatNumber(activeArtistData.instagramCommunityMembers || 0)} members</span>
+                                <div
+                                    onClick={() => setIsViewingChannel(true)}
+                                    className="mb-4 bg-zinc-900 rounded-lg p-2.5 flex items-center justify-between cursor-pointer hover:bg-zinc-800 transition-colors border border-zinc-800/80 group"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 p-[1.5px] flex items-center justify-center">
+                                            <div className="w-full h-full bg-zinc-900 rounded-full flex items-center justify-center text-sm">💬</div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold text-sm text-white group-hover:text-blue-400 transition-colors">{activeArtistData.instagramCommunityName}</span>
+                                            <span className="text-xs text-zinc-400">{formatNumber(activeArtistData.instagramCommunityMembers || 0)} members • Broadcast channel</span>
+                                        </div>
                                     </div>
+                                    <span className="text-xs font-semibold text-blue-400 group-hover:underline">Open</span>
                                 </div>
                             ) : (
                                 <button onClick={() => setIsCreatingCommunity(true)} className="w-full mb-4 bg-zinc-900 py-2 rounded-lg text-sm font-semibold text-white hover:bg-zinc-800 text-center flex items-center justify-center gap-2">

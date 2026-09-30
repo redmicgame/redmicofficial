@@ -69,7 +69,10 @@ import type {
   KidActivity,
   ActingOffer,
   ActingRole,
+  InstagramChannelMessage,
+  InstagramChannelReaction,
 } from "../types";
+import { generateInstagramChannelReactions, calculateReactionGrowthDuration } from "../utils/instagramChannel";
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from "../utils/relationshipUtils";
 import {
   INITIAL_MONEY,
@@ -8654,6 +8657,33 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             Math.floor(Math.random() * 90);
           artistData.instagramFollowers =
             (artistData.instagramFollowers || 0) + instagramPassiveGain;
+
+          if (artistData.instagramCommunityName) {
+            const memberGain = Math.max(1, Math.floor(instagramPassiveGain * 0.05));
+            artistData.instagramCommunityMembers =
+              (artistData.instagramCommunityMembers || 30) + memberGain;
+
+            if (artistData.instagramChannelMessages && artistData.instagramChannelMessages.length > 0) {
+              artistData.instagramChannelMessages = artistData.instagramChannelMessages.map((msg) => {
+                if (Math.random() < 0.5) {
+                  const growthRate = 1 + (0.04 + Math.random() * 0.12);
+                  return {
+                    ...msg,
+                    isLiveGrowing: true,
+                    reactions: msg.reactions.map((r) => {
+                      const currentCount = r.targetCount || r.count;
+                      const newTarget = Math.max(currentCount + 1, Math.round(currentCount * growthRate));
+                      return {
+                        ...r,
+                        targetCount: newTarget,
+                      };
+                    }),
+                  };
+                }
+                return msg;
+              });
+            }
+          }
 
           // Sync group members' Instagram follower gain with group account
           if (
@@ -18743,6 +18773,8 @@ We wish you the best in your future endeavors.
     }
     case "CREATE_INSTAGRAM_COMMUNITY": {
       if (!state.activeArtistId) return state;
+      const followers = state.artistsData[state.activeArtistId]?.instagramFollowers || 0;
+      const members = Math.max(30, Math.floor(followers * 0.05) || 50);
       return {
         ...state,
         artistsData: {
@@ -18750,7 +18782,183 @@ We wish you the best in your future endeavors.
           [state.activeArtistId]: {
             ...state.artistsData[state.activeArtistId],
             instagramCommunityName: action.payload.name,
-            instagramCommunityMembers: Math.floor((state.artistsData[state.activeArtistId].instagramFollowers || 0) * 0.02)
+            instagramCommunityMembers: members,
+            instagramChannelMessages: state.artistsData[state.activeArtistId]?.instagramChannelMessages || [],
+          },
+        },
+      };
+    }
+    case "EDIT_INSTAGRAM_COMMUNITY": {
+      if (!state.activeArtistId) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...state.artistsData[state.activeArtistId],
+            instagramCommunityName: action.payload.name,
+          },
+        },
+      };
+    }
+    case "SEND_INSTAGRAM_CHANNEL_MESSAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData) return state;
+
+      const members = activeData.instagramCommunityMembers || Math.max(30, Math.floor((activeData.instagramFollowers || 0) * 0.05) || 50);
+      const reactions = generateInstagramChannelReactions(members);
+
+      let artistName = "";
+      if (state.soloArtist?.id === state.activeArtistId) {
+        artistName = state.soloArtist.name;
+      } else if (state.group?.id === state.activeArtistId) {
+        artistName = state.group.name;
+      } else if (state.group?.members.some(m => m.id === state.activeArtistId)) {
+        artistName = state.group.members.find(m => m.id === state.activeArtistId)?.name || "Artist";
+      } else {
+        artistName = state.soloArtist?.name || "Artist";
+      }
+
+      let artistImage = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=3470";
+      if (state.soloArtist?.id === state.activeArtistId && state.soloArtist.image) {
+        artistImage = state.soloArtist.image;
+      } else if (state.group?.id === state.activeArtistId && state.group.image) {
+        artistImage = state.group.image;
+      } else if (state.group?.members.some(m => m.id === state.activeArtistId)) {
+        artistImage = state.group.members.find(m => m.id === state.activeArtistId)?.image || artistImage;
+      }
+      const timeStr = `Week ${state.date.week}, ${state.date.year}`;
+      const nowMs = Date.now();
+      const durationMs = calculateReactionGrowthDuration(members);
+
+      const newMessage: InstagramChannelMessage = {
+        id: `ig-chan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        senderId: state.activeArtistId,
+        senderName: artistName,
+        senderAvatar: artistImage,
+        text: action.payload.text,
+        imageUrl: action.payload.imageUrl,
+        post: action.payload.post,
+        reel: action.payload.reel,
+        createdAt: timeStr,
+        date: state.date,
+        sentAt: nowMs,
+        durationMs,
+        reactions,
+        isLiveGrowing: true,
+      };
+
+      const existingMessages = activeData.instagramChannelMessages || [];
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramChannelMessages: [...existingMessages, newMessage],
+          },
+        },
+      };
+    }
+    case "FINISH_INSTAGRAM_CHANNEL_REACTION_GROWTH": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.instagramChannelMessages) return state;
+
+      const { messageId } = action.payload;
+      const updatedMessages = activeData.instagramChannelMessages.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        return {
+          ...msg,
+          isLiveGrowing: false,
+          reactions: msg.reactions.map((r) => ({
+            ...r,
+            count: r.targetCount || r.count,
+          })),
+        };
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramChannelMessages: updatedMessages,
+          },
+        },
+      };
+    }
+    case "REACT_INSTAGRAM_CHANNEL_MESSAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.instagramChannelMessages) return state;
+
+      const { messageId, emoji } = action.payload;
+      const updatedMessages = activeData.instagramChannelMessages.map(msg => {
+        if (msg.id !== messageId) return msg;
+
+        const existingReactionIndex = msg.reactions.findIndex(r => r.emoji === emoji);
+        let newReactions = [...msg.reactions];
+
+        if (existingReactionIndex >= 0) {
+          const existing = newReactions[existingReactionIndex];
+          if (existing.userReacted) {
+            const newCount = Math.max(0, existing.count - 1);
+            if (newCount === 0) {
+              newReactions.splice(existingReactionIndex, 1);
+            } else {
+              newReactions[existingReactionIndex] = {
+                ...existing,
+                count: newCount,
+                userReacted: false,
+              };
+            }
+          } else {
+            newReactions[existingReactionIndex] = {
+              ...existing,
+              count: existing.count + 1,
+              userReacted: true,
+            };
+          }
+        } else {
+          newReactions.push({
+            emoji,
+            count: 1,
+            userReacted: true,
+          });
+        }
+
+        return {
+          ...msg,
+          reactions: newReactions,
+        };
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramChannelMessages: updatedMessages,
+          },
+        },
+      };
+    }
+    case "DELETE_INSTAGRAM_CHANNEL_MESSAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.instagramChannelMessages) return state;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            instagramChannelMessages: activeData.instagramChannelMessages.filter(m => m.id !== action.payload.messageId),
           },
         },
       };

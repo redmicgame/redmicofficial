@@ -1191,6 +1191,30 @@ export interface InstagramReel {
   date: GameDate;
 }
 
+export interface InstagramChannelReaction {
+  emoji: string;
+  count: number;
+  targetCount?: number;
+  userReacted?: boolean;
+}
+
+export interface InstagramChannelMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  text?: string;
+  imageUrl?: string;
+  post?: InstagramPost;
+  reel?: InstagramReel;
+  createdAt: string;
+  date: GameDate;
+  sentAt?: number;
+  durationMs?: number;
+  reactions: InstagramChannelReaction[];
+  isLiveGrowing?: boolean;
+}
+
 export interface XComment {
   id: string;
   authorId: string;
@@ -2115,6 +2139,7 @@ export interface ArtistData {
   instagramLink?: string;
   instagramCommunityName?: string;
   instagramCommunityMembers?: number;
+  instagramChannelMessages?: InstagramChannelMessage[];
   instagramPosts?: InstagramPost[];
   instagramStories?: InstagramStory[];
   instagramReels?: InstagramReel[];
@@ -3086,6 +3111,38 @@ export type GameAction =
   | {
       type: "CREATE_INSTAGRAM_COMMUNITY";
       payload: { name: string };
+    }
+  | {
+      type: "EDIT_INSTAGRAM_COMMUNITY";
+      payload: { name: string };
+    }
+  | {
+      type: "SEND_INSTAGRAM_CHANNEL_MESSAGE";
+      payload: {
+        text?: string;
+        imageUrl?: string;
+        post?: InstagramPost;
+        reel?: InstagramReel;
+      };
+    }
+  | {
+      type: "REACT_INSTAGRAM_CHANNEL_MESSAGE";
+      payload: {
+        messageId: string;
+        emoji: string;
+      };
+    }
+  | {
+      type: "DELETE_INSTAGRAM_CHANNEL_MESSAGE";
+      payload: {
+        messageId: string;
+      };
+    }
+  | {
+      type: "FINISH_INSTAGRAM_CHANNEL_REACTION_GROWTH";
+      payload: {
+        messageId: string;
+      };
     }
   | { type: "FOLLOW_INSTAGRAM_NPC"; payload: { npcName: string } }
   | { type: "UNFOLLOW_INSTAGRAM_NPC"; payload: { npcName: string } }
