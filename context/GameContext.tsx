@@ -2892,6 +2892,29 @@ The Red Mic Team`,
           (draftArtistData.independentNameChanges || 0) + 1;
       }
 
+      // Get the artist's previous stage name before updating
+      let oldStageName = "";
+      if (state.soloArtist && state.soloArtist.id === state.activeArtistId) {
+        oldStageName = state.soloArtist.name;
+      } else if (state.group && state.group.id === state.activeArtistId) {
+        oldStageName = state.group.name;
+      } else if (state.group?.members.some((m) => m.id === state.activeArtistId)) {
+        oldStageName = state.group.members.find((m) => m.id === state.activeArtistId)?.name || "";
+      } else if (state.extraPlayableArtists?.some((a) => a.id === state.activeArtistId)) {
+        oldStageName = state.extraPlayableArtists.find((a) => a.id === state.activeArtistId)?.name || "";
+      } else if (state.allPlayerArtists?.some((a) => a.id === state.activeArtistId)) {
+        oldStageName = state.allPlayerArtists.find((a) => a.id === state.activeArtistId)?.name || "";
+      }
+      if (!oldStageName) {
+        for (const aKey in state.artistsData) {
+          const kMatch = state.artistsData[aKey].kids?.find((k) => k.id === state.activeArtistId);
+          if (kMatch) {
+            oldStageName = kMatch.stageName || kMatch.name;
+            break;
+          }
+        }
+      }
+
       let updatedSoloArtist = state.soloArtist;
       let updatedGroup = state.group;
 
@@ -2949,12 +2972,95 @@ The Red Mic Team`,
         }
       }
 
+      // Automatically update all existing featured songs, titles, and collaborations to the new stage name
+      if (oldStageName && oldStageName.trim() !== newName.trim()) {
+        const oldNameTrimmed = oldStageName.trim();
+        const oldNameLower = oldNameTrimmed.toLowerCase();
+        const escaped = escapeRegExp(oldNameTrimmed);
+        const nameWordRegex = new RegExp(`\\b${escaped}\\b`, "g");
+
+        for (const artistKey in updatedArtistsData) {
+          const aData = updatedArtistsData[artistKey];
+          if (aData.songs && aData.songs.length > 0) {
+            aData.songs = aData.songs.map((song) => {
+              let updatedSong = { ...song };
+              let changed = false;
+
+              // 1. Automatically update features list
+              if (updatedSong.features && Array.isArray(updatedSong.features)) {
+                if (updatedSong.features.some((f) => f && f.trim().toLowerCase() === oldNameLower)) {
+                  updatedSong.features = updatedSong.features.map((f) =>
+                    f && f.trim().toLowerCase() === oldNameLower ? newName : f,
+                  );
+                  changed = true;
+                }
+              }
+
+              // 2. Automatically update collaboration object
+              if (
+                updatedSong.collaboration &&
+                updatedSong.collaboration.artistName &&
+                updatedSong.collaboration.artistName.trim().toLowerCase() === oldNameLower
+              ) {
+                updatedSong.collaboration = {
+                  ...updatedSong.collaboration,
+                  artistName: newName,
+                };
+                changed = true;
+              }
+
+              // 3. Automatically update primaryArtist if matching
+              if (
+                updatedSong.primaryArtist &&
+                updatedSong.primaryArtist.trim().toLowerCase() === oldNameLower
+              ) {
+                updatedSong.primaryArtist = newName;
+                changed = true;
+              }
+
+              // 4. Automatically update song title if it credits the old stage name (e.g. feat. OldName)
+              if (updatedSong.title && nameWordRegex.test(updatedSong.title)) {
+                updatedSong.title = updatedSong.title.replace(nameWordRegex, newName);
+                changed = true;
+              }
+
+              return changed ? updatedSong : song;
+            });
+          }
+
+          // Also check releases for artistName
+          if (aData.releases && aData.releases.length > 0) {
+            aData.releases = aData.releases.map((rel) => {
+              if (rel.artistName && rel.artistName.trim().toLowerCase() === oldNameLower) {
+                return { ...rel, artistName: newName };
+              }
+              return rel;
+            });
+          }
+        }
+      }
+
+      // Update spotifyPlaylists tracks if artistName matched old stage name
+      let updatedSpotifyPlaylists = state.spotifyPlaylists;
+      if (updatedSpotifyPlaylists && oldStageName && oldStageName.trim() !== newName.trim()) {
+        const oldNameLower = oldStageName.trim().toLowerCase();
+        updatedSpotifyPlaylists = updatedSpotifyPlaylists.map((pl) => ({
+          ...pl,
+          tracks: pl.tracks.map((t) =>
+            t.artistName && t.artistName.trim().toLowerCase() === oldNameLower
+              ? { ...t, artistName: newName }
+              : t,
+          ),
+        }));
+      }
+
       return {
         ...state,
         soloArtist: updatedSoloArtist,
         group: updatedGroup,
         extraPlayableArtists: updatedExtraPlayableArtists,
         allPlayerArtists: updatedAllPlayerArtists,
+        spotifyPlaylists: updatedSpotifyPlaylists,
         artistsData: updatedArtistsData,
       };
     }
