@@ -720,12 +720,37 @@ const S4AReleaseDetailView: React.FC<{ release: Release; onBack: () => void }> =
 
 // --- HOME TAB ---
 const S4AHome: React.FC = () => {
-  const { activeArtistData, gameState, dispatch } = useGame();
+  const { activeArtistData, gameState, activeArtist, dispatch } = useGame();
   if (!activeArtistData) return null;
 
   const { releases, songs, listeningNow, monthlyListeners, followers } =
     activeArtistData;
   const showWrapped = gameState.date.week >= 50;
+
+  const allSongsWithFeatures = useMemo(() => {
+    const ownSongs = songs || [];
+    const ownIds = new Set(ownSongs.map((s) => s.id));
+    const featured: Song[] = [];
+    if (gameState.artistsData && activeArtist) {
+      const aName = activeArtist.name.toLowerCase();
+      for (const otherId in gameState.artistsData) {
+        if (otherId === activeArtist.id) continue;
+        const otherData = gameState.artistsData[otherId];
+        (otherData.songs || []).forEach((s) => {
+          if (!ownIds.has(s.id) && s.isReleased) {
+            const isFeat =
+              (s.features && s.features.some((f) => f.toLowerCase() === aName)) ||
+              (s.collaboration && s.collaboration.artistName.toLowerCase() === aName) ||
+              (s.title && s.title.toLowerCase().includes(aName));
+            if (isFeat) {
+              featured.push(s);
+            }
+          }
+        });
+      }
+    }
+    return [...ownSongs, ...featured];
+  }, [songs, gameState.artistsData, activeArtist]);
 
   const latestRelease = useMemo(() => {
     return [...releases].sort(
@@ -739,20 +764,20 @@ const S4AHome: React.FC = () => {
   const latestReleaseStreams = useMemo(() => {
     if (!latestRelease) return 0;
     return latestRelease.songIds.reduce((sum, id) => {
-      const song = songs.find((s) => s.id === id);
+      const song = allSongsWithFeatures.find((s) => s.id === id);
       return sum + (song?.streams || 0);
     }, 0);
-  }, [latestRelease, songs]);
+  }, [latestRelease, allSongsWithFeatures]);
 
   const last7DaysStreams =
     (activeArtistData.lastFourWeeksStreams || [])[0] || 0;
 
   const topSongs = useMemo(() => {
-    return [...songs]
+    return [...allSongsWithFeatures]
       .filter((s) => s.isReleased)
       .sort((a, b) => b.streams - a.streams)
       .slice(0, 5);
-  }, [songs]);
+  }, [allSongsWithFeatures]);
 
   return (
     <div className="bg-[#402000] text-white h-full overflow-y-auto">
@@ -873,7 +898,7 @@ const S4AMusic: React.FC<{
   onSelectRelease: (release: Release) => void;
   onSelectUpcomingRelease: (submissionId: string) => void;
 }> = ({ onSelectSong, onSelectRelease, onSelectUpcomingRelease }) => {
-  const { activeArtistData, gameState, allPlayerArtists } = useGame();
+  const { activeArtistData, gameState, allPlayerArtists, activeArtist } = useGame();
   const [musicTab, setMusicTab] = useState<
     "Songs" | "Releases" | "Playlists" | "Upcoming"
   >("Upcoming");
@@ -883,6 +908,31 @@ const S4AMusic: React.FC<{
 
   if (!activeArtistData) return null;
   const { songs, streamsHistory, playlistPlacements } = activeArtistData;
+
+  const allSongsWithFeatures = useMemo(() => {
+    const ownSongs = songs || [];
+    const ownIds = new Set(ownSongs.map((s) => s.id));
+    const featured: Song[] = [];
+    if (gameState.artistsData && activeArtist) {
+      const aName = activeArtist.name.toLowerCase();
+      for (const otherId in gameState.artistsData) {
+        if (otherId === activeArtist.id) continue;
+        const otherData = gameState.artistsData[otherId];
+        (otherData.songs || []).forEach((s) => {
+          if (!ownIds.has(s.id) && s.isReleased) {
+            const isFeat =
+              (s.features && s.features.some((f) => f.toLowerCase() === aName)) ||
+              (s.collaboration && s.collaboration.artistName.toLowerCase() === aName) ||
+              (s.title && s.title.toLowerCase().includes(aName));
+            if (isFeat) {
+              featured.push(s);
+            }
+          }
+        });
+      }
+    }
+    return [...ownSongs, ...featured];
+  }, [songs, gameState.artistsData, activeArtist]);
 
   const getPlaylistCover = (playlistId: string, fallbackCover: string) => {
     const p = gameState.spotifyPlaylists?.find((p) => p.id === playlistId);
@@ -911,9 +961,9 @@ const S4AMusic: React.FC<{
   const [sortPeriod, setSortPeriod] = useState<SortPeriod>("12m");
 
   const sortedSongs = useMemo(() => {
-    const releasedSongs = songs.filter((s) => s.isReleased);
+    const releasedSongs = allSongsWithFeatures.filter((s) => s.isReleased);
     const totalStreamsAllSongs =
-      songs.reduce((s, song) => s + (song.streams || 0), 0) || 1;
+      allSongsWithFeatures.reduce((s, song) => s + (song.streams || 0), 0) || 1;
 
     switch (sortPeriod) {
       case "all":
@@ -1411,7 +1461,7 @@ const S4AProfile: React.FC = () => {
   const { date } = gameState;
 
   const independentNameChanges = activeArtistData.independentNameChanges || 0;
-  const canChangeName = !contract && independentNameChanges < 2;
+  const canChangeName = !contract && independentNameChanges < 5;
 
   const handleNameChangeSubmit = () => {
     if (newNameInput.trim() && canChangeName) {
@@ -1503,7 +1553,7 @@ const S4AProfile: React.FC = () => {
         {!contract ? (
           <>
             <p className="text-xs text-zinc-500">
-              You can change your stage name {2 - independentNameChanges} more
+              You can change your stage name {5 - independentNameChanges} more
               time(s) as an independent artist.
             </p>
             <button

@@ -35,9 +35,8 @@ const AnimatedReactionPill: React.FC<{
         const progress = Math.min(1, elapsed / duration);
         if (progress >= 1) return target;
 
-        // Realistic reaction surge curve: initial engagement wave in first 15%, then steady growth
-        const ease = 1 - Math.pow(1 - progress, 2);
-        return Math.max(1, Math.floor(1 + (target - 1) * ease));
+        // Steady linear reaction growth scaled across the duration (e.g. 30 min for 10k members) without extra effects
+        return Math.max(1, Math.min(target, Math.floor(1 + (target - 1) * progress)));
     };
 
     const [displayCount, setDisplayCount] = useState<number>(calculateCurrent);
@@ -58,8 +57,8 @@ const AnimatedReactionPill: React.FC<{
 
         tick();
 
-        // Update interval: every 1.5 seconds so you see numbers move live
-        const timer = setInterval(tick, 1500);
+        // Update interval: every 1 second so you see numbers move live smoothly and steadily
+        const timer = setInterval(tick, 1000);
         return () => clearInterval(timer);
     }, [isLiveGrowing, target, effectiveSentAt, duration]);
 

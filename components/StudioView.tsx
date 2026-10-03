@@ -352,6 +352,11 @@ const StudioView: React.FC = () => {
             artistId: activeArtist.id,
             removedStreams: 0,
             features: currentCollaborations.map(c => c.artistName),
+            collaboration: currentCollaborations.length > 0 ? {
+                artistName: currentCollaborations[0].artistName,
+                cost: currentCollaborations[0].cost,
+                qualityBoost: qualityBonus,
+            } : undefined,
             remixOfSongId: isRemix ? remixOfSongId : undefined,
             dailyStreams: [],
             producers,
@@ -432,6 +437,11 @@ const StudioView: React.FC = () => {
             artistId: activeArtist.id,
             removedStreams: 0,
             features: collaborations.map(c => c.artistName),
+            collaboration: collaborations.length > 0 ? {
+                artistName: collaborations[0].artistName,
+                cost: collaborations[0].cost,
+                qualityBoost: qualityBoost,
+            } : undefined,
             remixOfSongId: undefined, // Re-recordings are standalone versions
             dailyStreams: [],
             producers: producersList,

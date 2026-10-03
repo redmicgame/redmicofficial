@@ -1804,6 +1804,46 @@ const gameReducerInternal = (
     ...(state.group ? [state.group] : []),
   ];
 
+  const escapeRegExp = (str: string) => {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  };
+
+  const isArtistFeaturedOnSong = (
+    song: Song,
+    artistName: string,
+    primaryArtistId?: string,
+    currentArtistId?: string,
+  ): boolean => {
+    if (primaryArtistId && currentArtistId && primaryArtistId === currentArtistId) return false;
+    if (!artistName || !artistName.trim()) return false;
+    const nameLower = artistName.trim().toLowerCase();
+
+    // Check song.features array
+    if (song.features && Array.isArray(song.features)) {
+      if (song.features.some((f) => f && f.trim().toLowerCase() === nameLower)) {
+        return true;
+      }
+    }
+
+    // Check song.collaboration object
+    if (song.collaboration && song.collaboration.artistName) {
+      if (song.collaboration.artistName.trim().toLowerCase() === nameLower) {
+        return true;
+      }
+    }
+
+    // Check song.title for (feat. Artist), (ft. Artist), (with Artist)
+    if (song.title) {
+      const escaped = escapeRegExp(artistName.trim());
+      const featRegex = new RegExp(`\\b(feat\\.?|ft\\.?|with)\\s+.*\\b${escaped}\\b`, "i");
+      if (featRegex.test(song.title)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const getCurrentArtistProfile = (): (Artist | Group) | null => {
     if (!state.activeArtistId) return null;
     return (
@@ -2859,16 +2899,63 @@ The Red Mic Team`,
         updatedSoloArtist = { ...state.soloArtist, name: newName };
       } else if (state.group && state.group.id === state.activeArtistId) {
         updatedGroup = { ...state.group, name: newName };
+      } else if (state.group?.members.some((m) => m.id === state.activeArtistId)) {
+        updatedGroup = {
+          ...state.group,
+          members: state.group.members.map((m) =>
+            m.id === state.activeArtistId ? { ...m, name: newName } : m,
+          ),
+        };
+      }
+
+      // Update extraPlayableArtists (where child artists live)
+      let updatedExtraPlayableArtists = state.extraPlayableArtists ? [...state.extraPlayableArtists] : [];
+      const extraIndex = updatedExtraPlayableArtists.findIndex((a) => a.id === state.activeArtistId);
+      if (extraIndex !== -1) {
+        updatedExtraPlayableArtists[extraIndex] = {
+          ...updatedExtraPlayableArtists[extraIndex],
+          name: newName,
+        };
+      }
+
+      // Update allPlayerArtists if present
+      let updatedAllPlayerArtists = state.allPlayerArtists
+        ? state.allPlayerArtists.map((a) => (a.id === state.activeArtistId ? { ...a, name: newName } : a))
+        : undefined;
+
+      // Update player XUser
+      if (draftArtistData.xUsers) {
+        draftArtistData.xUsers = draftArtistData.xUsers.map((u) =>
+          u.isPlayer
+            ? { ...u, name: newName, username: newName.replace(/\s+/g, "").toLowerCase() }
+            : u,
+        );
+      }
+
+      // Also update kids array in all artistsData so the parent sees the child's new stage name
+      const updatedArtistsData: { [id: string]: ArtistData } = {
+        ...state.artistsData,
+        [state.activeArtistId]: draftArtistData,
+      };
+
+      for (const artistKey in updatedArtistsData) {
+        if (updatedArtistsData[artistKey].kids) {
+          updatedArtistsData[artistKey] = {
+            ...updatedArtistsData[artistKey],
+            kids: updatedArtistsData[artistKey].kids!.map((k) =>
+              k.id === state.activeArtistId ? { ...k, name: newName, stageName: newName } : k,
+            ),
+          };
+        }
       }
 
       return {
         ...state,
         soloArtist: updatedSoloArtist,
         group: updatedGroup,
-        artistsData: {
-          ...state.artistsData,
-          [state.activeArtistId]: draftArtistData,
-        },
+        extraPlayableArtists: updatedExtraPlayableArtists,
+        allPlayerArtists: updatedAllPlayerArtists,
+        artistsData: updatedArtistsData,
       };
     }
     case "CHANGE_ACTIVE_ARTIST":
@@ -3175,7 +3262,29 @@ The Red Mic Team`,
             const sum28 = last28.reduce((a, b) => a + b, 0);
             return sum + (last28.length < 28 ? Math.floor(sum28 * (28 / last28.length)) : sum28);
           }, 0);
-          const calculatedListeners = Math.floor(totalStreamsLast28Days * 0.1);
+
+          let featureStreamsLast28Days = 0;
+          if (artistProfile?.name) {
+            for (const otherId in updatedArtistsData) {
+              if (otherId === artistId) continue;
+              const otherSongs = updatedArtistsData[otherId].songs || [];
+              otherSongs.forEach((s) => {
+                if (!s.isReleased || s.isTakenDown) return;
+                if (isArtistFeaturedOnSong(s, artistProfile.name, otherId, artistId)) {
+                  const last28 = s.dailyStreams || [];
+                  if (last28.length === 0) {
+                    featureStreamsLast28Days += (s.lastWeekStreams ? s.lastWeekStreams * 4 : 0);
+                  } else {
+                    const sum28 = last28.reduce((a, b) => a + b, 0);
+                    featureStreamsLast28Days += (last28.length < 28 ? Math.floor(sum28 * (28 / last28.length)) : sum28);
+                  }
+                }
+              });
+            }
+          }
+
+          const combined28DayStreams = totalStreamsLast28Days + featureStreamsLast28Days;
+          const calculatedListeners = Math.floor(combined28DayStreams * 0.1);
           const maxListeners = 148000000 + (artistId.charCodeAt(0) % 2000000);
           artistData.monthlyListeners = Math.min(calculatedListeners, maxListeners);
           artistData.peakMonthlyListeners = Math.max(
@@ -6323,6 +6432,29 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           totalWeeklyStreams,
           ...artistData.lastFourWeeksStreams,
         ].slice(0, 4);
+        let featureStreamsLast28Days = 0;
+        if (isDailyMode) {
+          const aProf = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          if (aProf?.name) {
+            for (const otherId in updatedArtistsData) {
+              if (otherId === artistId) continue;
+              const otherSongs = updatedArtistsData[otherId].songs || [];
+              otherSongs.forEach((s) => {
+                if (!s.isReleased || s.isTakenDown) return;
+                if (isArtistFeaturedOnSong(s, aProf.name, otherId, artistId)) {
+                  const last28 = s.dailyStreams || [];
+                  if (last28.length === 0) {
+                    featureStreamsLast28Days += (s.lastWeekStreams ? s.lastWeekStreams * 4 : 0);
+                  } else {
+                    const sum28 = last28.reduce((a, b) => a + b, 0);
+                    featureStreamsLast28Days += (last28.length < 28 ? Math.floor(sum28 * (28 / last28.length)) : sum28);
+                  }
+                }
+              });
+            }
+          }
+        }
+
         const totalStreamsLastMonth = isDailyMode
           ? artistData.songs.reduce((sum, s) => {
               if (!s.isReleased || s.isTakenDown) return sum;
@@ -6330,7 +6462,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               if (last28.length === 0) return sum + (s.lastWeekStreams ? s.lastWeekStreams * 4 : 0);
               const sum28 = last28.reduce((a, b) => a + b, 0);
               return sum + (last28.length < 28 ? Math.floor(sum28 * (28 / last28.length)) : sum28);
-            }, 0)
+            }, 0) + featureStreamsLast28Days
           : updatedLastFourWeeksStreams.reduce(
               (sum, streams) => sum + streams,
               0,
@@ -9695,19 +9827,15 @@ The Government`,
       const featureStreamsMap: Record<string, number> = {};
       for (const outId in updatedArtistsData) {
         updatedArtistsData[outId].songs.forEach((song) => {
-          if (
-            song.isReleased &&
-            song.collaboration &&
-            song.collaboration.artistName
-          ) {
-            const featArtist = allPlayerArtistsAndGroups.find(
-              (a) => a.name === song.collaboration!.artistName,
-            );
-            if (featArtist && featArtist.id !== outId) {
-              featureStreamsMap[featArtist.id] =
-                (featureStreamsMap[featArtist.id] || 0) +
-                (song.lastWeekStreams || 0);
-            }
+          if (song.isReleased && !song.isTakenDown) {
+            allPlayerArtistsAndGroups.forEach((featArtist) => {
+              if (featArtist.id === outId) return;
+              if (isArtistFeaturedOnSong(song, featArtist.name, outId, featArtist.id)) {
+                featureStreamsMap[featArtist.id] =
+                  (featureStreamsMap[featArtist.id] || 0) +
+                  (song.lastWeekStreams || 0);
+              }
+            });
           }
         });
       }
@@ -9752,6 +9880,8 @@ The Government`,
             featData.streamsHistory[
               featData.streamsHistory.length - 1
             ].streams += fStreams;
+          } else {
+            featData.streamsHistory = [{ date: newDate, streams: fStreams }];
           }
           if (newDate.week % 4 !== 0) {
             featData.streamsThisMonth += fStreams;

@@ -35,12 +35,13 @@ export function generateInstagramChannelReactions(memberCount: number, startAtOn
 
 /**
  * Calculates the growth duration in milliseconds based on the channel's member count.
- * Exactly matches user specification: ~30 minutes for 10k members.
+ * Exactly matches user specification: 30 minutes for 10k members.
+ * Slow, steady progression without extra effects.
  */
 export function calculateReactionGrowthDuration(memberCount: number): number {
   const members = Math.max(10, memberCount);
   const minutes = (members / 10000) * 30;
-  // Clamp between 3 minutes (minimum) and 180 minutes (3 hours maximum)
-  const clampedMinutes = Math.max(3, Math.min(180, minutes));
+  // Clamp between 1 minute (minimum) and 720 minutes (12 hours maximum)
+  const clampedMinutes = Math.max(1, Math.min(720, minutes));
   return Math.round(clampedMinutes * 60 * 1000);
 }
