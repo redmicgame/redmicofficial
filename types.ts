@@ -2121,6 +2121,8 @@ export interface ArtistData {
   youtubeSubscribers: number;
   youtubeBanner?: string;
   ukBannerImage?: string;
+  chartHistoryImage?: string;
+  billboardImage?: string;
   youtubePartnerProgram?: {
     isActive: boolean;
     eligibleViewsThisQuarter: number;
@@ -3088,6 +3090,14 @@ export type GameAction =
   | {
       type: "UPDATE_ARTIST_IMAGE";
       payload: { artistId: string; newImage: string };
+    }
+  | {
+      type: "UPDATE_CHART_HISTORY_IMAGE";
+      payload: { artistId?: string; image: string };
+    }
+  | {
+      type: "UPDATE_ARTIST_DATA";
+      payload: { artistId?: string; data: Partial<ArtistData> };
     }
   | { type: "UPDATE_ABOUT_PROFILE"; payload: { bio: string; images: string[] } }
   | { type: "CREATE_ONLYFANS_PROFILE"; payload: { profile: OnlyFansProfile } }

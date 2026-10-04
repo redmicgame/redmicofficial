@@ -1,7 +1,8 @@
 import { getArtistImage } from "../constants";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import CameraIcon from './icons/CameraIcon';
 import { Song, Release, ChartHistory } from '../types';
 
 type ChartType = 'billboardHot100' | 'billboardTopAlbums' | 'hotPopSongs' | 'hotRapRnb' | 'electronicChart' | 'countryChart' | 'ukSinglesChart' | 'ukAlbumsChart';
@@ -9,8 +10,28 @@ type ChartType = 'billboardHot100' | 'billboardTopAlbums' | 'hotPopSongs' | 'hot
 const ChartHistoryView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
     const [selectedChart, setSelectedChart] = useState<ChartType>('billboardHot100');
-
     const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const dataUrl = event.target?.result as string;
+            if (dataUrl && activeArtist?.id) {
+                dispatch({
+                    type: 'UPDATE_CHART_HISTORY_IMAGE',
+                    payload: {
+                        artistId: activeArtist.id,
+                        image: dataUrl,
+                    },
+                });
+            }
+        };
+        reader.readAsDataURL(file);
+    };
 
     if (!activeArtistData || !activeArtist) {
         return <div className="p-4">Loading history...</div>;
@@ -100,11 +121,22 @@ const ChartHistoryView: React.FC = () => {
         return { title, chartedItems, stats };
     }, [selectedChart, gameState, songs, releases]);
 
+    const chartProfilePic = activeArtistData.chartHistoryImage || activeArtistData.billboardImage || activeArtist.image;
+
     return (
         <div className="absolute inset-0 bg-zinc-900 text-white overflow-y-auto pb-24">
-            <div className="relative h-64">
+            {/* Hidden file input for uploading chart history profile picture */}
+            <input 
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+            />
+
+            <div className="relative h-64 sm:h-72">
                 <img 
-                    src={getArtistImage(activeArtist.name, activeArtist.image)} 
+                    src={getArtistImage(activeArtist.name, chartProfilePic)} 
                     alt={activeArtist.name} 
                     onError={(e) => {
                         const fallback = getArtistImage(activeArtist.name);
@@ -114,13 +146,54 @@ const ChartHistoryView: React.FC = () => {
                     }}
                     className="w-full h-full object-cover opacity-30" 
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/60 to-transparent" />
                 <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} className="absolute top-4 left-4 p-2 bg-black/30 rounded-full hover:bg-black/50 z-10">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
+
+                {/* Tap to Upload Banner Badge */}
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute top-4 right-4 z-20 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-md"
+                    title="Change chart history profile picture"
+                >
+                    <CameraIcon className="w-4 h-4" />
+                    <span>Tap to upload</span>
+                </button>
+
                 <div className="absolute bottom-0 p-4 w-full">
-                    <p className="text-sm font-semibold text-zinc-400">Chart History</p>
-                    <h1 className="text-4xl font-bold">{activeArtist.name}</h1>
+                    <div className="flex items-center gap-4 mb-2">
+                        {/* Interactive Profile Picture (Tap to Upload) */}
+                        <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="relative group cursor-pointer flex-shrink-0"
+                            title="Tap to change profile picture"
+                        >
+                            <img
+                                src={getArtistImage(activeArtist.name, chartProfilePic)}
+                                alt={activeArtist.name}
+                                onError={(e) => {
+                                    const fallback = getArtistImage(activeArtist.name);
+                                    if (e.currentTarget.src !== fallback) {
+                                        e.currentTarget.src = fallback;
+                                    }
+                                }}
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white/40 shadow-xl group-hover:opacity-80 transition-all"
+                            />
+                            <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-[10px] font-bold text-white transition-opacity">
+                                <CameraIcon className="w-4 h-4 mb-0.5" />
+                                <span>Upload</span>
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 bg-zinc-900 border border-zinc-700 p-1 rounded-full text-white shadow">
+                                <CameraIcon className="w-3 h-3" />
+                            </div>
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold text-zinc-400">Chart History</p>
+                            <h1 className="text-3xl sm:text-4xl font-bold truncate">{activeArtist.name}</h1>
+                        </div>
+                    </div>
+
                     <div className="flex gap-6 mt-2">
                         <div className="text-center">
                             <p className="text-2xl font-bold">{chartData.stats.ones}</p>

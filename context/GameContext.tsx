@@ -7706,6 +7706,7 @@ The Genius Team`,
                   return {
                     ...s,
                     isReleased: true,
+                    isVaulted: false,
                     releaseId: release.type === "Compilation" ? s.releaseId : release.id,
                     coverArt:
                       release.type === "Single" ? release.coverArt : s.coverArt,
@@ -17271,7 +17272,12 @@ The Tonight Show Team`;
 
       const newSongs = activeData.songs.map((song) =>
         releaseWithLabel.songIds.includes(song.id)
-          ? { ...song, isReleased: true, releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id }
+          ? {
+              ...song,
+              isReleased: true,
+              isVaulted: false,
+              releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id,
+            }
           : song,
       );
 
@@ -24352,6 +24358,36 @@ Let us know if you accept.`,
       }
 
       return newState;
+    }
+    case "UPDATE_CHART_HISTORY_IMAGE": {
+      const targetId = action.payload.artistId || state.activeArtistId;
+      if (!targetId || !state.artistsData[targetId]) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [targetId]: {
+            ...state.artistsData[targetId],
+            chartHistoryImage: action.payload.image,
+            billboardImage: action.payload.image,
+            ukBannerImage: action.payload.image,
+          },
+        },
+      };
+    }
+    case "UPDATE_ARTIST_DATA": {
+      const targetId = action.payload.artistId || state.activeArtistId;
+      if (!targetId || !state.artistsData[targetId]) return state;
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [targetId]: {
+            ...state.artistsData[targetId],
+            ...action.payload.data,
+          },
+        },
+      };
     }
     case "CREATE_ONLYFANS_PROFILE": {
       if (!state.activeArtistId) return state;

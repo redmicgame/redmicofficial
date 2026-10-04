@@ -186,6 +186,7 @@ interface TrackItemProps {
 }
 
 const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack, isStreamingActive, onCoverChange }) => {
+    const { dispatch } = useGame();
 
     return (
         <div className={`bg-zinc-800/50 p-2 rounded-lg ${song.isTakenDown ? 'opacity-60' : ''}`}>
@@ -208,6 +209,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                          <p className="font-semibold">{song.title}</p>
                          {grammyWin && <GrammyAwardIcon className="w-4 h-4 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
                          {song.isTakenDown && <span className="text-[10px] font-bold bg-red-900/80 text-red-400 px-1.5 py-0.5 rounded-full">TAKEN DOWN</span>}
+                         {song.isVaulted && <span className="text-[10px] font-bold bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded-full">VAULTED</span>}
                     </div>
                     <p className="text-sm text-zinc-400">
                         {isStreamingActive ? `${formatNumber(song.streams)} streams & ${formatNumber(song.sales || 0)} sales` : `${formatNumber(song.sales || 0)} sales`}
@@ -228,6 +230,15 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                      <p className="font-bold text-right">#{chartInfo.peak ?? 'N/A'}</p>
                      
                      <ItunesVersionManager song={song} />
+
+                     <div className="col-span-2 mt-2">
+                         <button 
+                             onClick={() => dispatch({ type: 'TOGGLE_VAULT_SONG', payload: { songId: song.id } })}
+                             className={`w-full py-1.5 rounded-md text-xs font-bold transition-colors ${song.isVaulted ? 'bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40' : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200'}`}
+                         >
+                             {song.isVaulted ? "Unvault Track" : "Vault Track (Save to Vault)"}
+                         </button>
+                     </div>
 
                      {canTakeDown && !song.isTakenDown && (
                          <div className="col-span-2 mt-2">

@@ -44,15 +44,25 @@ const ReleaseView: React.FC = () => {
         });
 
         if (releaseType === 'Compilation') {
-            return songs.filter(s => !s.isVaulted && !s.title.endsWith(' - Live'));
+            return songs.filter(s => !s.title.endsWith(' - Live'));
         }
         
         if (releaseType === 'Live Album') {
-            return songs.filter(s => s.title.endsWith(' - Live') && !s.isReleased && !s.isVaulted);
+            return songs.filter(s => s.title.endsWith(' - Live') && !s.isReleased);
         }
 
-        return songs.filter(s => (!s.isReleased || !songsInEPOrAlbum.has(s.id)) && !s.isVaulted && !s.title.endsWith(' - Live'));
-    }, [songs, releases, releaseType]);
+        const baseAlbumSongIds = new Set(
+            releaseType === 'Album (Deluxe)' && baseAlbumForDeluxe
+                ? releases.find(r => r.id === baseAlbumForDeluxe)?.songIds || []
+                : []
+        );
+
+        return songs.filter(s => 
+            (!s.isReleased || !songsInEPOrAlbum.has(s.id) || s.isVaulted) && 
+            !s.title.endsWith(' - Live') &&
+            (!baseAlbumForDeluxe || !baseAlbumSongIds.has(s.id))
+        );
+    }, [songs, releases, releaseType, baseAlbumForDeluxe]);
 
     const coverArt = useMemo(() => {
         if (releaseType === 'Album (Deluxe)') {
@@ -349,6 +359,9 @@ const ReleaseView: React.FC = () => {
                                                 <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded-full font-medium">Released</span>
                                             ) : (
                                                 <span className="text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-medium">Unreleased</span>
+                                            )}
+                                            {song.isVaulted && (
+                                                <span className="text-xs bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded-full font-medium">Vaulted</span>
                                             )}
                                         </div>
                                     </div>
