@@ -33,13 +33,20 @@ const ReleaseView: React.FC = () => {
     const [selectedLiveTourId, setSelectedLiveTourId] = useState<string>('');
 
     if (!activeArtistData || !activeArtist) return null;
-    const { songs, contract, releases, customLabels, redMicPro } = activeArtistData;
+    const { songs, contract, releases, labelSubmissions, customLabels, redMicPro } = activeArtistData;
 
     const availableSongs = useMemo(() => {
         const songsInEPOrAlbum = new Set<string>();
         releases.forEach(r => {
             if (r.type === 'EP' || r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album') {
                 r.songIds.forEach(songId => songsInEPOrAlbum.add(songId));
+            }
+        });
+        (labelSubmissions || []).forEach(sub => {
+            if (sub.status !== 'rejected' && sub.release) {
+                if (sub.release.type === 'EP' || sub.release.type === 'Album' || sub.release.type === 'Album (Deluxe)' || sub.release.type === 'Compilation' || sub.release.type === 'Live Album') {
+                    sub.release.songIds.forEach(songId => songsInEPOrAlbum.add(songId));
+                }
             }
         });
 
@@ -58,11 +65,11 @@ const ReleaseView: React.FC = () => {
         );
 
         return songs.filter(s => 
-            (!s.isReleased || !songsInEPOrAlbum.has(s.id) || s.isVaulted) && 
+            !songsInEPOrAlbum.has(s.id) && 
             !s.title.endsWith(' - Live') &&
             (!baseAlbumForDeluxe || !baseAlbumSongIds.has(s.id))
         );
-    }, [songs, releases, releaseType, baseAlbumForDeluxe]);
+    }, [songs, releases, labelSubmissions, releaseType, baseAlbumForDeluxe]);
 
     const coverArt = useMemo(() => {
         if (releaseType === 'Album (Deluxe)') {
