@@ -247,11 +247,12 @@ export const ChartPredictionsView: React.FC = () => {
             const digitalPoints = songDigitalSales * 60 * formula.digital;
             const physicalPoints = songPhysicalSales * 60 * formula.physical;
             
-            const points = streamPoints + radioPoints + digitalPoints + physicalPoints;
+            const rawPoints = streamPoints + radioPoints + digitalPoints + physicalPoints;
+            const points = rawPoints * 0.00001;
             
             return {
                 ...song,
-                points: Math.floor(points),
+                points: Math.round(points),
                 pointsDiff: 0,
                 sales: songDigitalSales + songPhysicalSales,
                 radioPlays: currentRadioPlays,
@@ -259,7 +260,24 @@ export const ChartPredictionsView: React.FC = () => {
         });
 
         hot100Contenders.sort((a, b) => b.points - a.points);
-        return hot100Contenders.slice(0, 60);
+
+        // Apply Billboard Recurrent Rules to early predictions:
+        const eligibleContenders: typeof hot100Contenders = [];
+        for (const song of hot100Contenders) {
+            const history = gameState.chartHistory[song.uniqueId];
+            const nextRank = eligibleContenders.length + 1;
+            if (nextRank <= 100) {
+                if (history && history.weeksOnChart >= 52 && nextRank > 25) {
+                    continue; // 52-week recurrent rule
+                }
+                if (history && history.weeksOnChart >= 20 && nextRank > 50) {
+                    continue; // 20-week recurrent rule
+                }
+            }
+            eligibleContenders.push(song);
+        }
+
+        return eligibleContenders.slice(0, 60);
     }, [gameState.artistsData, gameState.npcs, allPlayerArtists]);
 
     if (!activeArtistData) return null;

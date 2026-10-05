@@ -1704,21 +1704,36 @@ const calculateGenreChart = (
   chartHistory: ChartHistory,
   currentDate: { year: number; week: number },
 ): { newChart: ChartEntry[]; newHistory: ChartHistory } => {
-  const genreContenders = allContenders.filter((song) =>
-    genres.includes(song.genre),
-  );
-
-  genreContenders.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
-
-  const eligibleGenreContenders = genreContenders.filter((song, index) => {
-    const potentialRank = index + 1;
-    const history = chartHistory[song.uniqueId];
-    if (history && history.weeksOnChart >= 52 && potentialRank > 25)
-      return false;
-    if (history && history.weeksOnChart >= 20 && potentialRank > 50)
-      return false;
-    return true;
+  const genreContenders = allContenders.filter((song) => {
+    const g = (song.genre || "").toLowerCase();
+    return genres.some((target) => g.includes(target.toLowerCase()));
   });
+
+  // Sort by Billboard chart points (or weeklyStreams as fallback)
+  genreContenders.sort((a, b) => {
+    const aPts = typeof a.hot100Points === "number" ? a.hot100Points : a.weeklyStreams;
+    const bPts = typeof b.hot100Points === "number" ? b.hot100Points : b.weeklyStreams;
+    return bPts - aPts;
+  });
+
+  // Apply Billboard Recurrent Rules for Genre Charts (top 50):
+  // Songs on chart >= 52 weeks must rank in top 25; songs on chart >= 20 weeks must rank in top 50
+  const eligibleGenreContenders: any[] = [];
+  for (const song of genreContenders) {
+    if (eligibleGenreContenders.length >= 50) {
+      eligibleGenreContenders.push(song);
+      continue;
+    }
+    const nextRank = eligibleGenreContenders.length + 1;
+    const history = chartHistory[song.uniqueId];
+    if (history && history.weeksOnChart >= 52 && nextRank > 25) {
+      continue; // Recurrent
+    }
+    if (history && history.weeksOnChart >= 20 && nextRank > 50) {
+      continue; // Recurrent
+    }
+    eligibleGenreContenders.push(song);
+  }
 
   const top50 = eligibleGenreContenders.slice(0, 50);
   const newHistory: ChartHistory = { ...chartHistory };
@@ -1773,6 +1788,10 @@ const calculateGenreChart = (
       songId: song.songId,
       uniqueId: song.uniqueId,
       weeklyStreams: song.weeklyStreams,
+      digitalSales: song.digitalSales,
+      radioPlays: song.radioPlays,
+      radioImpressions: song.radioImpressions,
+      points: Math.round(song.hot100Points || 0),
     });
   });
 
@@ -10156,6 +10175,7 @@ It is now available on your Spotify profile.
           songId: baseSong.id,
           genre: baseSong.genre,
           itunesPrice: baseSong.itunesPrice,
+          isAvailableOnStreaming: baseSong.isAvailableOnStreaming !== false,
         };
       });
 
@@ -10233,6 +10253,7 @@ It is now available on your Spotify profile.
           coverArt: getArtistImage(npc.artist, npc.coverArt),
           songId: undefined,
           genre: npc.genre,
+          isAvailableOnStreaming: true,
         };
       });
 
@@ -10657,6 +10678,7 @@ It is now available on your Spotify profile.
           radioFormats: matchingPlayerSong ? matchingPlayerSong.radioFormats : songAny.radioFormats || (isOnRadio ? [rFormat] : []),
           formatRadioPlays: matchingPlayerSong ? matchingPlayerSong.formatRadioPlays : songAny.formatRadioPlays || (isOnRadio ? { [rFormat]: rPlays } : {}),
           formatRadioImpressions: matchingPlayerSong ? matchingPlayerSong.formatRadioImpressions : songAny.formatRadioImpressions || (isOnRadio ? { [rFormat]: rImpressions } : {}),
+          isAvailableOnStreaming: (song as any).isAvailableOnStreaming !== false,
           ...( !song.isPlayerSong ? { isOnUkRadio, ukRadioPlays, ukRadioFormat } : { isOnUkRadio: pIsOnUkRadio, ukRadioPlays: pUkRadioPlays, ukRadioFormat: pUkRadioFormat } ),
         };
       });
@@ -10759,7 +10781,7 @@ It is now available on your Spotify profile.
           songPhysicalSales += baseSales;
         }
 
-        const hasStreamingRights = song.isAvailableOnStreaming === true;
+        const hasStreamingRights = song.isAvailableOnStreaming !== false;
 
         // Billboard Hot 100 Formulas by Decade:
         // 1990s: Radio Airplay 70%, Physical Sales 30%, Digital Sales 0%, Streaming 0%
@@ -10784,8 +10806,9 @@ It is now available on your Spotify profile.
         // Physical Sales Points: Single physical formats (CDs, vinyl, cassettes)
         const physicalPoints = songPhysicalSales * 60 * formula.physical;
 
-        const points =
+        const rawPoints =
           streamPoints + radioPoints + digitalPoints + physicalPoints;
+        const points = rawPoints * 0.00001;
 
         return {
           ...song,
@@ -10797,17 +10820,31 @@ It is now available on your Spotify profile.
       });
       hot100Contenders.sort((a, b) => b.hot100Points - a.hot100Points);
 
-      const eligibleBillboardContenders = hot100Contenders.filter(
-        (song, index) => {
-          const potentialRank = index + 1;
-          const history = state.chartHistory[song.uniqueId];
-          if (history && history.weeksOnChart >= 52 && potentialRank > 25)
-            return false;
-          if (history && history.weeksOnChart >= 20 && potentialRank > 50)
-            return false;
-          return true;
-        },
-      );
+      // Billboard Recurrent Rules:
+      // A song is removed from the Hot 100 if:
+      // - 20+ weeks on chart and rank falls below #50 (rank > 50)
+      // - 52+ weeks on chart and rank falls below #25 (rank > 25)
+      // Iteratively fill ranks 1 to 100 so valid lower songs correctly advance:
+      const eligibleBillboardContenders: typeof hot100Contenders = [];
+      const recurrentSongIds = new Set<string>();
+
+      for (const song of hot100Contenders) {
+        const history = state.chartHistory[song.uniqueId];
+        const nextRank = eligibleBillboardContenders.length + 1;
+
+        if (nextRank <= 100) {
+          if (history && history.weeksOnChart >= 52 && nextRank > 25) {
+            recurrentSongIds.add(song.uniqueId);
+            continue; // Ineligible due to 52-week recurrent rule
+          }
+          if (history && history.weeksOnChart >= 20 && nextRank > 50) {
+            recurrentSongIds.add(song.uniqueId);
+            continue; // Ineligible due to 20-week recurrent rule
+          }
+        }
+
+        eligibleBillboardContenders.push(song);
+      }
 
       const top100 = eligibleBillboardContenders.slice(0, 100);
       const newBillboardHot100: ChartEntry[] = [];
@@ -10861,6 +10898,7 @@ It is now available on your Spotify profile.
           digitalSales: song.digitalSales,
           radioPlays: song.radioPlays,
           radioImpressions: song.radioImpressions,
+          points: Math.round(song.hot100Points || 0),
         });
       });
 
@@ -10882,7 +10920,8 @@ It is now available on your Spotify profile.
         i++
       ) {
         const song = eligibleBillboardContenders[i];
-        if (newChartHistory[song.uniqueId]) continue; // Has chart history from Hot 100 before
+        if (newChartHistory[song.uniqueId] || state.chartHistory[song.uniqueId]) continue; // Has chart history from Hot 100 before
+        if (recurrentSongIds.has(song.uniqueId)) continue; // Recurrent songs cannot appear on Bubbling Under
 
         const weeksBubbling = (newBubblingUnderHistory[song.uniqueId] || 0) + 1;
         if (weeksBubbling > 10) continue; // max stay 10 weeks
@@ -10906,6 +10945,7 @@ It is now available on your Spotify profile.
           digitalSales: song.digitalSales,
           radioPlays: song.radioPlays,
           radioImpressions: song.radioImpressions,
+          points: Math.round(song.hot100Points || 0),
         });
         bubblingCount++;
       }
@@ -11134,10 +11174,10 @@ It is now available on your Spotify profile.
             });
         });
 
-      // --- GENRE CHART CALCULATION ---
+      // --- GENRE CHART CALCULATION (Billboard Formulas & Points) ---
       const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } =
         calculateGenreChart(
-          allContenders,
+          hot100Contenders,
           ["Pop"],
           state.hotPopSongs,
           state.hotPopSongsHistory,
@@ -11145,7 +11185,7 @@ It is now available on your Spotify profile.
         );
       const { newChart: newHotRapRnb, newHistory: newHotRapRnbHistory } =
         calculateGenreChart(
-          allContenders,
+          hot100Contenders,
           ["Hip Hop", "R&B"],
           state.hotRapRnb,
           state.hotRapRnbHistory,
@@ -11155,7 +11195,7 @@ It is now available on your Spotify profile.
         newChart: newElectronicChart,
         newHistory: newElectronicChartHistory,
       } = calculateGenreChart(
-        allContenders,
+        hot100Contenders,
         ["Electronic"],
         state.electronicChart,
         state.electronicChartHistory,
@@ -11163,7 +11203,7 @@ It is now available on your Spotify profile.
       );
       const { newChart: newCountryChart, newHistory: newCountryChartHistory } =
         calculateGenreChart(
-          allContenders,
+          hot100Contenders,
           ["Country"],
           state.countryChart,
           state.countryChartHistory,

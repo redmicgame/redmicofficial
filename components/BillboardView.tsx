@@ -73,7 +73,9 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
     }
     const hash = (entry.uniqueId || entry.albumId || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const divisor = 750 + (hash % 250);
-    const digitalSales = isAlbumChart ? (entry.weeklySales || 0) : Math.floor(weeklyStreams / divisor) * boost;
+    const digitalSales = isAlbumChart 
+        ? (entry.weeklySales || 0) 
+        : (entry.digitalSales !== undefined ? entry.digitalSales : Math.floor(weeklyStreams / divisor) * boost);
 
     return (
         <div className="w-full relative bg-[#f4f4f4] mb-2 shadow-sm rounded-sm overflow-hidden flex flex-col transition-all">
@@ -203,6 +205,18 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
                                 </div>
                             </>
                         )}
+                        {entry.points !== undefined && entry.points > 0 && (() => {
+                            const formattedPoints = entry.points > 10000 ? Math.round(entry.points * 0.00001) : Math.round(entry.points);
+                            return (
+                                <>
+                                    <div className="w-px h-8 bg-zinc-300"></div>
+                                    <div className="text-center">
+                                        <p className="text-[10px] font-bold text-zinc-400 tracking-wider">CHART POINTS</p>
+                                        <p className="text-lg font-black text-emerald-600">{formatNumber(formattedPoints)}</p>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 )}
             </div>
@@ -405,6 +419,55 @@ const BillboardView: React.FC = () => {
 
                             <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 text-[11px] text-zinc-500 leading-relaxed">
                                 Note: Billboard added streaming to the Hot 100 formula in 2010. Radio plays are converted to all-format impressions.
+                            </div>
+
+                            {/* Additional Official Billboard Rules */}
+                            <div className="space-y-3 pt-2">
+                                <h4 className="font-extrabold text-sm uppercase tracking-wider text-black flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-[#12FF80]"></span>
+                                    Official Billboard Chart Rules
+                                </h4>
+
+                                <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 space-y-2 text-xs">
+                                    <p className="font-bold text-black flex items-center gap-1">
+                                        ⏱️ Recurrent Rules (Drop-off & Ineligibility)
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-1 text-zinc-600">
+                                        <li><strong>20-Week Rule:</strong> A song that has charted for 20+ weeks and falls below <strong>#50</strong> is automatically removed to recurrent status.</li>
+                                        <li><strong>52-Week Rule:</strong> A song that has charted for 52+ weeks and falls below <strong>#25</strong> is automatically removed to recurrent status.</li>
+                                        <li>Recurrent songs are disqualified from the Hot 100 to allow new releases to chart, unless they gain sufficient new points to re-enter above the threshold.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 space-y-2 text-xs">
+                                    <p className="font-bold text-black flex items-center gap-1">
+                                        🫧 Bubbling Under Hot 100 Rules
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-1 text-zinc-600">
+                                        <li>Ranks the top 25 songs below the Hot 100 based on the official Billboard points formula.</li>
+                                        <li>Songs that have already charted on the main Hot 100 or were disqualified by recurrent rules cannot appear on Bubbling Under.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 space-y-2 text-xs">
+                                    <p className="font-bold text-black flex items-center gap-1">
+                                        💿 Billboard 200 (Album Units) Rules
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-1 text-zinc-600">
+                                        <li><strong>1 Album Unit (SPS)</strong> = 1 Pure Album Sale = 1,500 on-demand streams (SEA) = 10 digital track sales (TEA).</li>
+                                        <li>Physical copies (Vinyl, CDs, Cassettes) and store pre-orders are counted upon the album's debut week.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 space-y-2 text-xs">
+                                    <p className="font-bold text-black flex items-center gap-1">
+                                        📻 Genre Charts (Pop, Rap/R&B, Dance/Electronic, Country)
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-1 text-zinc-600">
+                                        <li>Follow the same decade weighting formulas (Streaming, Radio airplay, Digital and Physical sales) filtered by genre.</li>
+                                        <li>Subject to recurrent rules (50 positions) to keep genre charts fresh and competitive.</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
 

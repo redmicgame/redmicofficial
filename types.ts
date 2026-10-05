@@ -886,6 +886,7 @@ export interface ChartEntry {
   itunesDuration?: number;
   itunesExplicit?: boolean;
   regionalStreams?: Record<string, number>;
+  points?: number;
 }
 
 export interface VideoChartEntry {
