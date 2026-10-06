@@ -477,6 +477,7 @@ export const Post: React.FC<{
 
   const partnerOrChildDualImage = useMemo(() => {
     if (isTmzPost) return null;
+    if (post.image3 || (post.images && post.images.length > 2)) return null;
     if (post.image && post.image2) {
       return { img1: post.image, img2: post.image2 };
     }
@@ -754,16 +755,43 @@ export const Post: React.FC<{
               referrerPolicy="no-referrer"
             />
           </div>
-        ) : post.image && post.image2 ? (
+        ) : (post.images && post.images.length === 4) || (post.image && post.image2 && post.image3 && post.image4) ? (
+          <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-0.5 border border-zinc-700 rounded-xl overflow-hidden max-w-full aspect-square bg-zinc-900">
+            <img
+              src={post.images ? post.images[0] : post.image}
+              alt="Post image 1"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              src={post.images ? post.images[1] : post.image2}
+              alt="Post image 2"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              src={post.images ? post.images[2] : post.image3}
+              alt="Post image 3"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              src={post.images ? post.images[3] : post.image4}
+              alt="Post image 4"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (post.images && post.images.length === 2) || (post.image && post.image2) ? (
           <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
             <img
-              src={post.image}
+              src={post.images ? post.images[0] : post.image}
               alt="Post image 1"
               className="w-1/2 h-full object-cover border-r border-zinc-700"
               referrerPolicy="no-referrer"
             />
             <img
-              src={post.image2}
+              src={post.images ? post.images[1] : post.image2}
               alt="Post image 2"
               className="w-1/2 h-full object-cover"
               referrerPolicy="no-referrer"

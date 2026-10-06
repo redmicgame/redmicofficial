@@ -1235,6 +1235,9 @@ export interface XPost {
   content: string;
   image?: string;
   image2?: string;
+  image3?: string;
+  image4?: string;
+  images?: string[];
   video?: string;
   poll?: {
     options: XPollOption[];
@@ -2245,6 +2248,11 @@ export interface ArtistData {
   firstChartEntry?: { songTitle: string; rank: number; date: GameDate } | null;
   hasEarnedFirstSoloHot100?: boolean;
   hasEarnedFirstBillboard200No1?: boolean;
+  hasEarnedFourBillboard200No1s?: boolean;
+  hasEarnedFourHot100No1s?: boolean;
+  hasEarnedFourTop10SongsTweeted?: boolean;
+  billboard200NumberOneDebuts?: number;
+  numberOneHits?: number;
   hasAimingFirstHot100Tweeted?: boolean;
   hasEarnedFirstGrammyNomination?: boolean;
   hasEarnedFirstHot100No1?: boolean;
@@ -2382,6 +2390,10 @@ export interface GameState {
   };
   mostNumberOneDebutsRecord?: { artist: string; count: number; image: string };
   npcNumberOneDebuts?: Record<string, number>;
+  mostBillboard200NumberOneDebutsRecord?: { artist: string; count: number; image: string };
+  npcBillboard200NumberOneDebuts?: Record<string, number>;
+  hot100No1HitsThisDecade?: Record<string, number>;
+  b200No1AlbumsThisDecade?: Record<string, number>;
   hotRapRnb: ChartEntry[];
   electronicChart: ChartEntry[];
   countryChart: ChartEntry[];

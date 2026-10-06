@@ -12226,6 +12226,132 @@ It is now available on your Spotify profile.
         }
       }
 
+      // --- FOUR IMAGE MILESTONE TWEETS (ARTIST ONLY - FOUR IMAGE FORMAT) ---
+      // 1. 4 Songs in Hot 100 Top 10 simultaneously
+      const top10PlayerEntries = newBillboardHot100.filter(
+        (e) => e.rank <= 10 && e.isPlayerSong && e.songId,
+      );
+      if (top10PlayerEntries.length >= 4) {
+        const artistSongsMap: Record<string, typeof top10PlayerEntries> = {};
+        top10PlayerEntries.forEach((entry) => {
+          const song = allPlayerSongsFlat.find((s) => s.id === entry.songId);
+          if (song && song.artistId) {
+            if (!artistSongsMap[song.artistId]) artistSongsMap[song.artistId] = [];
+            artistSongsMap[song.artistId].push(entry);
+          }
+        });
+        Object.entries(artistSongsMap).forEach(([artistId, entries]) => {
+          if (entries.length >= 4) {
+            const aData = updatedArtistsData[artistId];
+            if (aData && !aData.hasEarnedFourTop10SongsTweeted) {
+              aData.hasEarnedFourTop10SongsTweeted = true;
+              const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+              const artistName = artistProfile?.name || entries[0].artist || "Artist";
+              const sorted4 = [...entries].sort((a, b) => a.rank - b.rank).slice(0, 4);
+              const content = `${artistName} charts 4 songs in the top 10 on this week's Billboard Hot 100:\n\n#${sorted4[0].rank} "${sorted4[0].title}"\n#${sorted4[1].rank} "${sorted4[1].title}"\n#${sorted4[2].rank} "${sorted4[2].title}"\n#${sorted4[3].rank} "${sorted4[3].title}"`;
+              aData.xPosts.unshift({
+                id: crypto.randomUUID(),
+                authorId: "chartdata",
+                content,
+                image: sorted4[0].coverArt,
+                image2: sorted4[1].coverArt,
+                image3: sorted4[2].coverArt,
+                image4: sorted4[3].coverArt,
+                images: sorted4.map((s) => s.coverArt),
+                likes: Math.floor(Math.random() * 85000) + 35000,
+                retweets: Math.floor(Math.random() * 22000) + 6000,
+                views: Math.floor(Math.random() * 1600000) + 500000,
+                date: newDate,
+              });
+            }
+          }
+        });
+      }
+
+      // 2. Four #1 Hits on the Billboard Hot 100
+      Object.entries(updatedArtistsData).forEach(([artistId, aData]) => {
+        if (!aData.hasEarnedFourHot100No1s) {
+          const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          const artistName = artistProfile?.name || "Artist";
+          const no1Songs: { title: string; coverArt: string }[] = [];
+          (aData.songs || []).forEach((song) => {
+            const hist = newChartHistory[song.id] || state.chartHistory?.[song.id];
+            const currentHot100Entry = newBillboardHot100.find(
+              (e) => e.songId === song.id && e.rank === 1,
+            );
+            if (currentHot100Entry || hist?.peak === 1) {
+              if (!no1Songs.some((s) => s.title === song.title)) {
+                no1Songs.push({
+                  title: song.title,
+                  coverArt: song.coverArt || (currentHot100Entry?.coverArt ?? ""),
+                });
+              }
+            }
+          });
+          if (no1Songs.length >= 4) {
+            aData.hasEarnedFourHot100No1s = true;
+            const fourHits = no1Songs.slice(0, 4);
+            const content = `${artistName} has now earned four #1 hits on the Billboard Hot 100:\n\n- "${fourHits[0].title}"\n- "${fourHits[1].title}"\n- "${fourHits[2].title}"\n- "${fourHits[3].title}"`;
+            aData.xPosts.unshift({
+              id: crypto.randomUUID(),
+              authorId: "chartdata",
+              content,
+              image: fourHits[0].coverArt,
+              image2: fourHits[1].coverArt,
+              image3: fourHits[2].coverArt,
+              image4: fourHits[3].coverArt,
+              images: fourHits.map((s) => s.coverArt),
+              likes: Math.floor(Math.random() * 95000) + 40000,
+              retweets: Math.floor(Math.random() * 25000) + 8000,
+              views: Math.floor(Math.random() * 1800000) + 600000,
+              date: newDate,
+            });
+          }
+        }
+      });
+
+      // 3. Four #1 Albums on the Billboard 200
+      Object.entries(updatedArtistsData).forEach(([artistId, aData]) => {
+        if (!aData.hasEarnedFourBillboard200No1s) {
+          const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+          const artistName = artistProfile?.name || "Artist";
+          const no1Albums: { title: string; coverArt: string }[] = [];
+          (aData.releases || []).forEach((rel) => {
+            const hist = newAlbumChartHistory[rel.id] || state.albumChartHistory?.[rel.id];
+            const currentEntry = newBillboardTopAlbums.find(
+              (a) => a.albumId === rel.id && a.rank === 1,
+            );
+            if (currentEntry || hist?.peak === 1) {
+              if (!no1Albums.some((a) => a.title === rel.title)) {
+                no1Albums.push({
+                  title: rel.title,
+                  coverArt: rel.coverArt || (currentEntry?.coverArt ?? ""),
+                });
+              }
+            }
+          });
+          if (no1Albums.length >= 4) {
+            aData.hasEarnedFourBillboard200No1s = true;
+            const fourAlbums = no1Albums.slice(0, 4);
+            const content = `${artistName} has now earned four #1 albums on the Billboard 200:\n\n- '${fourAlbums[0].title}'\n- '${fourAlbums[1].title}'\n- '${fourAlbums[2].title}'\n- '${fourAlbums[3].title}'`;
+            aData.xPosts.unshift({
+              id: crypto.randomUUID(),
+              authorId: "chartdata",
+              content,
+              image: fourAlbums[0].coverArt,
+              image2: fourAlbums[1].coverArt,
+              image3: fourAlbums[2].coverArt,
+              image4: fourAlbums[3].coverArt,
+              images: fourAlbums.map((a) => a.coverArt),
+              likes: Math.floor(Math.random() * 95000) + 40000,
+              retweets: Math.floor(Math.random() * 25000) + 8000,
+              views: Math.floor(Math.random() * 1800000) + 600000,
+              date: newDate,
+            });
+          }
+        }
+      });
+
       // Biggest Sales Week Record (Billboard 200)
       const currentBiggestSales =
         finalState.biggestSalesWeekByYear?.[newDate.year];
@@ -12265,62 +12391,351 @@ It is now available on your Spotify profile.
         }
       }
 
-      // Most #1 Debuts Record (Hot 100)
-      if (
+      // Helper function to format chart data leaderboard list post (matching real-life @chartdata style)
+      const formatChartDataLeaderboard = (
+        header: string,
+        dataMap: Record<string, number>,
+        maxRank = 5,
+        featuredArtist?: string,
+      ): string => {
+        const sorted = Object.entries(dataMap)
+          .filter(([_, count]) => count > 0)
+          .sort((a, b) => b[1] - a[1]);
+
+        const lines: string[] = [];
+        let currentRank = 1;
+        let featuredIncluded = false;
+
+        for (let i = 0; i < sorted.length; i++) {
+          if (i > 0 && sorted[i][1] < sorted[i - 1][1]) {
+            currentRank = i + 1;
+          }
+          if (currentRank <= maxRank) {
+            lines.push(`#${currentRank} ${sorted[i][0]} ${sorted[i][1]}`);
+            if (featuredArtist && sorted[i][0].toLowerCase() === featuredArtist.toLowerCase()) {
+              featuredIncluded = true;
+            }
+          } else {
+            if (featuredArtist && !featuredIncluded && sorted[i][0].toLowerCase() === featuredArtist.toLowerCase()) {
+              lines.push(`#${currentRank} ${sorted[i][0]} ${sorted[i][1]}`);
+              featuredIncluded = true;
+            }
+          }
+        }
+        return `${header}\n\n${lines.join("\n")}`;
+      };
+
+      // Most #1 Hits / Debuts Record (Hot 100) - Triggered every time an artist gains a #1 hit
+      const isGainingHot100No1 =
         hot100One &&
-        hot100One.lastWeek === null &&
-        newChartHistory[hot100One.uniqueId]?.weeksOnChart === 1
-      ) {
-        // Determine if it's player or NPC
-        let debutCount = 0;
-        let artistImage = "";
+        (hot100One.lastWeek === null ||
+          hot100One.lastWeek > 1 ||
+          !state.billboardHot100 ||
+          state.billboardHot100[0]?.uniqueId !== hot100One.uniqueId);
+
+      if (isGainingHot100No1 && hot100One) {
+        const isDebutNo1 =
+          hot100One.lastWeek === null ||
+          newChartHistory[hot100One.uniqueId]?.weeksOnChart === 1;
+
         if (hot100One.isPlayerSong && hot100One.songId) {
           const song = allPlayerSongsFlat.find(
             (s) => s.id === hot100One.songId,
           );
           if (song) {
             const artistData = updatedArtistsData[song.artistId];
-            artistData.numberOneDebuts = (artistData.numberOneDebuts || 0) + 1;
-            debutCount = artistData.numberOneDebuts;
-            artistImage =
-              allPlayerArtistsAndGroups.find((a) => a.id === song.artistId)
-                ?.imageUrl || hot100One.coverArt;
+            if (artistData) {
+              if (isDebutNo1) {
+                artistData.numberOneDebuts = (artistData.numberOneDebuts || 0) + 1;
+              }
+              artistData.numberOneHits = (artistData.numberOneHits || 0) + 1;
+            }
           }
         } else {
           if (!finalState.npcNumberOneDebuts)
             finalState.npcNumberOneDebuts = {};
-          finalState.npcNumberOneDebuts[hot100One.artist] =
-            (finalState.npcNumberOneDebuts[hot100One.artist] || 0) + 1;
-          debutCount = finalState.npcNumberOneDebuts[hot100One.artist];
-          artistImage =
-            state.npcImages?.[hot100One.artist] || hot100One.coverArt;
+          if (isDebutNo1) {
+            finalState.npcNumberOneDebuts[hot100One.artist] =
+              (finalState.npcNumberOneDebuts[hot100One.artist] || 0) + 1;
+          }
+          if (!finalState.npcNumberOneHits)
+            finalState.npcNumberOneHits = {};
+          finalState.npcNumberOneHits[hot100One.artist] =
+            (finalState.npcNumberOneHits[hot100One.artist] || 0) + 1;
         }
 
-        const currentMostDebuts = finalState.mostNumberOneDebutsRecord;
-        if (!currentMostDebuts || debutCount > currentMostDebuts.count) {
-          if (currentMostDebuts) {
-            const surpassingText =
-              currentMostDebuts.artist === hot100One.artist
-                ? `breaking their own record`
-                : `surpassing ${currentMostDebuts.artist} (${currentMostDebuts.count})`;
+        // Build actual Hot 100 #1 hits leaderboard directly from verified chart history (no placeholder artists)
+        const actualHot100Map: Record<string, number> = {};
+        const playerNo1SongsByArtist = new Map<string, Set<string>>();
 
-            npcPopBasePosts.push({
-              id: crypto.randomUUID(),
-              authorId: "chartdata",
-              content: `${hot100One.artist} now has the most #1 debuts for an artist in Hot 100 history, ${surpassingText}.`,
-              image: artistImage,
-              image2: currentMostDebuts.image,
-              likes: Math.floor(Math.random() * 80000) + 30000,
-              retweets: Math.floor(Math.random() * 20000) + 5000,
-              views: Math.floor(Math.random() * 1500000) + 500000,
-              date: newDate,
-            });
+        // Check chart history for all player artists and their songs
+        allPlayerArtistsAndGroups.forEach((artistProfile) => {
+          const artistData = updatedArtistsData[artistProfile.id];
+          const artistName = artistProfile.name || "Artist";
+          if (!playerNo1SongsByArtist.has(artistName)) {
+            playerNo1SongsByArtist.set(artistName, new Set());
           }
-          finalState.mostNumberOneDebutsRecord = {
-            artist: hot100One.artist,
-            count: debutCount,
-            image: artistImage,
-          };
+          const songSet = playerNo1SongsByArtist.get(artistName)!;
+
+          (artistData?.songs || []).forEach((song) => {
+            if (song.remixOfSongId) return;
+            const hist =
+              newChartHistory[song.id] ||
+              state.chartHistory?.[song.id] ||
+              (song.title ? newChartHistory[song.title] || state.chartHistory?.[song.title] : null) ||
+              (song.uniqueId ? newChartHistory[song.uniqueId] || state.chartHistory?.[song.uniqueId] : null);
+            if (hist && hist.peak === 1) {
+              songSet.add(song.id);
+            }
+          });
+        });
+
+        const combinedChartHistory = { ...state.chartHistory, ...newChartHistory };
+        Object.entries(combinedChartHistory).forEach(([uniqueId, hist]) => {
+          if (hist && hist.peak === 1) {
+            const playerSong = allPlayerSongsFlat.find((s) => s.id === uniqueId || s.uniqueId === uniqueId);
+            if (playerSong) {
+              const artistProfile =
+                allPlayerArtistsAndGroups.find((a) => a.id === playerSong.artistId) ||
+                state.soloArtist ||
+                state.group;
+              const artistName = artistProfile?.name || "Artist";
+              if (!playerNo1SongsByArtist.has(artistName)) {
+                playerNo1SongsByArtist.set(artistName, new Set());
+              }
+              playerNo1SongsByArtist.get(artistName)!.add(playerSong.remixOfSongId || playerSong.id);
+            }
+          }
+        });
+
+        playerNo1SongsByArtist.forEach((songs, artistName) => {
+          const profile = allPlayerArtistsAndGroups.find((a) => a.name === artistName);
+          const aData = profile ? updatedArtistsData[profile.id] : null;
+          let count = songs.size;
+          if (aData?.numberOneHits && aData.numberOneHits > count) {
+            count = aData.numberOneHits;
+          }
+          if (count > 0) {
+            actualHot100Map[artistName] = count;
+          }
+        });
+
+        // Check NPC artists from actual chart history (only artists who actually entered / reached #1)
+        const npcNo1SongsByArtist = new Map<string, Set<string>>();
+        Object.entries(combinedChartHistory).forEach(([uniqueId, hist]) => {
+          if (hist && hist.peak === 1) {
+            const isPlayer = allPlayerSongsFlat.some((s) => s.id === uniqueId || s.uniqueId === uniqueId);
+            if (!isPlayer) {
+              const npcSong =
+                (state.npcs || []).find((n) => n.uniqueId === uniqueId || n.id === uniqueId) ||
+                (newNpcsList || []).find((n) => n.uniqueId === uniqueId || n.id === uniqueId) ||
+                (state.billboardHot100 || []).find((b) => b.uniqueId === uniqueId && !b.isPlayerSong) ||
+                (top100 || []).find((b) => b.uniqueId === uniqueId && !b.isPlayerSong) ||
+                (allContenders || []).find((c) => c.uniqueId === uniqueId && !c.isPlayerSong);
+              if (npcSong && npcSong.artist) {
+                if (!npcNo1SongsByArtist.has(npcSong.artist)) {
+                  npcNo1SongsByArtist.set(npcSong.artist, new Set());
+                }
+                npcNo1SongsByArtist.get(npcSong.artist)!.add(uniqueId);
+              }
+            }
+          }
+        });
+
+        npcNo1SongsByArtist.forEach((songs, artistName) => {
+          const trackedHits = finalState.npcNumberOneHits?.[artistName] || state.npcNumberOneHits?.[artistName] || 0;
+          const count = Math.max(songs.size, trackedHits);
+          if (count > 0) {
+            actualHot100Map[artistName] = count;
+          }
+        });
+
+        Object.entries(finalState.npcNumberOneHits || {}).forEach(([artist, count]) => {
+          if (count > 0 && (!actualHot100Map[artist] || actualHot100Map[artist] < count)) {
+            actualHot100Map[artist] = count;
+          }
+        });
+
+        // Ensure current hot100One artist has at least 1 hit
+        if (hot100One) {
+          actualHot100Map[hot100One.artist] = Math.max(1, actualHot100Map[hot100One.artist] || 0);
+        }
+
+        finalState.hot100No1HitsThisDecade = actualHot100Map;
+
+        if (Object.keys(actualHot100Map).length > 0) {
+          const postContent = formatChartDataLeaderboard(
+            "Artists with the most #1 hits on the Hot 100 this decade:",
+            finalState.hot100No1HitsThisDecade,
+            5,
+            hot100One.artist,
+          );
+
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content: postContent,
+            likes: Math.floor(Math.random() * 80000) + 30000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 1500000) + 500000,
+            date: newDate,
+          });
+        }
+      }
+
+      // Most #1 Debuts / Albums Record (Billboard 200) - Triggered whenever someone gets a #1 debut that's higher than the 5th position (top 5 debut)
+      const top5DebutAlbum = newBillboardTopAlbums.find(
+        (a) =>
+          a.rank <= 5 &&
+          (a.lastWeek === null ||
+            newAlbumChartHistory[a.uniqueId]?.weeksOnChart === 1),
+      );
+
+      if (top5DebutAlbum) {
+        const isB200No1Debut = top5DebutAlbum.rank === 1;
+
+        if (top5DebutAlbum.isPlayerAlbum && top5DebutAlbum.albumId) {
+          const playerArtist =
+            allPlayerArtistsAndGroups.find((a) => a.name === top5DebutAlbum.artist) ||
+            allPlayerArtistsAndGroups.find((a) => {
+              const aData = updatedArtistsData[a.id];
+              return aData?.releases?.some((r) => r.id === top5DebutAlbum.albumId);
+            });
+          if (playerArtist && updatedArtistsData[playerArtist.id]) {
+            const aData = updatedArtistsData[playerArtist.id];
+            if (isB200No1Debut) {
+              aData.billboard200NumberOneDebuts =
+                (aData.billboard200NumberOneDebuts || 0) + 1;
+            }
+          }
+        } else {
+          if (!finalState.npcBillboard200NumberOneDebuts)
+            finalState.npcBillboard200NumberOneDebuts = {};
+          if (isB200No1Debut) {
+            finalState.npcBillboard200NumberOneDebuts[top5DebutAlbum.artist] =
+              (finalState.npcBillboard200NumberOneDebuts[top5DebutAlbum.artist] || 0) + 1;
+          }
+        }
+
+        // Build actual Billboard 200 #1 albums leaderboard directly from verified chart history (no placeholder artists)
+        const actualB200Map: Record<string, number> = {};
+        const playerNo1AlbumsByArtist = new Map<string, Set<string>>();
+
+        // Check chart history for all player artists and their albums
+        allPlayerArtistsAndGroups.forEach((artistProfile) => {
+          const artistData = updatedArtistsData[artistProfile.id];
+          const artistName = artistProfile.name || "Artist";
+          if (!playerNo1AlbumsByArtist.has(artistName)) {
+            playerNo1AlbumsByArtist.set(artistName, new Set());
+          }
+          const albumSet = playerNo1AlbumsByArtist.get(artistName)!;
+
+          (artistData?.releases || []).forEach((rel) => {
+            if (rel.type === "Album") {
+              const hist =
+                newAlbumChartHistory[rel.id] ||
+                state.albumChartHistory?.[rel.id] ||
+                (rel.title ? newAlbumChartHistory[rel.title] || state.albumChartHistory?.[rel.title] : null) ||
+                (rel.uniqueId ? newAlbumChartHistory[rel.uniqueId] || state.albumChartHistory?.[rel.uniqueId] : null);
+              if (hist && hist.peak === 1) {
+                albumSet.add(rel.id);
+              }
+            }
+          });
+        });
+
+        const combinedAlbumChartHistory = { ...state.albumChartHistory, ...newAlbumChartHistory };
+        Object.entries(combinedAlbumChartHistory).forEach(([uniqueId, hist]) => {
+          if (hist && hist.peak === 1) {
+            const playerRel = (allPlayerReleases || []).find((r) => r.id === uniqueId || r.uniqueId === uniqueId);
+            if (playerRel) {
+              const artistProfile =
+                allPlayerArtistsAndGroups.find((a) => a.id === playerRel.artistId) ||
+                state.soloArtist ||
+                state.group;
+              const artistName = artistProfile?.name || (playerRel as any)?.artist || "Artist";
+              if (!playerNo1AlbumsByArtist.has(artistName)) {
+                playerNo1AlbumsByArtist.set(artistName, new Set());
+              }
+              playerNo1AlbumsByArtist.get(artistName)!.add(playerRel.id);
+            }
+          }
+        });
+
+        playerNo1AlbumsByArtist.forEach((albums, artistName) => {
+          const profile = allPlayerArtistsAndGroups.find((a) => a.name === artistName);
+          const aData = profile ? updatedArtistsData[profile.id] : null;
+          let count = albums.size;
+          if (aData?.billboard200NumberOneDebuts && aData.billboard200NumberOneDebuts > count) {
+            count = aData.billboard200NumberOneDebuts;
+          }
+          if (count > 0) {
+            actualB200Map[artistName] = count;
+          }
+        });
+
+        // Check NPC artists from actual album chart history (only artists who actually entered / reached #1)
+        const npcNo1AlbumsByArtist = new Map<string, Set<string>>();
+        Object.entries(combinedAlbumChartHistory).forEach(([uniqueId, hist]) => {
+          if (hist && hist.peak === 1) {
+            const isPlayer = (allPlayerReleases || []).some((r) => r.id === uniqueId || r.uniqueId === uniqueId);
+            if (!isPlayer) {
+              const npcAlb =
+                (state.npcAlbums || []).find((a) => a.id === uniqueId || a.uniqueId === uniqueId) ||
+                (newNpcAlbums || []).find((a) => a.id === uniqueId || a.uniqueId === uniqueId) ||
+                (state.billboardTopAlbums || []).find((b) => b.uniqueId === uniqueId && !b.isPlayerAlbum) ||
+                (top200Albums || []).find((b) => b.uniqueId === uniqueId && !b.isPlayerAlbum) ||
+                (allAlbumContenders || []).find((c) => c.uniqueId === uniqueId && !c.isPlayerAlbum);
+              if (npcAlb && npcAlb.artist) {
+                if (!npcNo1AlbumsByArtist.has(npcAlb.artist)) {
+                  npcNo1AlbumsByArtist.set(npcAlb.artist, new Set());
+                }
+                npcNo1AlbumsByArtist.get(npcAlb.artist)!.add(uniqueId);
+              }
+            }
+          }
+        });
+
+        npcNo1AlbumsByArtist.forEach((albums, artistName) => {
+          const trackedDebuts =
+            finalState.npcBillboard200NumberOneDebuts?.[artistName] ||
+            state.npcBillboard200NumberOneDebuts?.[artistName] ||
+            0;
+          const count = Math.max(albums.size, trackedDebuts);
+          if (count > 0) {
+            actualB200Map[artistName] = count;
+          }
+        });
+
+        Object.entries(finalState.npcBillboard200NumberOneDebuts || {}).forEach(([artist, count]) => {
+          if (count > 0 && (!actualB200Map[artist] || actualB200Map[artist] < count)) {
+            actualB200Map[artist] = count;
+          }
+        });
+
+        if (isB200No1Debut) {
+          actualB200Map[top5DebutAlbum.artist] = Math.max(1, actualB200Map[top5DebutAlbum.artist] || 0);
+        }
+
+        finalState.b200No1AlbumsThisDecade = actualB200Map;
+
+        if (Object.keys(actualB200Map).length > 0) {
+          const b200PostContent = formatChartDataLeaderboard(
+            "Artists with the most #1 albums on the Billboard 200 this decade:",
+            finalState.b200No1AlbumsThisDecade,
+            5,
+            top5DebutAlbum.artist,
+          );
+
+          npcPopBasePosts.push({
+            id: crypto.randomUUID(),
+            authorId: "chartdata",
+            content: b200PostContent,
+            likes: Math.floor(Math.random() * 80000) + 30000,
+            retweets: Math.floor(Math.random() * 20000) + 5000,
+            views: Math.floor(Math.random() * 1500000) + 500000,
+            date: newDate,
+          });
         }
       }
 
