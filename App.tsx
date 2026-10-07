@@ -138,8 +138,9 @@ import ImdbView from './components/ImdbView';
 import ActingCareerView from './components/ActingCareerView';
 import { TvAndFilmProductionView } from './components/TvAndFilmProductionView';
 import AlbumPredictionsView from './components/AlbumPredictionsView';
-import { getEraConfiguration } from './utils/eraUtils';
+import { getEraConfiguration, isSpotifyUnlockedForPlayer, getPlayerRegion, SPOTIFY_REGION_LAUNCH_YEARS } from './utils/eraUtils';
 import UKChartView from './components/UKChartView';
+import SpotifyIcon from './components/icons/SpotifyIcon';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData, dispatch } = useGame();
@@ -147,9 +148,39 @@ const AppContent: React.FC = () => {
     const isGoldTheme = activeArtistData?.isGoldTheme ?? false;
     
     const eraConfig = getEraConfiguration(gameState.date.year);
+    const playerRegion = getPlayerRegion(activeArtistData, gameState.soloArtist, gameState.group);
+    const spotifyUnlocked = isSpotifyUnlockedForPlayer(playerRegion, gameState.date.year);
+    const spotifyLaunchYear = SPOTIFY_REGION_LAUNCH_YEARS[playerRegion] || 2011;
 
     if (!careerMode) {
         return <StartScreen />;
+    }
+
+    const spotifyViewNames = [
+        'spotify', 'spotifyAlbumCountdown', 'spotifyPodcasts', 'spotifyForCreators',
+        'spotifyForArtists', 'spotifyWrapped', 'spotifyChart', 'spotifyVideoChart',
+        'spotifyTopSongs', 'spotifyTopAlbums', 'spotifySoundtrackDetail', 'kworbData', 'kworb'
+    ];
+
+    if (spotifyViewNames.includes(currentView) && !spotifyUnlocked) {
+        return (
+            <div className="bg-[#121212] min-h-screen text-white flex flex-col items-center justify-center p-6 text-center">
+                <SpotifyIcon className="w-20 h-20 mb-6 text-[#1DB954]" />
+                <h1 className="text-3xl font-black mb-3">Spotify Not Available Yet</h1>
+                <p className="text-zinc-300 max-w-md text-base mb-2">
+                    Spotify is not available in your region (<span className="text-[#1DB954] font-bold">{playerRegion}</span>) in {gameState.date.year}.
+                </p>
+                <p className="text-zinc-400 text-sm mb-6">
+                    Spotify becomes available in {playerRegion} in <span className="text-white font-semibold">{spotifyLaunchYear}</span>.
+                </p>
+                <button
+                    onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })}
+                    className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold px-6 py-2.5 rounded-full transition-colors"
+                >
+                    Return Home
+                </button>
+            </div>
+        );
     }
 
     const renderView = () => {

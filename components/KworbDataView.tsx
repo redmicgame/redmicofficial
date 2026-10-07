@@ -37,6 +37,7 @@ export function computeSongWeeklyStreams(
     artistData: any
 ): number {
     if (!song) return 0;
+    if (gameState?.date?.year < 2008) return 0;
 
     // If song was taken down or removed from streaming
     if (song.isTakenDown || song.isAvailableOnStreaming === false) {

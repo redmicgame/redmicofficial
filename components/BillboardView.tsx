@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
-import { getBillboardFormula } from '../utils/eraUtils';
+import { getBillboardFormula, isSpotifyUnlockedForPlayer, getPlayerRegion } from '../utils/eraUtils';
 import { getArtistImage } from '../constants';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
@@ -229,6 +229,10 @@ type SubChart = 'hot100' | 'bubblingUnder' | 'topAlbums' | 'hotPop' | 'hotRap' |
 const BillboardView: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const { billboardHot100, billboardBubblingUnder25, billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart, spotifyGlobal = [], date } = gameState;
+    const activeArtistData = gameState.artistsData[gameState.activeArtistId || ''];
+    const playerRegion = getPlayerRegion(activeArtistData, gameState.soloArtist, gameState.group);
+    const spotifyUnlocked = isSpotifyUnlockedForPlayer(playerRegion, date.year);
+
     const [selectedChart, setSelectedChart] = useState<SubChart>('hot100');
     const [showSelector, setShowSelector] = useState(false);
 
@@ -239,7 +243,7 @@ const BillboardView: React.FC = () => {
         return `${month} ${day}, ${d.year}`;
     }
 
-    const chartsData: Record<SubChart, { title: string, data: ChartEntry[], isAlbum?: boolean }> = {
+    const chartsData: Record<string, { title: string, data: ChartEntry[], isAlbum?: boolean }> = {
         hot100: { title: 'BILLBOARD HOT 100™', data: billboardHot100 },
         bubblingUnder: { title: 'BUBBLING UNDER HOT 100™', data: billboardBubblingUnder25 || [] },
         topAlbums: { title: 'BILLBOARD 200™', data: billboardTopAlbums as any, isAlbum: true },
@@ -247,10 +251,10 @@ const BillboardView: React.FC = () => {
         hotRap: { title: 'HOT RAP & R&B SONGS™', data: hotRapRnb },
         electronic: { title: 'HOT DANCE/ELECTRONIC SONGS™', data: electronicChart },
         country: { title: 'HOT COUNTRY SONGS™', data: countryChart },
-        spotify: { title: 'SPOTIFY GLOBAL 50', data: spotifyGlobal },
+        ...(spotifyUnlocked ? { spotify: { title: 'SPOTIFY GLOBAL 50', data: spotifyGlobal } } : {}),
     };
 
-    const currentChart = chartsData[selectedChart];
+    const currentChart = chartsData[selectedChart] || chartsData.hot100;
     const [showFormulaModal, setShowFormulaModal] = useState(false);
     const currentFormula = getBillboardFormula(date.year);
 

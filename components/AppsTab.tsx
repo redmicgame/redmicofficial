@@ -26,7 +26,7 @@ import RollingStoneIcon from './icons/RollingStoneIcon';
 
 import TikTokIcon from './icons/TikTokIcon';
 import RiaaIcon from './icons/RiaaIcon';
-import { getEraConfiguration } from '../utils/eraUtils';
+import { getEraConfiguration, isSpotifyUnlockedForPlayer, getPlayerRegion } from '../utils/eraUtils';
 
 interface AppInfo {
     name: string;
@@ -168,12 +168,19 @@ const AppsTab: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const eraConfig = getEraConfiguration(gameState.date.year);
     const activeArtistData = gameState.artistsData[activeArtist?.id || ''];
+    const playerRegion = getPlayerRegion(activeArtistData, gameState.soloArtist, gameState.group);
+    const spotifyUnlocked = isSpotifyUnlockedForPlayer(playerRegion, gameState.date.year);
 
     const isAppAvailable = (appName: string) => {
-        if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Spotify Charts' || appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
+        if (appName === 'Spotify' || appName === 'Spotify for Artists' || appName === 'Spotify Charts' || appName === 'Kworb Data') {
+            return spotifyUnlocked;
+        }
+        if (appName === 'Spotify Podcasts' || appName === 'Spotify for Creators') {
+            return spotifyUnlocked && gameState.date.year >= 2020;
+        }
+        if (appName === 'Apple Music' || appName === 'Apple Music for Artists') return eraConfig.streamingActive;
         if (appName === 'iTunes') return eraConfig.digitalSalesActive;
         if (appName === 'X') return eraConfig.xAvailable;
-        if (appName === 'Spotify Podcasts' || appName === 'Spotify for Creators') return gameState.date.year >= 2020;
         if (appName === 'Instagram') return eraConfig.instagramAvailable;
         if (appName === 'TikTok') return eraConfig.tiktokAvailable;
         if (appName === 'MySpace') return eraConfig.myspaceAvailable;

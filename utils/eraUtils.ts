@@ -135,3 +135,29 @@ const getRadioShare = (year: number) => {
     if (year < 2020) return 0.5;
     return 0.3;
 };
+
+export const SPOTIFY_REGION_LAUNCH_YEARS: Record<string, number> = {
+    "UK": 2008,
+    "US": 2011,
+    "Canada": 2011,
+    "Latin America": 2013,
+    "Asia": 2013,
+    "Africa": 2018,
+};
+
+export const isSpotifyAvailableInRegion = (region: string, year: number): boolean => {
+    if (year < 2008) return false;
+    if (region === "Global") return year >= 2008;
+    const launchYear = SPOTIFY_REGION_LAUNCH_YEARS[region] ?? 2011;
+    return year >= launchYear;
+};
+
+export const isSpotifyUnlockedForPlayer = (playerLocation: string | undefined, year: number): boolean => {
+    if (year < 2008) return false;
+    const region = playerLocation || "US";
+    return isSpotifyAvailableInRegion(region, year);
+};
+
+export const getPlayerRegion = (artistData?: any, soloArtist?: any, group?: any): string => {
+    return artistData?.location || soloArtist?.country || group?.country || "US";
+};

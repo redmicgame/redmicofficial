@@ -1114,7 +1114,7 @@ const initialArtistData: ArtistData = {
   weeksUntilNextSoundtrackOffer: Math.floor(Math.random() * 13) + 12, // 12-24 weeks
 };
 
-import { getEraConfiguration, getBillboardFormula } from "../utils/eraUtils";
+import { getEraConfiguration, getBillboardFormula, isSpotifyAvailableInRegion, isSpotifyUnlockedForPlayer, getPlayerRegion, SPOTIFY_REGION_LAUNCH_YEARS } from "../utils/eraUtils";
 
 const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
   {
@@ -2117,11 +2117,21 @@ The Red Mic Team`,
         isRead: false,
       };
 
+      const soloCountry = (artist.country as any) || "US";
       const newArtistData: ArtistData = {
         ...initialArtistData,
         money: INITIAL_MONEY,
         hype: 10,
         popularity: 10,
+        location: soloCountry,
+        regionalPopularity: {
+          US: soloCountry === "US" ? 10 : 0,
+          Canada: soloCountry === "Canada" ? 10 : 0,
+          UK: soloCountry === "UK" ? 10 : 0,
+          "Latin America": soloCountry === "Latin America" ? 10 : 0,
+          Asia: soloCountry === "Asia" ? 10 : 0,
+          Africa: soloCountry === "Africa" ? 10 : 0,
+        },
         youtubeSubscribers: initialSubs,
         tiktokFollowers: initialSubs * 2,
         instagramFollowers: initialSubs * 3,
@@ -2366,10 +2376,20 @@ The Red Mic Team`,
       ];
 
       // Group data
+      const groupCountry = (group.country as any) || (group.members[0]?.country as any) || "US";
       newArtistsData[group.id] = {
         ...initialArtistData,
         hype: 15, // Start with a bit more hype
         popularity: 15,
+        location: groupCountry,
+        regionalPopularity: {
+          US: groupCountry === "US" ? 15 : 0,
+          Canada: groupCountry === "Canada" ? 15 : 0,
+          UK: groupCountry === "UK" ? 15 : 0,
+          "Latin America": groupCountry === "Latin America" ? 15 : 0,
+          Asia: groupCountry === "Asia" ? 15 : 0,
+          Africa: groupCountry === "Africa" ? 15 : 0,
+        },
         youtubeSubscribers: Math.floor(Math.random() * 8000) + 2000,
         tiktokFollowers: Math.floor(Math.random() * 16000) + 4000,
         instagramFollowers: Math.floor(Math.random() * 20000) + 5000,
@@ -3341,21 +3361,53 @@ The Red Mic Team`,
                 ? song.lastWeekStreams
                 : Math.floor((quality ** 2) * 20 * (pop / 40 + 0.5) * (1 + hype / 200));
 
-              let dayStreams = Math.floor((baseWeeklyExpected / 7) * dayFactor * noise);
+              // Spotify availability by region:
+              // UK: 2008, US & Canada: 2011, Latin America & Asia: 2013, Africa: 2018
+              let dayStreams = 0;
+              if (newDate.year >= 2008) {
+                const regPop = artistData.regionalPopularity || {
+                  US: (artistData.location === "US" || !artistData.location) ? pop : 0,
+                  Canada: artistData.location === "Canada" ? pop : 0,
+                  UK: artistData.location === "UK" ? pop : 0,
+                  "Latin America": artistData.location === "Latin America" ? pop : 0,
+                  Asia: artistData.location === "Asia" ? pop : 0,
+                  Africa: artistData.location === "Africa" ? pop : 0,
+                };
 
-              if (song.promotion) {
-                dayStreams = Math.floor(dayStreams * (1 + (song.promotion.boost || 0.2)));
-              }
-              if (song.purchasedPlaylists && song.purchasedPlaylists.length > 0) {
-                dayStreams = Math.floor(dayStreams * 1.3);
-              }
+                const isRegActive = (r: string) => {
+                  if (newDate.year < 2008) return false;
+                  if (r === "UK") return newDate.year >= 2008;
+                  if (r === "US" || r === "Canada") return newDate.year >= 2011;
+                  if (r === "Latin America" || r === "Asia") return newDate.year >= 2013;
+                  if (r === "Africa") return newDate.year >= 2018;
+                  return false;
+                };
 
-              dayStreams = Math.max(25, dayStreams);
+                const activePopScore =
+                  (isRegActive("UK") ? (regPop["UK"] || 0) * 0.15 : 0) +
+                  (isRegActive("US") ? (regPop["US"] || 0) * 0.40 : 0) +
+                  (isRegActive("Canada") ? (regPop["Canada"] || 0) * 0.10 : 0) +
+                  (isRegActive("Latin America") ? (regPop["Latin America"] || 0) * 0.15 : 0) +
+                  (isRegActive("Asia") ? (regPop["Asia"] || 0) * 0.15 : 0) +
+                  (isRegActive("Africa") ? (regPop["Africa"] || 0) * 0.05 : 0);
+
+                if (activePopScore > 0) {
+                  const popScale = Math.min(1.5, activePopScore / Math.max(1, pop));
+                  let calculatedStreams = Math.floor((baseWeeklyExpected / 7) * dayFactor * noise * popScale);
+                  if (song.promotion) {
+                    calculatedStreams = Math.floor(calculatedStreams * (1 + (song.promotion.boost || 0.2)));
+                  }
+                  if (song.purchasedPlaylists && song.purchasedPlaylists.length > 0) {
+                    calculatedStreams = Math.floor(calculatedStreams * 1.3);
+                  }
+                  dayStreams = Math.max(10, calculatedStreams);
+                }
+              }
 
               const currentDaily = song.dailyStreams || [];
               const newDailyStreams = [...currentDaily.slice(-27), dayStreams];
 
-              const grossIncome = Math.floor(dayStreams / 150) * STREAM_INCOME_MULTIPLIER;
+              const grossIncome = dayStreams > 0 ? Math.floor(dayStreams / 150) * STREAM_INCOME_MULTIPLIER : 0;
               const netIncome = Math.floor(grossIncome * playerCut);
 
               artistData.money += netIncome;
@@ -3370,11 +3422,26 @@ The Red Mic Team`,
               // Daily radio
               const dailyRadio = Math.max(0, Math.floor(((song.radioPlays || (pop * 10)) / 7) * noise));
 
+              const dailyRegStreams = { ...(song.regionalStreams || { US: 0, Canada: 0, UK: 0, "Latin America": 0, Asia: 0, Africa: 0 }) };
+              if (dayStreams > 0 && typeof activePopScore === 'number' && activePopScore > 0) {
+                (["UK", "US", "Canada", "Latin America", "Asia", "Africa"] as const).forEach((r) => {
+                  if (isRegActive(r)) {
+                    const weight = r === "UK" ? 0.15 : r === "US" ? 0.40 : r === "Canada" ? 0.10 : r === "Latin America" ? 0.15 : r === "Asia" ? 0.15 : 0.05;
+                    const popContribution = (regPop[r] || 0) * weight;
+                    if (popContribution > 0) {
+                      const share = popContribution / activePopScore;
+                      dailyRegStreams[r] = (dailyRegStreams[r] || 0) + Math.floor(dayStreams * share);
+                    }
+                  }
+                });
+              }
+
               return {
                 ...song,
                 isReleased: effectivelyReleased,
                 streams: (song.streams || 0) + dayStreams,
                 dailyStreams: newDailyStreams,
+                regionalStreams: dailyRegStreams,
                 sales: (song.sales || 0) + dailySales,
                 radioPlays: (song.radioPlays || 0) + dailyRadio,
                 revenue: (song.revenue || 0) + grossIncome,
@@ -3666,7 +3733,9 @@ The Red Mic Team`,
             })[0];
 
             const topDailyStreams = topSongToday?.dailyStreams?.[topSongToday.dailyStreams.length - 1] || 0;
-            if (topSongToday && topDailyStreams > 10000) {
+            const playerRegion = getPlayerRegion(artistData, state.soloArtist, state.group);
+            const isSpotifyUnlocked = isSpotifyUnlockedForPlayer(playerRegion, newDate.year);
+            if (topSongToday && topDailyStreams > 10000 && isSpotifyUnlocked) {
               const prevDaily = topSongToday.dailyStreams && topSongToday.dailyStreams.length > 1
                 ? topSongToday.dailyStreams[topSongToday.dailyStreams.length - 2]
                 : Math.round(topDailyStreams * 0.95);
@@ -6153,28 +6222,141 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklyStreams = Math.floor(weeklyStreams * 0.70); // -30% streaming loss
             }
 
-            // Generate daily streams for the week
+            // Era-based Revenue Calculation
+            // Assume internal `weeklyStreams` represents STREAM EQUIVALENT UNITS
+            // 150 streams = 1 track sale
+            const eraConfig = getEraConfiguration(newDate.year);
+
+            const physicalGrossPerUnit = 2.5 / 150; // physical single
+            const digitalGrossPerUnit = 1.29 / 150; // digital download
+            const streamingGrossPerUnit = 0.004; // stream
+
+            const hasStreamingRights = song.isAvailableOnStreaming === true;
+            // Streaming is only active in the world from 2008 onwards
+            const effectiveStreamingShare = (hasStreamingRights && newDate.year >= 2008)
+              ? eraConfig.marketShare.streaming
+              : 0;
+
+            const isRegActive = (r: string) => {
+              if (newDate.year < 2008) return false;
+              if (r === "UK") return newDate.year >= 2008;
+              if (r === "US" || r === "Canada") return newDate.year >= 2011;
+              if (r === "Latin America" || r === "Asia") return newDate.year >= 2013;
+              if (r === "Africa") return newDate.year >= 2018;
+              return false;
+            };
+
+            const regPop = artistData.regionalPopularity || {
+              "US": (artistData.location === "US" || !artistData.location) ? (artistData.popularity || 0) : 0,
+              "Canada": artistData.location === "Canada" ? (artistData.popularity || 0) : 0,
+              "UK": artistData.location === "UK" ? (artistData.popularity || 0) : 0,
+              "Latin America": artistData.location === "Latin America" ? (artistData.popularity || 0) : 0,
+              "Asia": artistData.location === "Asia" ? (artistData.popularity || 0) : 0,
+              "Africa": artistData.location === "Africa" ? (artistData.popularity || 0) : 0,
+            };
+
+            let multUS = 1.0;
+            let multCanada = 1.0;
+            let multUK = 1.0;
+            let multLatin = 1.0;
+            let multAsia = 1.0;
+            let multAfrica = 1.0;
+
+            const gLower = (song.genre || "").toLowerCase();
+            if (gLower.includes("country")) multUS *= 2.5;
+            if (gLower.includes("k-pop") || gLower.includes("kpop") || gLower.includes("j-pop")) multAsia *= 2.5;
+            if (gLower.includes("reggae") || gLower.includes("afrobeat")) multAfrica *= 2.5;
+            if (gLower.includes("latin") || gLower.includes("reggaeton")) multLatin *= 2.5;
+            if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) multUK *= 2.0;
+
+            if (songPromo && songPromo.region && songPromo.region !== "Global") {
+                if (songPromo.region === "US") multUS *= songPromo.boostMultiplier;
+                if (songPromo.region === "Canada") multCanada *= songPromo.boostMultiplier;
+                if (songPromo.region === "UK") multUK *= songPromo.boostMultiplier;
+                if (songPromo.region === "Latin America") multLatin *= songPromo.boostMultiplier;
+                if (songPromo.region === "Asia") multAsia *= songPromo.boostMultiplier;
+                if (songPromo.region === "Africa") multAfrica *= songPromo.boostMultiplier;
+
+                weeklyStreams = Math.floor(weeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.3));
+            }
+
+            // Regional streaming allocation based on launch years:
+            // UK: 2008, US & Canada: 2011, Latin America & Asia: 2013, Africa: 2018
+            const regStreams: Record<string, number> = {
+              "US": 0,
+              "Canada": 0,
+              "UK": 0,
+              "Latin America": 0,
+              "Asia": 0,
+              "Africa": 0,
+            };
+
+            if (newDate.year >= 2008 && effectiveStreamingShare > 0) {
+              const marketWeights: Record<string, number> = {
+                "US": 0.40,
+                "Canada": 0.10,
+                "UK": 0.15,
+                "Latin America": 0.15,
+                "Asia": 0.15,
+                "Africa": 0.05,
+              };
+              const multipliers: Record<string, number> = {
+                "US": multUS,
+                "Canada": multCanada,
+                "UK": multUK,
+                "Latin America": multLatin,
+                "Asia": multAsia,
+                "Africa": multAfrica,
+              };
+
+              const artistBasePop = Math.max(10, artistData.popularity || 10);
+              (["US", "Canada", "UK", "Latin America", "Asia", "Africa"] as const).forEach((r) => {
+                if (isRegActive(r)) {
+                  const popVal = regPop[r] || 0;
+                  if (popVal > 0) {
+                    const popRatio = Math.min(1.5, Math.max(0.1, popVal / artistBasePop));
+                    regStreams[r] = Math.floor(
+                      weeklyStreams *
+                        effectiveStreamingShare *
+                        marketWeights[r] *
+                        popRatio *
+                        multipliers[r],
+                    );
+                  }
+                }
+              });
+            }
+
+            let actualStreamsThisWeek =
+              regStreams["US"] +
+              regStreams["Canada"] +
+              regStreams["UK"] +
+              regStreams["Latin America"] +
+              regStreams["Asia"] +
+              regStreams["Africa"];
+
+            // Generate daily streams for the week from actual streams
             const daily = new Array(7).fill(0);
-            if (weeklyStreams > 0) {
+            if (actualStreamsThisWeek > 0) {
               const weights = Array(7)
                 .fill(0)
                 .map(() => Math.random());
               const totalWeight = weights.reduce((s, w) => s + w, 0);
               if (totalWeight > 0) {
                 const dailyStreamsUnadjusted = weights.map((w) =>
-                  Math.floor((w / totalWeight) * weeklyStreams),
+                  Math.floor((w / totalWeight) * actualStreamsThisWeek),
                 );
                 const sum = dailyStreamsUnadjusted.reduce((s, d) => s + d, 0);
-                dailyStreamsUnadjusted[6] += weeklyStreams - sum; // Adjust last day to match total
+                dailyStreamsUnadjusted[6] += actualStreamsThisWeek - sum; // Adjust last day to match total
                 for (let i = 0; i < 7; i++)
                   daily[i] = dailyStreamsUnadjusted[i];
               } else {
-                daily[0] = weeklyStreams;
+                daily[0] = actualStreamsThisWeek;
               }
             }
             const newDailyStreams = [...(song.dailyStreams || []), ...daily];
 
-            totalWeeklyStreams += weeklyStreams;
+            totalWeeklyStreams += actualStreamsThisWeek;
 
             const release = artistData.releases.find(
               (r) => r.id === song.releaseId,
@@ -6187,23 +6369,8 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 (release.releaseDate?.year * 52 + release.releaseDate?.week) ===
                 1
             ) {
-              firstWeekStreamsData = { firstWeekStreams: weeklyStreams };
+              firstWeekStreamsData = { firstWeekStreams: actualStreamsThisWeek };
             }
-
-            // Era-based Revenue Calculation
-            // Assume internal `weeklyStreams` represents STREAM EQUIVALENT UNITS
-            // 150 streams = 1 track sale
-            const eraConfig = getEraConfiguration(newDate.year);
-
-            const physicalGrossPerUnit = 2.5 / 150; // physical single
-            const digitalGrossPerUnit = 1.29 / 150; // digital download
-            const streamingGrossPerUnit = 0.004; // stream
-
-            const songReleaseYear = song.releaseDate?.year || 2000;
-            const hasStreamingRights = song.isAvailableOnStreaming === true;
-            const effectiveStreamingShare = hasStreamingRights
-              ? eraConfig.marketShare.streaming
-              : 0;
 
             const physicalGross =
               weeklyStreams *
@@ -6214,7 +6381,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               eraConfig.marketShare.digital *
               digitalGrossPerUnit;
             const streamGross =
-              weeklyStreams * effectiveStreamingShare * streamingGrossPerUnit;
+              actualStreamsThisWeek * streamingGrossPerUnit;
 
             const generatedGross = physicalGross + digitalGross + streamGross;
 
@@ -6231,9 +6398,6 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 generatedNet * Math.max(0, 1 - song.contributorCutsTotal / 100);
             }
 
-            let actualStreamsThisWeek = hasStreamingRights
-              ? Math.floor(weeklyStreams * effectiveStreamingShare)
-              : 0;
             const pureSalesThisWeek = Math.floor(
               (weeklyStreams * (1 - effectiveStreamingShare)) / 150,
             );
@@ -6245,14 +6409,13 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             let finalDailyStreams = newDailyStreams;
 
             if (isDailyMode) {
-              // On Day 1 in Daily Mode: add only 1 day of streams & income to avoid Monday spike
-              const day1Streams = Math.max(25, Math.floor(weeklyStreams / 7));
-              const day1ActualStreams = hasStreamingRights ? Math.floor(day1Streams * effectiveStreamingShare) : 0;
+              // In Daily Mode: add only 1 day of streams & income
+              const day1Streams = Math.floor(actualStreamsThisWeek / 7);
               const day1Sales = Math.floor(pureSalesThisWeek / 7);
               const day1Net = Math.floor(generatedNet / 7);
               const day1Gross = Math.floor(generatedGross / 7);
 
-              streamsToAdd = day1ActualStreams;
+              streamsToAdd = day1Streams;
               salesToAdd = day1Sales;
               netIncomeToAdd = day1Net;
               grossRevenueToAdd = day1Gross;
@@ -6263,63 +6426,11 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               const last7Daily = finalDailyStreams.slice(-7);
               if (last7Daily.length > 0) {
                 weeklyStreams = last7Daily.reduce((a, b) => a + b, 0);
-                actualStreamsThisWeek = hasStreamingRights ? Math.floor(weeklyStreams * effectiveStreamingShare) : 0;
+                actualStreamsThisWeek = weeklyStreams;
               }
             }
 
             artistStreamIncome += netIncomeToAdd;
-
-            const regPop = artistData.regionalPopularity || {
-              "US": artistData.popularity || 0,
-              "Canada": 0,
-              "UK": 0,
-              "Latin America": 0,
-              "Asia": 0,
-              "Africa": 0
-            };
-            
-            let wUS = (regPop["US"] || 0);
-            let wCanada = (regPop["Canada"] || 0);
-            let wUK = (regPop["UK"] || 0);
-            let wLatin = (regPop["Latin America"] || 0);
-            let wAsia = (regPop["Asia"] || 0);
-            let wAfrica = (regPop["Africa"] || 0);
-            
-            const gLower = (song.genre || "").toLowerCase();
-            if (gLower.includes("country")) wUS *= 2.5;
-            if (gLower.includes("k-pop") || gLower.includes("kpop") || gLower.includes("j-pop")) wAsia *= 2.5;
-            if (gLower.includes("reggae") || gLower.includes("afrobeat")) wAfrica *= 2.5;
-            if (gLower.includes("latin") || gLower.includes("reggaeton")) wLatin *= 2.5;
-            if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) wUK *= 2.0;
-            
-            if (songPromo && songPromo.region && songPromo.region !== "Global") {
-                if (songPromo.region === "US") wUS *= songPromo.boostMultiplier;
-                if (songPromo.region === "Canada") wCanada *= songPromo.boostMultiplier;
-                if (songPromo.region === "UK") wUK *= songPromo.boostMultiplier;
-                if (songPromo.region === "Latin America") wLatin *= songPromo.boostMultiplier;
-                if (songPromo.region === "Asia") wAsia *= songPromo.boostMultiplier;
-                if (songPromo.region === "Africa") wAfrica *= songPromo.boostMultiplier;
-                
-                weeklyStreams = Math.floor(weeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.3)); // Overall weekly streams gets a slight boost since it's regional
-            }
-            
-            let totalPop = wUS + wCanada + wUK + wLatin + wAsia + wAfrica;
-            if (totalPop === 0) {
-              totalPop = 1;
-              wUS = 1;
-            }
-            const regStreams = {
-              "US": Math.floor(weeklyStreams * (wUS / totalPop)),
-              "Canada": Math.floor(weeklyStreams * (wCanada / totalPop)),
-              "UK": Math.floor(weeklyStreams * (wUK / totalPop)),
-              "Latin America": Math.floor(weeklyStreams * (wLatin / totalPop)),
-              "Asia": Math.floor(weeklyStreams * (wAsia / totalPop)),
-              "Africa": Math.floor(weeklyStreams * (wAfrica / totalPop)),
-            };
-            const currentSum = regStreams["US"] + regStreams["Canada"] + regStreams["UK"] + regStreams["Latin America"] + regStreams["Asia"] + regStreams["Africa"];
-            if (currentSum < weeklyStreams) {
-              regStreams["US"] += (weeklyStreams - currentSum);
-            }
             
             const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 };
             const newRegionalStreams = {
@@ -6336,7 +6447,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               streams: (song.streams || 0) + streamsToAdd,
               sales: (song.sales || 0) + salesToAdd,
               prevWeekStreams: song.lastWeekStreams || 0,
-              lastWeekStreams: weeklyStreams,
+              lastWeekStreams: actualStreamsThisWeek,
               actualPrevWeekStreams: song.actualLastWeekStreams || 0,
               actualLastWeekStreams: actualStreamsThisWeek,
               regionalStreams: newRegionalStreams,
@@ -6382,7 +6493,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             const firstWeekProjectStreams = release.songIds.reduce(
               (sum, songId) => {
                 const song = updatedSongs.find((s) => s.id === songId);
-                return sum + (song?.lastWeekStreams || 0);
+                return sum + (newDate.year >= 2008 ? (song?.actualLastWeekStreams || 0) : 0);
               },
               0,
             );
@@ -6613,21 +6724,25 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               (sum, streams) => sum + streams,
               0,
             );
-        const calculatedListeners = Math.floor(totalStreamsLastMonth * 0.1);
+        const calculatedListeners = newDate.year < 2008 ? 0 : Math.floor(totalStreamsLastMonth * 0.1);
         const maxListeners = 148000000 + (artistId.charCodeAt(0) % 2000000);
-        artistData.monthlyListeners = Math.min(
+        artistData.monthlyListeners = newDate.year < 2008 ? 0 : Math.min(
           calculatedListeners,
           maxListeners,
         );
         artistData.careerStage = newCareerStage;
-        artistData.peakMonthlyListeners = Math.max(
-          artistData.monthlyListeners,
-          artistData.peakMonthlyListeners || 0,
-        );
-
-        artistData.listeningNow = Math.floor(
-          artistData.monthlyListeners * (Math.random() * 0.001),
-        );
+        if (newDate.year >= 2008) {
+          artistData.peakMonthlyListeners = Math.max(
+            artistData.monthlyListeners,
+            artistData.peakMonthlyListeners || 0,
+          );
+          artistData.listeningNow = Math.floor(
+            artistData.monthlyListeners * (Math.random() * 0.001),
+          );
+        } else {
+          artistData.peakMonthlyListeners = 0;
+          artistData.listeningNow = 0;
+        }
         artistData.saves = Math.floor(
           (artistData.saves || 0) +
             (totalWeeklyStreams / 1000) * (Math.random() * 0.5 + 0.5),
@@ -10232,7 +10347,7 @@ It is now available on your Spotify profile.
       });
 
       const npcChartContenders = newNpcsWithReleases.map((npc) => {
-        const weeklyStreams = npcSongStreamMap.get(npc.uniqueId) || 500000;
+        const rawWeeklyStreams = (state.date.year < 2008) ? 0 : (npcSongStreamMap.get(npc.uniqueId) || 500000);
         let wUS = 40;
         let wCanada = 10;
         let wUK = 15;
@@ -10247,34 +10362,47 @@ It is now available on your Spotify profile.
         if (gLower.includes("latin") || gLower.includes("reggaeton")) wLatin *= 2.5;
         if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) wUK *= 2.0;
 
-        let totalWeight = wUS + wCanada + wUK + wLatin + wAsia + wAfrica;
+        const isRegActive = (r: string) => {
+          if (state.date.year < 2008) return false;
+          if (r === "UK") return state.date.year >= 2008;
+          if (r === "US" || r === "Canada") return state.date.year >= 2011;
+          if (r === "Latin America" || r === "Asia") return state.date.year >= 2013;
+          if (r === "Africa") return state.date.year >= 2018;
+          return false;
+        };
+
+        let totalWeight = (isRegActive("US") ? wUS : 0) +
+          (isRegActive("Canada") ? wCanada : 0) +
+          (isRegActive("UK") ? wUK : 0) +
+          (isRegActive("Latin America") ? wLatin : 0) +
+          (isRegActive("Asia") ? wAsia : 0) +
+          (isRegActive("Africa") ? wAfrica : 0);
         if (totalWeight === 0) totalWeight = 1;
 
         const regStreams = {
-            "US": Math.floor(weeklyStreams * (wUS / totalWeight)),
-            "Canada": Math.floor(weeklyStreams * (wCanada / totalWeight)),
-            "UK": Math.floor(weeklyStreams * (wUK / totalWeight)),
-            "Latin America": Math.floor(weeklyStreams * (wLatin / totalWeight)),
-            "Asia": Math.floor(weeklyStreams * (wAsia / totalWeight)),
-            "Africa": Math.floor(weeklyStreams * (wAfrica / totalWeight)),
+            "US": isRegActive("US") ? Math.floor(rawWeeklyStreams * (wUS / totalWeight)) : 0,
+            "Canada": isRegActive("Canada") ? Math.floor(rawWeeklyStreams * (wCanada / totalWeight)) : 0,
+            "UK": isRegActive("UK") ? Math.floor(rawWeeklyStreams * (wUK / totalWeight)) : 0,
+            "Latin America": isRegActive("Latin America") ? Math.floor(rawWeeklyStreams * (wLatin / totalWeight)) : 0,
+            "Asia": isRegActive("Asia") ? Math.floor(rawWeeklyStreams * (wAsia / totalWeight)) : 0,
+            "Africa": isRegActive("Africa") ? Math.floor(rawWeeklyStreams * (wAfrica / totalWeight)) : 0,
         };
 
-        const currentSum = regStreams["US"] + regStreams["Canada"] + regStreams["UK"] + regStreams["Latin America"] + regStreams["Asia"] + regStreams["Africa"];
-        if (currentSum < weeklyStreams) {
-            regStreams["US"] += (weeklyStreams - currentSum);
-        }
+        const activeWeeklyStreams = state.date.year < 2008 ? 0 : (
+          regStreams["US"] + regStreams["Canada"] + regStreams["UK"] + regStreams["Latin America"] + regStreams["Asia"] + regStreams["Africa"]
+        );
 
         return {
           uniqueId: npc.uniqueId,
           title: npc.title,
           artist: npc.artist,
-          weeklyStreams,
+          weeklyStreams: activeWeeklyStreams,
           regionalStreams: regStreams,
           isPlayerSong: false,
           coverArt: getArtistImage(npc.artist, npc.coverArt),
           songId: undefined,
           genre: npc.genre,
-          isAvailableOnStreaming: true,
+          isAvailableOnStreaming: state.date.year >= 2008,
         };
       });
 
@@ -11003,10 +11131,14 @@ It is now available on your Spotify profile.
       );
 
       const generateSpotifyChart = (region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa", prevChart: ChartEntry[]) => {
+          if (!isSpotifyAvailableInRegion(region, state.date.year)) return [];
           const sorted = [...allContenders].sort((a, b) => {
               const aStreams = region === "Global" ? a.weeklyStreams : (a.regionalStreams?.[region] || 0);
               const bStreams = region === "Global" ? b.weeklyStreams : (b.regionalStreams?.[region] || 0);
               return bStreams - aStreams;
+          }).filter((s) => {
+              const sStreams = region === "Global" ? s.weeklyStreams : (s.regionalStreams?.[region] || 0);
+              return sStreams > 0;
           }).slice(0, region === "Global" ? 200 : 100);
 
           const pMap = new Map((prevChart || []).map((entry) => [entry.uniqueId, entry.rank]));
@@ -11018,7 +11150,7 @@ It is now available on your Spotify profile.
             if (region === "Global" && lastWeekRank === null) newEntriesCount++;
             
             const rawStreams = region === "Global" ? song.weeklyStreams : (song.regionalStreams?.[region] || 0);
-            const actualStreams = Math.floor(rawStreams * streamMultiplier);
+            const actualStreams = Math.max(1, rawStreams);
             
             chart.push({
               rank: rank,
@@ -11052,6 +11184,7 @@ It is now available on your Spotify profile.
       
       const allVideoContenders = [];
       
+      if (state.date.year >= 2008) {
       // Add Player Videos
       Object.entries(updatedArtistsData).forEach(([artistId, aData]) => {
         if (!aData || !aData.videos) return;
@@ -11097,6 +11230,7 @@ It is now available on your Spotify profile.
           }
         }
       });
+      }
       
       allVideoContenders.sort((a, b) => b.weeklyViews - a.weeklyViews);
       const top50Videos = allVideoContenders.slice(0, 50);
@@ -13439,6 +13573,9 @@ HFPA`,
         const artistProfile = allPlayerArtistsAndGroups.find(
           (a) => a.id === artistId,
         );
+
+        const playerRegion = getPlayerRegion(artistData, state.soloArtist, state.group);
+        if (!isSpotifyUnlockedForPlayer(playerRegion, newDate.year)) continue;
 
         const isDailyMode = state.spotifySnapshotTimeframe === "daily" || state.timeMode === "daily";
 
@@ -17375,7 +17512,7 @@ Keep up the great work!
           const cleanTitle = originalSong.title.replace(/\s*\(Live From Coachella\)$/i, '');
           const liveTitle = `${cleanTitle} (Live From Coachella)`;
 
-          const initialStreams = Math.floor(Math.random() * 30000) + 15000;
+          const initialStreams = state.date.year >= 2008 ? Math.floor(Math.random() * 30000) + 15000 : 0;
           newSongs.push({
             ...originalSong,
             id: liveSongId,
@@ -19869,7 +20006,7 @@ We wish you the best in your future endeavors.
 
       let updatedSongs = activeData.songs;
       if (action.payload.songId) {
-        const addedStreams = Math.floor(views * 0.05); // 5% of views become streams
+        const addedStreams = state.date.year >= 2008 ? Math.floor(views * 0.05) : 0; // 5% of views become streams
         updatedSongs = updatedSongs.map((s) =>
           s.id === action.payload.songId
             ? { ...s, streams: (s.streams || 0) + addedStreams }
@@ -20678,7 +20815,7 @@ Watch: youtu.be/sIdlL8V83Cc`;
           (s) => s.id === action.payload.songId,
         );
         if (song) {
-          const streamsBoost = Math.floor(Math.random() * 5000) + 1000;
+          const streamsBoost = state.date.year >= 2008 ? Math.floor(Math.random() * 5000) + 1000 : 0;
           activeData.songs = activeData.songs.map((s) =>
             s.id === song.id
               ? {

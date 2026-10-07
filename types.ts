@@ -2090,7 +2090,7 @@ export interface ArtistData {
   stuckOnEra?: boolean;
   isBlacklistedByLabel?: boolean;
   money: number;
-  location?: "US" | "Canada" | "UK" | "Asia" | "Latin America";
+  location?: "US" | "Canada" | "UK" | "Asia" | "Latin America" | "Africa";
   lastMoveDate?: GameDate;
   yearlyIncome?: number;
   hype: number;
@@ -3038,7 +3038,7 @@ export type GameAction =
       };
     }
   | { type: "TOGGLE_OFFLINE_MODE" }
-  | { type: "CHANGE_LOCATION"; payload: { location: "US" | "Canada" | "UK" | "Asia" | "Latin America" } }
+  | { type: "CHANGE_LOCATION"; payload: { location: "US" | "Canada" | "UK" | "Asia" | "Latin America" | "Africa" } }
   | { type: "PRO_SIGN_LABEL"; payload: { labelId: Label["id"] } }
   | { type: "GO_TO_GRAMMY_SUBMISSIONS"; payload: { emailId: string } }
   | {

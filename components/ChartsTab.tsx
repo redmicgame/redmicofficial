@@ -3,6 +3,7 @@ import React from 'react';
 import { useGame } from '../context/GameContext';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import SpotifyIcon from './icons/SpotifyIcon';
+import { isSpotifyUnlockedForPlayer, getPlayerRegion } from '../utils/eraUtils';
 
 const ChartItemPreview: React.FC<{
     rank: number;
@@ -33,6 +34,10 @@ const ChartItemPreview: React.FC<{
 const ChartsTab: React.FC = () => {
     const { gameState, dispatch } = useGame();
     const { billboardHot100, spotifyGlobal = [], billboardTopAlbums, hotPopSongs, hotRapRnb, electronicChart, countryChart, ukSinglesChart = [] } = gameState;
+
+    const activeArtistData = gameState.artistsData[gameState.activeArtistId || ''];
+    const playerRegion = getPlayerRegion(activeArtistData, gameState.soloArtist, gameState.group);
+    const spotifyUnlocked = isSpotifyUnlockedForPlayer(playerRegion, gameState.date.year);
 
     const billboardTop3 = billboardHot100.slice(0, 3);
     const spotifyTop3 = spotifyGlobal.slice(0, 3);
@@ -88,29 +93,31 @@ const ChartsTab: React.FC = () => {
                 )}
             </div>
             
-             <div className="bg-zinc-800 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                        <SpotifyIcon className="w-6 h-6"/>
-                        <h3 className="font-bold text-lg">Spotify Charts</h3>
+            {spotifyUnlocked && (
+                <div className="bg-zinc-800 rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-2">
+                            <SpotifyIcon className="w-6 h-6"/>
+                            <h3 className="font-bold text-lg">Spotify Charts</h3>
+                        </div>
+                        <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotifyChart' })} className="text-sm text-red-400 flex items-center gap-1">
+                            View Chart <ChevronRightIcon className="w-4 h-4" />
+                        </button>
                     </div>
-                    <button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'spotifyChart' })} className="text-sm text-red-400 flex items-center gap-1">
-                        View Chart <ChevronRightIcon className="w-4 h-4" />
-                    </button>
+                    {spotifyTop3.length > 0 ? (
+                        <div className="space-y-4">
+                            {spotifyTop3.map(song => (
+                                <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt || getArtistImage(song.artist)} title={song.title} artist={song.artist} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <p className="text-zinc-400">The chart is empty.</p>
+                            <p className="text-zinc-500 text-sm">Release music and wait a week for the chart to update.</p>
+                        </div>
+                    )}
                 </div>
-                {spotifyTop3.length > 0 ? (
-                    <div className="space-y-4">
-                        {spotifyTop3.map(song => (
-                            <ChartItemPreview key={song.uniqueId} rank={song.rank} coverArt={song.coverArt || getArtistImage(song.artist)} title={song.title} artist={song.artist} />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-6">
-                        <p className="text-zinc-400">The chart is empty.</p>
-                         <p className="text-zinc-500 text-sm">Release music and wait a week for the chart to update.</p>
-                    </div>
-                )}
-            </div>
+            )}
 
             <div className="bg-zinc-800 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-4">

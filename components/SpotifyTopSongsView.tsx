@@ -11,6 +11,7 @@ import DownloadIcon from './icons/DownloadIcon';
 import ArrowUpIcon from './icons/ArrowUpIcon';
 import ArrowDownIcon from './icons/ArrowDownIcon';
 import { getSpotifySongDetails, SpotifySongDetails } from '../utils/spotifyCredits';
+import { isSpotifyAvailableInRegion } from '../utils/eraUtils';
 
 export const ChartRow: React.FC<{
     entry: ChartEntry;
@@ -237,13 +238,13 @@ const SpotifyTopSongsView: React.FC = () => {
                         onChange={(e) => setRegion(e.target.value as any)}
                         className="appearance-none bg-zinc-800 text-white border border-zinc-600 rounded-full pl-4 pr-8 py-1.5 text-sm font-semibold outline-none cursor-pointer hover:bg-zinc-700 transition-colors"
                     >
-                        <option value="Global">Global</option>
-                        <option value="US">US</option>
-                        <option value="Canada">Canada</option>
-                        <option value="UK">UK</option>
-                        <option value="Latin America">Latin America</option>
-                        <option value="Asia">Asia</option>
-                        <option value="Africa">Africa</option>
+                        {isSpotifyAvailableInRegion("Global", date.year) && <option value="Global">Global</option>}
+                        {isSpotifyAvailableInRegion("UK", date.year) && <option value="UK">UK</option>}
+                        {isSpotifyAvailableInRegion("US", date.year) && <option value="US">US</option>}
+                        {isSpotifyAvailableInRegion("Canada", date.year) && <option value="Canada">Canada</option>}
+                        {isSpotifyAvailableInRegion("Latin America", date.year) && <option value="Latin America">Latin America</option>}
+                        {isSpotifyAvailableInRegion("Asia", date.year) && <option value="Asia">Asia</option>}
+                        {isSpotifyAvailableInRegion("Africa", date.year) && <option value="Africa">Africa</option>}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
                         <ChevronDownIcon className="w-4 h-4" />
