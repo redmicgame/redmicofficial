@@ -3317,7 +3317,15 @@ The Red Mic Team`,
             if (effectivelyReleased && !song.isTakenDown) {
               const quality = song.quality || 50;
               const pop = artistData.popularity || 10;
-              const hype = artistData.hype || 5;
+              const songRelDate =
+                song.releaseDate ||
+                artistData.releases.find((r) => r.id === song.releaseId)?.releaseDate;
+              const songAgeInWeeks = songRelDate
+                ? newDate.year * 52 +
+                  newDate.week -
+                  (songRelDate.year * 52 + songRelDate.week)
+                : 0;
+              const hype = songAgeInWeeks <= 52 ? (artistData.hype || 5) : 0;
 
               // Day of week factor: Friday/Saturday weekend spikes
               let dayFactor = 1.0;
@@ -5871,9 +5879,22 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             if (song.isInterlude) {
               baseStreams = baseStreams * 0.5;
             }
+
+            // Hype only affects streams for songs released in the past 12 months (<= 52 weeks).
+            // Songs released before that aren't affected by hype (basically 0 hype, multiplier = 1.0).
+            const songRelDate =
+              song.releaseDate ||
+              artistData.releases.find((r) => r.id === song.releaseId)?.releaseDate;
+            const songAgeInWeeks = songRelDate
+              ? newDate.year * 52 +
+                newDate.week -
+                (songRelDate.year * 52 + songRelDate.week)
+              : 0;
+            const songHypeMultiplier = songAgeInWeeks <= 52 ? hypeMultiplier : 1.0;
+
             let weeklyStreams = Math.floor(
               baseStreams *
-                hypeMultiplier *
+                songHypeMultiplier *
                 labelMultiplier *
                 popularityMultiplier *
                 diffMultiplier *

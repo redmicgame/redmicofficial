@@ -71,7 +71,11 @@ export const ChartPredictionsView: React.FC = () => {
                 if (totalWeeklyStreams === 0) {
                     // New release estimation
                     const baseStreams = Math.max(1000, Math.floor(Math.pow(aData.popularity || 0, 3) * 0.5));
-                    let hypeMultiplier = 1 + (aData.hype / 100);
+                    const songRelDate = song.releaseDate || aData.releases?.find(r => r.id === song.releaseId)?.releaseDate;
+                    const songAgeWeeks = songRelDate
+                        ? (gameState.date.year * 52 + gameState.date.week) - (songRelDate.year * 52 + songRelDate.week)
+                        : 0;
+                    let hypeMultiplier = songAgeWeeks <= 52 ? 1 + (aData.hype / 100) : 1.0;
                     let labelMultiplier = aData.contract ? 1.5 : 1.0;
                     totalWeeklyStreams = Math.floor(baseStreams * hypeMultiplier * labelMultiplier * 1.5);
                 }
