@@ -24,6 +24,15 @@ interface WeekTimelineItem {
     label: string; // e.g. "JUL W1 - 2013"
 }
 
+interface SongAudioEntry {
+    type: 'file' | 'spotify';
+    url: string;
+    name: string;
+    spotifyTrackId?: string;
+    spotifyUrl?: string;
+    blob?: Blob;
+}
+
 const SONG_COLORS = [
     '#f59e0b', // Amber / Gold
     '#ec4899', // Pink
@@ -47,44 +56,70 @@ function formatWeekLabel(year: number, week: number): string {
     return `${m} W${weekInMonth} - ${year}`;
 }
 
-// IndexedDB Helper for persistent MP3 storage
+// IndexedDB Helper for persistent MP3 and Spotify storage
 const DB_NAME = 'Hot100AudioDB';
 const STORE_NAME = 'songAudio';
 
 async function openAudioDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
+        const req = indexedDB.open(DB_NAME, 2);
         req.onupgradeneeded = () => {
-            req.result.createObjectStore(STORE_NAME, { keyPath: 'songId' });
+            if (!req.result.objectStoreNames.contains(STORE_NAME)) {
+                req.result.createObjectStore(STORE_NAME, { keyPath: 'songId' });
+            }
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
     });
 }
 
-async function saveAudioToDB(songId: string, file: File) {
+async function saveAudioToDB(songId: string, entry: SongAudioEntry) {
     try {
         const db = await openAudioDB();
         const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put({ songId, name: file.name, blob: file });
+        tx.objectStore(STORE_NAME).put({
+            songId,
+            type: entry.type,
+            name: entry.name,
+            url: entry.url,
+            spotifyTrackId: entry.spotifyTrackId,
+            spotifyUrl: entry.spotifyUrl,
+            blob: entry.blob,
+        });
     } catch (e) {
         console.error('Failed to save audio to IndexedDB', e);
     }
 }
 
-async function loadAllAudioFromDB(): Promise<Record<string, { url: string; name: string }>> {
+async function loadAllAudioFromDB(): Promise<Record<string, SongAudioEntry>> {
     try {
         const db = await openAudioDB();
         return new Promise((resolve) => {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const req = tx.objectStore(STORE_NAME).getAll();
             req.onsuccess = () => {
-                const results: Record<string, { url: string; name: string }> = {};
+                const results: Record<string, SongAudioEntry> = {};
                 (req.result || []).forEach((item: any) => {
-                    if (item.blob) {
+                    if (item.type === 'spotify') {
                         results[item.songId] = {
+                            type: 'spotify',
+                            url: item.url,
+                            name: item.name || 'Spotify Track',
+                            spotifyTrackId: item.spotifyTrackId,
+                            spotifyUrl: item.spotifyUrl,
+                        };
+                    } else if (item.blob) {
+                        results[item.songId] = {
+                            type: 'file',
                             url: URL.createObjectURL(item.blob),
                             name: item.name || 'uploaded.mp3',
+                            blob: item.blob,
+                        };
+                    } else if (item.url) {
+                        results[item.songId] = {
+                            type: 'file',
+                            url: item.url,
+                            name: item.name || 'Audio Track',
                         };
                     }
                 });
@@ -120,7 +155,13 @@ const Hot100ChartRaceView: React.FC = () => {
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [isRecording, setIsRecording] = useState<boolean>(false);
     const [recordingProgress, setRecordingProgress] = useState<number>(0);
-    const [audioMap, setAudioMap] = useState<Record<string, { url: string; name: string }>>({});
+    const [audioMap, setAudioMap] = useState<Record<string, SongAudioEntry>>({});
+
+    // Spotify link modal / input states
+    const [activeSpotifyInputSongId, setActiveSpotifyInputSongId] = useState<string | null>(null);
+    const [spotifyInputUrl, setSpotifyInputUrl] = useState<string>('');
+    const [isFetchingSpotify, setIsFetchingSpotify] = useState<boolean>(false);
+    const [spotifyInputError, setSpotifyInputError] = useState<string>('');
 
     const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
     const animFrameRef = useRef<number | null>(null);
@@ -133,7 +174,7 @@ const Hot100ChartRaceView: React.FC = () => {
         audio.preload = 'auto';
         audioRef.current = audio;
 
-        // Load stored MP3s from IndexedDB on startup
+        // Load stored MP3s and Spotify links from IndexedDB on startup
         loadAllAudioFromDB().then((data) => {
             setAudioMap(data);
         });
@@ -292,7 +333,7 @@ const Hot100ChartRaceView: React.FC = () => {
         return topSong;
     }, [timeline, currentProgress, songsData]);
 
-    // Synchronize MP3 audio playback with the highest charting song
+    // Synchronize MP3 / Spotify audio playback with the highest charting song
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
@@ -311,8 +352,8 @@ const Hot100ChartRaceView: React.FC = () => {
         const songId = highestPositionSong.id;
         const songAudio = audioMap[songId];
 
-        // If the highest charting song does not have an uploaded MP3, pause audio
-        if (!songAudio) {
+        // If the highest charting song has neither an MP3 nor a Spotify audio link, pause audio
+        if (!songAudio || !songAudio.url) {
             if (!audio.paused) {
                 audio.pause();
             }
@@ -341,17 +382,62 @@ const Hot100ChartRaceView: React.FC = () => {
     // Upload MP3 handler
     const handleUploadAudio = async (songId: string, file: File) => {
         const url = URL.createObjectURL(file);
+        const entry: SongAudioEntry = {
+            type: 'file',
+            url,
+            name: file.name,
+            blob: file,
+        };
         setAudioMap(prev => ({
             ...prev,
-            [songId]: { url, name: file.name },
+            [songId]: entry,
         }));
-        await saveAudioToDB(songId, file);
+        await saveAudioToDB(songId, entry);
     };
 
-    // Remove MP3 handler
+    // Attach Spotify Link handler
+    const handleAttachSpotify = async (songId: string, url: string) => {
+        if (!url.trim()) return;
+        setIsFetchingSpotify(true);
+        setSpotifyInputError('');
+
+        try {
+            const res = await fetch(`/api/spotify/track?url=${encodeURIComponent(url.trim())}`);
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            if (!data.previewUrl) {
+                throw new Error('This track does not have an audio preview on Spotify.');
+            }
+
+            const displayName = data.title ? `${data.title} - ${data.artist}` : 'Spotify Track';
+            const audioEntry: SongAudioEntry = {
+                type: 'spotify',
+                url: data.previewUrl,
+                name: displayName,
+                spotifyTrackId: data.id,
+                spotifyUrl: data.spotifyUrl || url.trim(),
+            };
+
+            setAudioMap(prev => ({
+                ...prev,
+                [songId]: audioEntry,
+            }));
+
+            await saveAudioToDB(songId, audioEntry);
+            setActiveSpotifyInputSongId(null);
+            setSpotifyInputUrl('');
+        } catch (e: any) {
+            setSpotifyInputError(e.message || 'Failed to fetch Spotify track. Please check the URL.');
+        } finally {
+            setIsFetchingSpotify(false);
+        }
+    };
+
+    // Remove audio handler (both MP3 and Spotify)
     const handleRemoveAudio = async (songId: string) => {
         const existing = audioMap[songId];
-        if (existing) {
+        if (existing && existing.type === 'file') {
             URL.revokeObjectURL(existing.url);
         }
         setAudioMap(prev => {
@@ -1120,7 +1206,7 @@ const Hot100ChartRaceView: React.FC = () => {
                                             ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
                                             : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
                                     }`}
-                                    title={isMuted ? 'Unmute MP3 audio' : 'Mute MP3 audio'}
+                                    title={isMuted ? 'Unmute audio' : 'Mute audio'}
                                 >
                                     {isMuted ? '🔇 Muted' : '🔊 Sound'}
                                 </button>
@@ -1166,7 +1252,7 @@ const Hot100ChartRaceView: React.FC = () => {
                     </div>
                 )}
 
-                {/* Charting Songs in this Race & MP3 Upload Options */}
+                {/* Charting Songs in this Race & MP3 / Spotify Audio Options */}
                 {songsData.length > 0 && (
                     <div className="w-full max-w-[640px] bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-5 flex flex-col gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-3 gap-1">
@@ -1175,7 +1261,7 @@ const Hot100ChartRaceView: React.FC = () => {
                                     Charting Songs in Race ({songsData.length})
                                 </span>
                                 <p className="text-[11px] text-zinc-400">
-                                    Upload MP3 files to play soundtrack while each song is charting at #1 position
+                                    Upload MP3 files or paste Spotify links to play the track while each song is charting at #1 position
                                 </p>
                             </div>
                             <span className="text-[11px] text-amber-300 font-semibold bg-amber-950/60 border border-amber-800/40 px-2.5 py-0.5 rounded-full w-fit">
@@ -1183,16 +1269,18 @@ const Hot100ChartRaceView: React.FC = () => {
                             </span>
                         </div>
 
-                        <div className="flex flex-col gap-2.5">
+                        <div className="flex flex-col gap-3">
                             {songsData.map((s) => {
-                                const hasAudio = Boolean(audioMap[s.id]);
+                                const audioInfo = audioMap[s.id];
+                                const hasAudio = Boolean(audioInfo);
                                 const isCurrentTop = highestPositionSong?.id === s.id;
                                 const isCurrentlyPlaying = isCurrentTop && isPlaying && hasAudio && !isMuted;
+                                const isInputtingSpotify = activeSpotifyInputSongId === s.id;
 
                                 return (
                                     <div
                                         key={s.id}
-                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/70 border rounded-2xl p-3 transition-all ${
+                                        className={`flex flex-col gap-2.5 bg-zinc-950/70 border rounded-2xl p-3 transition-all ${
                                             isCurrentlyPlaying
                                                 ? 'border-rose-500/80 shadow-[0_0_18px_rgba(244,63,94,0.18)] bg-rose-950/20'
                                                 : isCurrentTop
@@ -1200,98 +1288,193 @@ const Hot100ChartRaceView: React.FC = () => {
                                                 : 'border-zinc-800/70'
                                         }`}
                                     >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                            <div
-                                                className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm"
-                                                style={{ backgroundColor: s.color }}
-                                            />
-                                            <img
-                                                src={s.coverArt}
-                                                alt={s.title}
-                                                className="w-11 h-11 rounded-xl object-cover flex-shrink-0 bg-zinc-800 border border-zinc-700/50 shadow-sm"
-                                                onError={(e) => {
-                                                    e.currentTarget.src = getArtistImage(artistName);
-                                                }}
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-bold text-xs truncate text-white" title={s.title}>
-                                                        {s.title}
-                                                    </p>
-                                                    {isCurrentTop && (
-                                                        <span className="text-[10px] bg-amber-400 text-black px-1.5 py-0.2 rounded font-black tracking-wide flex-shrink-0">
-                                                            TOP POSITION
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-[11px] text-zinc-400 truncate mt-0.5">
-                                                    Peak: <span className="text-amber-400 font-bold">#{s.peak}</span> • {s.points.size} weeks charted
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Beside it: Upload MP3 File option */}
-                                        <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
-                                            <input
-                                                type="file"
-                                                id={`audio-upload-${s.id}`}
-                                                accept="audio/*,.mp3,.wav,.m4a,.ogg"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        handleUploadAudio(s.id, file);
-                                                    }
-                                                }}
-                                            />
-
-                                            {hasAudio ? (
-                                                <div className="flex items-center gap-1.5">
-                                                    <div
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                                                            isCurrentlyPlaying
-                                                                ? 'bg-rose-950 text-rose-200 border-rose-500 shadow-sm shadow-rose-500/20 animate-pulse'
-                                                                : 'bg-emerald-950/60 text-emerald-300 border-emerald-700/50'
-                                                        }`}
-                                                        title={audioMap[s.id].name}
-                                                    >
-                                                        <span>{isCurrentlyPlaying ? '🔊' : '🎵'}</span>
-                                                        <span className="max-w-[110px] sm:max-w-[140px] truncate">
-                                                            {audioMap[s.id].name}
-                                                        </span>
-                                                        {isCurrentlyPlaying && (
-                                                            <span className="text-[10px] text-rose-300 font-black uppercase">
-                                                                Playing
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                <div
+                                                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm"
+                                                    style={{ backgroundColor: s.color }}
+                                                />
+                                                <img
+                                                    src={s.coverArt}
+                                                    alt={s.title}
+                                                    className="w-11 h-11 rounded-xl object-cover flex-shrink-0 bg-zinc-800 border border-zinc-700/50 shadow-sm"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src = getArtistImage(artistName);
+                                                    }}
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-bold text-xs truncate text-white" title={s.title}>
+                                                            {s.title}
+                                                        </p>
+                                                        {isCurrentTop && (
+                                                            <span className="text-[10px] bg-amber-400 text-black px-1.5 py-0.2 rounded font-black tracking-wide flex-shrink-0">
+                                                                TOP POSITION
                                                             </span>
                                                         )}
                                                     </div>
+                                                    <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+                                                        Peak: <span className="text-amber-400 font-bold">#{s.peak}</span> • {s.points.size} weeks charted
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                                                    <label
-                                                        htmlFor={`audio-upload-${s.id}`}
-                                                        className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors border border-zinc-700"
-                                                        title="Replace MP3 file"
-                                                    >
-                                                        Replace
-                                                    </label>
+                                            {/* Beside it: Audio Options (Upload MP3 file or Paste Spotify link) */}
+                                            <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                                                <input
+                                                    type="file"
+                                                    id={`audio-upload-${s.id}`}
+                                                    accept="audio/*,.mp3,.wav,.m4a,.ogg"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            handleUploadAudio(s.id, file);
+                                                        }
+                                                    }}
+                                                />
 
+                                                {hasAudio ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div
+                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                                                isCurrentlyPlaying
+                                                                    ? 'bg-rose-950 text-rose-200 border-rose-500 shadow-sm shadow-rose-500/20 animate-pulse'
+                                                                    : audioInfo.type === 'spotify'
+                                                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600/70'
+                                                                    : 'bg-zinc-800 text-zinc-200 border-zinc-700'
+                                                            }`}
+                                                            title={audioInfo.name}
+                                                        >
+                                                            <span>
+                                                                {isCurrentlyPlaying
+                                                                    ? '🔊'
+                                                                    : audioInfo.type === 'spotify'
+                                                                    ? '🟢'
+                                                                    : '🎵'}
+                                                            </span>
+                                                            <span className="max-w-[110px] sm:max-w-[140px] truncate">
+                                                                {audioInfo.type === 'spotify'
+                                                                    ? `Spotify: ${audioInfo.name}`
+                                                                    : audioInfo.name}
+                                                            </span>
+                                                            {isCurrentlyPlaying && (
+                                                                <span className="text-[10px] text-rose-300 font-black uppercase">
+                                                                    Playing
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Replace button */}
+                                                        <div className="relative group">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (isInputtingSpotify) {
+                                                                        setActiveSpotifyInputSongId(null);
+                                                                    } else {
+                                                                        setActiveSpotifyInputSongId(s.id);
+                                                                        setSpotifyInputUrl(audioInfo.spotifyUrl || '');
+                                                                        setSpotifyInputError('');
+                                                                    }
+                                                                }}
+                                                                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors border border-zinc-700"
+                                                                title="Replace audio"
+                                                            >
+                                                                Replace
+                                                            </button>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => handleRemoveAudio(s.id)}
+                                                            className="bg-zinc-800 hover:bg-red-950 text-zinc-400 hover:text-red-300 px-2 py-1.5 rounded-xl text-xs transition-colors border border-zinc-700 hover:border-red-800"
+                                                            title="Remove audio"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <label
+                                                            htmlFor={`audio-upload-${s.id}`}
+                                                            className="cursor-pointer bg-zinc-800 hover:bg-zinc-750 text-zinc-200 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                                                            title="Upload an MP3 audio file from your device"
+                                                        >
+                                                            <span>🎵</span>
+                                                            <span>Upload MP3 file</span>
+                                                        </label>
+
+                                                        <button
+                                                            onClick={() => {
+                                                                if (isInputtingSpotify) {
+                                                                    setActiveSpotifyInputSongId(null);
+                                                                } else {
+                                                                    setActiveSpotifyInputSongId(s.id);
+                                                                    setSpotifyInputUrl('');
+                                                                    setSpotifyInputError('');
+                                                                }
+                                                            }}
+                                                            className="bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 hover:text-emerald-200 border border-emerald-700/60 hover:border-emerald-500 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                                                            title="Paste a Spotify song link"
+                                                        >
+                                                            <span>🟢</span>
+                                                            <span>Spotify link</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Inline Spotify Link Input Box */}
+                                        {isInputtingSpotify && (
+                                            <div className="mt-1 bg-zinc-900 border border-emerald-500/50 rounded-xl p-3 flex flex-col gap-2">
+                                                <div className="flex items-center justify-between text-xs text-zinc-300 font-bold">
+                                                    <span className="flex items-center gap-1.5 text-emerald-400">
+                                                        <span>🟢</span> Paste Spotify Track Link for "{s.title}"
+                                                    </span>
                                                     <button
-                                                        onClick={() => handleRemoveAudio(s.id)}
-                                                        className="bg-zinc-800 hover:bg-red-950 text-zinc-400 hover:text-red-300 px-2 py-1.5 rounded-xl text-xs transition-colors border border-zinc-700 hover:border-red-800"
-                                                        title="Remove MP3"
+                                                        onClick={() => {
+                                                            setActiveSpotifyInputSongId(null);
+                                                            setSpotifyInputUrl('');
+                                                            setSpotifyInputError('');
+                                                        }}
+                                                        className="text-zinc-500 hover:text-white text-xs"
                                                     >
-                                                        ✕
+                                                        ✕ Cancel
                                                     </button>
                                                 </div>
-                                            ) : (
-                                                <label
-                                                    htmlFor={`audio-upload-${s.id}`}
-                                                    className="cursor-pointer bg-zinc-800 hover:bg-zinc-750 text-zinc-200 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                                                >
-                                                    <span>🎵</span>
-                                                    <span>Upload MP3 file</span>
-                                                </label>
-                                            )}
-                                        </div>
+
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={spotifyInputUrl}
+                                                        onChange={(e) => setSpotifyInputUrl(e.target.value)}
+                                                        placeholder="https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT..."
+                                                        className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                handleAttachSpotify(s.id, spotifyInputUrl);
+                                                            }
+                                                        }}
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        onClick={() => handleAttachSpotify(s.id, spotifyInputUrl)}
+                                                        disabled={!spotifyInputUrl.trim() || isFetchingSpotify}
+                                                        className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 flex-shrink-0"
+                                                    >
+                                                        {isFetchingSpotify ? 'Fetching...' : 'Attach'}
+                                                    </button>
+                                                </div>
+
+                                                {spotifyInputError ? (
+                                                    <p className="text-[11px] text-red-400 font-medium">{spotifyInputError}</p>
+                                                ) : (
+                                                    <p className="text-[11px] text-zinc-400">
+                                                        Paste any Spotify track URL (e.g. from Spotify's Share &gt; Copy Song Link). It will play during this song's charting weeks.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}

@@ -143,6 +143,54 @@ async function startServer() {
     }
   });
 
+  app.get('/api/spotify/track', async (req, res) => {
+    try {
+        const url = req.query.url;
+        if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
+
+        const trackIdMatch = url.match(/track\/([a-zA-Z0-9]+)/) || url.match(/spotify:track:([a-zA-Z0-9]+)/);
+        const trackId = trackIdMatch ? trackIdMatch[1] : url.trim();
+
+        const response = await fetch(`https://embed.spotify.com/?uri=spotify:track:${encodeURIComponent(trackId)}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+        const text = await response.text();
+        const match = text.match(/<script id="__NEXT_DATA__" type="application\/json"[^>]*>([\s\S]*?)<\/script>/);
+
+        if (!match) {
+            return res.status(404).json({ error: 'Could not extract data from Spotify' });
+        }
+
+        const json = JSON.parse(match[1]);
+        const entity = json.props?.pageProps?.state?.data?.entity;
+
+        if (!entity) {
+            return res.status(404).json({ error: 'Track not found on Spotify' });
+        }
+
+        const images = entity.coverArt?.sources || entity.images || entity.visualIdentity?.image;
+        let image = '';
+        if (Array.isArray(images) && images.length > 0) {
+            image = images[0]?.url || '';
+        }
+
+        const previewUrl = entity.audioPreview?.url || '';
+
+        res.json({
+            id: entity.id || trackId,
+            title: entity.name || entity.title || '',
+            artist: entity.artists?.[0]?.name || entity.subtitle || '',
+            image: image,
+            previewUrl: previewUrl,
+            spotifyUrl: `https://open.spotify.com/track/${trackId}`
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message || String(e) });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
