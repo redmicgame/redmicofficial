@@ -11,6 +11,7 @@ import PlusIcon from './icons/PlusIcon';
 import LosslessIcon from './icons/LosslessIcon';
 import AppleMusicBrowseView from './AppleMusicBrowseView';
 import { AppleMusicPlaylistCover, AppleMusicPlaylistDetailView } from './AppleMusicPlaylistDetailView';
+import AppleMusicTopSongsDiscographyView from './AppleMusicTopSongsDiscographyView';
 
 const formatDateApple = (gameDate: GameDate) => {
     const date = new Date(gameDate.year, 0, (gameDate.week - 1) * 7 + 1);
@@ -363,7 +364,7 @@ const HorizontalSection: React.FC<{title: string, items: (Release | Video)[], on
 const AppleMusicView: React.FC = () => {
     const { dispatch, activeArtist, activeArtistData, gameState } = useGame();
     const [tab, setTab] = useState<'artist' | 'browse'>('artist');
-    const [view, setView] = useState<'artistProfile' | 'releaseDetail'>('artistProfile');
+    const [view, setView] = useState<'artistProfile' | 'releaseDetail' | 'topSongsDiscography'>('artistProfile');
     const [browseView, setBrowseView] = useState<'home' | 'topPlaylists' | 'topSongs' | 'topAlbums' | 'bestNewSongs' | 'topPreAdds' | 'playlistDetail'>('home');
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
     const [selectedBrowsePlaylist, setSelectedBrowsePlaylist] = useState<string | null>(null);
@@ -535,6 +536,10 @@ const AppleMusicView: React.FC = () => {
             return <AppleMusicReleaseDetailView releaseId={selectedReleaseId} onBack={handleBackToProfile} onSelectRelease={handleSelectRelease} />;
         }
 
+        if (view === 'topSongsDiscography') {
+            return <AppleMusicTopSongsDiscographyView onBack={handleBackToProfile} onSelectRelease={handleSelectRelease} />;
+        }
+
         const { songs, releases, videos } = activeArtistData;
         const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc));
         const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
@@ -667,10 +672,23 @@ const AppleMusicView: React.FC = () => {
                     {topSongs.length > 0 && (
                         <section>
                             <div className="flex justify-between items-center mb-3">
-                                <h2 className="text-2xl font-bold flex items-center gap-1">
-                                    <span>Top Songs</span>
-                                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
-                                </h2>
+                                <button
+                                    onClick={() => setView('topSongsDiscography')}
+                                    className="group flex items-center gap-1.5 text-left transition-opacity hover:opacity-80 cursor-pointer"
+                                    title="View entire discography ranked by weekly streams"
+                                >
+                                    <h2 className="text-2xl font-bold flex items-center gap-1 text-white">
+                                        <span>Top Songs</span>
+                                        <ChevronRightIcon className="w-5 h-5 text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-all inline" />
+                                    </h2>
+                                </button>
+                                <button
+                                    onClick={() => setView('topSongsDiscography')}
+                                    className="text-xs font-semibold text-rose-500 hover:text-rose-400 transition-colors flex items-center gap-0.5 py-1 px-2 rounded-lg hover:bg-zinc-800/40"
+                                >
+                                    <span>See All</span>
+                                    <ChevronRightIcon className="w-3.5 h-3.5" />
+                                </button>
                             </div>
                             <div className="space-y-1">
                                 {topSongs.map(song => {

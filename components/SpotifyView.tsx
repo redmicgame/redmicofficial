@@ -18,6 +18,52 @@ import SpotifyPlaylistDetailView from './SpotifyPlaylistDetailView';
 import { SpotifyPlaylistCover } from './SpotifyPlaylistCover';
 import SpotifyNowPlayingView from './SpotifyNowPlayingView';
 
+const formatSongDuration = (seconds?: number) => {
+    if (!seconds) return '3:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
+const RetroPopularityBar: React.FC<{
+    song: Song;
+    maxRecentPopularity: number;
+}> = ({ song, maxRecentPopularity }) => {
+    const songRecent = (song.lastWeekStreams && song.lastWeekStreams > 0) ? song.lastWeekStreams : (song.streams || 0);
+    const popRatio = maxRecentPopularity > 0 
+        ? Math.max(0.08, Math.min(1, songRecent / maxRecentPopularity))
+        : 0.15;
+    const popPercent = Math.round(popRatio * 100);
+
+    return (
+        <div 
+            className="flex flex-col items-end sm:items-center shrink-0" 
+            title={`${popPercent}% recent popularity (${formatNumber(songRecent)} recent streams)`}
+        >
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5 hidden sm:block">
+                Popularity
+            </span>
+            <div className="flex items-center gap-[2px] p-1 bg-gray-100 border border-gray-200 rounded">
+                {Array.from({ length: 10 }).map((_, i) => {
+                    const threshold = (i + 1) / 10;
+                    const isFilled = popRatio >= (threshold - 0.05);
+                    return (
+                        <div
+                            key={i}
+                            className={`w-1.5 sm:w-2 h-3.5 rounded-[1px] transition-colors ${
+                                isFilled ? 'bg-zinc-800' : 'bg-gray-200'
+                            }`}
+                        />
+                    );
+                })}
+            </div>
+            <span className="text-[10px] text-gray-400 font-mono mt-0.5 sm:hidden">
+                {popPercent}%
+            </span>
+        </div>
+    );
+};
+
 const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boolean; onClick?: () => void; }> = ({ song, index, hasMusicVideo, onClick }) => {
     return (
         <div onClick={onClick} className="flex items-center gap-4 group cursor-pointer p-2 -mx-2 rounded-md hover:bg-white/10">
@@ -326,9 +372,22 @@ const SpotifyView: React.FC = () => {
             .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0));
     }, [allSongs]);
 
-    const topSongs = streamingSongs.slice(0, 10);
+    const is2008_2015 = date.year <= 2015;
+    const is2016_2017 = date.year === 2016 || date.year === 2017;
+    const is2018_Plus = date.year >= 2018;
+
+    const top5Songs = useMemo(() => streamingSongs.slice(0, 5), [streamingSongs]);
+    const topSongs = useMemo(() => streamingSongs.slice(0, 10), [streamingSongs]);
+
+    const maxRecentPopularity = useMemo(() => {
+        if (top5Songs.length === 0) return 1;
+        return Math.max(
+            ...top5Songs.map(s => (s.lastWeekStreams && s.lastWeekStreams > 0 ? s.lastWeekStreams : s.streams || 1)),
+            1
+        );
+    }, [top5Songs]);
         
-    const popularSongsToShow = isPopularExpanded ? topSongs : topSongs.slice(0, 5);
+    const popularSongsToShow = is2016_2017 ? top5Songs : (isPopularExpanded ? topSongs : top5Songs);
 
     const popularReleases = (() => {
         const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc));
@@ -524,7 +583,129 @@ const SpotifyView: React.FC = () => {
     }
 
     if (nowPlayingSongIndex !== null) {
-        return <SpotifyNowPlayingView songs={streamingSongs} initialSongIndex={streamingSongs.findIndex(s => s.id === popularSongsToShow[nowPlayingSongIndex].id)} onBack={() => setNowPlayingSongIndex(null)} />;
+        const currentActiveList = is2008_2015 ? top5Songs : popularSongsToShow;
+        const targetSong = currentActiveList[nowPlayingSongIndex];
+        const initialIdx = targetSong ? streamingSongs.findIndex(s => s.id === targetSong.id) : 0;
+        return <SpotifyNowPlayingView songs={streamingSongs} initialSongIndex={initialIdx >= 0 ? initialIdx : 0} onBack={() => setNowPlayingSongIndex(null)} />;
+    }
+
+    if (is2008_2015) {
+        return (
+            <div className="bg-white text-zinc-900 h-full overflow-y-auto pb-24">
+                {/* Navigation Bar */}
+                <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                    <button 
+                        onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'game' })} 
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors"
+                        aria-label="Back to Game"
+                    >
+                        <ChevronLeftIcon className="w-4 h-4" />
+                        <span>Back</span>
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <SpotifyIcon className="w-5 h-5 text-[#1db954]" />
+                        <span className="font-bold text-gray-900 text-base tracking-tight">Spotify</span>
+                    </div>
+                    <div className="w-16"></div>
+                </div>
+
+                {/* Profile Header (White Background, Profile picture at top, NO play button icon, NO monthly listeners) */}
+                <div className="p-6 sm:p-8 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+                    <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center sm:items-end gap-6">
+                        <div 
+                            className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-lg shadow-md overflow-hidden group cursor-pointer border border-gray-200 shrink-0 bg-gray-100"
+                            onClick={triggerFileInput}
+                            title="Click to change profile picture"
+                        >
+                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+                            <img src={activeArtist.image} alt={activeArtist.name} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-semibold p-2 text-center">
+                                <span>Change Photo</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-center sm:items-start text-center sm:text-left flex-grow">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                                Artist Profile
+                            </span>
+                            <h1 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight mb-3">
+                                {activeArtist.name}
+                            </h1>
+                            <div className="flex items-center gap-3">
+                                <button className="px-5 py-1.5 border border-gray-300 hover:border-gray-900 rounded-full text-xs font-bold text-gray-800 transition-colors uppercase tracking-wider">
+                                    Following
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Top 5 Tracks Section with recent popularity bar */}
+                <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Top 5 Tracks</h2>
+                        <span className="text-xs text-gray-400 font-medium hidden sm:inline">Ranked by Recent Popularity</span>
+                    </div>
+
+                    {top5Songs.length > 0 ? (
+                        <div className="space-y-1">
+                            {/* Table Header */}
+                            <div className="hidden sm:flex items-center gap-4 px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                                <span className="w-5 text-right">#</span>
+                                <span className="w-10"></span>
+                                <span className="flex-grow">Title</span>
+                                <span className="w-24 text-center">Popularity</span>
+                                <span className="w-10 text-right">Time</span>
+                            </div>
+
+                            {top5Songs.map((song, index) => {
+                                return (
+                                    <div 
+                                        key={song.id}
+                                        onClick={() => setNowPlayingSongIndex(index)}
+                                        className="flex items-center gap-3 sm:gap-4 py-2.5 px-3 rounded-lg hover:bg-gray-50 group cursor-pointer transition-colors border-b border-gray-100 last:border-0"
+                                    >
+                                        <span className="w-5 text-right font-bold text-sm text-gray-400 shrink-0">
+                                            {index + 1}
+                                        </span>
+                                        <img 
+                                            src={song.coverArt} 
+                                            alt={song.title} 
+                                            className="w-10 h-10 rounded-sm object-cover shadow-sm shrink-0" 
+                                        />
+                                        <div className="flex-grow min-w-0 pr-2">
+                                            <p className="font-semibold text-gray-900 text-sm sm:text-base truncate group-hover:text-[#1db954] transition-colors">
+                                                {song.title.replace(/ \(feat\. [^)]+\)/g, '')}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {song.explicit && (
+                                                    <span className="text-[10px] w-3.5 h-3.5 bg-gray-300 text-gray-800 font-bold rounded-sm flex-shrink-0 flex items-center justify-center">E</span>
+                                                )}
+                                                <span className="text-xs text-gray-500 truncate">
+                                                    {song.primaryArtist || activeArtist.name}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Popularity Bar */}
+                                        <RetroPopularityBar song={song} maxRecentPopularity={maxRecentPopularity} />
+
+                                        {/* Duration */}
+                                        <span className="text-xs text-gray-400 font-mono w-10 text-right shrink-0 hidden sm:block">
+                                            {formatSongDuration(song.duration)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center text-gray-400 text-sm">
+                            No tracks released on Spotify yet.
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -548,7 +729,7 @@ const SpotifyView: React.FC = () => {
                     <h1 className="text-5xl md:text-7xl font-black tracking-tighter" style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.7)' }}>
                         {activeArtist.name}
                     </h1>
-                    {isVerified && (
+                    {is2018_Plus && isVerified && (
                         <div 
                             className="flex items-center gap-2 mt-2 cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity w-max"
                             onClick={(e) => { e.stopPropagation(); setShowVerifiedModal(true); }}
@@ -560,14 +741,16 @@ const SpotifyView: React.FC = () => {
                 </div>
             </div>
 
-            <VerifiedModal 
-                isOpen={showVerifiedModal} 
-                onClose={() => setShowVerifiedModal(false)}
-                sinceYear={sinceYear}
-                releasesCount={releases.length}
-                playlists={playlistsNames}
-                recentVenues={recentVenues}
-            />
+            {is2018_Plus && (
+                <VerifiedModal 
+                    isOpen={showVerifiedModal} 
+                    onClose={() => setShowVerifiedModal(false)}
+                    sinceYear={sinceYear}
+                    releasesCount={releases.length}
+                    playlists={playlistsNames}
+                    recentVenues={recentVenues}
+                />
+            )}
 
             {/* Main Content */}
             <div className="p-4 space-y-8 pb-20">
@@ -598,18 +781,20 @@ const SpotifyView: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Placeholder for Music/Clips/Events/Merch tabs */}
-                <div className="border-b border-zinc-800">
-                    <div className="flex gap-6">
-                        <button className="py-2 text-sm font-semibold border-b-2 border-green-500">Music</button>
-                        <button className="py-2 text-sm font-semibold text-zinc-400 hover:text-white">Clips</button>
-                        <button className="py-2 text-sm font-semibold text-zinc-400 hover:text-white">Events</button>
-                        <button className="py-2 text-sm font-semibold text-zinc-400 hover:text-white">Merch</button>
+                {/* Tabs - 2018 onwards only */}
+                {is2018_Plus && (
+                    <div className="border-b border-zinc-800">
+                        <div className="flex gap-6">
+                            <button className="py-2 text-sm font-semibold border-b-2 border-green-500">Music</button>
+                            <button className="py-2 text-sm font-semibold text-zinc-400 hover:text-white">Clips</button>
+                            <button className="py-2 text-sm font-semibold text-zinc-400 hover:text-white">Events</button>
+                            <button className="py-2 text-sm font-semibold text-zinc-400 hover:text-white">Merch</button>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Popular Songs */}
-                {topSongs.length > 0 && (
+                {popularSongsToShow.length > 0 && (
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold">Popular</h2>
                         <div className="space-y-2">
@@ -618,7 +803,7 @@ const SpotifyView: React.FC = () => {
                                 return <PopularSongItem key={song.id} song={song} index={index} hasMusicVideo={hasMusicVideo} onClick={() => setNowPlayingSongIndex(index)} />;
                             })}
                         </div>
-                        {topSongs.length > 5 && (
+                        {is2018_Plus && topSongs.length > 5 && (
                              <div className="pt-2">
                                 <button 
                                     onClick={() => setIsPopularExpanded(!isPopularExpanded)} 
@@ -631,8 +816,8 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
 
-                {/* Artist Pick (Moved between Popular and Popular Releases) */}
-                {artistPickItem && (
+                {/* Artist Pick - 2018 onwards only */}
+                {is2018_Plus && artistPickItem && (
                     <div className="space-y-3">
                         <h2 className="text-2xl font-bold">Artist pick</h2>
                         <button onClick={() => handleShowReleaseDetail(artistPick.itemType === 'release' ? artistPick.itemId : (songs.find(s=>s.id === artistPick.itemId)?.releaseId || ''))} className="w-full text-left flex items-start gap-4 p-3 -m-3 rounded-lg hover:bg-white/10">
@@ -662,7 +847,6 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
 
-
                 {/* Popular Releases */}
                 {popularReleases.length > 0 && (
                     <div className="space-y-4">
@@ -683,8 +867,8 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
 
-                {/* Upcoming Releases */}
-                {upcomingReleases.length > 0 && (
+                {/* Upcoming Releases - 2018 onwards only */}
+                {is2018_Plus && upcomingReleases.length > 0 && (
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <h2 className="text-2xl font-bold">Upcoming</h2>
@@ -705,7 +889,7 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
                 
-                {/* Appears On */}
+                {/* Appears On - Playlisting */}
                 {appearsOnPlaylists.length > 0 && (
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold">Appears on</h2>
@@ -744,7 +928,7 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
                 
-                {/* Spotify Editorial Playlists */}
+                {/* Spotify Editorial Playlists - Playlisting */}
                 {gameState.spotifyPlaylists && gameState.spotifyPlaylists.length > 0 && (
                     <div className="space-y-4 pt-2">
                         <div className="flex justify-between items-center">
@@ -786,9 +970,8 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
                 
-                
-                {/* Music Videos Section */}
-                {activeArtistData.videos?.filter(v => v.isOnSpotify && v.type === 'Music Video').length > 0 && (
+                {/* Music Videos Section - 2018 onwards only */}
+                {is2018_Plus && activeArtistData.videos?.filter(v => v.isOnSpotify && v.type === 'Music Video').length > 0 && (
                     <div className="space-y-4 pt-4">
                         <h2 className="text-2xl font-bold">Music videos</h2>
                         <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar snap-x">
@@ -811,8 +994,8 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
 
-                {/* Watch More Section */}
-                {activeArtistData.videos?.filter(v => v.isOnSpotify && v.type !== 'Music Video').length > 0 && (
+                {/* Watch More Section - 2018 onwards only */}
+                {is2018_Plus && activeArtistData.videos?.filter(v => v.isOnSpotify && v.type !== 'Music Video').length > 0 && (
                     <div className="space-y-4 pt-4">
                         <h2 className="text-2xl font-bold">Watch more from {activeArtist.name}</h2>
                         <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar snap-x">
@@ -835,127 +1018,135 @@ const SpotifyView: React.FC = () => {
                     </div>
                 )}
 
-                {/* About Section */}
-                <div className="space-y-4 pt-4">
-                    <h2 className="text-2xl font-bold">About</h2>
-                    <div 
-                        className="bg-[#282828] rounded-xl overflow-hidden cursor-pointer hover:bg-[#3E3E3E] transition-colors relative"
-                        onClick={() => setShowAboutModal(true)}
-                    >
-                        <div className="h-64 sm:h-80 w-full">
-                            <img 
-                                src={(activeArtistData.aboutImages && activeArtistData.aboutImages.length > 0) ? activeArtistData.aboutImages[0] : activeArtist.image} 
-                                className="w-full h-full object-cover" 
-                                alt={`${activeArtist.name} about`} 
-                            />
-                        </div>
-                        <div className="p-4" style={{ background: 'linear-gradient(to top, #282828 100%, transparent) -mt-10' }}>
-                            {getSpotifyRank(monthlyListeners) !== null && (
-                                <p className="text-sm font-semibold mb-1">#{getSpotifyRank(monthlyListeners)} in Top Artists</p>
-                            )}
-                            <div className="flex justify-between items-center mb-1">
-                                <div className="flex items-center gap-1">
-                                    <h3 className="text-xl font-bold">{activeArtist.name}</h3>
-                                    {activeArtistData.isSpotifyVerified && (
-                                        <div className="ml-1 flex items-center">
-                                            <VerifiedBadgeIcon className="w-5 h-5 text-[#A0D9B1]" />
-                                        </div>
-                                    )}
-                                </div>
-                                <button className="border border-zinc-400 rounded-full px-4 py-1 text-sm font-semibold hover:border-white">
-                                    Follow
-                                </button>
+                {/* About Section - 2018 onwards only */}
+                {is2018_Plus && (
+                    <div className="space-y-4 pt-4">
+                        <h2 className="text-2xl font-bold">About</h2>
+                        <div 
+                            className="bg-[#282828] rounded-xl overflow-hidden cursor-pointer hover:bg-[#3E3E3E] transition-colors relative"
+                            onClick={() => setShowAboutModal(true)}
+                        >
+                            <div className="h-64 sm:h-80 w-full">
+                                <img 
+                                    src={(activeArtistData.aboutImages && activeArtistData.aboutImages.length > 0) ? activeArtistData.aboutImages[0] : activeArtist.image} 
+                                    className="w-full h-full object-cover" 
+                                    alt={`${activeArtist.name} about`} 
+                                />
                             </div>
-                            <p className="text-sm text-zinc-400 mb-4">{monthlyListeners >= 1000000 ? `${(monthlyListeners / 1000000).toFixed(1).replace(/\.0$/, '')}M` : monthlyListeners.toLocaleString()} monthly listeners</p>
-                            
-                            {activeArtistData.aboutBio && (
-                                <p className="text-sm line-clamp-3 text-zinc-300">
-                                    {activeArtistData.aboutBio}
-                                </p>
-                            )}
+                            <div className="p-4" style={{ background: 'linear-gradient(to top, #282828 100%, transparent) -mt-10' }}>
+                                {getSpotifyRank(monthlyListeners) !== null && (
+                                    <p className="text-sm font-semibold mb-1">#{getSpotifyRank(monthlyListeners)} in Top Artists</p>
+                                )}
+                                <div className="flex justify-between items-center mb-1">
+                                    <div className="flex items-center gap-1">
+                                        <h3 className="text-xl font-bold">{activeArtist.name}</h3>
+                                        {activeArtistData.isSpotifyVerified && (
+                                            <div className="ml-1 flex items-center">
+                                                <VerifiedBadgeIcon className="w-5 h-5 text-[#A0D9B1]" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button className="border border-zinc-400 rounded-full px-4 py-1 text-sm font-semibold hover:border-white">
+                                        Follow
+                                    </button>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-4">{monthlyListeners >= 1000000 ? `${(monthlyListeners / 1000000).toFixed(1).replace(/\.0$/, '')}M` : monthlyListeners.toLocaleString()} monthly listeners</p>
+                                
+                                {activeArtistData.aboutBio && (
+                                    <p className="text-sm line-clamp-3 text-zinc-300">
+                                        {activeArtistData.aboutBio}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
-                {/* Fans Also Like Section */}
-                <div className="space-y-4 pt-6 border-t border-zinc-800/60 mt-6">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold tracking-tight text-white">Fans Also Like</h2>
-                        {isFansAlsoLikeUnlocked && (
-                            <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5 bg-zinc-800/60 px-2.5 py-1 rounded-full border border-zinc-700/50">
-                                <span className="w-2 h-2 rounded-full bg-[#1ed760]"></span>
-                                Genre: <span className="text-white font-semibold">{primaryGenre}</span>
-                            </span>
+                {/* Fans Also Like Section - 2018 onwards only */}
+                {is2018_Plus && (
+                    <div className="space-y-4 pt-6 border-t border-zinc-800/60 mt-6">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-2xl font-bold tracking-tight text-white">Fans Also Like</h2>
+                            {isFansAlsoLikeUnlocked && (
+                                <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5 bg-zinc-800/60 px-2.5 py-1 rounded-full border border-zinc-700/50">
+                                    <span className="w-2 h-2 rounded-full bg-[#1ed760]"></span>
+                                    Genre: <span className="text-white font-semibold">{primaryGenre}</span>
+                                </span>
+                            )}
+                        </div>
+
+                        {isFansAlsoLikeUnlocked ? (
+                            <div className="flex overflow-x-auto gap-6 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar snap-x">
+                                {similarArtists.map((artist, idx) => (
+                                    <div 
+                                        key={idx} 
+                                        onClick={() => setSelectedSimilarArtist(artist)}
+                                        className="flex flex-col items-center group cursor-pointer shrink-0 w-28 sm:w-36 snap-start"
+                                    >
+                                        <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border border-zinc-800/80 shadow-2xl group-hover:scale-105 transition-all duration-300">
+                                            <img src={artist.image} alt={artist.name} className="w-full h-full object-cover group-hover:brightness-110 transition-all" />
+                                        </div>
+                                        <p className="font-bold text-sm sm:text-base text-white text-center truncate w-full mt-3 group-hover:text-[#1ed760] transition-colors">
+                                            {artist.name}
+                                        </p>
+                                        <p className="text-xs text-zinc-400 text-center truncate w-full mt-0.5 font-medium">
+                                            Artist
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-gradient-to-r from-zinc-900/90 via-zinc-900 to-zinc-800/40 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div className="space-y-1 text-center sm:text-left">
+                                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                                            <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                            </svg>
+                                            <p className="font-bold text-white text-sm sm:text-base">Unlocks at 1B Career Streams</p>
+                                        </div>
+                                        <p className="text-xs text-zinc-400 max-w-md">
+                                            Reach <span className="text-[#1ed760] font-semibold">1,000,000,000 career streams</span> across your catalog to unlock your "Fans Also Like" artist recommendations based on your primary genre (<span className="text-white font-semibold">{primaryGenre}</span>).
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col items-center sm:items-end w-full sm:w-auto shrink-0">
+                                        <div className="text-xs sm:text-sm font-bold text-white font-mono">
+                                            {formatNumber(totalCareerStreams)} / 1.0B
+                                        </div>
+                                        <div className="w-full sm:w-44 bg-zinc-800 h-2 rounded-full overflow-hidden mt-1.5 border border-zinc-700/50">
+                                            <div 
+                                                className="bg-gradient-to-r from-green-500 to-emerald-400 h-full rounded-full transition-all duration-500" 
+                                                style={{ width: `${Math.min(100, (totalCareerStreams / 1_000_000_000) * 100)}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-zinc-500 mt-1 font-mono">
+                                            {((totalCareerStreams / 1_000_000_000) * 100).toFixed(1)}% Unlocked
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </div>
-
-                    {isFansAlsoLikeUnlocked ? (
-                        <div className="flex overflow-x-auto gap-6 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar snap-x">
-                            {similarArtists.map((artist, idx) => (
-                                <div 
-                                    key={idx} 
-                                    onClick={() => setSelectedSimilarArtist(artist)}
-                                    className="flex flex-col items-center group cursor-pointer shrink-0 w-28 sm:w-36 snap-start"
-                                >
-                                    <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border border-zinc-800/80 shadow-2xl group-hover:scale-105 transition-all duration-300">
-                                        <img src={artist.image} alt={artist.name} className="w-full h-full object-cover group-hover:brightness-110 transition-all" />
-                                    </div>
-                                    <p className="font-bold text-sm sm:text-base text-white text-center truncate w-full mt-3 group-hover:text-[#1ed760] transition-colors">
-                                        {artist.name}
-                                    </p>
-                                    <p className="text-xs text-zinc-400 text-center truncate w-full mt-0.5 font-medium">
-                                        Artist
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="bg-gradient-to-r from-zinc-900/90 via-zinc-900 to-zinc-800/40 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                <div className="space-y-1 text-center sm:text-left">
-                                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                                        <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                        </svg>
-                                        <p className="font-bold text-white text-sm sm:text-base">Unlocks at 1B Career Streams</p>
-                                    </div>
-                                    <p className="text-xs text-zinc-400 max-w-md">
-                                        Reach <span className="text-[#1ed760] font-semibold">1,000,000,000 career streams</span> across your catalog to unlock your "Fans Also Like" artist recommendations based on your primary genre (<span className="text-white font-semibold">{primaryGenre}</span>).
-                                    </p>
-                                </div>
-                                <div className="flex flex-col items-center sm:items-end w-full sm:w-auto shrink-0">
-                                    <div className="text-xs sm:text-sm font-bold text-white font-mono">
-                                        {formatNumber(totalCareerStreams)} / 1.0B
-                                    </div>
-                                    <div className="w-full sm:w-44 bg-zinc-800 h-2 rounded-full overflow-hidden mt-1.5 border border-zinc-700/50">
-                                        <div 
-                                            className="bg-gradient-to-r from-green-500 to-emerald-400 h-full rounded-full transition-all duration-500" 
-                                            style={{ width: `${Math.min(100, (totalCareerStreams / 1_000_000_000) * 100)}%` }}
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-zinc-500 mt-1 font-mono">
-                                        {((totalCareerStreams / 1_000_000_000) * 100).toFixed(1)}% Unlocked
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                )}
 
             </div>
 
-            <AboutModal 
-                isOpen={showAboutModal} 
-                onClose={() => setShowAboutModal(false)}
-                artistData={activeArtistData}
-                artist={activeArtist}
-            />
+            {is2018_Plus && (
+                <>
+                    <AboutModal 
+                        isOpen={showAboutModal} 
+                        onClose={() => setShowAboutModal(false)}
+                        artistData={activeArtistData}
+                        artist={activeArtist}
+                    />
 
-            <SimilarArtistModal
-                artist={selectedSimilarArtist}
-                onClose={() => setSelectedSimilarArtist(null)}
-                playerGenre={primaryGenre}
-            />
+                    <SimilarArtistModal
+                        artist={selectedSimilarArtist}
+                        onClose={() => setSelectedSimilarArtist(null)}
+                        playerGenre={primaryGenre}
+                    />
+                </>
+            )}
         </div>
     );
 };

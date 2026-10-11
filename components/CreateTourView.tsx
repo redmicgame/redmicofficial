@@ -1,6 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { VENUES, TOUR_TIER_REQUIREMENTS, TOUR_TICKET_PRICE_SUGGESTIONS } from '../constants';
+import { 
+    VENUES, 
+    TOUR_TIER_REQUIREMENTS, 
+    TOUR_TIER_CONFIG,
+    calculateTourPower, 
+    calculateMaxSelloutPrice, 
+    calculateTourSelloutRatio, 
+    TIER_BASE_SELLOUT_PRICES 
+} from '../constants';
 import { Tour, Venue, Song, MerchProduct } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -12,6 +20,7 @@ const CreateTourView: React.FC = () => {
     const [tourName, setTourName] = useState('');
     const [bannerImage, setBannerImage] = useState<string | null>(null);
     const [tier, setTier] = useState<TourTier | null>(null);
+    const [tourTier, setTourTier] = useState<1 | 2 | 3>(1);
     const [venuesForSelection, setVenuesForSelection] = useState<(typeof VENUES[TourTier][0] & {id: string})[]>([]);
     const [chosenVenueIds, setChosenVenueIds] = useState<Set<string>>(new Set());
     
@@ -31,6 +40,9 @@ const CreateTourView: React.FC = () => {
 
     if (!activeArtistData || !activeArtist) return null;
     const { popularity, songs, hype, merch, money } = activeArtistData;
+    const publicImage = activeArtistData.publicImage !== undefined ? activeArtistData.publicImage : 50;
+    const tourPower = useMemo(() => calculateTourPower(popularity, hype, publicImage), [popularity, hype, publicImage]);
+
     const allSongs = useMemo(() => songs, [songs]);
     const isModernEra = gameState.date.year >= 2018;
 
@@ -49,13 +61,20 @@ const CreateTourView: React.FC = () => {
 
     const handleTierSelect = (selectedTier: TourTier) => {
         setTier(selectedTier);
-        const suggestion = TOUR_TICKET_PRICE_SUGGESTIONS[selectedTier];
-        setTicketPrice(Math.floor((suggestion.min + suggestion.max) / 2));
+        setTourTier(1);
+        const recPrice = calculateMaxSelloutPrice(1, popularity, hype, publicImage);
+        setTicketPrice(recPrice);
         
         const venuesWithIds = VENUES[selectedTier].map(v => ({...v, id: crypto.randomUUID()}));
         setVenuesForSelection(venuesWithIds);
         setChosenVenueIds(new Set(venuesWithIds.map(v => v.id)));
         setStep(2);
+    };
+
+    const handleSelectSubTier = (newTier: 1 | 2 | 3) => {
+        setTourTier(newTier);
+        const recPrice = calculateMaxSelloutPrice(newTier, popularity, hype, publicImage);
+        setTicketPrice(recPrice);
     };
 
     const handleToggleVenue = (id: string) => {
@@ -128,7 +147,8 @@ const CreateTourView: React.FC = () => {
         }
 
         const isSetlistMissingHits = top3Hits.some(hit => !setlist.has(hit.id));
-        const demandScore = Math.min(100, Math.floor(popularity * 1.5 + hype * 0.5));
+        const selloutRatio = calculateTourSelloutRatio(ticketPrice, tourTier, popularity, hype, publicImage);
+        const demandScore = Math.min(100, Math.round(selloutRatio * 100));
         
         const selectedMerchItems = (merch || []).filter(m => chosenMerchIds.has(m.id));
 
@@ -137,12 +157,18 @@ const CreateTourView: React.FC = () => {
             artistId: activeArtist.id,
             name: tourName,
             bannerImage: bannerImage || 'https://images.unsplash.com/photo-1540039155732-68473682c892?auto=format&fit=crop&q=80',
+            venueCategory: tier || 'Small Halls',
+            tier: tourTier,
             venues: chosenVenuesList.map(v => ({
                 id: crypto.randomUUID(),
                 name: v.name,
                 city: v.city,
                 capacity: v.capacity,
-                ticketPrice: ticketPrice
+                ticketPrice: ticketPrice,
+                tier: tourTier,
+                soldOut: false,
+                revenue: 0,
+                ticketsSold: 0
             })),
             setlist: Array.from(setlist),
             status: 'planning',
@@ -168,7 +194,7 @@ const CreateTourView: React.FC = () => {
 
     const renderStep = () => {
         switch (step) {
-            case 1: // Name, Banner, Tier
+            case 1: // Name, Banner, Venue Category
                 return (
                     <div className="space-y-4">
                         <label htmlFor="banner-upload" className="cursor-pointer w-full aspect-[2/1] bg-zinc-800 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden">
@@ -176,14 +202,41 @@ const CreateTourView: React.FC = () => {
                         </label>
                         <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                         <input type="text" value={tourName} onChange={e => setTourName(e.target.value)} placeholder="Tour Name (Required)" className="w-full bg-zinc-700 p-3 rounded-md focus:outline-none border border-transparent focus:border-red-500" />
-                        {!tourName.trim() && <p className="text-xs text-red-400 font-bold">Please enter a tour name to select a tier.</p>}
-                        <div className="grid grid-cols-2 gap-3">
+                        {!tourName.trim() && <p className="text-xs text-red-400 font-bold">Please enter a tour name to select a venue size.</p>}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {Object.entries(TOUR_TIER_REQUIREMENTS).map(([tierName, req]) => {
                                 const isAvailable = popularity >= req;
+                                const config = TOUR_TIER_CONFIG[tierName as TourTier];
+                                const tierCount = config?.tiers.length || 1;
                                 return (
-                                    <button key={tierName} onClick={() => handleTierSelect(tierName as TourTier)} disabled={!isAvailable || !tourName.trim()} className="bg-zinc-800 p-3 rounded-lg disabled:opacity-50 text-left hover:bg-zinc-700 transition-colors">
-                                        <h3 className="font-bold">{tierName}</h3>
-                                        <p className="text-xs text-zinc-400">Requires: {req} Popularity</p>
+                                    <button 
+                                        key={tierName} 
+                                        onClick={() => handleTierSelect(tierName as TourTier)} 
+                                        disabled={!isAvailable || !tourName.trim()} 
+                                        className="bg-zinc-800 p-3.5 rounded-xl disabled:opacity-50 text-left hover:bg-zinc-700/90 transition-all border border-zinc-700/50 hover:border-zinc-500 flex flex-col justify-between"
+                                    >
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <h3 className="font-bold text-base text-white">{tierName}</h3>
+                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                                    {tierCount} {tierCount === 1 ? 'Tier' : 'Tiers'}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-zinc-400 mb-2">{config?.description}</p>
+                                        </div>
+                                        <div className="text-xs pt-2 border-t border-zinc-700/50 flex justify-between items-center">
+                                            <span className={isAvailable ? 'text-zinc-300' : 'text-red-400'}>
+                                                Req: {req} Popularity
+                                            </span>
+                                            <span className="text-zinc-400 text-[11px]">
+                                                {tierName === 'Stadiums' || tierName === 'Arenas' 
+                                                    ? 'Tiers 1, 2 & 3' 
+                                                    : tierName === 'Large Halls' 
+                                                        ? 'Tiers 1 & 2' 
+                                                        : 'Tier 1 only'}
+                                            </span>
+                                        </div>
                                     </button>
                                 );
                             })}
@@ -191,17 +244,127 @@ const CreateTourView: React.FC = () => {
                     </div>
                 );
             case 2: // Venues and Pricing
+                const currentConfig = tier ? TOUR_TIER_CONFIG[tier] : null;
+                const availableTiers: (1 | 2 | 3)[] = currentConfig?.tiers || [1];
+                const recommendedPrice = calculateMaxSelloutPrice(tourTier, popularity, hype, publicImage);
+                const selloutRatio = calculateTourSelloutRatio(ticketPrice, tourTier, popularity, hype, publicImage);
+                const isFullSellout = ticketPrice <= recommendedPrice;
+                const projectedSelloutPct = Math.round(selloutRatio * 100);
+
                 return (
                     <div className="space-y-4">
-                        <h2 className="text-xl font-bold">{tier} Tour ({chosenVenueIds.size} shows)</h2>
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-bold">{tier} Tour ({chosenVenueIds.size} shows)</h2>
+                        </div>
+
+                        {/* Tier Selector */}
+                        <div className="bg-zinc-800/90 p-3.5 rounded-xl border border-zinc-700/80 space-y-2.5">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-sm font-bold text-zinc-200">
+                                    Tour Pricing Tier
+                                </label>
+                                <span className="text-xs text-zinc-400">
+                                    {tier === 'Stadiums' || tier === 'Arenas' ? '3 Tiers available' : tier === 'Large Halls' ? '2 Tiers available' : '1 Tier available'}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                {([1, 2, 3] as (1 | 2 | 3)[]).map((tNum) => {
+                                    const isSupported = availableTiers.includes(tNum);
+                                    if (!isSupported) return null;
+                                    const tRecPrice = calculateMaxSelloutPrice(tNum, popularity, hype, publicImage);
+                                    const baseCap = TIER_BASE_SELLOUT_PRICES[tNum];
+                                    const isSelected = tourTier === tNum;
+
+                                    return (
+                                        <button
+                                            key={tNum}
+                                            type="button"
+                                            onClick={() => handleSelectSubTier(tNum)}
+                                            className={`p-3 rounded-lg text-left transition-all border ${
+                                                isSelected 
+                                                    ? 'bg-red-600/20 border-red-500 shadow-sm' 
+                                                    : 'bg-zinc-700/50 border-zinc-600/60 hover:bg-zinc-700 text-zinc-300'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className={`font-bold text-sm ${isSelected ? 'text-red-400' : 'text-white'}`}>
+                                                    Tier {tNum}
+                                                </span>
+                                                {isSelected && <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded font-bold uppercase">Selected</span>}
+                                            </div>
+                                            <p className="text-xs text-zinc-300 font-semibold">
+                                                Rec Price: <span className="text-green-400 font-bold">${tRecPrice}</span>
+                                            </p>
+                                            <p className="text-[10px] text-zinc-400 mt-0.5">
+                                                Base sellout cap: ${baseCap} (at 100 power)
+                                            </p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Ticket Price with auto-fill & live feedback */}
+                        <div className="bg-zinc-800/90 p-4 rounded-xl border border-zinc-700/80 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <label className="block text-sm font-bold text-zinc-200">Ticket Price ($)</label>
+                                    <p className="text-xs text-zinc-400">
+                                        Auto-filled with recommended price (${recommendedPrice}). You can edit this.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setTicketPrice(recommendedPrice)}
+                                    className="text-xs bg-zinc-700 hover:bg-zinc-600 text-blue-300 hover:text-white px-3 py-1.5 rounded-lg border border-zinc-600 transition-colors font-medium"
+                                >
+                                    Reset to Recommended (${recommendedPrice})
+                                </button>
+                            </div>
+
+                            <div className="relative">
+                                <span className="absolute left-3.5 top-3 text-zinc-400 font-bold text-lg">$</span>
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    value={ticketPrice} 
+                                    onChange={e => setTicketPrice(Math.max(1, Number(e.target.value)))} 
+                                    className="w-full bg-zinc-900 pl-8 pr-4 py-3 rounded-lg font-bold text-lg text-white focus:outline-none border border-zinc-600 focus:border-red-500" 
+                                />
+                            </div>
+
+                            {/* Sellout Status Notice */}
+                            {isFullSellout ? (
+                                <div className="bg-green-950/40 border border-green-500/40 p-3 rounded-lg flex items-start gap-2.5">
+                                    <span className="text-green-400 font-bold text-base mt-0.5">✓</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-green-300">100% Sellout Expected</p>
+                                        <p className="text-xs text-green-400/90">
+                                            Ticket price is at or below the max sellout limit (${recommendedPrice}) based on your Popularity (50%), Hype (40%), and Public Image (10%). All dates will fully sell out!
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-amber-950/40 border border-amber-500/50 p-3 rounded-lg flex items-start gap-2.5">
+                                    <span className="text-amber-400 font-bold text-base mt-0.5">⚠</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-amber-300">
+                                            Won't Fully Sell Out (~{projectedSelloutPct}% attendance projected)
+                                        </p>
+                                        <p className="text-xs text-amber-400/90">
+                                            Anything above ${recommendedPrice} will not sell out. The higher the price above ${recommendedPrice}, the fewer tickets you sell!
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg">
                             <p className="text-sm font-bold text-blue-200">Venue Booking Costs</p>
                             <p className="text-xs text-blue-300">You must pay upfront to secure venues. Currently: ${formatNumber(venueBookingCost)}</p>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-300">Ticket Price</label>
-                            <input type="number" value={ticketPrice} onChange={e => setTicketPrice(Number(e.target.value))} className="mt-1 w-full bg-zinc-700 p-2 rounded-md focus:outline-none" />
-                        </div>
+
                         <div className="bg-zinc-800 p-3 rounded-lg space-y-2 border border-zinc-700">
                             <label className="block text-sm font-bold text-zinc-200">Shows per Week (Maximum 7)</label>
                             <div className="grid grid-cols-7 gap-1">

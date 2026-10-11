@@ -99,7 +99,19 @@ const TourDetailView: React.FC = () => {
                     <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'tours'})} className="absolute top-4 left-4 p-2 bg-black/50 rounded-full hover:bg-black/70">
                         <ArrowLeftIcon className="w-6 h-6" />
                     </button>
-                    <h1 className="absolute bottom-4 left-4 text-4xl font-black">{tour.name}</h1>
+                    <div className="absolute bottom-4 left-4 flex flex-col gap-1">
+                        <h1 className="text-4xl font-black">{tour.name}</h1>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs bg-red-600/90 text-white font-bold px-2 py-0.5 rounded shadow">
+                                {tour.venueCategory || 'Tour'} • Tier {tour.tier || 1}
+                            </span>
+                            {tour.venues.length > 0 && (
+                                <span className="text-xs bg-zinc-800/80 text-zinc-300 font-medium px-2 py-0.5 rounded border border-zinc-700">
+                                    Base Ticket: ${tour.venues[0].ticketPrice}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </header>
 
                 <div className="flex border-b border-zinc-800 bg-zinc-900 sticky top-0 z-10 px-4">
@@ -221,6 +233,7 @@ const TourDetailView: React.FC = () => {
                                             ...v, 
                                             id: crypto.randomUUID(), 
                                             ticketPrice: tour.venues[0].ticketPrice,
+                                            tier: tour.tier || 1,
                                             ticketsSold: 0, 
                                             revenue: 0, 
                                             soldOut: false

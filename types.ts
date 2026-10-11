@@ -1712,6 +1712,7 @@ export interface Venue {
   soldOut: boolean;
   revenue: number;
   ticketsSold: number;
+  tier?: 1 | 2 | 3;
 }
 
 export interface Tour {
@@ -1737,6 +1738,8 @@ export interface Tour {
   guestIds?: string[];
   bookingCostsPaid?: number;
   showsPerWeek?: number;
+  venueCategory?: 'Small Halls' | 'Large Halls' | 'Arenas' | 'Stadiums';
+  tier?: 1 | 2 | 3;
 }
 
 export interface Brand {

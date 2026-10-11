@@ -95,6 +95,8 @@ import {
   SECURITY_TEAMS,
   GIGS,
   TALENT_AGENCIES,
+  calculateMaxSelloutPrice,
+  calculateTourSelloutRatio,
 } from "../constants";
 import {
   RADIO_FORMATS,
@@ -3504,28 +3506,31 @@ The Red Mic Team`,
                   const venue = tour.venues[venueIdx];
                   const newVenues = [...tour.venues];
 
-                  let baseDemand = (artistData.popularity || 10) * 800 + (artistData.hype || 5) * 50;
-                  let supportDemand = 0;
-                  if (tour.openerId) {
-                    const op = state.npcs?.find((n) => n.uniqueId === tour.openerId);
-                    if (op) supportDemand += op.basePopularity / 2000;
-                  }
-                  if (tour.guestIds) {
-                    tour.guestIds.forEach((gid) => {
-                      const gu = state.npcs?.find((n) => n.uniqueId === gid);
-                      if (gu) supportDemand += gu.basePopularity / 4000;
-                    });
-                  }
-                  baseDemand += supportDemand;
+                  const tourTier = tour.tier || venue.tier || 1;
+                  const artistPop = artistData.popularity || 0;
+                  const artistHype = artistData.hype || 0;
+                  const artistImage = artistData.publicImage !== undefined ? artistData.publicImage : 50;
 
-                  const priceSensitivity = 1.2 - venue.ticketPrice / 200;
-                  let demand = baseDemand * Math.max(0.1, priceSensitivity);
-                  demand = demand * (0.8 + Math.random() * 0.4);
-                  if (tour.isSetlistMissingHits) demand *= 0.5;
+                  const maxSelloutPrice = calculateMaxSelloutPrice(tourTier, artistPop, artistHype, artistImage);
+                  const selloutRatio = calculateTourSelloutRatio(venue.ticketPrice, tourTier, artistPop, artistHype, artistImage);
 
-                  const newTicketsSold = Math.floor(
-                    Math.min(venue.capacity - (venue.ticketsSold || 0), demand)
-                  );
+                  let newTicketsSold = 0;
+                  if (venue.ticketPrice <= maxSelloutPrice) {
+                    // Fully sells out!
+                    let demand = venue.capacity;
+                    if (tour.isSetlistMissingHits) demand = Math.floor(demand * 0.7);
+                    const remaining = Math.max(0, venue.capacity - (venue.ticketsSold || 0));
+                    newTicketsSold = Math.floor(Math.min(remaining, demand));
+                  } else {
+                    // Above max sellout price: won't sell out, higher price sells worse
+                    const variance = (Math.random() * 0.04 - 0.02);
+                    const effectiveRatio = Math.max(0.05, Math.min(0.97, selloutRatio + variance));
+                    let targetTotalSold = Math.floor(venue.capacity * effectiveRatio);
+                    if (tour.isSetlistMissingHits) targetTotalSold = Math.floor(targetTotalSold * 0.8);
+                    const remaining = Math.max(0, targetTotalSold - (venue.ticketsSold || 0));
+                    newTicketsSold = Math.floor(Math.min(venue.capacity - (venue.ticketsSold || 0), remaining));
+                  }
+
                   let actualTicketPrice = venue.ticketPrice;
                   if (tour.useDynamicPricing) {
                     actualTicketPrice = venue.ticketPrice * (Math.random() * 2 + 2);
@@ -3565,7 +3570,7 @@ The Red Mic Team`,
                     ...venue,
                     ticketsSold: (venue.ticketsSold || 0) + newTicketsSold,
                     revenue: (venue.revenue || 0) + revenue,
-                    soldOut: (venue.ticketsSold || 0) + newTicketsSold >= venue.capacity,
+                    soldOut: (venue.ticketPrice <= maxSelloutPrice) && ((venue.ticketsSold || 0) + newTicketsSold >= venue.capacity),
                   };
                   newVenues[venueIdx] = updatedVenue;
                   artistData.money += revenue;
@@ -4625,34 +4630,31 @@ Live Nation`,
                 if (venueIdx >= tour.venues.length) break;
                 const venue = tour.venues[venueIdx];
 
-                // Calculate sales
-                let baseDemand =
-                  artistData.popularity * 800 + artistData.hype * 50;
+                // Calculate sales using tier-based sellout model
+                const tourTier = tour.tier || venue.tier || 1;
+                const artistPop = artistData.popularity || 0;
+                const artistHype = artistData.hype || 0;
+                const artistImage = artistData.publicImage !== undefined ? artistData.publicImage : 50;
 
-                let supportDemand = 0;
-                if (tour.openerId) {
-                  const op = state.npcs?.find((n) => n.uniqueId === tour.openerId);
-                  if (op) supportDemand += op.basePopularity / 2000;
+                const maxSelloutPrice = calculateMaxSelloutPrice(tourTier, artistPop, artistHype, artistImage);
+                const selloutRatio = calculateTourSelloutRatio(venue.ticketPrice, tourTier, artistPop, artistHype, artistImage);
+
+                let newTicketsSold = 0;
+                if (venue.ticketPrice <= maxSelloutPrice) {
+                  // Fully sells out!
+                  let demand = venue.capacity;
+                  if (tour.isSetlistMissingHits) demand = Math.floor(demand * 0.7);
+                  const remaining = Math.max(0, venue.capacity - (venue.ticketsSold || 0));
+                  newTicketsSold = Math.floor(Math.min(remaining, demand));
+                } else {
+                  // Above max sellout price: won't sell out, higher price sells worse
+                  const variance = (Math.random() * 0.04 - 0.02);
+                  const effectiveRatio = Math.max(0.05, Math.min(0.97, selloutRatio + variance));
+                  let targetTotalSold = Math.floor(venue.capacity * effectiveRatio);
+                  if (tour.isSetlistMissingHits) targetTotalSold = Math.floor(targetTotalSold * 0.8);
+                  const remaining = Math.max(0, targetTotalSold - (venue.ticketsSold || 0));
+                  newTicketsSold = Math.floor(Math.min(venue.capacity - (venue.ticketsSold || 0), remaining));
                 }
-                if (tour.guestIds) {
-                  tour.guestIds.forEach((gid) => {
-                    const gu = state.npcs?.find((n) => n.uniqueId === gid);
-                    if (gu) supportDemand += gu.basePopularity / 4000;
-                  });
-                }
-                baseDemand += supportDemand;
-
-                let priceSensitivity = 1.2 - venue.ticketPrice / 200;
-                let demand = baseDemand * Math.max(0.1, priceSensitivity);
-                demand = demand * (0.8 + Math.random() * 0.4);
-
-                if (tour.isSetlistMissingHits) {
-                  demand = demand * 0.5;
-                }
-
-                let newTicketsSold = Math.floor(
-                  Math.min(venue.capacity - (venue.ticketsSold || 0), demand)
-                );
 
                 let actualTicketPrice = venue.ticketPrice;
                 if (tour.useDynamicPricing) {
@@ -11723,18 +11725,23 @@ It is now available on your Spotify profile.
             }
           }
           
-          if (
+          const isFirstWeekIn =
             newDate.year * 52 +
               newDate.week -
               (relDate.year * 52 + relDate.week) ===
-            1
-          ) {
+            1;
+
+          if (isFirstWeekIn) {
             release.firstWeekSales = totalWeeklySales;
           }
 
           // Unlimited weekly album sales, SES, and activity (no caps)
           let weeklySES = actualStreamEquivalents;
           let weeklyActivity = weeklySES + totalWeeklySales;
+
+          if (isFirstWeekIn) {
+            (release as any).firstWeekActivity = weeklyActivity;
+          }
           
           release.sales = (release.sales || 0) + totalWeeklySales;
 
@@ -11813,6 +11820,7 @@ It is now available on your Spotify profile.
       ];
       allAlbumContenders.sort((a, b) => b.weeklyActivity - a.weeklyActivity);
 
+      let finalState: GameState = { ...state };
       const top200Albums = allAlbumContenders.slice(0, 200);
       const newAlbumChartHistory: ChartHistory = { ...state.albumChartHistory };
       const newBillboardTopAlbums: AlbumChartEntry[] = [];
@@ -11853,6 +11861,30 @@ It is now available on your Spotify profile.
             chartRun: [rank],
             firstEntered: { year: newDate.year, week: newDate.week },
           };
+        }
+
+        const isDebutAlbum = !prevChartEntry && (!history || history.weeksOnChart === 1);
+        if (isDebutAlbum) {
+          if (!finalState.yearlyAlbumDebuts) {
+            finalState.yearlyAlbumDebuts = { ...(state.yearlyAlbumDebuts || {}) };
+          }
+          if (!finalState.yearlyAlbumDebuts[newDate.year]) {
+            finalState.yearlyAlbumDebuts[newDate.year] = [];
+          }
+          const alreadyTracked = finalState.yearlyAlbumDebuts[newDate.year].some(
+            (d: any) => d.uniqueId === album.uniqueId
+          );
+          if (!alreadyTracked) {
+            finalState.yearlyAlbumDebuts[newDate.year].push({
+              uniqueId: album.uniqueId,
+              title: album.title,
+              artist: album.artist,
+              sales: finalActivity,
+              coverArt: album.coverArt,
+              isPlayerAlbum: album.isPlayerAlbum,
+              week: newDate.week,
+            });
+          }
         }
 
         newBillboardTopAlbums.push({
@@ -12071,7 +12103,6 @@ It is now available on your Spotify profile.
       });
 
       // --- NPC Pop Base #1 Debut Posts ---
-      let finalState: GameState = { ...state };
       const npcPopBasePosts: XPost[] = [];
 
       // --- US ITUNES CHARTDATA POSTS ---
@@ -12546,12 +12577,145 @@ It is now available on your Spotify profile.
         }
       }
 
+      // Helper function to format units for chartdata posts (e.g. 2.61M, 407K)
+      const formatChartUnits = (num: number): string => {
+        if (!num || isNaN(num)) return "0";
+        if (num >= 1_000_000) {
+          const val = num / 1_000_000;
+          return `${val.toFixed(val >= 10 ? 1 : 2).replace(/\.0+$/, "")}M`;
+        }
+        if (num >= 1_000) {
+          const kVal = Math.round(num / 1000);
+          return `${kVal.toLocaleString("en-US")}K`;
+        }
+        return `${Math.round(num).toLocaleString("en-US")}`;
+      };
+
+      // 1. Chartdata: Biggest US album debuts of [year] (posted week 44, only top 10 positions, user and NPC artists only)
+      if (newDate.week === 44) {
+        if (!finalState.hasTweetedYearlyAlbumDebuts) {
+          finalState.hasTweetedYearlyAlbumDebuts = { ...(state.hasTweetedYearlyAlbumDebuts || {}) };
+        }
+        if (!finalState.hasTweetedYearlyAlbumDebuts[newDate.year]) {
+          finalState.hasTweetedYearlyAlbumDebuts[newDate.year] = true;
+
+          const yearDebuts: { title: string; artist: string; sales: number; coverArt?: string }[] = [
+            ...(finalState.yearlyAlbumDebuts?.[newDate.year] || []),
+          ];
+
+          // Supplement with any player or NPC albums from current year if available
+          top200Albums.forEach((album) => {
+            const hist = newAlbumChartHistory[album.uniqueId];
+            if (hist && hist.firstEntered?.year === newDate.year) {
+              if (
+                !yearDebuts.some(
+                  (d) =>
+                    d.title.toLowerCase() === album.title.toLowerCase() &&
+                    d.artist.toLowerCase() === album.artist.toLowerCase()
+                )
+              ) {
+                yearDebuts.push({
+                  title: album.title,
+                  artist: album.artist,
+                  sales: album.weeklyActivity,
+                  coverArt: album.coverArt,
+                });
+              }
+            }
+          });
+
+          yearDebuts.sort((a, b) => b.sales - a.sales);
+
+          // Strictly top 10 positions only
+          const top10 = yearDebuts.slice(0, 10);
+          if (top10.length > 0) {
+            const lines = top10.map((item, idx) => {
+              return `#${idx + 1} ${item.title}, ${item.artist} ${formatChartUnits(item.sales)}`;
+            });
+
+            npcPopBasePosts.push({
+              id: crypto.randomUUID(),
+              authorId: "chartdata",
+              content: `Biggest US album debuts of ${newDate.year}:\n\n${lines.join("\n")}`,
+              image: top10[0]?.coverArt,
+              likes: Math.floor(Math.random() * 85000) + 35000,
+              retweets: Math.floor(Math.random() * 22000) + 6000,
+              views: Math.floor(Math.random() * 1600000) + 500000,
+              date: newDate,
+            });
+          }
+        }
+      }
+
+      // 2. Chartdata: Artist's biggest first week sales (whenever the user drops an album and its first week sales are in, ranks oldest to newest)
+      allPlayerArtistsAndGroups.forEach((artistProfile) => {
+        const aData = updatedArtistsData[artistProfile.id];
+        if (!aData) return;
+
+        (aData.releases || []).forEach((rel: any) => {
+          if (rel.type !== "Album" && rel.type !== "Album (Deluxe)") return;
+          if (!rel.releaseDate || !rel.isReleased) return;
+
+          const wDiff =
+            newDate.year * 52 +
+            newDate.week -
+            (rel.releaseDate.year * 52 + rel.releaseDate.week);
+
+          if (wDiff === 1 && !rel.hasTweetedFirstWeekSalesLeaderboard) {
+            rel.hasTweetedFirstWeekSalesLeaderboard = true;
+
+            const releasedAlbums = (aData.releases || []).filter((r: any) => {
+              if (r.type !== "Album" && r.type !== "Album (Deluxe)") return false;
+              if (!r.isReleased || !r.releaseDate) return false;
+              const diff =
+                newDate.year * 52 +
+                newDate.week -
+                (r.releaseDate.year * 52 + r.releaseDate.week);
+              return diff >= 1;
+            });
+
+            if (releasedAlbums.length > 0) {
+              // Ranks from oldest to newest album
+              const sortedOldestToNewest = [...releasedAlbums].sort((a: any, b: any) => {
+                const dateA = a.releaseDate.year * 52 + a.releaseDate.week;
+                const dateB = b.releaseDate.year * 52 + b.releaseDate.week;
+                return dateA - dateB;
+              });
+
+              const artistName = artistProfile.name || "Artist";
+              const apostrophe = artistName.endsWith("s") ? "'" : "'s";
+              const header = `${artistName}${apostrophe} biggest first week sales:`;
+
+              const lines = sortedOldestToNewest.map((album: any) => {
+                const units =
+                  album.firstWeekActivity ||
+                  album.firstWeekSales ||
+                  album.sales ||
+                  0;
+                return `${album.title} - ${formatChartUnits(units)}`;
+              });
+
+              npcPopBasePosts.push({
+                id: crypto.randomUUID(),
+                authorId: "chartdata",
+                content: `${header}\n\n${lines.join("\n")}`,
+                image: rel.coverArt,
+                likes: Math.floor(Math.random() * 85000) + 35000,
+                retweets: Math.floor(Math.random() * 20000) + 5000,
+                views: Math.floor(Math.random() * 1500000) + 500000,
+                date: newDate,
+              });
+            }
+          }
+        });
+      });
+
       // Helper function to format chart data leaderboard list post (matching real-life @chartdata style)
+      // Strictly 5 positions only (not infinite)
       const formatChartDataLeaderboard = (
         header: string,
         dataMap: Record<string, number>,
-        maxRank = 5,
-        featuredArtist?: string,
+        maxPositions = 5,
       ): string => {
         const sorted = Object.entries(dataMap)
           .filter(([_, count]) => count > 0)
@@ -12559,23 +12723,14 @@ It is now available on your Spotify profile.
 
         const lines: string[] = [];
         let currentRank = 1;
-        let featuredIncluded = false;
 
         for (let i = 0; i < sorted.length; i++) {
+          if (lines.length >= maxPositions) break;
           if (i > 0 && sorted[i][1] < sorted[i - 1][1]) {
             currentRank = i + 1;
           }
-          if (currentRank <= maxRank) {
-            lines.push(`#${currentRank} ${sorted[i][0]} ${sorted[i][1]}`);
-            if (featuredArtist && sorted[i][0].toLowerCase() === featuredArtist.toLowerCase()) {
-              featuredIncluded = true;
-            }
-          } else {
-            if (featuredArtist && !featuredIncluded && sorted[i][0].toLowerCase() === featuredArtist.toLowerCase()) {
-              lines.push(`#${currentRank} ${sorted[i][0]} ${sorted[i][1]}`);
-              featuredIncluded = true;
-            }
-          }
+          if (currentRank > maxPositions) break;
+          lines.push(`#${currentRank} ${sorted[i][0]} ${sorted[i][1]}`);
         }
         return `${header}\n\n${lines.join("\n")}`;
       };
@@ -26170,11 +26325,19 @@ Let us know if you accept.`,
 
           if (pctToCollect <= 0) return tour;
 
-          const demandScore = tour.presaleDemand || 0; // 0-100
+          const tourTier = tour.tier || 1;
+          const artistPop = activeData.popularity || 0;
+          const artistHype = activeData.hype || 0;
+          const artistImage = activeData.publicImage !== undefined ? activeData.publicImage : 50;
 
           const updatedVenues = tour.venues.map((venue) => {
+            const venueTier = venue.tier || tourTier;
+            const maxSelloutPrice = calculateMaxSelloutPrice(venueTier, artistPop, artistHype, artistImage);
+            const selloutRatio = calculateTourSelloutRatio(venue.ticketPrice, venueTier, artistPop, artistHype, artistImage);
+
             const allocation = Math.floor(venue.capacity * pctToCollect);
-            let wantToBuy = Math.floor(allocation * (demandScore / 100));
+            let wantToBuy = Math.floor(allocation * selloutRatio);
+            if (tour.isSetlistMissingHits) wantToBuy = Math.floor(wantToBuy * 0.7);
 
             const remaining = venue.capacity - venue.ticketsSold;
             const actualSold = Math.min(wantToBuy, remaining);

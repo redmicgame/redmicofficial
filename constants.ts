@@ -465,6 +465,70 @@ export const TOUR_TICKET_PRICE_SUGGESTIONS: { [key: string]: number } = {
     'Stadiums': 120,
 };
 
+export const TOUR_TIER_CONFIG = {
+    'Small Halls': {
+        tiers: [1] as (1 | 2 | 3)[],
+        minPopularity: 20,
+        description: 'Intimate clubs & historic halls (Cap: 300 - 2,600)'
+    },
+    'Large Halls': {
+        tiers: [1, 2] as (1 | 2 | 3)[],
+        minPopularity: 40,
+        description: 'Theatres & large ballrooms (Cap: 2,000 - 9,500)'
+    },
+    'Arenas': {
+        tiers: [1, 2, 3] as (1 | 2 | 3)[],
+        minPopularity: 60,
+        description: 'Major sports arenas & coliseums (Cap: 11,000 - 23,500)'
+    },
+    'Stadiums': {
+        tiers: [1, 2, 3] as (1 | 2 | 3)[],
+        minPopularity: 80,
+        description: 'World-class open-air & domed stadiums (Cap: 39,000 - 87,000+)'
+    }
+};
+
+export const TIER_BASE_SELLOUT_PRICES: Record<1 | 2 | 3, number> = {
+    1: 750,
+    2: 500,
+    3: 300,
+};
+
+// Calculates artist tour rating: Popularity (50%), Hype (40%), Public Image (10%)
+export const calculateTourPower = (popularity: number = 0, hype: number = 0, publicImage: number = 50): number => {
+    return (popularity * 0.50) + (hype * 0.40) + (publicImage * 0.10);
+};
+
+// Calculates max price where tour can fully sell out
+export const calculateMaxSelloutPrice = (
+    tier: 1 | 2 | 3,
+    popularity: number = 0,
+    hype: number = 0,
+    publicImage: number = 50
+): number => {
+    const power = calculateTourPower(popularity, hype, publicImage);
+    const powerRatio = Math.max(0.01, power / 100);
+    const basePrice = TIER_BASE_SELLOUT_PRICES[tier] || 300;
+    return Math.max(10, Math.round(basePrice * powerRatio));
+};
+
+// Calculates sellout ratio: 1.0 if ticketPrice <= maxSelloutPrice, lower as price rises
+export const calculateTourSelloutRatio = (
+    ticketPrice: number,
+    tier: 1 | 2 | 3,
+    popularity: number = 0,
+    hype: number = 0,
+    publicImage: number = 50
+): number => {
+    const maxPrice = calculateMaxSelloutPrice(tier, popularity, hype, publicImage);
+    if (ticketPrice <= maxPrice) {
+        return 1.0; // Fully sells out!
+    }
+    // Anything above that wouldn't sell out and the higher the worse it doesn't sell
+    const ratio = maxPrice / ticketPrice;
+    return Math.max(0.05, Math.min(0.98, Math.pow(ratio, 1.4)));
+};
+
 export const VENUES = {
     'Small Halls': [
         { name: 'The Roxy', city: 'Los Angeles', capacity: 500, region: 'North America' }, { name: 'The Bowery Ballroom', city: 'New York', capacity: 575, region: 'North America' }, { name: 'The Independent', city: 'San Francisco', capacity: 500, region: 'North America' }, { name: 'Lincoln Hall', city: 'Chicago', capacity: 500, region: 'North America' }, { name: 'The Masquerade', city: 'Atlanta', capacity: 1000, region: 'North America' },
