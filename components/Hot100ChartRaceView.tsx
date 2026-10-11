@@ -402,21 +402,35 @@ const Hot100ChartRaceView: React.FC = () => {
         setSpotifyInputError('');
 
         try {
-            const res = await fetch(`/api/spotify/track?url=${encodeURIComponent(url.trim())}`);
-            const data = await res.json();
-            if (data.error) throw new Error(data.error);
+            const trimmedUrl = url.trim();
+            const trackIdMatch = trimmedUrl.match(/track[/:]([a-zA-Z0-9]+)/) || trimmedUrl.match(/spotify:track:([a-zA-Z0-9]+)/);
+            const trackId = trackIdMatch ? trackIdMatch[1] : (trimmedUrl.startsWith('http') ? '' : trimmedUrl);
+
+            const res = await fetch(`/api/spotify/track?url=${encodeURIComponent(trimmedUrl)}`);
+            let data: any = null;
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(`Spotify service unavailable (${res.status}). Please check the link.`);
+            }
+
+            if (!res.ok || data?.error) {
+                throw new Error(data?.error || `Failed to fetch Spotify track (${res.status})`);
+            }
 
             if (!data.previewUrl) {
                 throw new Error('This track does not have an audio preview on Spotify.');
             }
 
-            const displayName = data.title ? `${data.title} - ${data.artist}` : 'Spotify Track';
+            const displayName = data.title ? `${data.title}${data.artist ? ` - ${data.artist}` : ''}` : 'Spotify Track';
             const audioEntry: SongAudioEntry = {
                 type: 'spotify',
                 url: data.previewUrl,
                 name: displayName,
-                spotifyTrackId: data.id,
-                spotifyUrl: data.spotifyUrl || url.trim(),
+                spotifyTrackId: data.id || trackId,
+                spotifyUrl: data.spotifyUrl || trimmedUrl,
             };
 
             setAudioMap(prev => ({
