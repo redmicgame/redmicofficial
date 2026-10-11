@@ -841,6 +841,86 @@ const generateNewHits = (
   return hits;
 };
 
+export const SUPERSTAR_ARTISTS_CONFIG = [
+  { key: "ella langley", name: "Ella Langley", limit: 1 },
+  { key: "drake", name: "Drake", limit: 1 },
+  { key: "taylor swift", name: "Taylor Swift", limit: 10 },
+] as const;
+
+export const resolveActiveSuperstarHits = (
+  currentActive: Record<string, string[]> | undefined,
+  currentBillboard: ChartEntry[],
+  allNpcSongs: { uniqueId: string; artist: string; basePopularity?: number }[],
+  chartHistory: Record<string, any> = {}
+): Record<string, string[]> => {
+  const result: Record<string, string[]> = {
+    "ella langley": [],
+    "drake": [],
+    "taylor swift": [],
+  };
+
+  const billboardSongIds = new Set((currentBillboard || []).map((e) => e.uniqueId));
+
+  for (const config of SUPERSTAR_ARTISTS_CONFIG) {
+    const artistKey = config.key;
+    const limit = config.limit;
+    const existingList = currentActive?.[artistKey] || [];
+
+    // Keep songs that are STILL on the Billboard Hot 100 (haven't left yet)
+    const stillActiveOnBillboard: string[] = [];
+    for (const songId of existingList) {
+      if (billboardSongIds.has(songId)) {
+        stillActiveOnBillboard.push(songId);
+      }
+      // If not on billboardSongIds, it has left the chart!
+    }
+
+    // If existingList was not set (e.g. initial game start) or has room, also consider current billboard entries
+    if (stillActiveOnBillboard.length < limit) {
+      const billboardEntriesForArtist = (currentBillboard || [])
+        .filter((entry) => {
+          const l = (entry.artist || "").toLowerCase();
+          return l.includes(artistKey) && !entry.isPlayerSong && !stillActiveOnBillboard.includes(entry.uniqueId);
+        })
+        .sort((a, b) => a.rank - b.rank); // lowest rank number (best charting) first
+
+      for (const entry of billboardEntriesForArtist) {
+        if (stillActiveOnBillboard.length >= limit) break;
+        stillActiveOnBillboard.push(entry.uniqueId);
+      }
+    }
+
+    // If still under limit (e.g. previous hit left the chart, or none yet), select new candidate song(s) to become their hit!
+    if (stillActiveOnBillboard.length < limit) {
+      const needed = limit - stillActiveOnBillboard.length;
+      const candidates = allNpcSongs
+        .filter((song) => {
+          const l = (song.artist || "").toLowerCase();
+          if (!l.includes(artistKey)) return false;
+          if (stillActiveOnBillboard.includes(song.uniqueId)) return false;
+          const hist = chartHistory[song.uniqueId];
+          // Must not have already completed a chart run in the past
+          if (hist && hist.weeksOnChart > 0) return false;
+          return true;
+        })
+        .sort((a, b) => (b.basePopularity || 0) - (a.basePopularity || 0));
+
+      for (let i = 0; i < needed && i < candidates.length; i++) {
+        const picked = candidates[i];
+        stillActiveOnBillboard.push(picked.uniqueId);
+        // Elevate basePopularity for this designated hit so it debuts strongly
+        picked.basePopularity = Math.floor(
+          135_000_000 * Math.exp(-0.01 * Math.floor(Math.random() * 5)),
+        );
+      }
+    }
+
+    result[artistKey] = stillActiveOnBillboard.slice(0, limit);
+  }
+
+  return result;
+};
+
 const NPC_ALBUM_ADJECTIVES = [
   "Eternal",
   "Chromatic",
@@ -1609,6 +1689,7 @@ const initialState: GameState = {
   npcAlbums: [],
   soundtrackAlbums: [],
   billboardHot100: [],
+  activeSuperstarHits: { "drake": [], "ella langley": [], "taylor swift": [] },
   billboardTopAlbums: [],
   albumChartHistory: {},
   chartHistory: {},
@@ -3824,8 +3905,37 @@ The Red Mic Team`,
 
       // Add them back to the list
       newNpcsList.unshift(...newlyGeneratedNpcs);
+
+      // Resolve active superstar hits (Drake: max 1, Ella Langley: max 1, Taylor Swift: max 10)
+      // A hit stays active while charting on the Billboard Hot 100.
+      // Once it leaves Billboard Hot 100, they can have one again.
+      // The rest of their songs are normal.
+      const currentActiveSuperstarHits = resolveActiveSuperstarHits(
+        state.activeSuperstarHits,
+        state.billboardHot100,
+        newNpcsList,
+        state.chartHistory
+      );
+      const activeSuperstarHitIds = new Set<string>([
+        ...(currentActiveSuperstarHits["ella langley"] || []),
+        ...(currentActiveSuperstarHits["drake"] || []),
+        ...(currentActiveSuperstarHits["taylor swift"] || []),
+      ]);
+
       // Optional: simulate decay so old hits drop
-      newNpcsList = newNpcsList.map(npc => ({...npc, basePopularity: Math.floor(npc.basePopularity * (0.97 + Math.random() * 0.02))}));
+      newNpcsList = newNpcsList.map((npc) => {
+        const isSuperstar = activeSuperstarHitIds.has(npc.uniqueId);
+        const chartHist = state.chartHistory?.[npc.uniqueId];
+        const weeksOn = chartHist?.weeksOnChart || 0;
+        if (isSuperstar && weeksOn < 8) {
+          const decayMult = weeksOn <= 4 ? 0.996 + Math.random() * 0.004 : 0.988 + Math.random() * 0.008;
+          return { ...npc, basePopularity: Math.floor(npc.basePopularity * decayMult) };
+        }
+        return {
+          ...npc,
+          basePopularity: Math.floor(npc.basePopularity * (0.97 + Math.random() * 0.02)),
+        };
+      });
       newNpcsList.sort((a, b) => b.basePopularity - a.basePopularity);
 
       // NPC Album Churn Logic
@@ -10320,16 +10430,16 @@ It is now available on your Spotify profile.
       const songTargetStreams: number[] = [];
       for (let i = 0; i < newNpcsWithReleases.length; i++) {
         let act = 0;
-        if (i === 0) act = 40000000 + Math.random() * 15000000;       // 40m-55m
-        else if (i === 1) act = 34000000 + Math.random() * 8000000;   // 34m-42m
-        else if (i === 2) act = 30000000 + Math.random() * 6000000;   // 30m-36m
-        else if (i === 3) act = 27000000 + Math.random() * 5000000;   // 27m-32m
-        else if (i === 4) act = 25000000 + Math.random() * 3000000;   // 25m-28m
-        else if (i === 5) act = 24000000 + Math.random() * 2000000;   // 24m-26m (rank 6)
-        else if (i === 6) act = 23000000 + Math.random() * 1000000;   // 23m-24m
-        else if (i === 7) act = 22000000 + Math.random() * 1000000;   // 22m-23m
-        else if (i === 8) act = 21000000 + Math.random() * 1000000;   // 21m-22m
-        else if (i === 9) act = 20000000 + Math.random() * 1000000;   // 20m-21m
+        if (i === 0) act = 55000000 + Math.random() * 25000000;       // 55m-80m
+        else if (i === 1) act = 45000000 + Math.random() * 15000000;   // 45m-60m
+        else if (i === 2) act = 38000000 + Math.random() * 10000000;   // 38m-48m
+        else if (i === 3) act = 32000000 + Math.random() * 8000000;    // 32m-40m
+        else if (i === 4) act = 28000000 + Math.random() * 6000000;    // 28m-34m
+        else if (i === 5) act = 25000000 + Math.random() * 3000000;    // 25m-28m
+        else if (i === 6) act = 23000000 + Math.random() * 1000000;    // 23m-24m
+        else if (i === 7) act = 22000000 + Math.random() * 1000000;    // 22m-23m
+        else if (i === 8) act = 21000000 + Math.random() * 1000000;    // 21m-22m
+        else if (i === 9) act = 20000000 + Math.random() * 1000000;    // 20m-21m
         else if (i < 20) act = 16000000 + Math.random() * 3000000;    // 16m-19m
         else if (i < 40) act = 14000000 + Math.random() * 2000000;    // 14m-16m
         else if (i < 60) act = 12500000 + Math.random() * 1500000;    // 12.5m-14m
@@ -10349,13 +10459,24 @@ It is now available on your Spotify profile.
       });
 
       const npcChartContenders = newNpcsWithReleases.map((npc) => {
-        const rawWeeklyStreams = (state.date.year < 2008) ? 0 : (npcSongStreamMap.get(npc.uniqueId) || 500000);
+        let rawWeeklyStreams = (state.date.year < 2008) ? 0 : (npcSongStreamMap.get(npc.uniqueId) || 500000);
         let wUS = 40;
         let wCanada = 10;
         let wUK = 15;
         let wLatin = 15;
         let wAsia = 15;
         let wAfrica = 5;
+
+        const isSuperstar = activeSuperstarHitIds.has(npc.uniqueId);
+
+        if (isSuperstar && state.date.year >= 2008) {
+          const hist = state.chartHistory?.[npc.uniqueId];
+          const isDebutOrPeak = !hist || hist.weeksOnChart <= 8;
+          if (isDebutOrPeak) {
+            rawWeeklyStreams = Math.max(rawWeeklyStreams, Math.floor(55000000 + Math.random() * 30000000));
+          }
+          wUS *= 3.5;
+        }
 
         const gLower = (npc.genre || "").toLowerCase();
         if (gLower.includes("country")) wUS *= 2.5;
@@ -10760,7 +10881,18 @@ It is now available on your Spotify profile.
               possibleFormats.length,
               song.weeklyStreams > 15000000 ? 3 : song.weeklyStreams > 5000000 ? 2 : 1
             );
-            const npcFormats = possibleFormats.slice(0, countToPick);
+            const isSuperstarArtist = activeSuperstarHitIds.has(song.uniqueId);
+
+            let npcFormats = possibleFormats.slice(0, countToPick);
+            if (isSuperstarArtist) {
+              if (g.includes("country")) {
+                npcFormats = ["country", "hot_ac", "chr", "adult_hits"];
+              } else if (g.includes("hip hop") || g.includes("rap")) {
+                npcFormats = ["urban", "rhythmic", "chr", "hot_ac"];
+              } else {
+                npcFormats = ["chr", "hot_ac", "ac", "adult_hits", "country"];
+              }
+            }
 
             const radioEraBoost =
               state.date.year < 2010
@@ -10772,7 +10904,11 @@ It is now available on your Spotify profile.
             let targetPlays = Math.floor(
               song.weeklyStreams * 0.0025 * radioEraBoost,
             );
-            if (targetPlays > maxPlaysForRank) targetPlays = maxPlaysForRank;
+            if (isSuperstarArtist) {
+              targetPlays = Math.max(targetPlays, Math.floor(22000 + Math.random() * 8000));
+            } else if (targetPlays > maxPlaysForRank) {
+              targetPlays = maxPlaysForRank;
+            }
 
             const npcWeights = calculateMultiFormatWeights(song.genre || "", npcFormats);
             const npcPlaysMap: Record<string, number> = {};
@@ -10792,6 +10928,10 @@ It is now available on your Spotify profile.
               totalNpcPlays += fmtPlays;
               totalNpcImpr += fmtImpr;
             });
+
+            if (isSuperstarArtist) {
+              totalNpcImpr = Math.max(totalNpcImpr, Math.floor(100000000 + Math.random() * 50000000));
+            }
 
             rPlays = totalNpcPlays;
             rImpressions = totalNpcImpr;
@@ -10957,9 +11097,33 @@ It is now available on your Spotify profile.
         // Physical Sales Points: Single physical formats (CDs, vinyl, cassettes)
         const physicalPoints = songPhysicalSales * 60 * formula.physical;
 
+        const isSuperstar = activeSuperstarHitIds.has(song.uniqueId);
+
+        if (isSuperstar && !song.isPlayerSong) {
+          songDigitalSales += Math.floor(35000 + Math.random() * 40000);
+          songPhysicalSales += Math.floor(15000 + Math.random() * 25000);
+        }
+
         const rawPoints =
           streamPoints + radioPoints + digitalPoints + physicalPoints;
-        const points = rawPoints * 0.00001;
+        let points = rawPoints * 0.00001;
+
+        if (isSuperstar && !song.isPlayerSong) {
+          const hist = state.chartHistory?.[song.uniqueId];
+          const isDebut = !hist || hist.weeksOnChart === 0;
+          const weeksAtNo1 = hist?.weeksAtNo1 || 0;
+          const weeksOnChart = hist?.weeksOnChart || 0;
+
+          // Stronger debuts on Billboard Hot 100:
+          if (isDebut) {
+            points = Math.max(points, 520 + Math.random() * 150);
+          } else if (weeksAtNo1 >= 1 && weeksAtNo1 < 7) {
+            // Spend multiple weeks at #1!
+            points = Math.max(points, 480 + Math.random() * 120);
+          } else if (weeksOnChart < 8) {
+            points = Math.max(points, 430 + Math.random() * 100);
+          }
+        }
 
         return {
           ...song,
@@ -11052,6 +11216,13 @@ It is now available on your Spotify profile.
           points: Math.round(song.hot100Points || 0),
         });
       });
+
+      const newBillboardSongIds = new Set(newBillboardHot100.map((e) => e.uniqueId));
+      const finalActiveSuperstarHits: Record<string, string[]> = {
+        "ella langley": (currentActiveSuperstarHits["ella langley"] || []).filter((id) => newBillboardSongIds.has(id)),
+        "drake": (currentActiveSuperstarHits["drake"] || []).filter((id) => newBillboardSongIds.has(id)),
+        "taylor swift": (currentActiveSuperstarHits["taylor swift"] || []).filter((id) => newBillboardSongIds.has(id)),
+      };
 
       const artistsWithFirstChartEntry = new Set<string>();
 
@@ -16544,6 +16715,7 @@ Keep up the great work!
           artistsData: updatedArtistsData,
           spotifyPlaylists: newSpotifyPlaylists,
           billboardHot100: newBillboardHot100,
+          activeSuperstarHits: finalActiveSuperstarHits,
           billboardBubblingUnder25: newBillboardBubblingUnder25,
           bubblingUnderHistory: newBubblingUnderHistory,
           billboardTopAlbums: newBillboardTopAlbums,
@@ -17314,6 +17486,7 @@ Keep up the great work!
         artistsData: updatedArtistsData,
         spotifyPlaylists: newSpotifyPlaylists,
         billboardHot100: newBillboardHot100,
+        activeSuperstarHits: finalActiveSuperstarHits,
         billboardBubblingUnder25: newBillboardBubblingUnder25,
         bubblingUnderHistory: newBubblingUnderHistory,
         billboardTopAlbums: newBillboardTopAlbums,

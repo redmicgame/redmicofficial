@@ -2367,6 +2367,7 @@ export interface GameState {
   npcImages?: Record<string, string>;
   soundtrackAlbums: SoundtrackAlbum[];
   billboardHot100: ChartEntry[];
+  activeSuperstarHits?: Record<string, string[]>;
   billboardBubblingUnder25?: ChartEntry[];
   bubblingUnderHistory?: { [uniqueId: string]: number };
   billboardTopAlbums: AlbumChartEntry[];
