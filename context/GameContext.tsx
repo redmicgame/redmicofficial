@@ -1690,6 +1690,7 @@ const initialState: GameState = {
   soundtrackAlbums: [],
   billboardHot100: [],
   activeSuperstarHits: { "drake": [], "ella langley": [], "taylor swift": [] },
+  billboardHot100WeeklyArchive: [],
   billboardTopAlbums: [],
   albumChartHistory: {},
   chartHistory: {},
@@ -11179,10 +11180,16 @@ It is now available on your Spotify profile.
           if (rank === 1) {
             history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
           }
+          const currentRunEntry = { year: newDate.year, week: newDate.week, rank };
           if (history.chartRun) {
             history.chartRun.push(rank);
           } else {
             history.chartRun = [rank];
+          }
+          if (history.chartRunEntries) {
+            history.chartRunEntries.push(currentRunEntry);
+          } else {
+            history.chartRunEntries = [currentRunEntry];
           }
           if (!history.firstEntered) {
             history.firstEntered = { year: newDate.year, week: newDate.week };
@@ -11194,6 +11201,7 @@ It is now available on your Spotify profile.
             lastRank: rank,
             weeksAtNo1: rank === 1 ? 1 : 0,
             chartRun: [rank],
+            chartRunEntries: [{ year: newDate.year, week: newDate.week, rank }],
             firstEntered: { year: newDate.year, week: newDate.week },
           };
         }
@@ -11223,6 +11231,40 @@ It is now available on your Spotify profile.
         "drake": (currentActiveSuperstarHits["drake"] || []).filter((id) => newBillboardSongIds.has(id)),
         "taylor swift": (currentActiveSuperstarHits["taylor swift"] || []).filter((id) => newBillboardSongIds.has(id)),
       };
+
+      // Weekly archive of player Hot 100 charting entries for chart race videos
+      const playerSongIdsSet = new Set(
+        (allPlayerSongsFlat || []).map((s) => s.id)
+      );
+      const playerArtistNamesLower = [
+        ...(state.allPlayerArtists?.map((a) => a.name.toLowerCase()) || []),
+        state.soloArtist?.name?.toLowerCase(),
+        state.group?.name?.toLowerCase(),
+      ].filter((n): n is string => Boolean(n));
+
+      const playerHot100EntriesThisWeek = newBillboardHot100
+        .filter((entry) => 
+          entry.isPlayerSong || 
+          (entry.songId && playerSongIdsSet.has(entry.songId)) ||
+          playerSongIdsSet.has(entry.uniqueId) ||
+          playerArtistNamesLower.some((name) => (entry.artist || "").toLowerCase().includes(name))
+        )
+        .map((entry) => ({
+          uniqueId: entry.uniqueId,
+          title: entry.title,
+          artist: entry.artist,
+          coverArt: entry.coverArt,
+          rank: entry.rank,
+        }));
+
+      const newBillboardHot100WeeklyArchive = [
+        ...(state.billboardHot100WeeklyArchive || []),
+        {
+          year: newDate.year,
+          week: newDate.week,
+          entries: playerHot100EntriesThisWeek,
+        },
+      ];
 
       const artistsWithFirstChartEntry = new Set<string>();
 
@@ -16716,6 +16758,7 @@ Keep up the great work!
           spotifyPlaylists: newSpotifyPlaylists,
           billboardHot100: newBillboardHot100,
           activeSuperstarHits: finalActiveSuperstarHits,
+          billboardHot100WeeklyArchive: newBillboardHot100WeeklyArchive,
           billboardBubblingUnder25: newBillboardBubblingUnder25,
           bubblingUnderHistory: newBubblingUnderHistory,
           billboardTopAlbums: newBillboardTopAlbums,
@@ -17487,6 +17530,7 @@ Keep up the great work!
         spotifyPlaylists: newSpotifyPlaylists,
         billboardHot100: newBillboardHot100,
         activeSuperstarHits: finalActiveSuperstarHits,
+        billboardHot100WeeklyArchive: newBillboardHot100WeeklyArchive,
         billboardBubblingUnder25: newBillboardBubblingUnder25,
         bubblingUnderHistory: newBubblingUnderHistory,
         billboardTopAlbums: newBillboardTopAlbums,

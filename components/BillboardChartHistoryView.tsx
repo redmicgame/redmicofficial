@@ -210,6 +210,23 @@ const BillboardChartHistoryView: React.FC = () => {
                     {categoryTitle}
                 </div>
 
+                {/* Watch Hot 100 Chart Race Video Button */}
+                <button
+                    onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'hot100ChartRace' })}
+                    className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-sm sm:text-base py-3.5 px-6 rounded-2xl flex items-center justify-between shadow-[0_4px_25px_rgba(239,68,68,0.35)] transition-all hover:scale-[1.01] active:scale-[0.99] mb-4 border border-rose-400/40 group"
+                >
+                    <div className="flex items-center gap-2.5">
+                        <span className="text-xl">🎬</span>
+                        <div className="text-left">
+                            <div className="leading-tight tracking-wide">HOT 100 CHART RACE VIDEO</div>
+                            <div className="text-[11px] text-amber-200 font-semibold opacity-90">Watch animated video of your whole charting history</div>
+                        </div>
+                    </div>
+                    <span className="text-xs bg-black/40 px-3 py-1 rounded-full font-bold uppercase tracking-wider text-amber-300 border border-amber-400/30 group-hover:bg-black/60 transition-colors">
+                        Red Mic
+                    </span>
+                </button>
+
                 {/* 3 Metric Summary Boxes */}
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     <div className="bg-[#09120c] rounded-2xl border border-zinc-800/80 p-3 sm:p-4 text-center shadow-lg">

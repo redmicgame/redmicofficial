@@ -226,6 +226,13 @@ const ChartHistoryView: React.FC = () => {
                     {gameState.date.year >= 2016 && <option value="ukSinglesChart">UK Official Singles Chart</option>}
                     {gameState.date.year >= 2016 && <option value="ukAlbumsChart">UK Official Albums Chart</option>}
                 </select>
+
+                <button
+                    onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'hot100ChartRace' })}
+                    className="w-full mt-3 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-sm py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99]"
+                >
+                    <span>🎬 Watch Hot 100 Chart Race Video</span>
+                </button>
             </div>
 
             <main className="p-4">
@@ -242,10 +249,7 @@ const ChartHistoryView: React.FC = () => {
                         
                         const getChartRunString = (run?: number[]) => {
                             if (!run || run.length === 0) return 'N/A';
-                            if (run.length <= 10) return run.map(r => `#${r}`).join(' - ');
-                            const first5 = run.slice(0, 5).map(r => `#${r}`).join(' - ');
-                            const last5 = run.slice(-5).map(r => `#${r}`).join(' - ');
-                            return `${first5} - ... - ${last5}`;
+                            return run.map(r => `#${r}`).join(' → ');
                         };
 
                         return (

@@ -924,6 +924,12 @@ export interface AlbumChartEntry {
   weeklyPureSales?: number;
 }
 
+export interface ChartRunEntry {
+  year: number;
+  week: number;
+  rank: number;
+}
+
 export interface ChartHistory {
   [uniqueId: string]: {
     peak: number;
@@ -932,6 +938,7 @@ export interface ChartHistory {
     weeksAtNo1?: number;
     weeksAtPeak?: number;
     chartRun?: number[];
+    chartRunEntries?: ChartRunEntry[];
     firstEntered?: { year: number; week: number };
     peakDate?: { year: number; week: number };
   };
@@ -1540,6 +1547,7 @@ export type GameView =
   | "createOnlyFansPost"
   | "chartHistory"
   | "billboardChartHistory"
+  | "hot100ChartRace"
   | "ukChartHistory"
   | "albumSalesChart"
   | "labels"
@@ -2368,6 +2376,11 @@ export interface GameState {
   soundtrackAlbums: SoundtrackAlbum[];
   billboardHot100: ChartEntry[];
   activeSuperstarHits?: Record<string, string[]>;
+  billboardHot100WeeklyArchive?: {
+    year: number;
+    week: number;
+    entries: { uniqueId: string; title: string; artist: string; coverArt: string; rank: number }[];
+  }[];
   billboardBubblingUnder25?: ChartEntry[];
   bubblingUnderHistory?: { [uniqueId: string]: number };
   billboardTopAlbums: AlbumChartEntry[];
