@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { VIEW_INCOME_MULTIPLIER } from '../constants';
 import { Video } from '../types';
+import { calculateYouTubeLikes, getYouTubeLikeRatio, getYouTubeEngagementPerformance } from '../utils/youtubeViews';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import ThumbUpIcon from './icons/ThumbUpIcon';
@@ -192,7 +193,10 @@ const YouTubeStudioView: React.FC = () => {
                             <h3 className="text-lg font-bold">Latest published content</h3>
                             <div className="space-y-3">
                                 {latestVideos.map(video => {
-                                    const likes = Math.floor(video.views * 0.2);
+                                    const song = activeArtistData?.songs.find(s => s.id === video.songId);
+                                    const hype = song?.hype ?? activeArtistData?.hype ?? 50;
+                                    const likes = video.likes ?? calculateYouTubeLikes(video.views, hype);
+                                    const engagement = getYouTubeEngagementPerformance(hype);
                                     const comments = Math.floor(video.views / (Math.random() * 500 + 400));
                                     const weeksSinceRelease = weeksAgo(video.releaseDate);
 
@@ -210,7 +214,7 @@ const YouTubeStudioView: React.FC = () => {
                                                     <ChartBarIcon className="w-4 h-4 text-zinc-400" />
                                                     <span>{formatNumber(video.views)}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5">
+                                                <div className="flex items-center gap-1.5" title={`${likes.toLocaleString()} likes (${engagement.ratioPercent} • ${engagement.tier})`}>
                                                     <ThumbUpIcon className="w-4 h-4 text-zinc-400" />
                                                     <span>{formatNumber(likes)}</span>
                                                 </div>
@@ -264,6 +268,10 @@ const YouTubeStudioView: React.FC = () => {
                                 {filteredVideos.map(video => {
                                     const lastWeekViews = video.lastWeekViews || 0;
                                     const lastWeekMoney = yppActive ? lastWeekViews * VIEW_INCOME_MULTIPLIER : 0;
+                                    const videoSong = activeArtistData?.songs.find(s => s.id === video.songId);
+                                    const videoHype = videoSong?.hype ?? activeArtistData?.hype ?? 50;
+                                    const videoLikes = video.likes ?? calculateYouTubeLikes(video.views, videoHype);
+                                    const videoEngagement = getYouTubeEngagementPerformance(videoHype);
 
                                     return (
                                         <div 
@@ -290,10 +298,14 @@ const YouTubeStudioView: React.FC = () => {
                                                     Released Y{video.releaseDate.year} W{video.releaseDate.week} ({weeksAgo(video.releaseDate)} weeks ago)
                                                 </p>
 
-                                                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-xs">
+                                                <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">
                                                     <div>
                                                         <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Total Views</p>
                                                         <p className="font-bold text-zinc-100">{formatNumber(video.views)}</p>
+                                                    </div>
+                                                    <div title={`${videoLikes.toLocaleString()} likes (${videoEngagement.ratioPercent} • ${videoEngagement.tier})`}>
+                                                        <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Likes ({videoEngagement.ratioPercent})</p>
+                                                        <p className="font-bold text-zinc-100">{formatNumber(videoLikes)}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-[10px] text-zinc-400 uppercase tracking-wider">Last Week Views</p>
@@ -461,45 +473,59 @@ const YouTubeStudioView: React.FC = () => {
                                 <span className="text-xs font-normal text-zinc-400">{editingVideo.type}</span>
                             </h3>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1">
-                                    <p className="text-xs text-zinc-400">Total Views</p>
-                                    <p className="text-lg font-bold text-white">{formatNumber(editingVideo.views)}</p>
-                                </div>
+                            {(() => {
+                                const editSong = activeArtistData?.songs.find(s => s.id === editingVideo.songId);
+                                const editHype = editSong?.hype ?? activeArtistData?.hype ?? 50;
+                                const editLikes = editingVideo.likes ?? calculateYouTubeLikes(editingVideo.views, editHype);
+                                const editEngagement = getYouTubeEngagementPerformance(editHype);
 
-                                <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1">
-                                    <p className="text-xs text-zinc-400">Last Week Views</p>
-                                    <p className="text-lg font-bold text-sky-400">+{formatNumber(editingVideo.lastWeekViews || 0)}</p>
-                                </div>
-
-                                <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1 col-span-2">
-                                    <div className="flex justify-between items-center">
-                                        <p className="text-xs text-zinc-400">Last Week Earnings</p>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${yppActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                            {yppActive ? 'Monetized' : 'Monetization Off'}
-                                        </span>
-                                    </div>
-                                    {yppActive ? (
-                                        <p className="text-xl font-bold text-green-400">
-                                            ${formatNumber((editingVideo.lastWeekViews || 0) * VIEW_INCOME_MULTIPLIER)}
-                                        </p>
-                                    ) : (
-                                        <div>
-                                            <p className="text-xl font-bold text-zinc-500">$0.00</p>
-                                            <p className="text-[11px] text-zinc-400 mt-0.5">
-                                                Join YouTube Partner Program (Earn tab) to monetize this video.
-                                            </p>
+                                return (
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1">
+                                            <p className="text-xs text-zinc-400">Total Views</p>
+                                            <p className="text-lg font-bold text-white">{formatNumber(editingVideo.views)}</p>
                                         </div>
-                                    )}
-                                </div>
 
-                                {editingVideo.firstWeekViews !== undefined && (
-                                    <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1 col-span-2">
-                                        <p className="text-xs text-zinc-400">First Week Debut Views</p>
-                                        <p className="text-md font-bold text-purple-400">{formatNumber(editingVideo.firstWeekViews)}</p>
+                                        <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1" title={`${editEngagement.tier} (${editEngagement.ratioPercent})`}>
+                                            <p className="text-xs text-zinc-400">Likes ({editEngagement.ratioPercent})</p>
+                                            <p className="text-lg font-bold text-white">{formatNumber(editLikes)}</p>
+                                        </div>
+
+                                        <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1">
+                                            <p className="text-xs text-zinc-400">Last Week Views</p>
+                                            <p className="text-lg font-bold text-sky-400">+{formatNumber(editingVideo.lastWeekViews || 0)}</p>
+                                        </div>
+
+                                        <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1 col-span-3">
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-xs text-zinc-400">Last Week Earnings</p>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${yppActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                    {yppActive ? 'Monetized' : 'Monetization Off'}
+                                                </span>
+                                            </div>
+                                            {yppActive ? (
+                                                <p className="text-xl font-bold text-green-400">
+                                                    ${formatNumber((editingVideo.lastWeekViews || 0) * VIEW_INCOME_MULTIPLIER)}
+                                                </p>
+                                            ) : (
+                                                <div>
+                                                    <p className="text-xl font-bold text-zinc-500">$0.00</p>
+                                                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                                                        Join YouTube Partner Program (Earn tab) to monetize this video.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {editingVideo.firstWeekViews !== undefined && (
+                                            <div className="bg-[#282828] p-3 rounded-xl border border-white/5 space-y-1 col-span-3">
+                                                <p className="text-xs text-zinc-400">First Week Debut Views</p>
+                                                <p className="text-md font-bold text-purple-400">{formatNumber(editingVideo.firstWeekViews)}</p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Action Buttons */}

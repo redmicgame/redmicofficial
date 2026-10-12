@@ -2660,38 +2660,54 @@ function resolveSingleArtistImage(name: string): string | undefined {
   return undefined;
 }
 
-export function getArtistImage(artistName?: string, coverArtFallback?: string): string {
+export function getArtistImage(artistName?: string, coverArtFallback?: string, isPlayer?: boolean): string {
   const hasValidFallback = coverArtFallback && !isBrokenOrGenericCover(coverArtFallback);
 
+  // 1. If a valid custom cover art or profile picture was provided, ALWAYS prioritize it!
+  // This prevents player songs, albums, and chart history from having their cover art overridden by
+  // an NPC's face when the player shares an artist name with an NPC.
+  if (hasValidFallback) {
+    return coverArtFallback;
+  }
+
   if (!artistName || !artistName.trim()) {
-    if (hasValidFallback) return coverArtFallback;
+    if (coverArtFallback && coverArtFallback.trim() !== "") return coverArtFallback;
     return MUSIC_COVER_FALLBACKS[0];
   }
 
   const rawName = artistName.trim();
 
-  // 1. Try resolving direct artist name or alias
+  // 2. If this is explicitly a player artist / song, do NOT resolve to an NPC artist profile picture
+  if (isPlayer) {
+    if (coverArtFallback && coverArtFallback.trim() !== "") {
+      return coverArtFallback;
+    }
+    let hash = 0;
+    for (let i = 0; i < rawName.length; i++) {
+      hash = (hash << 5) - hash + rawName.charCodeAt(i);
+      hash |= 0;
+    }
+    const index = Math.abs(hash) % MUSIC_COVER_FALLBACKS.length;
+    return MUSIC_COVER_FALLBACKS[index];
+  }
+
+  // 3. For NPC artists (when isPlayer is false or undefined): Try resolving direct artist name or alias
   const directMatch = resolveSingleArtistImage(rawName);
   if (directMatch) return directMatch;
 
-  // 2. Collab / feature split: "Artist A, Artist B", "Artist A feat. Artist B", etc.
+  // 4. Collab / feature split: "Artist A, Artist B", "Artist A feat. Artist B", etc.
   const parts = rawName.split(/\s*(?:,\s*|\s+(?:feat\.?|ft\.?|featuring|with|and|&|x|\+|\/)\s+)\s*/i).map(p => p.trim()).filter(Boolean);
   for (const part of parts) {
     const partMatch = resolveSingleArtistImage(part);
     if (partMatch) return partMatch;
   }
 
-  // 3. If a valid custom cover art was provided (e.g., custom album cover art created by player), use it
-  if (hasValidFallback) {
-    return coverArtFallback;
-  }
-
-  // 4. If coverArtFallback was provided and not totally empty and not broken, return it
+  // 5. If coverArtFallback was provided and not totally empty and not broken, return it
   if (coverArtFallback && coverArtFallback.trim() !== "" && !isBrokenOrGenericCover(coverArtFallback)) {
     return coverArtFallback;
   }
 
-  // 5. Deterministic fallback based on artist name hash
+  // 6. Deterministic fallback based on artist name hash
   let hash = 0;
   for (let i = 0; i < rawName.length; i++) {
     hash = (hash << 5) - hash + rawName.charCodeAt(i);

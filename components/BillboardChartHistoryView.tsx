@@ -192,10 +192,10 @@ const BillboardChartHistoryView: React.FC = () => {
                 {/* Artist Portrait Card */}
                 <div className="relative w-full aspect-square max-w-sm mx-auto mb-6 rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/20 bg-zinc-900">
                     <img
-                        src={getArtistImage(activeArtist.name, activeArtist.image)}
+                        src={getArtistImage(activeArtist.name, activeArtist.image, true)}
                         alt={activeArtist.name}
                         onError={(e) => {
-                            const fallback = getArtistImage(activeArtist.name);
+                            const fallback = activeArtist.image || getArtistImage(activeArtist.name, undefined, true);
                             if (e.currentTarget.src !== fallback) {
                                 e.currentTarget.src = fallback;
                             }
@@ -317,10 +317,10 @@ const BillboardChartHistoryView: React.FC = () => {
                                         {/* Song/Album Title and Artist Header */}
                                         <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
                                             <img
-                                                src={getArtistImage(item.artist, item.coverArt)}
+                                                src={getArtistImage(item.artist, item.coverArt, true)}
                                                 alt={item.title}
                                                 onError={(e) => {
-                                                    const fallback = getArtistImage(item.artist);
+                                                    const fallback = item.coverArt || activeArtist.image || getArtistImage(item.artist, undefined, true);
                                                     if (e.currentTarget.src !== fallback) {
                                                         e.currentTarget.src = fallback;
                                                     }

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { VIDEO_COSTS, NPC_ARTIST_NAMES, LABELS } from '../constants';
-import { calculateYouTubeViews } from '../utils/youtubeViews';
+import { calculateYouTubeViews, calculateYouTubeLikes, getYouTubeEngagementPerformance } from '../utils/youtubeViews';
 import type { Video } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -165,6 +165,7 @@ const CreateVideoView: React.FC = () => {
             title,
             type: videoType,
             views: 0,
+            likes: 0,
             thumbnail: thumbnail,
             releaseDate: isScheduled ? { week: ((date.week + scheduledWeeks - 1) % 52) + 1, year: date.year + Math.floor((date.week + scheduledWeeks - 1) / 52) } : date,
             isScheduled: isScheduled,
@@ -263,6 +264,19 @@ const CreateVideoView: React.FC = () => {
                                 <p className="text-purple-400 font-bold text-base">
                                     ~{formatNumber(estimatedFirstWeek)} views
                                 </p>
+                                {(() => {
+                                    const hype = selectedSong?.hype ?? activeArtistData.hype ?? 50;
+                                    const estLikes = calculateYouTubeLikes(estimatedFirstWeek, hype);
+                                    const engagement = getYouTubeEngagementPerformance(hype);
+                                    return (
+                                        <>
+                                            <p className="text-zinc-400 font-medium">Est. 1st Week Likes:</p>
+                                            <p className="text-pink-400 font-bold text-base">
+                                                ~{formatNumber(estLikes)} likes ({engagement.ratioPercent} • {engagement.tier.split(' ')[0]})
+                                            </p>
+                                        </>
+                                    );
+                                })()}
                             </>
                         )}
                         <p className="text-zinc-400">Cost:</p><p className="text-red-400 font-medium">-${cost.toLocaleString()}</p>

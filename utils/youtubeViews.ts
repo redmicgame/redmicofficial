@@ -169,3 +169,52 @@ export function calculateYouTubeViews({
 
   return Math.max(0, Math.round(totalViews));
 }
+
+/**
+ * YouTube engagement like ratio based on hype:
+ * - 1%: Low (≤10 hype) -> 300,000 likes on 30M views
+ * - 2%: Average (11–24 hype) -> 600,000 likes on 30M views
+ * - 3%: Good (25–49 hype) -> 900,000 likes on 30M views
+ * - 4%: Very strong (50–69 hype) -> 1.2M likes on 30M views
+ * - 5%: Hit song (70–84 hype) -> 1.5M likes on 30M views
+ * - 7%: Huge fan reaction (85–94 hype) -> 2.1M likes on 30M views
+ * - 10%: Exceptional (95+ hype) -> 3.0M likes on 30M views
+ */
+export function getYouTubeLikeRatio(hype: number): number {
+  const safeHype = Math.max(0, Math.min(100, Math.round(hype)));
+  if (safeHype <= 10) return 0.01;
+  if (safeHype <= 24) return 0.02;
+  if (safeHype <= 49) return 0.03;
+  if (safeHype <= 69) return 0.04;
+  if (safeHype <= 84) return 0.05;
+  if (safeHype <= 94) return 0.07;
+  return 0.10;
+}
+
+export function getYouTubeEngagementPerformance(hype: number): {
+  tier: string;
+  ratio: number;
+  ratioPercent: string;
+} {
+  const safeHype = Math.max(0, Math.min(100, Math.round(hype)));
+  let tier = 'Exceptional (95+ hype)';
+  if (safeHype <= 10) tier = 'Low (≤10 hype)';
+  else if (safeHype <= 24) tier = 'Average (11–24 hype)';
+  else if (safeHype <= 49) tier = 'Good (25–49 hype)';
+  else if (safeHype <= 69) tier = 'Very strong (50–69 hype)';
+  else if (safeHype <= 84) tier = 'Hit song (70–84 hype)';
+  else if (safeHype <= 94) tier = 'Huge fan reaction (85–94 hype)';
+
+  const ratio = getYouTubeLikeRatio(safeHype);
+  return {
+    tier,
+    ratio,
+    ratioPercent: `${Math.round(ratio * 100)}%`,
+  };
+}
+
+export function calculateYouTubeLikes(views: number, hype: number): number {
+  const safeViews = Math.max(0, views);
+  const ratio = getYouTubeLikeRatio(hype);
+  return Math.floor(safeViews * ratio);
+}

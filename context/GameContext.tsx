@@ -110,7 +110,7 @@ import { generateWeeklyXContent, formatChartDataHot100Post } from "../utils/xCon
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
-import { calculateYouTubeViews } from "../utils/youtubeViews";
+import { calculateYouTubeViews, calculateYouTubeLikes } from "../utils/youtubeViews";
 
 function createGovernmentDivorceEmail(
   artistName: string,
@@ -3772,9 +3772,15 @@ The Red Mic Team`,
               };
             }
 
+            const totalDailyViews = video.views + dayViews;
+            const song = artistData.songs?.find((s) => s.id === video.songId);
+            const hype = song?.hype ?? artistData.hype ?? 50;
+            const likes = calculateYouTubeLikes(totalDailyViews, hype);
+
             return {
               ...video,
-              views: video.views + dayViews,
+              views: totalDailyViews,
+              likes,
               ...spotifyViewsData,
             };
           });
@@ -6975,9 +6981,14 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             };
           }
           
+          const totalNewViews = video.views + weeklyViews + initialArchiveBoost;
+          const hype = song?.hype ?? artistData.hype ?? 50;
+          const likes = calculateYouTubeLikes(totalNewViews, hype);
+          
           return {
             ...video,
-            views: video.views + weeklyViews + initialArchiveBoost,
+            views: totalNewViews,
+            likes,
             lastWeekViews: weeklyViews,
             ...firstWeekViewsData,
             ...spotifyViewsData,

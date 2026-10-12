@@ -136,10 +136,10 @@ const ChartHistoryView: React.FC = () => {
 
             <div className="relative h-64 sm:h-72">
                 <img 
-                    src={getArtistImage(activeArtist.name, chartProfilePic)} 
+                    src={getArtistImage(activeArtist.name, chartProfilePic || activeArtist.image, true)} 
                     alt={activeArtist.name} 
                     onError={(e) => {
-                        const fallback = getArtistImage(activeArtist.name);
+                        const fallback = chartProfilePic || activeArtist.image || getArtistImage(activeArtist.name, undefined, true);
                         if (e.currentTarget.src !== fallback) {
                             e.currentTarget.src = fallback;
                         }
@@ -170,10 +170,10 @@ const ChartHistoryView: React.FC = () => {
                             title="Tap to change profile picture"
                         >
                             <img
-                                src={getArtistImage(activeArtist.name, chartProfilePic)}
+                                src={getArtistImage(activeArtist.name, chartProfilePic || activeArtist.image, true)}
                                 alt={activeArtist.name}
                                 onError={(e) => {
-                                    const fallback = getArtistImage(activeArtist.name);
+                                    const fallback = chartProfilePic || activeArtist.image || getArtistImage(activeArtist.name, undefined, true);
                                     if (e.currentTarget.src !== fallback) {
                                         e.currentTarget.src = fallback;
                                     }

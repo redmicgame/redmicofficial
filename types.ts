@@ -346,6 +346,7 @@ export interface Video {
     | "Interview"
     | "Custom";
   views: number;
+  likes?: number;
   thumbnail: string;
   releaseDate: GameDate;
   isScheduled?: boolean;

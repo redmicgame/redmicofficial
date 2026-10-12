@@ -12,6 +12,7 @@ import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import { Video, Song, Release } from '../types';
 import ShoppingBagIcon from './icons/ShoppingBagIcon';
 import { LABELS, SUBSCRIBER_THRESHOLD_VERIFIED, VIEWS_THRESHOLD_VERIFIED } from '../constants';
+import { calculateYouTubeLikes, getYouTubeLikeRatio, getYouTubeEngagementPerformance } from '../utils/youtubeViews';
 
 const CancelIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -51,6 +52,9 @@ const DescriptionOverlay: React.FC<{ video: Video; onClose: () => void }> = ({ v
     }
     
     const storeItems = merch.slice(0, 3);
+    const hype = song?.hype ?? activeArtistData?.hype ?? 50;
+    const likes = video.likes ?? calculateYouTubeLikes(video.views, hype);
+    const engagement = getYouTubeEngagementPerformance(hype);
     
     return (
         <>
@@ -63,9 +67,9 @@ const DescriptionOverlay: React.FC<{ video: Video; onClose: () => void }> = ({ v
                 <div className="bg-zinc-800 rounded-xl p-4">
                     <h3 className="text-lg font-bold">{video.title}</h3>
                     <div className="grid grid-cols-3 gap-4 text-zinc-300 mt-4 text-center">
-                        <div>
-                            <p className="font-bold text-lg">{formatNumber(Math.floor(video.views * 0.01))}</p>
-                            <p className="text-xs text-zinc-400">Likes</p>
+                        <div title={`${engagement.tier} (${engagement.ratioPercent} like ratio)`}>
+                            <p className="font-bold text-lg">{formatNumber(likes)}</p>
+                            <p className="text-xs text-zinc-400">Likes ({engagement.ratioPercent})</p>
                         </div>
                         <div>
                             <p className="font-bold text-lg">{video.views.toLocaleString()}</p>
@@ -365,7 +369,10 @@ const YouTubeVideoDetailView: React.FC = () => {
         );
     }
 
-    const likes = Math.floor(video.views * 0.01);
+    const song = activeArtistData?.songs.find(s => s.id === video.songId);
+    const hype = song?.hype ?? activeArtistData?.hype ?? 50;
+    const likes = video.likes ?? calculateYouTubeLikes(video.views, hype);
+    const engagement = getYouTubeEngagementPerformance(hype);
     const timeAgo = (releaseDate: { week: number, year: number }, currentDate: { week: number, year: number }): string => {
         const weeksAgo = (currentDate.year * 52 + currentDate.week) - (releaseDate.year * 52 + releaseDate.week);
     
@@ -414,7 +421,10 @@ const YouTubeVideoDetailView: React.FC = () => {
 
                 <div className="flex gap-2 overflow-x-auto pb-2">
                     <div className="flex items-center bg-zinc-800 rounded-full flex-shrink-0">
-                        <button className="flex items-center gap-2 p-2 px-4 hover:bg-zinc-700 rounded-l-full">
+                        <button
+                            className="flex items-center gap-2 p-2 px-4 hover:bg-zinc-700 rounded-l-full"
+                            title={`${likes.toLocaleString()} likes (${engagement.ratioPercent} engagement ratio • ${engagement.tier})`}
+                        >
                             <ThumbUpIcon className="w-5 h-5"/>
                             <span className="text-sm font-semibold">{formatNumber(likes)}</span>
                         </button>

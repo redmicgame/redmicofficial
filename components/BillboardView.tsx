@@ -89,10 +89,10 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
                 </div>
                 
                 <img 
-                    src={getArtistImage(artist, coverArt)} 
+                    src={getArtistImage(artist, coverArt, isPlayerItem)} 
                     alt={title} 
                     onError={(e) => {
-                        const fallback = getArtistImage(artist);
+                        const fallback = coverArt || getArtistImage(artist, undefined, isPlayerItem);
                         if (e.currentTarget.src !== fallback) {
                             e.currentTarget.src = fallback;
                         }
