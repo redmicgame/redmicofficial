@@ -2331,6 +2331,27 @@ export interface ArtistData {
   filmingGig?: (ActingRole & { remainingWeeks: number; weeklyEvents?: string[]; soundtrackCover?: string; soundtrackSongId?: string; pay?: number }) | null;
   twitchStreams?: TwitchStreamSchedule[];
   tvAndFilmProjects?: TvAndFilmProject[];
+  pendingFycPosts?: FycBannerData[];
+  fycBanners?: FycBannerData[];
+}
+
+export interface FycSubmissionItem {
+  category: string;
+  itemName: string;
+  itemId?: string;
+}
+
+export interface FycBannerData {
+  id: string;
+  awardShow: 'AMAs' | 'BRITs' | 'GRAMMYs' | 'OSCARS' | 'Golden Globes';
+  awardShowTitle: string;
+  artistId: string;
+  artistName: string;
+  artistImage: string;
+  mainProjectName: string;
+  submissions: FycSubmissionItem[];
+  date: GameDate;
+  scheduledPostDate?: GameDate;
 }
 
 export interface RedCarpetLook {
@@ -2586,6 +2607,8 @@ export interface GameState {
   activeMoviePremiereOffer: { roleId?: string; roleTitle?: string; emailId?: string; } | null;
   allPlayerArtists?: (Artist | Group)[];
   activeGoldenGlobeRedCarpetOffer: { emailId: string } | null;
+  pendingFycPosts?: FycBannerData[];
+  fycBanners?: FycBannerData[];
 }
 
 export interface EncounterChoice {

@@ -21,6 +21,7 @@ import ImageIcon from "./icons/ImageIcon";
 import ConfirmationModal from "./ConfirmationModal";
 import XPremiumModal from "./XPremiumModal";
 import { SpotifySnapshotCard } from "./SpotifySnapshotCard";
+import { ForYourConsiderationBanner } from "./ForYourConsiderationBanner";
 import { getArtistImage } from "../constants";
 import { getSmartCommentTemplates } from "../utils/smartXFanContent";
 
@@ -473,6 +474,7 @@ export const Post: React.FC<{
   const isChartPost = post.image && post.image.startsWith("chart:");
   const isSnapshotPost = post.image && post.image.startsWith("snapshot:");
   const isLeaderboardPost = post.image && post.image.startsWith("leaderboard:");
+  const isFycPost = post.image && post.image.startsWith("fyc:");
   const isTmzPost = author.id === "tmz";
 
   const partnerOrChildDualImage = useMemo(() => {
@@ -506,7 +508,7 @@ export const Post: React.FC<{
         const kidImg =
           kid.photoUrl ||
           kid.image ||
-          (post.image && !post.image.startsWith("chart:") && !post.image.startsWith("snapshot:")
+          (post.image && !post.image.startsWith("chart:") && !post.image.startsWith("snapshot:") && !post.image.startsWith("fyc:")
             ? post.image
             : "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=500&h=500&fit=crop");
         return {
@@ -536,7 +538,7 @@ export const Post: React.FC<{
         const partnerImg =
           rel.image ||
           getArtistImage(rel.partnerName) ||
-          (post.image && !post.image.startsWith("chart:") && !post.image.startsWith("snapshot:")
+          (post.image && !post.image.startsWith("chart:") && !post.image.startsWith("snapshot:") && !post.image.startsWith("fyc:")
             ? post.image
             : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=500&fit=crop");
         return {
@@ -706,6 +708,10 @@ export const Post: React.FC<{
           <SpotifySnapshotCard dataString={post.image!} style={gameState.spotifySnapshotStyle} />
         ) : isLeaderboardPost ? (
           <LeaderboardGridCard dataString={post.image!} />
+        ) : isFycPost ? (
+          <div className="mt-2">
+            <ForYourConsiderationBanner dataString={post.image!} />
+          </div>
         ) : isTmzPost ? (
           <div
             onClick={() =>

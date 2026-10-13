@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
-import { Release, Song, BritCategoryName } from '../types';
+import { Release, Song, BritCategoryName, FycBannerData } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import BritAwardIcon from './icons/BritAwardIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
+import ForYourConsiderationBanner from './ForYourConsiderationBanner';
 
 const SubmitForBritsView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const { date } = gameState;
     const [selections, setSelections] = useState<{ [key in BritCategoryName]?: string }>({});
+    const [showBannerPreview, setShowBannerPreview] = useState(false);
 
     if (!activeArtistData || !activeArtist) return null;
 
@@ -75,6 +77,44 @@ const SubmitForBritsView: React.FC = () => {
         dispatch({ type: 'SUBMIT_FOR_BRITS', payload: { submissions, emailId } });
     };
 
+    const previewSubmissions = useMemo(() => {
+        return Object.entries(selections)
+            .filter(([_, itemId]) => !!itemId)
+            .map(([category, itemId]) => {
+                const cat = category as BritCategoryName;
+                let itemName = '';
+                if (cat === 'Artist of the Year' || cat === 'BRITs Rising Star' || cat === 'BRITs Best New Artist' || (cat.startsWith('Best ') && cat.endsWith(' Act'))) {
+                    const songMatch = eligibleSongs.find(s => s.id === itemId);
+                    const albumMatch = eligibleAlbums.find(a => a.id === itemId);
+                    if (songMatch) itemName = songMatch.title;
+                    else if (albumMatch) itemName = albumMatch.title;
+                    else itemName = activeArtist.name;
+                } else if (cat === 'British Album of the Year') {
+                    itemName = eligibleAlbums.find(a => a.id === itemId)?.title || activeArtist.name;
+                } else {
+                    itemName = eligibleSongs.find(s => s.id === itemId)?.title || activeArtist.name;
+                }
+                return { category: cat, itemName, itemId: itemId! };
+            });
+    }, [selections, activeArtist.name, eligibleAlbums, eligibleSongs]);
+
+    const albumSelection = previewSubmissions.find(s => s.category.includes('Album'));
+    const mainProjectName = albumSelection && albumSelection.itemName !== 'N/A' ? albumSelection.itemName : activeArtist.name;
+
+    const fycPreviewData: FycBannerData = {
+        id: 'preview',
+        awardShow: 'BRITs',
+        awardShowTitle: 'FOR YOUR BRIT AWARDS CONSIDERATION',
+        artistId: activeArtist.id,
+        artistName: activeArtist.name,
+        artistImage: activeArtist.image || activeArtistData.artistImages?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop',
+        mainProjectName,
+        submissions: previewSubmissions,
+        date,
+    };
+
+    const hasAnySelection = Object.keys(selections).length > 0;
+
     return (
         <div className="h-full w-full bg-zinc-950 text-white flex flex-col min-h-screen">
             {/* Header */}
@@ -101,14 +141,25 @@ const SubmitForBritsView: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <button
-                    onClick={handleSubmit}
-                    disabled={Object.keys(selections).length === 0}
-                    className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-red-900/30 transition-all text-sm"
-                >
-                    <CheckCircleIcon className="w-4 h-4" />
-                    Submit Entry
-                </button>
+                <div className="flex items-center gap-2">
+                    {hasAnySelection && (
+                        <button
+                            type="button"
+                            onClick={() => setShowBannerPreview(true)}
+                            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-red-500/20 text-red-200 border border-red-500/40 hover:bg-red-500/30 transition-colors"
+                        >
+                            <span>✨</span> Preview FYC
+                        </button>
+                    )}
+                    <button
+                        onClick={handleSubmit}
+                        disabled={!hasAnySelection}
+                        className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-red-600 to-blue-600 hover:from-red-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg shadow-red-900/30 transition-all text-sm"
+                    >
+                        <CheckCircleIcon className="w-4 h-4" />
+                        Submit Entry
+                    </button>
+                </div>
             </header>
 
             {/* Submission Form */}
@@ -284,17 +335,57 @@ const SubmitForBritsView: React.FC = () => {
                     })}
                 </div>
 
-                <div className="pt-4 flex justify-end">
-                    <button
-                        onClick={handleSubmit}
-                        disabled={Object.keys(selections).length === 0}
-                        className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 hover:from-red-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl shadow-red-900/30 transition-all text-base flex items-center justify-center gap-2"
-                    >
-                        <CheckCircleIcon className="w-5 h-5" />
-                        Submit {Object.keys(selections).length} Nomination{Object.keys(selections).length === 1 ? '' : 's'} for BRITs
-                    </button>
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800">
+                    <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+                        <span className="text-amber-400 font-semibold">Pop Base</span> will post your official 'For Your Consideration' banner on X next week.
+                    </p>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {hasAnySelection && (
+                            <button
+                                type="button"
+                                onClick={() => setShowBannerPreview(true)}
+                                className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/30 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+                            >
+                                <span>✨</span> FYC Banner
+                            </button>
+                        )}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!hasAnySelection}
+                            className="flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 hover:from-red-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl shadow-red-900/30 transition-all text-sm flex items-center justify-center gap-2"
+                        >
+                            <CheckCircleIcon className="w-5 h-5" />
+                            Submit {Object.keys(selections).length} Nomination{Object.keys(selections).length === 1 ? '' : 's'} for BRITs
+                        </button>
+                    </div>
                 </div>
             </main>
+
+            {/* Banner Preview Modal */}
+            {showBannerPreview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div className="relative max-w-xl w-full max-h-[92vh] overflow-y-auto rounded-3xl">
+                        <div className="flex justify-between items-center mb-3 px-2">
+                            <span className="text-xs font-bold uppercase tracking-widest text-amber-300">
+                                Official For Your Consideration Banner Preview
+                            </span>
+                            <button
+                                onClick={() => setShowBannerPreview(false)}
+                                className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1 rounded-full text-xs font-semibold"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <ForYourConsiderationBanner
+                            bannerData={fycPreviewData}
+                            isInteractive={false}
+                        />
+                        <p className="text-center text-xs text-zinc-400 mt-3">
+                            This banner will be published by Pop Base on X one week after submission.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

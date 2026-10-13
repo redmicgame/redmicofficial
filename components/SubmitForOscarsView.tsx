@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
-import { Song, OscarAward } from '../types';
+import { Song, OscarAward, FycBannerData } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import ForYourConsiderationBanner from './ForYourConsiderationBanner';
 
 type CategoryName = OscarAward['category'];
 
@@ -13,6 +14,7 @@ const SubmitForOscarsView: React.FC = () => {
     const [leadingSelection, setLeadingSelection] = useState<string>('');
     const [supportingSelection, setSupportingSelection] = useState<string>('');
     const [voiceSelection, setVoiceSelection] = useState<string>('');
+    const [showBannerPreview, setShowBannerPreview] = useState<boolean>(false);
 
     if (!activeArtistData || !activeArtist) return null;
 
@@ -82,13 +84,64 @@ const SubmitForOscarsView: React.FC = () => {
 
     const hasAnySelection = !!songSelection || !!leadingSelection || !!supportingSelection || !!voiceSelection;
 
+    const previewSubmissions = useMemo(() => {
+        const subs: { category: string; itemName: string; itemId?: string }[] = [];
+        if (songSelection) {
+            const song = activeArtistData.songs.find(s => s.id === songSelection);
+            if (song) subs.push({ category: 'Best Original Song', itemId: song.id, itemName: song.title });
+        }
+        if (leadingSelection) {
+            const role = (activeArtistData.actingRoles || []).find(r => r.id === leadingSelection);
+            if (role) subs.push({ category: 'Best Actor/Actress', itemId: role.id, itemName: role.title });
+        }
+        if (supportingSelection) {
+            const role = (activeArtistData.actingRoles || []).find(r => r.id === supportingSelection);
+            if (role) subs.push({ category: 'Best Supporting Actor/Actress', itemId: role.id, itemName: role.title });
+        }
+        if (voiceSelection) {
+            const role = (activeArtistData.actingRoles || []).find(r => r.id === voiceSelection);
+            if (role) subs.push({ category: 'Best Voice Actor/Actress', itemId: role.id, itemName: role.title });
+        }
+        return subs;
+    }, [songSelection, leadingSelection, supportingSelection, voiceSelection, activeArtistData.songs, activeArtistData.actingRoles]);
+
+    const mainProjectName = useMemo(() => {
+        const role = previewSubmissions.find(s => s.category.includes('Actor') || s.category.includes('Actress'));
+        if (role && role.itemName) return role.itemName;
+        const song = previewSubmissions.find(s => s.category === 'Best Original Song');
+        if (song && song.itemName) return song.itemName;
+        return activeArtist.name;
+    }, [previewSubmissions, activeArtist.name]);
+
+    const fycPreviewData: FycBannerData = {
+        id: 'preview',
+        awardShow: 'OSCARS',
+        awardShowTitle: 'FOR YOUR OSCAR® CONSIDERATION',
+        artistId: activeArtist.id,
+        artistName: activeArtist.name,
+        artistImage: activeArtist.image || activeArtistData.artistImages?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop',
+        mainProjectName,
+        submissions: previewSubmissions,
+        date,
+    };
+
     return (
          <div className="h-full w-full bg-zinc-900 flex flex-col">
-            <header className="p-4 flex items-center gap-4 sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
-                <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'inbox'})} className="p-2 rounded-full hover:bg-white/10">
-                    <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-                <h1 className="text-2xl font-bold">Oscar Submissions</h1>
+            <header className="p-4 flex items-center justify-between sticky top-0 bg-zinc-900/80 backdrop-blur-sm z-10 border-b border-zinc-700/50">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => dispatch({type: 'CHANGE_VIEW', payload: 'inbox'})} className="p-2 rounded-full hover:bg-white/10">
+                        <ArrowLeftIcon className="w-6 h-6" />
+                    </button>
+                    <h1 className="text-2xl font-bold">Oscar Submissions</h1>
+                </div>
+                {hasAnySelection && (
+                    <button
+                        onClick={() => setShowBannerPreview(true)}
+                        className="px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5"
+                    >
+                        <span>✨</span> Preview FYC Banner
+                    </button>
+                )}
             </header>
             
             <main className="flex-grow p-4 space-y-6 overflow-y-auto">
@@ -164,11 +217,55 @@ const SubmitForOscarsView: React.FC = () => {
                 </div>
             </main>
 
-            <div className="p-4 border-t border-zinc-700/50">
-                <button onClick={handleSubmit} disabled={!hasAnySelection} className="w-full h-12 bg-[#d4af37] hover:bg-[#c4a132] text-black font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-[#d4af37]/20 disabled:bg-zinc-600 disabled:text-zinc-400">
-                    Submit to The Academy
-                </button>
+            <div className="p-4 border-t border-zinc-700/50 bg-zinc-950/40">
+                <div className="flex gap-2">
+                    {hasAnySelection && (
+                        <button
+                            type="button"
+                            onClick={() => setShowBannerPreview(true)}
+                            className="h-12 px-5 bg-zinc-800 hover:bg-zinc-700 text-[#d4af37] border border-[#d4af37]/30 font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span>✨</span> FYC Banner
+                        </button>
+                    )}
+                    <button
+                        onClick={handleSubmit}
+                        disabled={!hasAnySelection}
+                        className="flex-1 h-12 bg-[#d4af37] hover:bg-[#c4a132] text-black font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-[#d4af37]/20 disabled:bg-zinc-600 disabled:text-zinc-400"
+                    >
+                        Submit to The Academy
+                    </button>
+                </div>
+                <p className="text-center text-xs text-zinc-400 mt-2.5 flex items-center justify-center gap-1.5">
+                    <span className="text-amber-400 font-semibold">Pop Base</span> will post your official 'For Your Consideration' banner on X next week.
+                </p>
             </div>
+
+            {/* Banner Preview Modal */}
+            {showBannerPreview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div className="relative max-w-xl w-full max-h-[92vh] overflow-y-auto rounded-3xl">
+                        <div className="flex justify-between items-center mb-3 px-2">
+                            <span className="text-xs font-bold uppercase tracking-widest text-[#d4af37]">
+                                Official For Your Consideration Banner Preview
+                            </span>
+                            <button
+                                onClick={() => setShowBannerPreview(false)}
+                                className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1 rounded-full text-xs font-semibold"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <ForYourConsiderationBanner
+                            bannerData={fycPreviewData}
+                            isInteractive={false}
+                        />
+                        <p className="text-center text-xs text-zinc-400 mt-3">
+                            This banner will be published by Pop Base on X one week after submission.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

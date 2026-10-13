@@ -71,6 +71,7 @@ import type {
   ActingRole,
   InstagramChannelMessage,
   InstagramChannelReaction,
+  FycBannerData,
 } from "../types";
 import { generateInstagramChannelReactions, calculateReactionGrowthDuration } from "../utils/instagramChannel";
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from "../utils/relationshipUtils";
@@ -9228,6 +9229,51 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             (artistData.spotifyFollowers || 0) + spotifyPassiveGain;
 
           artistData.xPosts.unshift(...newPosts);
+
+          // Pop Base "For Your Consideration" (FYC) Banners
+          if (artistData.pendingFycPosts && artistData.pendingFycPosts.length > 0) {
+            const dueFycPosts: FycBannerData[] = [];
+            const remainingFycPosts: FycBannerData[] = [];
+
+            for (const fyc of artistData.pendingFycPosts) {
+              const sched = fyc.scheduledPostDate;
+              const isDue = !sched || (
+                (newDate.year > sched.year) ||
+                (newDate.year === sched.year && newDate.week >= sched.week)
+              );
+
+              if (isDue) {
+                dueFycPosts.push(fyc);
+              } else {
+                remainingFycPosts.push(fyc);
+              }
+            }
+
+            artistData.pendingFycPosts = remainingFycPosts;
+
+            for (const fyc of dueFycPosts) {
+              const projectText = fyc.mainProjectName && fyc.mainProjectName !== fyc.artistName
+                ? `’s ‘${fyc.mainProjectName}’`
+                : '';
+              const awardShowName = fyc.awardShow;
+              const fycContent = `For Your Consideration: ${fyc.artistName}${projectText} for the upcoming ${awardShowName}. 🏆`;
+
+              const popBasePost: XPost = {
+                id: crypto.randomUUID(),
+                authorId: "popbase",
+                content: fycContent,
+                image: `fyc:${JSON.stringify(fyc)}`,
+                likes: Math.floor(Math.random() * 45000) + 55000,
+                retweets: Math.floor(Math.random() * 14000) + 7000,
+                views: Math.floor(Math.random() * 1200000) + 1100000,
+                date: newDate,
+              };
+
+              artistData.xPosts.unshift(popBasePost);
+              if (!artistData.fycBanners) artistData.fycBanners = [];
+              artistData.fycBanners.push(fyc);
+            }
+          }
 
           if (newComments && newComments.length > 0) {
             for (const { postId, comment } of newComments) {
@@ -24038,6 +24084,36 @@ Let us know if you accept.`,
         ? true
         : activeData.hasSubmittedForBestNewArtist;
 
+      const activeArtistProfile = state.soloArtist || (state.artists || []).find((a) => a.id === state.activeArtistId) || { name: activeData.name || "Artist", image: activeData.image || "" };
+      const albumSub = submissions.find((s: any) => s.category?.includes("Album") || s.category === "Album of the Year");
+      const mainProjectName = (albumSub && albumSub.itemName && albumSub.itemName !== "N/A" && albumSub.itemName !== activeArtistProfile.name)
+        ? albumSub.itemName
+        : activeArtistProfile.name;
+
+      const nextWeek = state.date.week + 1 > 52 ? 1 : state.date.week + 1;
+      const nextYear = state.date.week + 1 > 52 ? state.date.year + 1 : state.date.year;
+
+      const grammyFycBanner: FycBannerData = {
+        id: crypto.randomUUID(),
+        awardShow: "GRAMMYs",
+        awardShowTitle: "FOR YOUR GRAMMY® CONSIDERATION",
+        artistId: state.activeArtistId,
+        artistName: activeArtistProfile.name,
+        artistImage: (activeArtistProfile as any).image || activeData.artistImages?.[0] || activeData.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop",
+        mainProjectName,
+        submissions: submissions.map((s: any) => ({
+          category: s.category,
+          itemName: s.itemName,
+          itemId: s.itemId,
+        })),
+        date: state.date,
+        scheduledPostDate: {
+          week: nextWeek,
+          year: nextYear,
+          ...(state.date.day ? { day: state.date.day } : {}),
+        },
+      };
+
       return {
         ...state,
         artistsData: {
@@ -24046,6 +24122,8 @@ Let us know if you accept.`,
             ...activeData,
             inbox: updatedInbox,
             hasSubmittedForBestNewArtist: hasSubmittedBna,
+            pendingFycPosts: [...(activeData.pendingFycPosts || []), grammyFycBanner],
+            fycBanners: [...(activeData.fycBanners || []), grammyFycBanner],
           },
         },
         grammySubmissions: [...(state.grammySubmissions || []), ...submissions],
@@ -24231,6 +24309,36 @@ Let us know if you accept.`,
         ? true
         : activeData.hasSubmittedForAmaNewArtist;
 
+      const activeArtistProfile = state.soloArtist || (state.artists || []).find((a) => a.id === state.activeArtistId) || { name: activeData.name || "Artist", image: activeData.image || "" };
+      const albumSub = submissions.find((s: any) => s.category?.includes("Album"));
+      const mainProjectName = (albumSub && albumSub.itemName && albumSub.itemName !== "N/A" && albumSub.itemName !== activeArtistProfile.name)
+        ? albumSub.itemName
+        : activeArtistProfile.name;
+
+      const nextWeek = state.date.week + 1 > 52 ? 1 : state.date.week + 1;
+      const nextYear = state.date.week + 1 > 52 ? state.date.year + 1 : state.date.year;
+
+      const amaFycBanner: FycBannerData = {
+        id: crypto.randomUUID(),
+        awardShow: "AMAs",
+        awardShowTitle: "FOR YOUR AMAs CONSIDERATION",
+        artistId: state.activeArtistId,
+        artistName: activeArtistProfile.name,
+        artistImage: (activeArtistProfile as any).image || activeData.artistImages?.[0] || activeData.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop",
+        mainProjectName,
+        submissions: submissions.map((s: any) => ({
+          category: s.category,
+          itemName: s.itemName,
+          itemId: s.itemId,
+        })),
+        date: state.date,
+        scheduledPostDate: {
+          week: nextWeek,
+          year: nextYear,
+          ...(state.date.day ? { day: state.date.day } : {}),
+        },
+      };
+
       return {
         ...state,
         artistsData: {
@@ -24239,6 +24347,8 @@ Let us know if you accept.`,
             ...activeData,
             inbox: updatedInbox,
             hasSubmittedForAmaNewArtist: hasSubmittedNewArtist,
+            pendingFycPosts: [...(activeData.pendingFycPosts || []), amaFycBanner],
+            fycBanners: [...(activeData.fycBanners || []), amaFycBanner],
           },
         },
         amaSubmissions: [...(state.amaSubmissions || []), ...submissions],
@@ -24450,6 +24560,36 @@ Let us know if you accept.`,
         ? true
         : activeData.hasSubmittedForBritRisingStar;
 
+      const activeArtistProfile = state.soloArtist || (state.artists || []).find((a) => a.id === state.activeArtistId) || { name: activeData.name || "Artist", image: activeData.image || "" };
+      const albumSub = submissions.find((s: any) => s.category?.includes("Album"));
+      const mainProjectName = (albumSub && albumSub.itemName && albumSub.itemName !== "N/A" && albumSub.itemName !== activeArtistProfile.name)
+        ? albumSub.itemName
+        : activeArtistProfile.name;
+
+      const nextWeek = state.date.week + 1 > 52 ? 1 : state.date.week + 1;
+      const nextYear = state.date.week + 1 > 52 ? state.date.year + 1 : state.date.year;
+
+      const britFycBanner: FycBannerData = {
+        id: crypto.randomUUID(),
+        awardShow: "BRITs",
+        awardShowTitle: "FOR YOUR BRIT AWARDS CONSIDERATION",
+        artistId: state.activeArtistId,
+        artistName: activeArtistProfile.name,
+        artistImage: (activeArtistProfile as any).image || activeData.artistImages?.[0] || activeData.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop",
+        mainProjectName,
+        submissions: submissions.map((s: any) => ({
+          category: s.category,
+          itemName: s.itemName,
+          itemId: s.itemId,
+        })),
+        date: state.date,
+        scheduledPostDate: {
+          week: nextWeek,
+          year: nextYear,
+          ...(state.date.day ? { day: state.date.day } : {}),
+        },
+      };
+
       return {
         ...state,
         artistsData: {
@@ -24459,6 +24599,8 @@ Let us know if you accept.`,
             inbox: updatedInbox,
             hasSubmittedForBritNewArtist: hasSubmittedNewArtist,
             hasSubmittedForBritRisingStar: hasSubmittedRisingStar,
+            pendingFycPosts: [...(activeData.pendingFycPosts || []), britFycBanner],
+            fycBanners: [...(activeData.fycBanners || []), britFycBanner],
           },
         },
         britSubmissions: [...(state.britSubmissions || []), ...submissions],
@@ -24788,6 +24930,40 @@ Let us know if you accept.`,
         }
         return e;
       });
+
+      const activeArtistProfile = state.soloArtist || (state.artists || []).find((a) => a.id === state.activeArtistId) || { name: activeData.name || "Artist", image: activeData.image || "" };
+      const soundtrackSub = submissions.find((s: any) => s.category === "Best Soundtrack");
+      const roleSub = submissions.find((s: any) => s.category?.includes("Movie") || s.category?.includes("Show") || s.category?.includes("Actor") || s.category?.includes("Actress"));
+      const mainProjectName = (soundtrackSub && soundtrackSub.itemName && soundtrackSub.itemName !== "Unknown")
+        ? soundtrackSub.itemName
+        : (roleSub && roleSub.itemName && roleSub.itemName !== "Unknown")
+        ? roleSub.itemName
+        : activeArtistProfile.name;
+
+      const nextWeek = state.date.week + 1 > 52 ? 1 : state.date.week + 1;
+      const nextYear = state.date.week + 1 > 52 ? state.date.year + 1 : state.date.year;
+
+      const globesFycBanner: FycBannerData = {
+        id: crypto.randomUUID(),
+        awardShow: "Golden Globes",
+        awardShowTitle: "FOR YOUR GOLDEN GLOBES CONSIDERATION",
+        artistId: state.activeArtistId,
+        artistName: activeArtistProfile.name,
+        artistImage: (activeArtistProfile as any).image || activeData.artistImages?.[0] || activeData.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop",
+        mainProjectName,
+        submissions: submissions.map((s: any) => ({
+          category: s.category,
+          itemName: s.itemName,
+          itemId: s.itemId,
+        })),
+        date: state.date,
+        scheduledPostDate: {
+          week: nextWeek,
+          year: nextYear,
+          ...(state.date.day ? { day: state.date.day } : {}),
+        },
+      };
+
       return {
         ...state,
         artistsData: {
@@ -24795,6 +24971,8 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             inbox: updatedInbox,
+            pendingFycPosts: [...(activeData.pendingFycPosts || []), globesFycBanner],
+            fycBanners: [...(activeData.fycBanners || []), globesFycBanner],
           },
         },
         goldenGlobeSubmissions: [...(state.goldenGlobeSubmissions || []), ...submissions],
@@ -24812,6 +24990,40 @@ Let us know if you accept.`,
         }
         return email;
       });
+
+      const activeArtistProfile = state.soloArtist || (state.artists || []).find((a) => a.id === state.activeArtistId) || { name: activeData.name || "Artist", image: activeData.image || "" };
+      const songSub = submissions.find((s: any) => s.category === "Best Original Song");
+      const roleSub = submissions.find((s: any) => s.category?.includes("Actor") || s.category?.includes("Actress"));
+      const mainProjectName = (roleSub && roleSub.itemName)
+        ? roleSub.itemName
+        : (songSub && songSub.itemName)
+        ? songSub.itemName
+        : activeArtistProfile.name;
+
+      const nextWeek = state.date.week + 1 > 52 ? 1 : state.date.week + 1;
+      const nextYear = state.date.week + 1 > 52 ? state.date.year + 1 : state.date.year;
+
+      const oscarsFycBanner: FycBannerData = {
+        id: crypto.randomUUID(),
+        awardShow: "OSCARS",
+        awardShowTitle: "FOR YOUR OSCAR® CONSIDERATION",
+        artistId: state.activeArtistId,
+        artistName: activeArtistProfile.name,
+        artistImage: (activeArtistProfile as any).image || activeData.artistImages?.[0] || activeData.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=800&fit=crop",
+        mainProjectName,
+        submissions: submissions.map((s: any) => ({
+          category: s.category,
+          itemName: s.itemName,
+          itemId: s.itemId,
+        })),
+        date: state.date,
+        scheduledPostDate: {
+          week: nextWeek,
+          year: nextYear,
+          ...(state.date.day ? { day: state.date.day } : {}),
+        },
+      };
+
       return {
         ...state,
         artistsData: {
@@ -24819,6 +25031,8 @@ Let us know if you accept.`,
           [state.activeArtistId]: {
             ...activeData,
             inbox: updatedInbox,
+            pendingFycPosts: [...(activeData.pendingFycPosts || []), oscarsFycBanner],
+            fycBanners: [...(activeData.fycBanners || []), oscarsFycBanner],
           },
         },
         oscarSubmissions: [...(state.oscarSubmissions || []), ...submissions],
