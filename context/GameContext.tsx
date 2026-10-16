@@ -72,7 +72,12 @@ import type {
   InstagramChannelMessage,
   InstagramChannelReaction,
   FycBannerData,
+  BusinessBrand,
+  BusinessProduct,
+  BusinessCategory,
+  ProductQualityTier,
 } from "../types";
+import { calculateEstimatedDemand, BUSINESS_CATEGORIES } from "../utils/businessSimulation";
 import { generateInstagramChannelReactions, calculateReactionGrowthDuration } from "../utils/instagramChannel";
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from "../utils/relationshipUtils";
 import {
@@ -9272,6 +9277,184 @@ We would like to invite you to perform at a special Spotify Billions Club concer
               artistData.xPosts.unshift(popBasePost);
               if (!artistData.fycBanners) artistData.fycBanners = [];
               artistData.fycBanners.push(fyc);
+            }
+          }
+
+          // Business & LLC Weekly Simulation
+          if (artistData.businesses && artistData.businesses.length > 0) {
+            const currentArtistName =
+              artistProfile?.name ||
+              state.soloArtist?.name ||
+              state.group?.name ||
+              (state.artists || []).find((a) => a.id === artistId)?.name ||
+              "The Artist";
+
+            for (const business of artistData.businesses) {
+              if (business.llcStatus === "pending") {
+                business.llcWeeksRemaining -= 1;
+
+                // Chance of leaking to press during the 2 weeks if not yet leaked
+                if (!business.hasLeaked && Math.random() < 0.45) {
+                  business.hasLeaked = true;
+                  business.leakWeek = 2 - business.llcWeeksRemaining;
+                  business.brandHype = (business.brandHype || 15) + 25;
+                  artistData.hype = Math.min(100, (artistData.hype || 50) + 15);
+
+                  const sourceHandle = Math.random() > 0.5 ? "popbase" : "tmz";
+                  const leakPost: XPost = {
+                    id: crypto.randomUUID(),
+                    authorId: sourceHandle,
+                    content: `EXCLUSIVE: Public trademark filings reveal ${currentArtistName} has officially filed an LLC for a new brand venture named ‘${business.name}’ with an initial capitalization of $${(business.initialFunds / 1000000).toFixed(1)}M! 📁💼`,
+                    likes: Math.floor(Math.random() * 65000) + 40000,
+                    retweets: Math.floor(Math.random() * 18000) + 8000,
+                    views: Math.floor(Math.random() * 1500000) + 800000,
+                    date: newDate,
+                  };
+                  artistData.xPosts.unshift(leakPost);
+
+                  artistData.inbox.unshift({
+                    id: crypto.randomUUID(),
+                    sender: "Sterling & Vance Corporate Counsel",
+                    senderIcon: "business",
+                    subject: `Media Alert: Trademark Filing for '${business.name}' Leaked`,
+                    body: `Heads up from our corporate relations department: Pop Base and entertainment blogs on X have discovered public LLC registration filings for '${business.name}'. While we intended to keep the trademark confidential until launch, the leak has sparked massive fan speculation and gave your brand buzz an immediate +25 boost!`,
+                    date: newDate,
+                    isRead: false,
+                  });
+                }
+
+                // LLC Formation Approved after 2 weeks
+                if (business.llcWeeksRemaining <= 0) {
+                  business.llcStatus = "approved";
+                  business.llcApprovalDate = newDate;
+
+                  artistData.inbox.unshift({
+                    id: crypto.randomUUID(),
+                    sender: "Sterling & Vance Corporate Counsel",
+                    senderIcon: "business",
+                    subject: `✅ Approved: Certificate of Formation for ${business.legalName}`,
+                    body: `Congratulations! Your LLC application for '${business.name}' has been officially granted and stamped by the state regulatory board.\n\nYour corporate entity is legally active with $${business.initialFunds.toLocaleString()} in approved treasury funding. Head to your Business tab now to upload your official logo, select your industry sector, and formulate your first 1-3 flagship products for launch!`,
+                    date: newDate,
+                    isRead: false,
+                  });
+                }
+              } else if (business.llcStatus === "approved" && business.products && business.products.length > 0) {
+                // Active business weekly sales simulation
+                let weeklyBrandRevenue = 0;
+                let weeklyBrandProfit = 0;
+
+                for (const product of business.products) {
+                  if (product.currentStock > 0) {
+                    const demand = calculateEstimatedDemand({
+                      price: product.price,
+                      qualityTier: product.qualityTier,
+                      category: business.category || "perfume",
+                      popularity: artistData.popularity || 50,
+                      publicImage: artistData.publicImage || 50,
+                      hype: (artistData.hype || 50) + (business.brandHype || 0),
+                    });
+
+                    // Sell rate based on demand and stock
+                    const sellRate = Math.min(0.9, Math.max(0.08, (demand.demandScore / 100) * (0.12 + Math.random() * 0.14)));
+                    const unitsSold = Math.min(
+                      product.currentStock,
+                      Math.max(15, Math.floor(product.initialStock * sellRate + (artistData.popularity * 12)))
+                    );
+
+                    product.currentStock -= unitsSold;
+                    const pRev = unitsSold * product.price;
+                    const pCost = unitsSold * product.unitCost;
+                    const pProfit = pRev - pCost;
+
+                    product.weeklyUnitsSold = unitsSold;
+                    product.weeklyRevenue = pRev;
+                    product.totalUnitsSold += unitsSold;
+                    product.totalRevenue += pRev;
+                    product.estimatedDemandScore = demand.demandScore;
+
+                    weeklyBrandRevenue += pRev;
+                    weeklyBrandProfit += pProfit;
+
+                    // If sold out this week, create viral sold-out announcement
+                    if (product.currentStock === 0) {
+                      business.brandHype = Math.min(100, (business.brandHype || 0) + 15);
+                      const soldOutPost: XPost = {
+                        id: crypto.randomUUID(),
+                        authorId: "popbase",
+                        content: `${currentArtistName}’s ‘${product.name}’ from ${business.name} has officially SOLD OUT completely (${product.initialStock.toLocaleString()} units)! 🛍️🚨`,
+                        likes: Math.floor(Math.random() * 55000) + 35000,
+                        retweets: Math.floor(Math.random() * 12000) + 5000,
+                        views: Math.floor(Math.random() * 950000) + 600000,
+                        date: newDate,
+                      };
+                      artistData.xPosts.unshift(soldOutPost);
+                    }
+
+                    // Fans tweet about product quality, price, or hype!
+                    const catConfig = business.category ? BUSINESS_CATEGORIES[business.category] : null;
+                    const recPrices = catConfig?.recommendedPrices[product.qualityTier];
+                    const isExpensive = recPrices && product.price > recPrices.max;
+                    const isVeryAffordable = recPrices && product.price <= recPrices.min;
+                    const isLowQuality = product.qualityTier === "standard";
+                    const isLuxuryQuality = product.qualityTier === "luxury";
+
+                    let fanTweetText = "";
+                    if (isExpensive && Math.random() < 0.35) {
+                      const expensiveQuotes = [
+                        `love ${currentArtistName} with my whole heart, but $${product.price} for ${product.name}?? in this economy?! 😭💸`,
+                        `can someone tell ${currentArtistName} that $${product.price} for a ${product.category.toLowerCase()} is insane... who has that kind of money`,
+                        `i wanted ${product.name} so bad until i saw that $${product.price} price tag... ${business.name} is for millionaires only 💀`,
+                        `$${product.price} for ${product.name} is highway robbery ${currentArtistName} please lower the prices 😭`
+                      ];
+                      fanTweetText = expensiveQuotes[Math.floor(Math.random() * expensiveQuotes.length)];
+                    } else if (isLowQuality && Math.random() < 0.30) {
+                      const qualityQuotes = [
+                        `my ${product.name} from ${business.name} arrived today and the packaging feels kinda cheap 😕 love ${currentArtistName} though`,
+                        `honestly the quality on ${product.name} isn't giving what ${currentArtistName} promised... formula is pretty mid`,
+                        `is it just me or does ${currentArtistName}'s ${product.name} feel low quality for all this hype?`,
+                        `not ${business.name} sending out flimsy packaging for ${product.name} 😭 ${currentArtistName} we need better manufacturers!`
+                      ];
+                      fanTweetText = qualityQuotes[Math.floor(Math.random() * qualityQuotes.length)];
+                    } else if (isLuxuryQuality && Math.random() < 0.35) {
+                      const luxuryQuotes = [
+                        `the quality of ${currentArtistName}’s ${product.name} is ACTUALLY breathtaking... the heavy glass packaging and formula 10/10 👑✨`,
+                        `okay ${business.name} did NOT play with ${product.name}. this is genuine luxury and worth every penny`,
+                        `obsessed with ${product.name}!! ${currentArtistName} really put so much love into this formula 💖`,
+                        `already ordered a backup of ${product.name} from ${business.name}. genuinely one of the best brand launches this year`
+                      ];
+                      fanTweetText = luxuryQuotes[Math.floor(Math.random() * luxuryQuotes.length)];
+                    } else if (isVeryAffordable && Math.random() < 0.30) {
+                      const affordableQuotes = [
+                        `only $${product.price} for ${product.name}?! ${currentArtistName} is an angel for keeping ${business.name} affordable for fans 🥺✨`,
+                        `such high quality for only $${product.price}! ${currentArtistName} ate down with ${product.name}`,
+                      ];
+                      fanTweetText = affordableQuotes[Math.floor(Math.random() * affordableQuotes.length)];
+                    }
+
+                    if (fanTweetText && Math.random() < 0.5) {
+                      const fanUsers = artistData.xUsers?.filter(u => !u.isPlayer && !["tmz", "popbase", "popcrave", "chartdata"].includes(u.id)) || [];
+                      const randomFan = fanUsers[Math.floor(Math.random() * fanUsers.length)] || { id: "fan", name: "Fan" };
+                      const fanPost: XPost = {
+                        id: crypto.randomUUID(),
+                        authorId: randomFan.id,
+                        content: fanTweetText,
+                        likes: Math.floor(Math.random() * 3200) + 150,
+                        retweets: Math.floor(Math.random() * 600) + 40,
+                        views: Math.floor(Math.random() * 60000) + 8000,
+                        date: newDate,
+                      };
+                      artistData.xPosts.unshift(fanPost);
+                    }
+                  } else {
+                    product.weeklyUnitsSold = 0;
+                    product.weeklyRevenue = 0;
+                  }
+                }
+
+                business.treasuryFunds += weeklyBrandRevenue;
+                business.totalRevenue += weeklyBrandRevenue;
+                business.totalNetProfit += weeklyBrandProfit;
+              }
             }
           }
 
@@ -30080,6 +30263,650 @@ Statement Given: "${reason.toUpperCase()}"`,
                   talentAgencyId: undefined
               }
           }
+      };
+    }
+    case "FILE_BUSINESS_LLC": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData) return state;
+
+      const { name, initialFunds } = action.payload;
+      if (!name || !name.trim()) return state;
+      if (initialFunds < 1500000 || initialFunds > 10000000) return state;
+      if (activeData.money < initialFunds) return state;
+
+      const newBusiness: BusinessBrand = {
+        id: crypto.randomUUID(),
+        artistId: state.activeArtistId,
+        name: name.trim(),
+        legalName: `${name.trim()} LLC`,
+        initialFunds,
+        treasuryFunds: initialFunds,
+        totalRevenue: 0,
+        totalNetProfit: 0,
+        llcStatus: "pending",
+        llcWeeksRemaining: 2,
+        llcFiledDate: { ...state.date },
+        brandHype: Math.floor(Math.random() * 15) + 20,
+        products: [],
+        createdAt: { ...state.date },
+      };
+
+      const activeArtistName =
+        state.soloArtist?.name ||
+        state.group?.name ||
+        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
+        activeData.artistName ||
+        "The Artist";
+
+      const lawyerEmail: Email = {
+        id: crypto.randomUUID(),
+        sender: "Sterling & Vance Corporate Counsel",
+        senderIcon: "business",
+        subject: `Articles of Organization Filed: ${newBusiness.legalName}`,
+        body: `Dear ${activeArtistName},\n\nWe have submitted the formal Articles of Organization for ${newBusiness.legalName} with the Division of Corporations.\n\n• Initial Capitalization: $${initialFunds.toLocaleString()}\n• LLC Filing Timeframe: Exactly 2 weeks\n\nPlease note: Public regulatory filings mean details regarding your new corporate trademark may leak to the press during these two weeks. We will inform you the moment your official LLC certificate is approved!`,
+        date: { ...state.date },
+        isRead: false,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money - initialFunds,
+            businesses: [...(activeData.businesses || []), newBusiness],
+            inbox: [lawyerEmail, ...activeData.inbox],
+          },
+        },
+      };
+    }
+    case "SETUP_BUSINESS_BRAND": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+
+      const { businessId, logoUrl, category, products } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+
+      const targetBusiness = activeData.businesses[bIndex];
+      if (targetBusiness.llcStatus !== "approved") return state;
+
+      let totalMfgCost = 0;
+      const initialProducts: BusinessProduct[] = products.map((p) => {
+        const cost = p.unitCost * p.initialStock;
+        totalMfgCost += cost;
+        return {
+          id: crypto.randomUUID(),
+          name: p.name,
+          category: p.category,
+          description: p.description,
+          imageUrl: p.imageUrl,
+          qualityTier: p.qualityTier,
+          unitCost: p.unitCost,
+          price: p.price,
+          initialStock: p.initialStock,
+          currentStock: p.initialStock,
+          totalUnitsSold: 0,
+          totalRevenue: 0,
+          weeklyUnitsSold: 0,
+          weeklyRevenue: 0,
+          estimatedDemandScore: p.estimatedDemandScore,
+          customerRating: p.qualityTier === "luxury" ? 4.9 : p.qualityTier === "premium" ? 4.7 : 4.4,
+          reviewsCount: Math.floor(Math.random() * 40) + 20,
+          launchDate: { ...state.date },
+        };
+      });
+
+      let newTreasury = targetBusiness.treasuryFunds - totalMfgCost;
+      let newMoney = activeData.money;
+      if (newTreasury < 0) {
+        newMoney += newTreasury;
+        newTreasury = 0;
+      }
+      if (newMoney < 0) return state;
+
+      const categoryInfo = BUSINESS_CATEGORIES[category];
+      const categoryDisplayName = categoryInfo ? categoryInfo.label : category;
+
+      const updatedBusiness: BusinessBrand = {
+        ...targetBusiness,
+        logoUrl,
+        category,
+        categoryDisplayName,
+        treasuryFunds: newTreasury,
+        brandHype: (targetBusiness.brandHype || 25) + 35,
+        products: initialProducts,
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = updatedBusiness;
+
+      const activeArtistName =
+        state.soloArtist?.name ||
+        state.group?.name ||
+        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
+        activeData.artistName ||
+        "The Artist";
+
+      const launchPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: `OFFICIAL: ${activeArtistName} has launched their new ${categoryDisplayName.toLowerCase()} venture, ${targetBusiness.name}! The debut collection features ${initialProducts.length} flagship products now available. 💫🛍️`,
+        likes: Math.floor(Math.random() * 85000) + 60000,
+        retweets: Math.floor(Math.random() * 25000) + 12000,
+        views: Math.floor(Math.random() * 2200000) + 1500000,
+        date: { ...state.date },
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            hype: Math.min(100, (activeData.hype || 50) + 15),
+            businesses: updatedBusinesses,
+            xPosts: [launchPost, ...activeData.xPosts],
+          },
+        },
+      };
+    }
+    case "RESTOCK_BUSINESS_PRODUCT": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+
+      const { businessId, productId, additionalStock } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+      const pIndex = business.products.findIndex((p) => p.id === productId);
+      if (pIndex === -1) return state;
+
+      const product = business.products[pIndex];
+      const restockCost = additionalStock * product.unitCost;
+
+      let newTreasury = business.treasuryFunds - restockCost;
+      let newMoney = activeData.money;
+      if (newTreasury < 0) {
+        newMoney += newTreasury;
+        newTreasury = 0;
+      }
+      if (newMoney < 0) return state;
+
+      const updatedProduct: BusinessProduct = {
+        ...product,
+        initialStock: product.initialStock + additionalStock,
+        currentStock: product.currentStock + additionalStock,
+      };
+
+      const updatedProducts = [...business.products];
+      updatedProducts[pIndex] = updatedProduct;
+
+      const updatedBusiness = {
+        ...business,
+        treasuryFunds: newTreasury,
+        products: updatedProducts,
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = updatedBusiness;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "LAUNCH_BUSINESS_PRODUCT": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+
+      const { businessId, product } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+
+      const mfgCost = product.unitCost * product.initialStock;
+      let newTreasury = business.treasuryFunds - mfgCost;
+      let newMoney = activeData.money;
+      if (newTreasury < 0) {
+        newMoney += newTreasury;
+        newTreasury = 0;
+      }
+      if (newMoney < 0) return state;
+
+      const newProd: BusinessProduct = {
+        id: crypto.randomUUID(),
+        name: product.name,
+        category: product.category,
+        description: product.description,
+        imageUrl: product.imageUrl,
+        qualityTier: product.qualityTier,
+        unitCost: product.unitCost,
+        price: product.price,
+        initialStock: product.initialStock,
+        currentStock: product.initialStock,
+        totalUnitsSold: 0,
+        totalRevenue: 0,
+        weeklyUnitsSold: 0,
+        weeklyRevenue: 0,
+        estimatedDemandScore: product.estimatedDemandScore,
+        customerRating: product.qualityTier === "luxury" ? 4.9 : product.qualityTier === "premium" ? 4.7 : 4.4,
+        reviewsCount: Math.floor(Math.random() * 30) + 15,
+        launchDate: { ...state.date },
+      };
+
+      const updatedBusiness = {
+        ...business,
+        treasuryFunds: newTreasury,
+        brandHype: (business.brandHype || 25) + 20,
+        products: [...business.products, newProd],
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = updatedBusiness;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "WITHDRAW_BUSINESS_FUNDS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+
+      const { businessId, amount } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+      if (business.treasuryFunds < amount) return state;
+
+      const updatedBusiness = {
+        ...business,
+        treasuryFunds: business.treasuryFunds - amount,
+      };
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = updatedBusiness;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: activeData.money + amount,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "MARKET_BUSINESS": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+
+      const { businessId, campaignType, cost } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+
+      let newTreasury = business.treasuryFunds - cost;
+      let newMoney = activeData.money;
+      if (newTreasury < 0) {
+        newMoney += newTreasury;
+        newTreasury = 0;
+      }
+      if (newMoney < 0) return state;
+
+      const hypeBoost = campaignType === "vogue_ad" ? 30 : campaignType === "popup_store" ? 25 : campaignType === "influencer_gift" ? 20 : 15;
+      const activeArtistName =
+        state.soloArtist?.name ||
+        state.group?.name ||
+        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
+        activeData.artistName ||
+        "The Artist";
+
+      const campaignTitles: Record<string, string> = {
+        social_blitz: "Social Media Viral Blitz",
+        influencer_gift: "A-List Influencer PR Gifting",
+        popup_store: "Flagship Pop-Up Experience",
+        vogue_ad: "Vogue & Billboard National Campaign",
+      };
+
+      const campTitle = campaignTitles[campaignType] || "PR Marketing Campaign";
+      const newCampRecord = {
+        id: crypto.randomUUID(),
+        campaignType,
+        title: campTitle,
+        cost,
+        launchedDate: { ...state.date },
+      };
+
+      let campaignPostContent = "";
+      if (campaignType === "social_blitz") {
+        campaignPostContent = `VIRAL: ${activeArtistName}’s ${business.name} is currently dominating social media with thousands of creator reviews and trending sounds! 📱🔥🛍️`;
+      } else if (campaignType === "influencer_gift") {
+        campaignPostContent = `UNBOXING: A-list creators and celebrities are showing off extravagant PR luxury vaults sent by ${activeArtistName} for ${business.name} today! ✨🎁`;
+      } else if (campaignType === "popup_store") {
+        campaignPostContent = `CROWDS: Massive queues are stretching over four blocks in SoHo for ${activeArtistName}’s official ${business.name} flagship pop-up experience! 🏙️🛍️`;
+      } else if (campaignType === "vogue_ad") {
+        campaignPostContent = `HIGH FASHION: Vogue unveils an exclusive double-page feature on ${activeArtistName} and their luxury enterprise ${business.name}: “Setting the standard for modern glamour.” 📸👑`;
+      }
+
+      const campaignPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: campaignPostContent,
+        likes: Math.floor(Math.random() * 65000) + 45000,
+        retweets: Math.floor(Math.random() * 18000) + 7000,
+        views: Math.floor(Math.random() * 1600000) + 900000,
+        date: { ...state.date },
+      };
+
+      // Marketing campaign causes an immediate sales spike on available stock!
+      let immediateSalesRev = 0;
+      let immediateSalesProfit = 0;
+      const updatedProducts = business.products.map((p) => {
+        if (p.currentStock > 0) {
+          const promoUnits = Math.min(
+            p.currentStock,
+            Math.max(10, Math.floor(p.currentStock * (0.05 + Math.random() * 0.08)))
+          );
+          const pRev = promoUnits * p.price;
+          const pCost = promoUnits * p.unitCost;
+          immediateSalesRev += pRev;
+          immediateSalesProfit += pRev - pCost;
+          return {
+            ...p,
+            currentStock: p.currentStock - promoUnits,
+            totalUnitsSold: p.totalUnitsSold + promoUnits,
+            totalRevenue: p.totalRevenue + pRev,
+          };
+        }
+        return p;
+      });
+
+      const updatedBusiness: BusinessBrand = {
+        ...business,
+        treasuryFunds: newTreasury + immediateSalesRev,
+        totalRevenue: business.totalRevenue + immediateSalesRev,
+        totalNetProfit: business.totalNetProfit + immediateSalesProfit,
+        brandHype: Math.min(100, (business.brandHype || 30) + hypeBoost),
+        activeMarketingCampaigns: [newCampRecord, ...(business.activeMarketingCampaigns || [])],
+        products: updatedProducts,
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = updatedBusiness;
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            hype: Math.min(100, (activeData.hype || 50) + 15),
+            businesses: updatedBusinesses,
+            xPosts: [campaignPost, ...activeData.xPosts],
+          },
+        },
+      };
+    }
+    case "UPDATE_BUSINESS_PRODUCT_IMAGE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+      const { businessId, productId, imageUrl } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+      const pIndex = business.products.findIndex((p) => p.id === productId);
+      if (pIndex === -1) return state;
+
+      const updatedProducts = [...business.products];
+      updatedProducts[pIndex] = {
+        ...updatedProducts[pIndex],
+        imageUrl,
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = {
+        ...business,
+        products: updatedProducts,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "UPDATE_BUSINESS_BANNER": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+      const { businessId, bannerUrl } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = {
+        ...updatedBusinesses[bIndex],
+        bannerUrl,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "UPDATE_BUSINESS_PRODUCT_PRICE": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+      const { businessId, productId, price } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+      const pIndex = business.products.findIndex((p) => p.id === productId);
+      if (pIndex === -1) return state;
+
+      const updatedProducts = [...business.products];
+      updatedProducts[pIndex] = {
+        ...updatedProducts[pIndex],
+        price,
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = {
+        ...business,
+        products: updatedProducts,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "DELETE_BUSINESS_PRODUCT": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+      const { businessId, productId } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = {
+        ...business,
+        products: business.products.filter((p) => p.id !== productId),
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            businesses: updatedBusinesses,
+          },
+        },
+      };
+    }
+    case "HOST_PRODUCT_LAUNCH_PARTY": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData || !activeData.businesses) return state;
+      const { businessId, productId, venue, ticketPrice, performedSongId } = action.payload;
+      const bIndex = activeData.businesses.findIndex((b) => b.id === businessId);
+      if (bIndex === -1) return state;
+      const business = activeData.businesses[bIndex];
+      const pIndex = business.products.findIndex((p) => p.id === productId);
+      if (pIndex === -1) return state;
+      const product = business.products[pIndex];
+
+      let newTreasury = business.treasuryFunds - venue.cost;
+      let newMoney = activeData.money;
+      if (newTreasury < 0) {
+        newMoney += newTreasury;
+        newTreasury = 0;
+      }
+      if (newMoney < 0) return state;
+
+      const activeArtistName =
+        state.soloArtist?.name ||
+        state.group?.name ||
+        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
+        activeData.artistName ||
+        "The Artist";
+
+      const selloutRate = 0.88 + (Math.min(100, activeData.popularity || 50) / 100) * 0.12;
+      const ticketsSold = Math.floor(venue.capacity * selloutRate);
+      const ticketRevenue = ticketsSold * ticketPrice;
+
+      const unitsSoldAtEvent = Math.min(
+        product.currentStock,
+        Math.floor(ticketsSold * (0.65 + Math.random() * 0.3))
+      );
+      const productRevenueAtEvent = unitsSoldAtEvent * product.price;
+      const totalEventRevenue = ticketRevenue + productRevenueAtEvent;
+      const netProfit = totalEventRevenue - venue.cost;
+
+      const updatedProduct = {
+        ...product,
+        currentStock: product.currentStock - unitsSoldAtEvent,
+        totalUnitsSold: product.totalUnitsSold + unitsSoldAtEvent,
+        totalRevenue: product.totalRevenue + productRevenueAtEvent,
+      };
+
+      const updatedProducts = [...business.products];
+      updatedProducts[pIndex] = updatedProduct;
+
+      newTreasury += totalEventRevenue;
+
+      const performedSong = performedSongId ? activeData.songs?.find((s) => s.id === performedSongId) : null;
+      const performedSongTitle = performedSong?.title;
+
+      const launchPartyRecord: ProductLaunchParty = {
+        id: crypto.randomUUID(),
+        businessId: business.id,
+        productId: product.id,
+        productName: product.name,
+        businessName: business.name,
+        productImageUrl: product.imageUrl,
+        venueName: venue.name,
+        city: venue.city,
+        capacity: venue.capacity,
+        ticketPrice,
+        performedSongTitle,
+        performedSongId,
+        date: { ...state.date },
+        ticketsSold,
+        ticketRevenue,
+        productUnitsSoldAtEvent: unitsSoldAtEvent,
+        productRevenueAtEvent,
+        totalRevenue: totalEventRevenue,
+        cost: venue.cost,
+        netProfit,
+        hypeGenerated: performedSongTitle ? 40 : 25,
+      };
+
+      const partyPostContent = performedSongTitle
+        ? `EXCLUSIVE: ${activeArtistName} celebrated the launch of ${business.name}’s ‘${product.name}’ tonight at ${venue.name} in ${venue.city}, giving a show-stopping live performance of '${performedSongTitle}'! 🎤✨🛍️`
+        : `STARS OUT: ${activeArtistName} hosted an exclusive celebrity-filled launch party at ${venue.name} in ${venue.city} celebrating the arrival of ${business.name}'s ‘${product.name}’! 🍾🥂`;
+
+      const partyPost: XPost = {
+        id: crypto.randomUUID(),
+        authorId: "popbase",
+        content: partyPostContent,
+        likes: Math.floor(Math.random() * 75000) + 50000,
+        retweets: Math.floor(Math.random() * 22000) + 10000,
+        views: Math.floor(Math.random() * 1800000) + 1000000,
+        date: { ...state.date },
+      };
+
+      const updatedBusinesses = [...activeData.businesses];
+      updatedBusinesses[bIndex] = {
+        ...business,
+        treasuryFunds: newTreasury,
+        totalRevenue: business.totalRevenue + totalEventRevenue,
+        totalNetProfit: business.totalNetProfit + netProfit,
+        brandHype: Math.min(100, (business.brandHype || 30) + (performedSongTitle ? 35 : 20)),
+        products: updatedProducts,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: newMoney,
+            hype: Math.min(100, (activeData.hype || 50) + 20),
+            businesses: updatedBusinesses,
+            launchParties: [launchPartyRecord, ...(activeData.launchParties || [])],
+            xPosts: [partyPost, ...activeData.xPosts],
+          },
+        },
       };
     }
     case "LAUNCH_CRYPTO_COIN": {

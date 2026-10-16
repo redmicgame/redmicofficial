@@ -90,6 +90,7 @@ const appCategories: AppCategory[] = [
             { name: 'Payola', description: 'Influence the industry', icon: <MegaphoneIcon className="w-8 h-8"/>, view: 'promote', bgColor: '#ef4444' },
             { name: 'Gigs', description: 'Perform live shows', icon: <MicrophoneIcon className="w-8 h-8"/>, view: 'gigs', bgColor: '#a855f7' },
             { name: 'Merch Store', description: 'Sell vinyls, CDs, and more', icon: <ShoppingBagIcon className="w-8 h-8"/>, view: 'merchStore', bgColor: '#ec4899' },
+            { name: 'Brand Store', description: 'Official consumer brand storefront & products', icon: <ShoppingBagIcon className="w-8 h-8 text-amber-300"/>, view: 'businessStore', bgColor: '#d97706' },
             { name: 'Catalog', description: 'Manage your assets', icon: <DollarIcon className="w-8 h-8"/>, view: 'catalog', bgColor: '#22c55e' },
             { name: 'Crypto', description: 'Make and manage your own cryptocurrency', icon: <span className="font-bold text-xl text-white">₿</span>, view: 'crypto', bgColor: '#f59e0b' },
         ]

@@ -1558,6 +1558,7 @@ export type GameView =
   | "spotifySoundtrackDetail"
   | "gameGuide"
   | "tours"
+  | "businessStore"
   | "touring"
   | "touringView"
   | "ticketmaster"
@@ -2333,6 +2334,96 @@ export interface ArtistData {
   tvAndFilmProjects?: TvAndFilmProject[];
   pendingFycPosts?: FycBannerData[];
   fycBanners?: FycBannerData[];
+  businesses?: BusinessBrand[];
+  launchParties?: ProductLaunchParty[];
+}
+
+export type BusinessCategory =
+  | 'perfume'
+  | 'beauty'
+  | 'hair_care'
+  | 'shoes'
+  | 'fashion'
+  | 'skincare'
+  | 'accessories';
+
+export type ProductQualityTier = 'standard' | 'premium' | 'luxury';
+
+export interface BusinessProduct {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  imageUrl?: string;
+  qualityTier: ProductQualityTier;
+  unitCost: number;
+  price: number;
+  initialStock: number;
+  currentStock: number;
+  totalUnitsSold: number;
+  totalRevenue: number;
+  weeklyUnitsSold: number;
+  weeklyRevenue: number;
+  estimatedDemandScore: number;
+  customerRating: number;
+  reviewsCount: number;
+  launchDate: GameDate;
+}
+
+export interface BusinessBrand {
+  id: string;
+  artistId: string;
+  name: string;
+  legalName: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  category?: BusinessCategory;
+  categoryDisplayName?: string;
+  initialFunds: number;
+  treasuryFunds: number;
+  totalRevenue: number;
+  totalNetProfit: number;
+  llcStatus: 'pending' | 'approved';
+  llcWeeksRemaining: number;
+  llcFiledDate: GameDate;
+  llcApprovalDate?: GameDate;
+  hasLeaked?: boolean;
+  leakWeek?: number;
+  leakHeadline?: string;
+  brandHype: number;
+  activeMarketingCampaigns?: Array<{
+    id: string;
+    campaignType: string;
+    title: string;
+    cost: number;
+    launchedDate: GameDate;
+  }>;
+  products: BusinessProduct[];
+  createdAt: GameDate;
+}
+
+export interface ProductLaunchParty {
+  id: string;
+  businessId: string;
+  productId: string;
+  productName: string;
+  businessName: string;
+  productImageUrl?: string;
+  venueName: string;
+  city: string;
+  capacity: number;
+  ticketPrice: number;
+  performedSongTitle?: string;
+  performedSongId?: string;
+  date: GameDate;
+  ticketsSold: number;
+  ticketRevenue: number;
+  productUnitsSoldAtEvent: number;
+  productRevenueAtEvent: number;
+  totalRevenue: number;
+  cost: number;
+  netProfit: number;
+  hypeGenerated: number;
 }
 
 export interface FycSubmissionItem {
@@ -2631,6 +2722,17 @@ export interface ActiveEncounter {
 }
 
 export type GameAction =
+  | { type: "FILE_BUSINESS_LLC"; payload: { name: string; initialFunds: number } }
+  | { type: "SETUP_BUSINESS_BRAND"; payload: { businessId: string; logoUrl: string; category: BusinessCategory; products: Array<{ name: string; category: string; description?: string; imageUrl?: string; qualityTier: ProductQualityTier; unitCost: number; price: number; initialStock: number; estimatedDemandScore: number }> } }
+  | { type: "RESTOCK_BUSINESS_PRODUCT"; payload: { businessId: string; productId: string; additionalStock: number } }
+  | { type: "LAUNCH_BUSINESS_PRODUCT"; payload: { businessId: string; product: { name: string; category: string; description?: string; imageUrl?: string; qualityTier: ProductQualityTier; unitCost: number; price: number; initialStock: number; estimatedDemandScore: number } } }
+  | { type: "WITHDRAW_BUSINESS_FUNDS"; payload: { businessId: string; amount: number } }
+  | { type: "MARKET_BUSINESS"; payload: { businessId: string; campaignType: 'social_blitz' | 'influencer_gift' | 'popup_store' | 'vogue_ad'; cost: number } }
+  | { type: "UPDATE_BUSINESS_PRODUCT_IMAGE"; payload: { businessId: string; productId: string; imageUrl: string } }
+  | { type: "UPDATE_BUSINESS_BANNER"; payload: { businessId: string; bannerUrl: string } }
+  | { type: "UPDATE_BUSINESS_PRODUCT_PRICE"; payload: { businessId: string; productId: string; price: number } }
+  | { type: "DELETE_BUSINESS_PRODUCT"; payload: { businessId: string; productId: string } }
+  | { type: "HOST_PRODUCT_LAUNCH_PARTY"; payload: { businessId: string; productId: string; venue: { name: string; city: string; capacity: number; cost: number }; ticketPrice: number; performedSongId?: string } }
   | { type: "TOGGLE_AUTO_CERTIFICATIONS"; payload?: { enabled?: boolean } }
   | { type: "MANUAL_CLAIM_CERTIFICATION"; payload: { itemId: string; isAlbum: boolean } }
   | { type: "DELAY_SCHEDULED_RELEASE"; payload: { submissionId: string; delayWeeks: number } }

@@ -142,6 +142,7 @@ import AlbumPredictionsView from './components/AlbumPredictionsView';
 import { getEraConfiguration, isSpotifyUnlockedForPlayer, getPlayerRegion, SPOTIFY_REGION_LAUNCH_YEARS } from './utils/eraUtils';
 import UKChartView from './components/UKChartView';
 import SpotifyIcon from './components/icons/SpotifyIcon';
+import { BusinessStoreView } from './components/BusinessStoreView';
 
 const AppContent: React.FC = () => {
     const { gameState, activeArtistData, dispatch } = useGame();
@@ -451,6 +452,8 @@ const AppContent: React.FC = () => {
                 return <RiaaView />;
             case 'kalshi':
                 return <KalshiView />;
+            case 'businessStore':
+                return <BusinessStoreView />;
             case 'game':
             default:
                 return <GameUI />;
