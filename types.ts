@@ -3655,7 +3655,8 @@ export type GameAction =
   | { type: "ADD_GUEST_CAST_MEMBER"; payload: { projectId: string; castMember: CastMember } }
   | { type: "UPDATE_EPISODE_YOUTUBE_THUMBNAIL"; payload: { projectId: string; episodeNumber: number; thumbnailUrl: string } }
   | { type: "SIGN_YOUTUBE_DEAL"; payload: { projectId: string } }
-  | { type: "DELETE_TV_FILM_PROJECT"; payload: { projectId: string } };
+  | { type: "DELETE_TV_FILM_PROJECT"; payload: { projectId: string } }
+  | { type: "SEND_NPC_FEATURE_REQUEST"; payload: { npcArtistName: string } };
 export interface PodcastEpisode {
   id: string;
   title: string;

@@ -1,8 +1,8 @@
 
-import React, {  useState , useEffect } from 'react';
+import React, {  useState , useEffect, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { Song, Label, XUser } from '../types';
-import { LABELS } from '../constants';
+import { LABELS, NPC_ARTIST_NAMES } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { CustomAwardShowBuilder } from './CustomAwardShowBuilder';
 import { RedMicProCodeModal } from './RedMicProCodeModal';
@@ -164,6 +164,149 @@ const CustomFeatureBuilder: React.FC = () => {
                     ))}
                 </div>
             )}
+        </div>
+    );
+};
+
+const NpcFeatureRequestSender: React.FC = () => {
+    const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
+    const [selectedArtist, setSelectedArtist] = useState<string>('');
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    const playerArtistName = activeArtistData?.profile?.name || activeArtist?.name || '';
+
+    // Collect all NPC artists including those added from Pro dashboard (customFeatures)
+    const allNpcArtists = useMemo(() => {
+        const customNames = (gameState.customFeatures || []).map((f: any) => f.name);
+        const chartNpcNames = (gameState.npcs || []).map((n: any) => n.artist);
+        const albumNpcNames = (gameState.npcAlbums || []).map((a: any) => a.artist);
+        const imageNpcNames = Object.keys(gameState.npcImages || {});
+
+        const merged = new Set([
+            ...NPC_ARTIST_NAMES,
+            ...chartNpcNames,
+            ...albumNpcNames,
+            ...customNames,
+            ...imageNpcNames,
+        ]);
+
+        return Array.from(merged)
+            .filter((name): name is string => typeof name === 'string' && name.trim().length > 0 && name !== playerArtistName)
+            .sort((a, b) => a.localeCompare(b));
+    }, [gameState.customFeatures, gameState.npcs, gameState.npcAlbums, gameState.npcImages, playerArtistName]);
+
+    const isCustom = (name: string) => {
+        return (gameState.customFeatures || []).some((f: any) => f.name.toLowerCase() === name.toLowerCase());
+    };
+
+    const handleSendRequest = () => {
+        if (!selectedArtist) return;
+
+        dispatch({
+            type: 'SEND_NPC_FEATURE_REQUEST',
+            payload: { npcArtistName: selectedArtist }
+        });
+
+        setSuccessMessage(`Feature request sent! You received a new feature offer email from "${selectedArtist}" in your Inbox.`);
+    };
+
+    const filteredArtists = searchTerm
+        ? allNpcArtists.filter(a => a.toLowerCase().includes(searchTerm.toLowerCase()))
+        : allNpcArtists;
+
+    const artistImage = selectedArtist
+        ? gameState.npcImages?.[selectedArtist] || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedArtist)}&background=random&color=fff&size=250`
+        : null;
+
+    return (
+        <div className="bg-zinc-800 p-4 rounded-lg space-y-4 border border-zinc-700">
+            <div className="flex items-center gap-2">
+                <span className="text-xl">🎤</span>
+                <div>
+                    <h2 className="text-lg font-bold text-white">Send Feature Request to NPC Artist</h2>
+                    <p className="text-xs text-zinc-400">Select any NPC artist (including custom artists added from Pro dashboard) to receive a feature offer email in your Inbox.</p>
+                </div>
+            </div>
+
+            {successMessage && (
+                <div className="bg-emerald-900/40 border border-emerald-500/50 p-3 rounded-lg text-sm text-emerald-200 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                        <span>✉️</span>
+                        <span>{successMessage}</span>
+                    </div>
+                    <button
+                        onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'inbox' })}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded text-xs transition-colors shrink-0"
+                    >
+                        Go to Inbox
+                    </button>
+                </div>
+            )}
+
+            <div className="space-y-3">
+                <div>
+                    <label className="text-xs font-semibold text-zinc-300 block mb-1">Search & Filter Artist</label>
+                    <input
+                        type="text"
+                        placeholder="Type to search artist..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-zinc-700 p-2 rounded-md text-sm text-white placeholder-zinc-400 border border-zinc-600 focus:outline-none focus:border-yellow-400"
+                    />
+                </div>
+
+                <div>
+                    <label className="text-xs font-semibold text-zinc-300 block mb-1">Select Artist ({filteredArtists.length} available)</label>
+                    <select
+                        value={selectedArtist}
+                        onChange={(e) => {
+                            setSelectedArtist(e.target.value);
+                            setSuccessMessage(null);
+                        }}
+                        className="w-full bg-zinc-700 p-2 rounded-md text-sm text-white border border-zinc-600 focus:outline-none focus:border-yellow-400"
+                    >
+                        <option value="">-- Choose an NPC Artist --</option>
+                        {filteredArtists.map(artist => (
+                            <option key={artist} value={artist}>
+                                {artist} {isCustom(artist) ? '★ (Custom Pro Feature)' : ''}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {selectedArtist && (
+                    <div className="flex items-center justify-between bg-zinc-900/60 p-3 rounded-lg border border-zinc-700/60 mt-2">
+                        <div className="flex items-center gap-3">
+                            {artistImage && (
+                                <img
+                                    src={artistImage}
+                                    alt={selectedArtist}
+                                    className="w-12 h-12 rounded-full object-cover border border-zinc-600 shadow-md"
+                                />
+                            )}
+                            <div>
+                                <p className="font-bold text-white text-sm">{selectedArtist}</p>
+                                <p className="text-xs text-zinc-400">
+                                    {isCustom(selectedArtist) ? (
+                                        <span className="text-amber-400 font-medium">Custom Pro Artist</span>
+                                    ) : (
+                                        <span>Official NPC Artist</span>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleSendRequest}
+                            className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-black px-4 py-2 rounded-lg text-xs transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                        >
+                            <span>📨</span>
+                            <span>Send Feature Request</span>
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -703,6 +846,8 @@ const RedMicProDashboardView: React.FC = () => {
                         ))}
                     </div>
                 </div>
+
+                <NpcFeatureRequestSender />
 
                 <CustomFeatureBuilder />
 

@@ -24574,6 +24574,77 @@ Let us know if you accept.`,
         },
       };
     }
+    case "SEND_NPC_FEATURE_REQUEST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      if (!activeData) return state;
+
+      const artistProfile =
+        state.careerMode === "solo" && state.soloArtist
+          ? state.soloArtist
+          : state.group
+            ? state.group.members.find((m) => m.id === state.activeArtistId) || state.group
+            : null;
+      const artistName = artistProfile?.name || activeData.profile?.name || "there";
+
+      const npcArtistName = action.payload.npcArtistName;
+      const emailId = crypto.randomUUID();
+
+      const popularity = activeData.popularity || 50;
+      const payout = Math.floor(
+        50000 + popularity * 2000 * (Math.random() * 1.5 + 0.5)
+      );
+      const songQuality = Math.min(100, Math.floor(65 + Math.random() * 25));
+
+      let promotion: FeatureOffer["promotion"] | undefined = undefined;
+      if (Math.random() < 0.3) {
+        promotion = {
+          name: "Payola Push",
+          durationWeeks: Math.floor(Math.random() * 3) + 2,
+        };
+      }
+
+      const offer: FeatureOffer = {
+        type: "featureOffer",
+        npcArtistName,
+        payout,
+        songQuality,
+        promotion,
+        isAccepted: false,
+        emailId,
+      };
+
+      const newEmail: Email = {
+        id: emailId,
+        sender: npcArtistName,
+        senderIcon: "feature",
+        subject: `Feature Request: "${npcArtistName}"`,
+        body: `Hey ${artistName},
+
+Big fan of your work. I have a track that I think you'd sound perfect on.
+
+I can offer a payout of $${formatNumber(payout)} for your verse. The song quality is looking to be around ${songQuality}${promotion ? `, and we'll be running a ${promotion.name} for ${promotion.durationWeeks} weeks` : ""}.
+
+Let me know if you're interested.
+
+Best,
+${npcArtistName}`,
+        date: state.date,
+        isRead: false,
+        offer,
+      };
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            inbox: [newEmail, ...(activeData.inbox || [])],
+          },
+        },
+      };
+    }
     case "TOGGLE_GOLD_THEME": {
       if (!state.activeArtistId) return state;
       const { enabled } = action.payload;
