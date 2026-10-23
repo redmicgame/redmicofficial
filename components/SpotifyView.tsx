@@ -91,11 +91,19 @@ const PopularSongItem: React.FC<{ song: Song; index: number; hasMusicVideo?: boo
 };
 
 const PopularReleaseItem: React.FC<{ release: Release; isLatest: boolean; onClick: () => void; }> = ({ release, isLatest, onClick }) => {
+    const isSpotifyExclusive = release.isExclusive && (release.exclusiveTo === 'Spotify' || release.exclusivePlatforms?.includes('Spotify'));
     return (
         <button onClick={onClick} className="flex w-full text-left items-center gap-4 group cursor-pointer">
             <img src={release.coverArt} alt={release.title} className="w-16 h-16 rounded object-cover" />
             <div className="flex-grow min-w-0">
-                <p className="font-semibold text-white text-lg truncate">{release.title}</p>
+                <div className="flex items-center gap-2">
+                    <p className="font-semibold text-white text-lg truncate">{release.title}</p>
+                    {isSpotifyExclusive && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wider shrink-0">
+                            Spotify Exclusive
+                        </span>
+                    )}
+                </div>
                 <p className="text-sm text-zinc-400">
                     {isLatest ? 'Latest release' : release.releaseDate.year} • {release.type.replace(" (Deluxe)", "")}
                 </p>
@@ -368,9 +376,16 @@ const SpotifyView: React.FC = () => {
 
     const streamingSongs = useMemo(() => {
         return allSongs
-            .filter(s => s.isReleased && !s.isTakenDown && (s.isAvailableOnStreaming === true || s.isFeatureToNpc))
+            .filter(s => {
+                if (!s.isReleased || s.isTakenDown || s.isAvailableOnStreaming === false) return false;
+                if (s.isFeatureToNpc) return true;
+                const rel = releases.find(r => r.id === s.releaseId);
+                if (s.isExclusive && s.exclusiveTo && s.exclusiveTo !== 'Spotify' && !s.exclusivePlatforms?.includes('Spotify')) return false;
+                if (rel?.isExclusive && rel.exclusiveTo && rel.exclusiveTo !== 'Spotify' && !rel.exclusivePlatforms?.includes('Spotify')) return false;
+                return true;
+            })
             .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0));
-    }, [allSongs]);
+    }, [allSongs, releases]);
 
     const is2008_2015 = date.year <= 2015;
     const is2016_2017 = date.year === 2016 || date.year === 2017;
@@ -391,7 +406,8 @@ const SpotifyView: React.FC = () => {
 
     const popularReleases = (() => {
         const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc));
-        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
+        const isExclusiveToOther = (r: Release) => r.isExclusive && r.exclusiveTo && r.exclusiveTo !== 'Spotify' && !r.exclusivePlatforms?.includes('Spotify');
+        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && !isExclusiveToOther(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
 
         if (availableReleases.length === 0) {
             return [];

@@ -947,12 +947,8 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Tems": "https://cdn-images.dzcdn.net/images/artist/6afe2edff567600abf781c3d8a29344b/250x250-000000-80-0-0.jpg",
   "Asake": "https://cdn-images.dzcdn.net/images/artist/29baf235626c8cd1cdc782c6d467aca8/250x250-000000-80-0-0.jpg",
   "Omah Lay": "https://cdn-images.dzcdn.net/images/artist/e8ce64479eb3d7fc2853f7fd694cc999/250x250-000000-80-0-0.jpg",
-  "Avicii": "https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/250x250-000000-80-0-0.jpg",
   "Ella Langley": "https://cdn-images.dzcdn.net/images/artist/77aa9c0c9d9789bb43151a3882166d20/250x250-000000-80-0-0.jpg",
   "Riley Green": "https://cdn-images.dzcdn.net/images/artist/432eda6fc1dcf5d3643d52130c5717bd/250x250-000000-80-0-0.jpg",
-  "Morgan Wallen": "https://cdn-images.dzcdn.net/images/artist/74d538e146eb4a0fe0f65ce139886a8a/250x250-000000-80-0-0.jpg",
-  "Luke Combs": "https://cdn-images.dzcdn.net/images/artist/b8110b6d21f8a846200257c70cbf73e9/250x250-000000-80-0-0.jpg",
-  "Zach Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
   "Zack Bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
   "zack bryan": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/500x500-000000-80-0-0.jpg",
   "Kacey Musgraves": "https://cdn-images.dzcdn.net/images/artist/229fe42ffc5b16b51112ffee967453e1/250x250-000000-80-0-0.jpg",
@@ -967,8 +963,7 @@ export const NPC_ARTIST_IMAGES: Record<string, string> = {
   "Kane Brown": "https://cdn-images.dzcdn.net/images/artist/031a975249b648d21f34c5b2bbd3c877/250x250-000000-80-0-0.jpg",
   "Carrie Underwood": "https://cdn-images.dzcdn.net/images/artist/5d7c70c8d9d47e2c928b93ac0ff8d4fe/250x250-000000-80-0-0.jpg",
   "Dolly Parton": "https://cdn-images.dzcdn.net/images/artist/e0e4946c2e4149aa1421ec181e1e1fc6/250x250-000000-80-0-0.jpg",
-  "Johnny Cash": "https://cdn-images.dzcdn.net/images/artist/b6ebc29521306f6f21c395c7ac9a5f78/250x250-000000-80-0-0.jpg",
-  "Shania Twain": "https://cdn-images.dzcdn.net/images/artist/ebbfb131981fc4745fba7a215a151c40/250x250-000000-80-0-0.jpg"
+  "Johnny Cash": "https://cdn-images.dzcdn.net/images/artist/b6ebc29521306f6f21c395c7ac9a5f78/250x250-000000-80-0-0.jpg"
 };
 export const NPC_ERAS: Record<string, { start: number, end: number, genre: string, image: string }> = {
   "Tyler, the Creator": {"start":2009,"end":2050,"genre":"Hip Hop","image":"https://e-cdns-images.dzcdn.net/images/artist/5eceecd683beab6dd901a7931294a121/250x250-000000-80-0-0.jpg"},
@@ -1408,24 +1403,6 @@ export const NPC_ERAS: Record<string, { start: number, end: number, genre: strin
     "end": 2050,
     "genre": "Hip Hop",
     "image": "https://cdn-images.dzcdn.net/images/artist/bc031b73f958987fa103031070be5c16/250x250-000000-80-0-0.jpg"
-  },
-  "Morgan Wallen": {
-    "start": 2018,
-    "end": 2050,
-    "genre": "Country",
-    "image": "https://cdn-images.dzcdn.net/images/artist/75488d12757f5809b9e6c7f53e5bb455/250x250-000000-80-0-0.jpg"
-  },
-  "Luke Combs": {
-    "start": 2017,
-    "end": 2050,
-    "genre": "Country",
-    "image": "https://cdn-images.dzcdn.net/images/artist/c2a8e5d0d293a06bf887bb2724a780bc/250x250-000000-80-0-0.jpg"
-  },
-  "Zach Bryan": {
-    "start": 2021,
-    "end": 2050,
-    "genre": "Country",
-    "image": "https://cdn-images.dzcdn.net/images/artist/552d448a0c2cb72f40c3de3a384949bd/250x250-000000-80-0-0.jpg"
   },
   "Peso Pluma": {
     "start": 2023,

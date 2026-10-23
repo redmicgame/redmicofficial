@@ -54,7 +54,13 @@ const useItunesData = () => {
         for (const artistId in artistsData) {
             const aData = artistsData[artistId];
             const artist = allPlayerArtists.find(a => a.id === artistId);
-            aData.songs.filter(s => s.isReleased).forEach(song => {
+            const isSongExclusiveToOther = (s: Song) => {
+                const rel = aData.releases.find(r => r.id === s.releaseId);
+                if (s.isExclusive && s.exclusiveTo && s.exclusiveTo !== 'iTunes' && !s.exclusivePlatforms?.includes('iTunes')) return true;
+                if (rel?.isExclusive && rel.exclusiveTo && rel.exclusiveTo !== 'iTunes' && !rel.exclusivePlatforms?.includes('iTunes')) return true;
+                return false;
+            };
+            aData.songs.filter(s => s.isReleased && !isSongExclusiveToOther(s)).forEach(song => {
                 if (!billboardSongIds.has(song.id)) {
                     entries.push({
                         rank: 101,
@@ -147,7 +153,8 @@ const useItunesData = () => {
         for (const artistId in artistsData) {
             const aData = artistsData[artistId];
             const artist = allPlayerArtists.find(a => a.id === artistId);
-            aData.releases.filter(r => r.isReleased && !billboardAlbumIds.has(r.id)).forEach(release => {
+            const isAlbumExclusiveToOther = (r: Release) => r.isExclusive && r.exclusiveTo && r.exclusiveTo !== 'iTunes' && !r.exclusivePlatforms?.includes('iTunes');
+            aData.releases.filter(r => r.isReleased && !billboardAlbumIds.has(r.id) && !isAlbumExclusiveToOther(r)).forEach(release => {
                 let totalWeeklyActivity = 0;
                 release.songIds.forEach(songId => {
                     const song = aData.songs.find(s => s.id === songId);
@@ -169,8 +176,11 @@ const useItunesData = () => {
                     albumId: release.id,
                     uniqueId: release.id,
                     weeklyActivity: Math.floor(totalWeeklyActivity / 1500),
-                    weeklySales: 0
-                });
+                    weeklySales: 0,
+                    isExclusive: release.isExclusive,
+                    exclusiveTo: release.exclusiveTo,
+                    isDeluxe: !!release.standardEditionId,
+                } as any);
             });
 
             aData.labelSubmissions.filter(s => s.hasCountdownPage && s.status === 'scheduled').forEach(sub => {
@@ -358,7 +368,13 @@ const useItunesData = () => {
                 }).filter((s): s is ITunesSong & { isAvailable: boolean } => !!s);
              }
         }
-        return { ...album, tracks };
+        return { 
+            ...album, 
+            isExclusive: (album as any).isExclusive,
+            exclusiveTo: (album as any).exclusiveTo,
+            isDeluxe: (album as any).isDeluxe,
+            tracks 
+        };
     };
 
     return { allSongs, allAlbums, findArtistByName, getArtistDetails, getArtistSongs, getArtistAlbums, getAlbumDetails };
@@ -436,13 +452,24 @@ const SongRow: React.FC<{ song: ITunesSong; onClick: () => void; onPriceClick?: 
     </div>
 );
 
-const AlbumGridItem: React.FC<{ album: ITunesAlbum; onClick: () => void }> = ({ album, onClick }) => (
-    <button onClick={onClick} className="flex-shrink-0 w-40 text-left">
-        <img src={album.coverArt} alt={album.title} className="w-40 h-40 rounded-lg object-cover" />
-        <p className="mt-1 font-semibold line-clamp-1">{album.title}</p>
-        <p className="text-zinc-400 line-clamp-1">{album.artist}</p>
-    </button>
-);
+const AlbumGridItem: React.FC<{ album: ITunesAlbum; onClick: () => void }> = ({ album, onClick }) => {
+    const isExclusive = (album as any).isExclusive && ((album as any).exclusiveTo === 'iTunes' || (album as any).exclusivePlatforms?.includes('iTunes'));
+    const isDeluxe = (album as any).isDeluxe;
+    return (
+        <button onClick={onClick} className="flex-shrink-0 w-40 text-left cursor-pointer">
+            <div className="relative">
+                <img src={album.coverArt} alt={album.title} className="w-40 h-40 rounded-lg object-cover" />
+                {isExclusive && (
+                    <span className="absolute top-1.5 left-1.5 bg-sky-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow tracking-wider uppercase">
+                        {isDeluxe ? 'Deluxe Excl.' : 'iTunes Excl.'}
+                    </span>
+                )}
+            </div>
+            <p className="mt-1 font-semibold line-clamp-1">{album.title}</p>
+            <p className="text-zinc-400 line-clamp-1">{album.artist}</p>
+        </button>
+    );
+};
 
 const StarRating: React.FC<{ rating: number, count: number }> = ({ rating, count }) => {
     return (
@@ -724,7 +751,14 @@ const ITunesAlbumDetail: React.FC<{ albumData: any; navigateTo: Function; allAlb
                     <img src={coverArt} alt={title} className="w-36 h-36 rounded-md shadow-2xl object-cover flex-shrink-0" />
                     <div className="flex flex-col justify-between py-1 flex-1">
                         <div>
-                            <h2 className="text-xl font-bold leading-tight">{title} <span className="inline-block bg-red-600 text-black text-[10px] font-black px-1 rounded-sm align-middle ml-1">E</span></h2>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h2 className="text-xl font-bold leading-tight">{title} <span className="inline-block bg-red-600 text-black text-[10px] font-black px-1 rounded-sm align-middle ml-1">E</span></h2>
+                                {albumData.isExclusive && (albumData.exclusiveTo === 'iTunes' || albumData.exclusivePlatforms?.includes('iTunes')) && (
+                                    <span className="inline-block bg-sky-500/20 border border-sky-400 text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-full align-middle">
+                                        {albumData.isDeluxe ? 'iTunes Exclusive Deluxe' : 'iTunes Exclusive'}
+                                    </span>
+                                )}
+                            </div>
                             <button onClick={() => navigateTo('artist', { artistId: artist, artistName: artist }, artist)} className="text-lg text-zinc-400 mt-1">{artist} &gt;</button>
                         </div>
                         <div>

@@ -175,6 +175,12 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                                         <span className="text-white/90 font-bold"> Animated Cover</span>
                                     </>
                                 )}
+                                {release.isExclusive && (release.exclusiveTo === 'Apple Music' || release.exclusivePlatforms?.includes('Apple Music')) && (
+                                    <>
+                                        <span>•</span>
+                                        <span className="text-[#fa243c] font-black"> Apple Music Exclusive</span>
+                                    </>
+                                )}
                             </p>
                             
                             <div className="flex gap-4 mt-6 justify-center items-center px-4">
@@ -351,6 +357,11 @@ const HorizontalSection: React.FC<{title: string, items: (Release | Video)[], on
                             <div className="font-semibold truncate mt-2 flex items-center gap-1.5">
                                 <span className="truncate">{item.title}</span>
                                 {isExplicit && <span className="text-[10px] w-4 h-4 bg-zinc-700/80 text-zinc-300 font-bold rounded-sm flex items-center justify-center shrink-0">E</span>}
+                                {'isExclusive' in item && item.isExclusive && (item.exclusiveTo === 'Apple Music' || item.exclusivePlatforms?.includes('Apple Music')) && (
+                                    <span className="text-[9px] font-black text-[#fa243c] bg-[#fa243c]/20 px-1 py-0.5 rounded border border-[#fa243c]/40 shrink-0">
+                                        Exclusive
+                                    </span>
+                                )}
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">{isVideos ? artistName : ('releaseDate' in item && item.releaseDate.year)}</p>
                         </button>
@@ -542,14 +553,21 @@ const AppleMusicView: React.FC = () => {
 
         const { songs, releases, videos } = activeArtistData;
         const isFeature = (r: Release) => r.type !== 'Live Album' && (r.isFeatureToNpc || r.songIds.some(id => songs.find(s => s.id === id)?.isFeatureToNpc));
-        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
+        const isExclusiveToOther = (r: Release) => r.isExclusive && r.exclusiveTo && r.exclusiveTo !== 'Apple Music' && !r.exclusivePlatforms?.includes('Apple Music');
+        const availableReleases = releases.filter(r => !r.isTakenDown && !r.soundtrackInfo && !isFeature(r) && !isExclusiveToOther(r) && r.songIds.some(id => songs.find(s => s.id === id)?.isAvailableOnStreaming === true));
 
         const latestRelease = [...availableReleases]
             .filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Album (Deluxe)' || r.type === 'Compilation' || r.type === 'Live Album')
             .sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week))[0];
 
         const topSongs = [...songs]
-            .filter(s => s.isReleased && s.isAvailableOnStreaming === true)
+            .filter(s => {
+                if (!s.isReleased || s.isTakenDown || s.isAvailableOnStreaming === false) return false;
+                const rel = releases.find(r => r.id === s.releaseId);
+                if (s.isExclusive && s.exclusiveTo && s.exclusiveTo !== 'Apple Music' && !s.exclusivePlatforms?.includes('Apple Music')) return false;
+                if (rel?.isExclusive && rel.exclusiveTo && rel.exclusiveTo !== 'Apple Music' && !rel.exclusivePlatforms?.includes('Apple Music')) return false;
+                return true;
+            })
             .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
             .slice(0, 5);
         

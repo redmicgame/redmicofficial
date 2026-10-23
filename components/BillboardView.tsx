@@ -74,8 +74,8 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
     const hash = (entry.uniqueId || entry.albumId || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const divisor = 750 + (hash % 250);
     const digitalSales = isAlbumChart 
-        ? (entry.weeklySales || 0) 
-        : (entry.digitalSales !== undefined ? entry.digitalSales : Math.floor(weeklyStreams / divisor) * boost);
+        ? (entry.weeklyPureSales || entry.weeklySales || 0) 
+        : (entry.digitalSales !== undefined ? entry.digitalSales : (weeklyStreams > 0 ? Math.floor(weeklyStreams / divisor) * boost : 0));
 
     return (
         <div className="w-full relative bg-[#f4f4f4] mb-2 shadow-sm rounded-sm overflow-hidden flex flex-col transition-all">
@@ -189,12 +189,16 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
                     <div className="flex px-4 items-center justify-around">
                         <div className="text-center">
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">SALES</p>
-                            <p className="text-lg font-black text-black">{digitalSales > 0 ? formatNumber(Math.floor(digitalSales)) : 'N/A'}</p>
+                            <p className="text-lg font-black text-black">{digitalSales > 0 ? formatNumber(Math.floor(digitalSales)) : '0'}</p>
                         </div>
                         <div className="w-px h-8 bg-zinc-300"></div>
                         <div className="text-center">
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">AIRPLAY</p>
-                            <p className="text-lg font-black text-black">{entry.radioImpressions ? formatNumber(Math.floor(entry.radioImpressions)) : 'N/A'}</p>
+                            <p className="text-lg font-black text-black">
+                                {entry.radioImpressions && entry.radioImpressions > 0 
+                                    ? formatNumber(Math.floor(entry.radioImpressions)) 
+                                    : (entry.radioPlays && entry.radioPlays > 0 ? formatNumber(Math.floor(entry.radioPlays * 5000)) : '0')}
+                            </p>
                         </div>
                         {gameState.date.year >= 2010 && (
                             <>

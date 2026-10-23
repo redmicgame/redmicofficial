@@ -168,7 +168,13 @@ const UKChartView: React.FC = () => {
                             </div>
                             
                             {activeTab === 'singles' ? (
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className={`grid ${gameState.date.year < 2014 || (selectedItem.digitalSales && selectedItem.digitalSales > 0) ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+                                    {(gameState.date.year < 2014 || (selectedItem.digitalSales && selectedItem.digitalSales > 0)) && (
+                                        <div className="bg-[#fdf9f3] p-3 rounded-xl border border-zinc-200">
+                                            <p className="text-xs text-zinc-500 uppercase font-bold mb-1">UK Sales</p>
+                                            <p className="text-lg font-bold text-zinc-900">{formatNumber(selectedItem.digitalSales || 0)}</p>
+                                        </div>
+                                    )}
                                     <div className="bg-[#fdf9f3] p-3 rounded-xl border border-zinc-200">
                                         <p className="text-xs text-zinc-500 uppercase font-bold mb-1">UK Streams</p>
                                         <p className="text-lg font-bold text-zinc-900">{formatNumber(selectedItem.weeklyStreams)}</p>

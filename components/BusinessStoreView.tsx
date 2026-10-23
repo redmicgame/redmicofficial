@@ -193,14 +193,14 @@ export const BusinessStoreView: React.FC<BusinessStoreViewProps> = ({
 
   if (!business) {
     return (
-      <div className="bg-white text-black min-h-screen p-8 text-center space-y-4">
+      <div className="bg-white text-black h-full w-full overflow-y-auto p-8 text-center space-y-4 flex flex-col items-center justify-center">
         <h2 className="text-xl font-bold">No Active Store Available</h2>
         <p className="text-sm text-zinc-500">
           You must form an LLC and launch a brand in the Business tab first.
         </p>
         <button
           onClick={() => (onBack ? onBack() : dispatch({ type: 'CHANGE_VIEW', payload: 'game' }))}
-          className="px-4 py-2 rounded-lg bg-black text-white text-xs font-bold"
+          className="px-4 py-2 rounded-lg bg-black text-white text-xs font-bold cursor-pointer"
         >
           Return to Business
         </button>
@@ -215,7 +215,7 @@ export const BusinessStoreView: React.FC<BusinessStoreViewProps> = ({
     'Artist';
 
   return (
-    <div className="bg-white text-black min-h-screen flex flex-col font-sans overflow-y-auto pb-24">
+    <div className="bg-white text-black h-full w-full flex flex-col font-sans overflow-y-auto pb-32">
       {/* Hidden inputs for tap-to-upload */}
       <input
         type="file"

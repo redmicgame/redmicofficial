@@ -31,6 +31,8 @@ const ReleaseView: React.FC = () => {
     const [baseAlbumForDeluxe, setBaseAlbumForDeluxe] = useState<string>('');
     const [deluxeCoverArt, setDeluxeCoverArt] = useState<string | null>(null);
     const [selectedLiveTourId, setSelectedLiveTourId] = useState<string>('');
+    const [isExclusive, setIsExclusive] = useState<boolean>(false);
+    const [exclusivePlatform, setExclusivePlatform] = useState<'iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music'>('Spotify');
 
     if (!activeArtistData || !activeArtist) return null;
     const { songs, contract, releases, labelSubmissions, customLabels, redMicPro } = activeArtistData;
@@ -195,6 +197,9 @@ const ReleaseView: React.FC = () => {
             releaseDate: date, // This will be updated by label if approved
             artistId: activeArtist.id,
             standardEditionId: releaseType === 'Album (Deluxe)' ? baseAlbumForDeluxe : undefined,
+            isExclusive: isExclusive,
+            exclusiveTo: isExclusive ? exclusivePlatform : undefined,
+            exclusivePlatforms: isExclusive ? [exclusivePlatform] : undefined,
         };
 
         if (contract) {
@@ -385,6 +390,75 @@ const ReleaseView: React.FC = () => {
                     </>
                 )}
                 
+
+                {/* PLATFORM EXCLUSIVITY OPTION */}
+                <div className="bg-zinc-800/80 p-4 rounded-xl border border-zinc-700/60 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-white">Platform Exclusivity</span>
+                                <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    Special Release
+                                </span>
+                            </div>
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                                {releaseType === 'Album (Deluxe)'
+                                    ? 'Release this deluxe edition exclusively on a specific music platform'
+                                    : `Release this ${releaseType.toLowerCase()} exclusively on a specific music platform`}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsExclusive(!isExclusive)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                isExclusive ? 'bg-amber-500' : 'bg-zinc-700'
+                            }`}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    isExclusive ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                            />
+                        </button>
+                    </div>
+
+                    {isExclusive && (
+                        <div className="space-y-3 pt-3 border-t border-zinc-700/50">
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2">
+                                    Select Exclusive Platform:
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {([
+                                        { id: 'iTunes', label: 'iTunes', sub: 'Digital Sales', color: 'border-sky-500 bg-sky-500/20 text-sky-300' },
+                                        { id: 'Apple Music', label: 'Apple Music', sub: 'Streaming Exclusive', color: 'border-rose-500 bg-rose-500/20 text-rose-300' },
+                                        { id: 'Spotify', label: 'Spotify', sub: 'Streaming Exclusive', color: 'border-emerald-500 bg-emerald-500/20 text-emerald-300' },
+                                        { id: 'YouTube Music', label: 'YouTube Music', sub: 'Streaming Exclusive', color: 'border-red-500 bg-red-500/20 text-red-300' },
+                                    ] as const).map((plat) => (
+                                        <button
+                                            key={plat.id}
+                                            type="button"
+                                            onClick={() => setExclusivePlatform(plat.id)}
+                                            className={`p-3 rounded-lg border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                                                exclusivePlatform === plat.id
+                                                    ? `${plat.color} ring-2 ring-white/20 shadow-md`
+                                                    : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                                            }`}
+                                        >
+                                            <span className="font-bold text-sm">{plat.label}</span>
+                                            <span className="text-[10px] font-normal opacity-75">{plat.sub}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-zinc-400 italic bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800">
+                                {exclusivePlatform === 'iTunes'
+                                    ? `Available exclusively on iTunes! Deluxes and songs will be sold as digital downloads and chart on iTunes.`
+                                    : `Streams exclusively on ${exclusivePlatform}! Fans on other streaming platforms will react and talk about the exclusivity on social media.`}
+                            </p>
+                        </div>
+                    )}
+                </div>
 
                 {error && <p className="text-red-400 text-sm text-center">{error}</p>}
                 

@@ -156,6 +156,9 @@ export interface Song {
   trait?: "Smash Hit" | "TikTok Hit" | "Slow Burner" | "Flop" | "Radio Hit" | "Normal";
   traitGenerated?: boolean;
   isAvailableOnStreaming?: boolean;
+  isExclusive?: boolean;
+  exclusiveTo?: 'iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music';
+  exclusivePlatforms?: ('iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music')[];
   sales?: number;
   leakInfo?: {
     illegalStreams: number;
@@ -331,6 +334,10 @@ export interface Release {
   preorderSales?: number;
   vinylDelayed?: boolean;
   delayedVinylPreorders?: number;
+  isExclusive?: boolean;
+  exclusiveTo?: 'iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music';
+  exclusivePlatforms?: ('iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music')[];
+  isAvailableOnStreaming?: boolean;
 }
 
 export interface Video {

@@ -239,6 +239,13 @@ const SpotifyReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void
                                 <span className="font-semibold">{activeArtist.name}</span>
                             </div>
                             <p className="text-sm text-zinc-400 mt-1">{release.type.replace(" (Deluxe)", "")} • {release.releaseDate.year}</p>
+                            {release.isExclusive && (release.exclusiveTo === 'Spotify' || release.exclusivePlatforms?.includes('Spotify')) && (
+                                <div className="mt-2">
+                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/40">
+                                        ✨ Spotify Exclusive
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -1888,6 +1888,168 @@ const calculateGenreChart = (
   return { newChart, newHistory };
 };
 
+export const generateSpotifyChartEmail = (
+  artistId: string,
+  artistName: string,
+  isDaily: boolean,
+  date: GameDate,
+  allPlayerSongsFlat: Song[],
+  charts: {
+    global?: ChartEntry[];
+    us?: ChartEntry[];
+    uk?: ChartEntry[];
+    canada?: ChartEntry[];
+    latin?: ChartEntry[];
+    asia?: ChartEntry[];
+    africa?: ChartEntry[];
+  }
+): Email | null => {
+  const getPlayerEntries = (chart?: ChartEntry[]) => {
+    if (!chart || chart.length === 0) return [];
+    return chart.filter(
+      (e) =>
+        e.isPlayerSong &&
+        allPlayerSongsFlat.find((s) => s.id === e.songId || s.title.toLowerCase() === e.title.toLowerCase())?.artistId === artistId
+    );
+  };
+
+  const globalEntries = getPlayerEntries(charts.global);
+  const usEntries = getPlayerEntries(charts.us);
+  const ukEntries = getPlayerEntries(charts.uk);
+  const canadaEntries = getPlayerEntries(charts.canada);
+  const latinEntries = getPlayerEntries(charts.latin);
+  const asiaEntries = getPlayerEntries(charts.asia);
+  const africaEntries = getPlayerEntries(charts.africa);
+
+  const totalEntriesCount =
+    globalEntries.length +
+    usEntries.length +
+    ukEntries.length +
+    canadaEntries.length +
+    latinEntries.length +
+    asiaEntries.length +
+    africaEntries.length;
+
+  if (totalEntriesCount === 0) return null;
+
+  const streamLabel = isDaily ? "daily streams" : "streams";
+  const getStreamDisplay = (e: ChartEntry) => {
+    let count = e.weeklyStreams;
+    if (isDaily) {
+      if (e.dailyStreams) {
+        count = e.dailyStreams;
+      } else {
+        const pSong = allPlayerSongsFlat.find((s) => s.id === e.songId || s.title.toLowerCase() === e.title.toLowerCase());
+        if (pSong && pSong.lastDayStreams !== undefined && pSong.lastDayStreams > 0) {
+          count = pSong.lastDayStreams;
+        } else if (pSong && pSong.actualLastWeekStreams) {
+          count = Math.max(1, Math.round(pSong.actualLastWeekStreams / 7));
+        } else {
+          count = Math.max(1, Math.round(e.weeklyStreams / 7));
+        }
+      }
+    }
+    return `${formatNumber(count)} ${streamLabel}`;
+  };
+
+  let body = `Hi ${artistName},\n\nHere is your ${isDaily ? "daily" : "weekly"} Spotify Charts breakdown across all global and regional charts:\n`;
+
+  if (globalEntries.length > 0) {
+    body += `\n**Spotify Global Top 200**\n`;
+    globalEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  if (usEntries.length > 0) {
+    body += `\n**Spotify US Top 100**\n`;
+    usEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  if (ukEntries.length > 0) {
+    body += `\n**Spotify UK Top 100**\n`;
+    ukEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  if (canadaEntries.length > 0) {
+    body += `\n**Spotify Canada Top 100**\n`;
+    canadaEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  if (latinEntries.length > 0) {
+    body += `\n**Spotify Latin America Top 100**\n`;
+    latinEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  if (asiaEntries.length > 0) {
+    body += `\n**Spotify Asia Top 100**\n`;
+    asiaEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  if (africaEntries.length > 0) {
+    body += `\n**Spotify Africa Top 100**\n`;
+    africaEntries.forEach((e) => {
+      body += `#${e.rank} "${e.title}" - ${getStreamDisplay(e)}\n`;
+    });
+  }
+
+  body += `\nCongratulations on your streaming performance worldwide!\n- Spotify Charts Team`;
+
+  return {
+    id: crypto.randomUUID(),
+    sender: "Spotify Charts",
+    subject: isDaily ? "Your Daily Spotify Charts Update" : "Your Weekly Spotify Charts Update",
+    body: body,
+    date: date,
+    isRead: false,
+    senderIcon: "spotify",
+  };
+};
+
+export const generateUkChartEmail = (
+  artistId: string,
+  artistName: string,
+  isDaily: boolean,
+  date: GameDate,
+  allPlayerSongsFlat: Song[],
+  ukSinglesChart?: ChartEntry[]
+): Email | null => {
+  if (!ukSinglesChart || ukSinglesChart.length === 0) return null;
+  const playerEntries = ukSinglesChart.filter(
+    (e) =>
+      e.isPlayerSong &&
+      allPlayerSongsFlat.find((s) => s.id === e.songId || s.title.toLowerCase() === e.title.toLowerCase())?.artistId === artistId
+  );
+
+  if (playerEntries.length === 0) return null;
+
+  let body = `Hi ${artistName},\n\nHere is your ${isDaily ? "daily" : "weekly"} performance update on the Official UK Singles Chart:\n\n**Official UK Singles Chart Top 100**\n`;
+  playerEntries.forEach((e) => {
+    body += `#${e.rank} "${e.title}" (Peak: #${e.peak}, ${e.weeksOnChart} week${e.weeksOnChart === 1 ? "" : "s"} on chart)\n`;
+  });
+  body += `\nCongratulations on your chart success in the United Kingdom!\n- The Official Charts Company`;
+
+  return {
+    id: crypto.randomUUID(),
+    sender: "Official Charts",
+    subject: isDaily ? "Your Daily UK Singles Chart Update" : "Your Weekly UK Singles Chart Update",
+    body: body,
+    date: date,
+    isRead: false,
+    senderIcon: "brits",
+  };
+};
+
 const getHypeCap = (artistData: ArtistData): number => {
   if (artistData.redMicPro && artistData.redMicPro.unlocked) {
     if (artistData.redMicPro.hypeMode === "locked") {
@@ -3294,30 +3456,51 @@ The Red Mic Team`,
                 if (isDateToday(single.releaseDate)) {
                   const song = artistData.songs.find((s) => s.id === single.songId);
                   if (song && !song.isReleased) {
-                    artistData.songs = artistData.songs.map((s) =>
-                      s.id === single.songId
-                        ? {
-                            ...s,
-                            isReleased: true,
-                            isPreReleaseSingle: true,
-                            isInterlude: single.singleType === 'interlude',
-                            singleType: single.singleType,
-                            coverArt: sub.release?.coverArt || s.coverArt,
-                          }
-                        : s,
-                    );
+                    const isSubItunesExcl = (sub.release?.isExclusive && sub.release.exclusiveTo === 'iTunes') ||
+                                            (sub.release?.exclusivePlatforms?.includes('iTunes') && !sub.release?.exclusivePlatforms?.includes('Spotify'));
+                    const isSubOtherExcl = sub.release?.isExclusive && sub.release?.exclusiveTo && sub.release?.exclusiveTo !== 'Spotify';
+
+                    let targetReleaseId = "";
                     const existingRelease = artistData.releases.find((r) => r.songIds.includes(single.songId));
                     if (!existingRelease) {
+                      targetReleaseId = crypto.randomUUID();
                       artistData.releases.push({
-                        id: crypto.randomUUID(),
+                        id: targetReleaseId,
                         title: song.title,
                         type: "Single",
                         coverArt: sub.release?.coverArt,
                         songIds: [song.id],
                         releaseDate: newDate,
                         artistId: song.artistId,
+                        isExclusive: sub.release?.isExclusive,
+                        exclusiveTo: sub.release?.exclusiveTo,
+                        exclusivePlatforms: sub.release?.exclusivePlatforms,
                       });
+                    } else {
+                      targetReleaseId = existingRelease.id;
                     }
+
+                    artistData.songs = artistData.songs.map((s) =>
+                      s.id === single.songId
+                        ? {
+                            ...s,
+                            isReleased: true,
+                            releaseId: targetReleaseId,
+                            isPreReleaseSingle: true,
+                            isInterlude: single.singleType === 'interlude',
+                            singleType: single.singleType,
+                            coverArt: sub.release?.coverArt || s.coverArt,
+                            isExclusive: isSubItunesExcl || isSubOtherExcl ? true : (sub.release?.isExclusive ?? s.isExclusive),
+                            exclusiveTo: isSubItunesExcl ? 'iTunes' : (sub.release?.exclusiveTo ?? s.exclusiveTo),
+                            exclusivePlatforms: isSubItunesExcl ? ['iTunes'] : (sub.release?.exclusivePlatforms ?? s.exclusivePlatforms),
+                            isAvailableOnStreaming: isSubItunesExcl || isSubOtherExcl ? false : (s.isAvailableOnStreaming !== undefined ? s.isAvailableOnStreaming : true),
+                            streams: isSubItunesExcl ? 0 : s.streams,
+                            lastWeekStreams: isSubItunesExcl ? 0 : s.lastWeekStreams,
+                            actualLastWeekStreams: isSubItunesExcl ? 0 : s.actualLastWeekStreams,
+                            lastDayStreams: isSubItunesExcl ? 0 : s.lastDayStreams,
+                          }
+                        : s,
+                    );
                   }
                 }
               });
@@ -3327,12 +3510,45 @@ The Red Mic Team`,
                 sub.status = "released";
                 if (sub.release) {
                   sub.release.isReleased = true;
-                  artistData.songs = artistData.songs.map((s) =>
-                    sub.release.songIds.includes(s.id) ? { ...s, isReleased: true } : s,
-                  );
+                  const baseAlbumSongs = sub.release.standardEditionId
+                    ? (artistData.releases.find((r) => r.id === sub.release.standardEditionId)?.songIds || [])
+                    : [];
+                  const isSubItunesExcl = (sub.release.isExclusive && sub.release.exclusiveTo === 'iTunes') ||
+                                          (sub.release.exclusivePlatforms?.includes('iTunes') && !sub.release.exclusivePlatforms?.includes('Spotify'));
+                  const isSubOtherExcl = sub.release.isExclusive && sub.release.exclusiveTo && sub.release.exclusiveTo !== 'Spotify';
+
+                  artistData.songs = artistData.songs.map((s) => {
+                    if (!sub.release.songIds.includes(s.id)) return s;
+                    const isNewDeluxeTrack = sub.release.standardEditionId
+                      ? !baseAlbumSongs.includes(s.id)
+                      : true;
+                    const isTrackItunesExcl = (isNewDeluxeTrack && isSubItunesExcl) || (!sub.release.standardEditionId && isSubItunesExcl);
+                    const isTrackOtherExcl = (isNewDeluxeTrack && isSubOtherExcl) || (!sub.release.standardEditionId && isSubOtherExcl);
+                    const isExcl = isTrackItunesExcl || isTrackOtherExcl || (isNewDeluxeTrack ? (sub.release.isExclusive ?? s.isExclusive) : s.isExclusive);
+                    const exclTo = isTrackItunesExcl ? 'iTunes' : (isNewDeluxeTrack ? (sub.release.exclusiveTo ?? s.exclusiveTo) : s.exclusiveTo);
+
+                    return {
+                      ...s,
+                      isReleased: true,
+                      releaseId: sub.release.type === "Compilation" ? s.releaseId : sub.release.id,
+                      isExclusive: isExcl,
+                      exclusiveTo: exclTo,
+                      exclusivePlatforms: isTrackItunesExcl ? ['iTunes'] : (isNewDeluxeTrack ? (sub.release.exclusivePlatforms ?? s.exclusivePlatforms) : s.exclusivePlatforms),
+                      isAvailableOnStreaming: isTrackItunesExcl || isTrackOtherExcl
+                        ? false
+                        : s.isAvailableOnStreaming !== undefined ? s.isAvailableOnStreaming : true,
+                      streams: isTrackItunesExcl ? 0 : s.streams,
+                      lastWeekStreams: isTrackItunesExcl ? 0 : s.lastWeekStreams,
+                      actualLastWeekStreams: isTrackItunesExcl ? 0 : s.actualLastWeekStreams,
+                      lastDayStreams: isTrackItunesExcl ? 0 : s.lastDayStreams,
+                    };
+                  });
                   const existingAlbum = artistData.releases.find((r) => r.id === sub.release.id);
                   if (existingAlbum) {
                     existingAlbum.isReleased = true;
+                    existingAlbum.isExclusive = sub.release.isExclusive;
+                    existingAlbum.exclusiveTo = sub.release.exclusiveTo;
+                    existingAlbum.exclusivePlatforms = sub.release.exclusivePlatforms;
                   } else {
                     artistData.releases.push({ ...sub.release, isReleased: true, releaseDate: newDate });
                   }
@@ -3451,29 +3667,41 @@ The Red Mic Team`,
                 ? song.lastWeekStreams
                 : Math.floor((quality ** 2) * 20 * (pop / 40 + 0.5) * (1 + hype / 200));
 
+              // Exclusivity and streaming availability check:
+              const songRel = artistData.releases.find((r) => r.id === song.releaseId || r.songIds.includes(song.id));
+              const isItunesExcl = (song.isExclusive && song.exclusiveTo === 'iTunes') ||
+                                   (songRel?.isExclusive && songRel?.exclusiveTo === 'iTunes') ||
+                                   (song.exclusivePlatforms?.includes('iTunes') && !song.exclusivePlatforms?.includes('Spotify')) ||
+                                   (songRel?.exclusivePlatforms?.includes('iTunes') && !songRel?.exclusivePlatforms?.includes('Spotify')) ||
+                                   song.isAvailableOnStreaming === false;
+              const isOtherStreamingExcl = (song.isExclusive && song.exclusiveTo && song.exclusiveTo !== 'Spotify') ||
+                                           (songRel?.isExclusive && songRel.exclusiveTo && songRel.exclusiveTo !== 'Spotify');
+              const isStreamingAllowed = !isItunesExcl && !isOtherStreamingExcl;
+
               // Spotify availability by region:
               // UK: 2008, US & Canada: 2011, Latin America & Asia: 2013, Africa: 2018
               let dayStreams = 0;
-              if (newDate.year >= 2008) {
-                const regPop = artistData.regionalPopularity || {
-                  US: (artistData.location === "US" || !artistData.location) ? pop : 0,
-                  Canada: artistData.location === "Canada" ? pop : 0,
-                  UK: artistData.location === "UK" ? pop : 0,
-                  "Latin America": artistData.location === "Latin America" ? pop : 0,
-                  Asia: artistData.location === "Asia" ? pop : 0,
-                  Africa: artistData.location === "Africa" ? pop : 0,
-                };
+              let activePopScore = 0;
+              const regPop = artistData.regionalPopularity || {
+                US: (artistData.location === "US" || !artistData.location) ? pop : 0,
+                Canada: artistData.location === "Canada" ? pop : 0,
+                UK: artistData.location === "UK" ? pop : 0,
+                "Latin America": artistData.location === "Latin America" ? pop : 0,
+                Asia: artistData.location === "Asia" ? pop : 0,
+                Africa: artistData.location === "Africa" ? pop : 0,
+              };
 
-                const isRegActive = (r: string) => {
-                  if (newDate.year < 2008) return false;
-                  if (r === "UK") return newDate.year >= 2008;
-                  if (r === "US" || r === "Canada") return newDate.year >= 2011;
-                  if (r === "Latin America" || r === "Asia") return newDate.year >= 2013;
-                  if (r === "Africa") return newDate.year >= 2018;
-                  return false;
-                };
+              const isRegActive = (r: string) => {
+                if (newDate.year < 2008) return false;
+                if (r === "UK") return newDate.year >= 2008;
+                if (r === "US" || r === "Canada") return newDate.year >= 2011;
+                if (r === "Latin America" || r === "Asia") return newDate.year >= 2013;
+                if (r === "Africa") return newDate.year >= 2018;
+                return false;
+              };
 
-                const activePopScore =
+              if (newDate.year >= 2008 && isStreamingAllowed) {
+                activePopScore =
                   (isRegActive("UK") ? (regPop["UK"] || 0) * 0.15 : 0) +
                   (isRegActive("US") ? (regPop["US"] || 0) * 0.40 : 0) +
                   (isRegActive("Canada") ? (regPop["Canada"] || 0) * 0.10 : 0) +
@@ -3495,16 +3723,20 @@ The Red Mic Team`,
               }
 
               const currentDaily = song.dailyStreams || [];
-              const newDailyStreams = [...currentDaily.slice(-27), dayStreams];
+              const newDailyStreams = [...currentDaily.slice(-27), isItunesExcl ? 0 : dayStreams];
 
-              const grossIncome = dayStreams > 0 ? Math.floor(dayStreams / 150) * STREAM_INCOME_MULTIPLIER : 0;
+              const grossIncome = (!isItunesExcl && dayStreams > 0) ? Math.floor(dayStreams / 150) * STREAM_INCOME_MULTIPLIER : 0;
               const netIncome = Math.floor(grossIncome * playerCut);
 
               artistData.money += netIncome;
 
               // Daily pure sales
               const baseSales = song.sales && song.sales > 0 ? Math.floor(song.sales / 60) : Math.floor(pop * 3);
-              const dailySales = Math.max(0, Math.floor((baseSales / 7) * dayFactor * noise));
+              let dailySales = Math.max(0, Math.floor((baseSales / 7) * dayFactor * noise));
+              if (isItunesExcl) {
+                // High iTunes exclusive digital sales boost
+                dailySales = Math.max(50, Math.floor(dailySales * 3.5));
+              }
               const saleUnitCost = newDate.year < 2003 ? 12 : 1.29;
               const saleIncome = Math.floor(dailySales * saleUnitCost * playerCut);
               artistData.money += saleIncome;
@@ -3513,7 +3745,7 @@ The Red Mic Team`,
               const dailyRadio = Math.max(0, Math.floor(((song.radioPlays || (pop * 10)) / 7) * noise));
 
               const dailyRegStreams = { ...(song.regionalStreams || { US: 0, Canada: 0, UK: 0, "Latin America": 0, Asia: 0, Africa: 0 }) };
-              if (dayStreams > 0 && typeof activePopScore === 'number' && activePopScore > 0) {
+              if (!isItunesExcl && dayStreams > 0 && typeof activePopScore === 'number' && activePopScore > 0) {
                 (["UK", "US", "Canada", "Latin America", "Asia", "Africa"] as const).forEach((r) => {
                   if (isRegActive(r)) {
                     const weight = r === "UK" ? 0.15 : r === "US" ? 0.40 : r === "Canada" ? 0.10 : r === "Latin America" ? 0.15 : r === "Asia" ? 0.15 : 0.05;
@@ -3529,7 +3761,12 @@ The Red Mic Team`,
               return {
                 ...song,
                 isReleased: effectivelyReleased,
-                streams: (song.streams || 0) + dayStreams,
+                isAvailableOnStreaming: isItunesExcl || isOtherStreamingExcl ? false : (song.isAvailableOnStreaming !== false),
+                isExclusive: isItunesExcl || isOtherStreamingExcl ? true : song.isExclusive,
+                exclusiveTo: isItunesExcl ? 'iTunes' : (isOtherStreamingExcl ? (song.exclusiveTo || songRel?.exclusiveTo) : song.exclusiveTo),
+                streams: isItunesExcl ? 0 : (song.streams || 0) + dayStreams,
+                lastDayStreams: isItunesExcl ? 0 : dayStreams,
+                lastDaySales: dailySales,
                 dailyStreams: newDailyStreams,
                 regionalStreams: dailyRegStreams,
                 sales: (song.sales || 0) + dailySales,
@@ -3882,6 +4119,51 @@ The Red Mic Team`,
                   views: Math.floor(Math.random() * 800000) + 200000,
                   date: newDate,
                 });
+              }
+            }
+          }
+
+          // Daily Chart Emails for UK CHARTS and Spotify Charts in Daily Mode
+          if (artistProfile) {
+            const allFlatPlayerSongs: Song[] = [];
+            for (const aId in updatedArtistsData) {
+              allFlatPlayerSongs.push(...(updatedArtistsData[aId].songs || []));
+            }
+
+            // 1. UK Singles Chart Daily Email
+            const ukDailyEmail = generateUkChartEmail(
+              artistId,
+              artistProfile.name,
+              true,
+              newDate,
+              allFlatPlayerSongs,
+              state.ukSinglesChart
+            );
+            if (ukDailyEmail) {
+              artistData.inbox.unshift(ukDailyEmail);
+            }
+
+            // 2. Spotify Charts Daily Email (one combined email including Global, US, UK, Canada, Latin America, Asia, Africa)
+            const eraConfigDaily = getEraConfiguration(newDate.year);
+            if (eraConfigDaily.streamingActive) {
+              const spotifyDailyEmail = generateSpotifyChartEmail(
+                artistId,
+                artistProfile.name,
+                true,
+                newDate,
+                allFlatPlayerSongs,
+                {
+                  global: state.spotifyGlobal,
+                  us: state.spotifyUS,
+                  uk: state.spotifyUK,
+                  canada: state.spotifyCanada,
+                  latin: state.spotifyLatin,
+                  asia: state.spotifyAsia,
+                  africa: state.spotifyAfrica,
+                }
+              );
+              if (spotifyDailyEmail) {
+                artistData.inbox.unshift(spotifyDailyEmail);
               }
             }
           }
@@ -4395,10 +4677,14 @@ The Red Mic Team`,
         // --- MANAGER AUTOMATIONS ---
         if (artistData.manager?.autoDistributeAscap || artistData.manager?.autoDistributeFreeSongsToAscap) {
           artistData.songs = artistData.songs.map((song) => {
+            const songRel = artistData.releases.find((r) => r.id === song.releaseId);
+            const isItunesExcl = (song.isExclusive && song.exclusiveTo === 'iTunes') ||
+                                 (songRel?.isExclusive && songRel?.exclusiveTo === 'iTunes');
             if (
               song.isReleased &&
               !song.isAvailableOnStreaming &&
-              !song.isTakenDown
+              !song.isTakenDown &&
+              !isItunesExcl
             ) {
               const cost = artistData.contract !== null ? 0 : 1500;
               if (artistData.money >= cost) {
@@ -6030,8 +6316,8 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               }
             }
             baseStreams *= careerStageMultiplier;
-            const songRelease = artistData.releases.find((r) => r.id === song.releaseId);
-            if (songRelease && songRelease.type === 'Live Album') {
+            const songLiveRelease = artistData.releases.find((r) => r.id === song.releaseId);
+            if (songLiveRelease && songLiveRelease.type === 'Live Album') {
                 baseStreams *= 0.05; // -95% streams permanently
             }
 
@@ -6354,9 +6640,17 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
 
             const physicalGrossPerUnit = 2.5 / 150; // physical single
             const digitalGrossPerUnit = 1.29 / 150; // digital download
-            const streamingGrossPerUnit = 0.004; // stream
+            const streamingGrossPerUnit = STREAM_INCOME_MULTIPLIER;
+            const songRelease = artistData.releases.find((r) => r.id === song.releaseId || r.songIds.includes(song.id));
+            const isItunesExcl = (song.isExclusive && song.exclusiveTo === 'iTunes') ||
+                                 (songRelease?.isExclusive && songRelease?.exclusiveTo === 'iTunes') ||
+                                 (song.exclusivePlatforms?.includes('iTunes') && !song.exclusivePlatforms?.includes('Spotify')) ||
+                                 (songRelease?.exclusivePlatforms?.includes('iTunes') && !songRelease?.exclusivePlatforms?.includes('Spotify')) ||
+                                 song.isAvailableOnStreaming === false;
+            const isOtherExcl = (song.isExclusive && song.exclusiveTo && song.exclusiveTo !== 'Spotify') ||
+                                (songRelease?.isExclusive && songRelease.exclusiveTo && songRelease.exclusiveTo !== 'Spotify');
 
-            const hasStreamingRights = song.isAvailableOnStreaming === true;
+            const hasStreamingRights = !isItunesExcl && !isOtherExcl && (song.isAvailableOnStreaming === true || (song.isAvailableOnStreaming !== false && newDate.year >= 2008));
             // Streaming is only active in the world from 2008 onwards
             const effectiveStreamingShare = (hasStreamingRights && newDate.year >= 2008)
               ? eraConfig.marketShare.streaming
@@ -6523,19 +6817,23 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 generatedNet * Math.max(0, 1 - song.contributorCutsTotal / 100);
             }
 
-            const pureSalesThisWeek = Math.floor(
+            let pureSalesThisWeek = Math.floor(
               (weeklyStreams * (1 - effectiveStreamingShare)) / 150,
             );
+            if (isItunesExcl) {
+              // High digital download sales for iTunes exclusive releases
+              pureSalesThisWeek = Math.max(100, Math.floor(pureSalesThisWeek * 2.5));
+            }
 
-            let streamsToAdd = actualStreamsThisWeek;
+            let streamsToAdd = isItunesExcl ? 0 : actualStreamsThisWeek;
             let salesToAdd = pureSalesThisWeek;
             let netIncomeToAdd = generatedNet;
             let grossRevenueToAdd = generatedGross;
-            let finalDailyStreams = newDailyStreams;
+            let finalDailyStreams = isItunesExcl ? [...(song.dailyStreams || []), ...new Array(7).fill(0)] : newDailyStreams;
 
             if (isDailyMode) {
               // In Daily Mode: add only 1 day of streams & income
-              const day1Streams = Math.floor(actualStreamsThisWeek / 7);
+              const day1Streams = isItunesExcl ? 0 : Math.floor(actualStreamsThisWeek / 7);
               const day1Sales = Math.floor(pureSalesThisWeek / 7);
               const day1Net = Math.floor(generatedNet / 7);
               const day1Gross = Math.floor(generatedGross / 7);
@@ -6545,13 +6843,18 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               netIncomeToAdd = day1Net;
               grossRevenueToAdd = day1Gross;
 
-              finalDailyStreams = [...(song.dailyStreams || []).slice(-27), day1Streams];
+              finalDailyStreams = [...(song.dailyStreams || []).slice(-27), isItunesExcl ? 0 : day1Streams];
 
               // Sum the actual past 7 days of daily streams for charts & billboard
-              const last7Daily = finalDailyStreams.slice(-7);
-              if (last7Daily.length > 0) {
-                weeklyStreams = last7Daily.reduce((a, b) => a + b, 0);
-                actualStreamsThisWeek = weeklyStreams;
+              if (isItunesExcl) {
+                weeklyStreams = 0;
+                actualStreamsThisWeek = 0;
+              } else {
+                const last7Daily = finalDailyStreams.slice(-7);
+                if (last7Daily.length > 0) {
+                  weeklyStreams = last7Daily.reduce((a, b) => a + b, 0);
+                  actualStreamsThisWeek = weeklyStreams;
+                }
               }
             }
 
@@ -6559,24 +6862,28 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             
             const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 };
             const newRegionalStreams = {
-              "US": (currentRegStreams["US"] || 0) + (isDailyMode ? Math.floor(regStreams["US"] / 7) : regStreams["US"]),
-              "Canada": (currentRegStreams["Canada"] || 0) + (isDailyMode ? Math.floor(regStreams["Canada"] / 7) : regStreams["Canada"]),
-              "UK": (currentRegStreams["UK"] || 0) + (isDailyMode ? Math.floor(regStreams["UK"] / 7) : regStreams["UK"]),
-              "Latin America": (currentRegStreams["Latin America"] || 0) + (isDailyMode ? Math.floor(regStreams["Latin America"] / 7) : regStreams["Latin America"]),
-              "Asia": (currentRegStreams["Asia"] || 0) + (isDailyMode ? Math.floor(regStreams["Asia"] / 7) : regStreams["Asia"]),
-              "Africa": (currentRegStreams["Africa"] || 0) + (isDailyMode ? Math.floor(regStreams["Africa"] / 7) : regStreams["Africa"]),
+              "US": (currentRegStreams["US"] || 0) + (isItunesExcl ? 0 : (isDailyMode ? Math.floor(regStreams["US"] / 7) : regStreams["US"])),
+              "Canada": (currentRegStreams["Canada"] || 0) + (isItunesExcl ? 0 : (isDailyMode ? Math.floor(regStreams["Canada"] / 7) : regStreams["Canada"])),
+              "UK": (currentRegStreams["UK"] || 0) + (isItunesExcl ? 0 : (isDailyMode ? Math.floor(regStreams["UK"] / 7) : regStreams["UK"])),
+              "Latin America": (currentRegStreams["Latin America"] || 0) + (isItunesExcl ? 0 : (isDailyMode ? Math.floor(regStreams["Latin America"] / 7) : regStreams["Latin America"])),
+              "Asia": (currentRegStreams["Asia"] || 0) + (isItunesExcl ? 0 : (isDailyMode ? Math.floor(regStreams["Asia"] / 7) : regStreams["Asia"])),
+              "Africa": (currentRegStreams["Africa"] || 0) + (isItunesExcl ? 0 : (isDailyMode ? Math.floor(regStreams["Africa"] / 7) : regStreams["Africa"])),
             };
 
             return {
               ...song,
-              streams: (song.streams || 0) + streamsToAdd,
+              isAvailableOnStreaming: isItunesExcl || isOtherExcl ? false : (song.isAvailableOnStreaming !== false),
+              isExclusive: isItunesExcl || isOtherExcl ? true : song.isExclusive,
+              exclusiveTo: isItunesExcl ? 'iTunes' : (isOtherExcl ? (song.exclusiveTo || songRelease?.exclusiveTo) : song.exclusiveTo),
+              streams: isItunesExcl ? 0 : (song.streams || 0) + streamsToAdd,
               sales: (song.sales || 0) + salesToAdd,
+              lastWeekSales: pureSalesThisWeek,
               prevWeekStreams: song.lastWeekStreams || 0,
-              lastWeekStreams: actualStreamsThisWeek,
+              lastWeekStreams: isItunesExcl ? 0 : actualStreamsThisWeek,
               actualPrevWeekStreams: song.actualLastWeekStreams || 0,
-              actualLastWeekStreams: actualStreamsThisWeek,
+              actualLastWeekStreams: isItunesExcl ? 0 : actualStreamsThisWeek,
               regionalStreams: newRegionalStreams,
-              lastWeekRegionalStreams: regStreams,
+              lastWeekRegionalStreams: isItunesExcl ? { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 } : regStreams,
               ...firstWeekStreamsData,
               playlistBoostWeeks: newPlaylistBoostWeeks,
               purchasedPlaylists: newPurchasedPlaylists,
@@ -7839,6 +8146,10 @@ After careful consideration, we've decided to pass on releasing "${sub.release.t
                     ];
                   }
 
+                  const isSubItunesExcl = (sub.release.isExclusive && sub.release.exclusiveTo === 'iTunes') ||
+                                          (sub.release.exclusivePlatforms?.includes('iTunes') && !sub.release.exclusivePlatforms?.includes('Spotify'));
+                  const isSubOtherExcl = sub.release.isExclusive && sub.release.exclusiveTo && sub.release.exclusiveTo !== 'Spotify';
+
                   const singleRelease: Release = {
                     id: crypto.randomUUID(),
                     title: songToRelease.title,
@@ -7851,6 +8162,9 @@ After careful consideration, we've decided to pass on releasing "${sub.release.t
                     rightsSoldPercent:
                       rightsSoldPercent > 0 ? rightsSoldPercent : undefined,
                     rightsOwnerLabelId: rightsOwnerLabelId,
+                    isExclusive: sub.release.isExclusive,
+                    exclusiveTo: sub.release.exclusiveTo,
+                    exclusivePlatforms: sub.release.exclusivePlatforms,
                   };
                   artistData.releases.push(singleRelease);
                   artistData.songs = artistData.songs.map((s) =>
@@ -7863,6 +8177,13 @@ After careful consideration, we've decided to pass on releasing "${sub.release.t
                           isInterlude: single.singleType === 'interlude',
                           singleType: single.singleType,
                           coverArt: sub.release.coverArt,
+                          isExclusive: isSubItunesExcl || isSubOtherExcl ? true : (sub.release.isExclusive ?? s.isExclusive),
+                          exclusiveTo: isSubItunesExcl ? 'iTunes' : (sub.release.exclusiveTo ?? s.exclusiveTo),
+                          exclusivePlatforms: isSubItunesExcl ? ['iTunes'] : (sub.release.exclusivePlatforms ?? s.exclusivePlatforms),
+                          isAvailableOnStreaming: isSubItunesExcl || isSubOtherExcl ? false : (s.isAvailableOnStreaming !== undefined ? s.isAvailableOnStreaming : true),
+                          streams: isSubItunesExcl ? 0 : s.streams,
+                          lastWeekStreams: isSubItunesExcl ? 0 : s.lastWeekStreams,
+                          actualLastWeekStreams: isSubItunesExcl ? 0 : s.actualLastWeekStreams,
                           rightsSoldPercent:
                             rightsSoldPercent > 0
                               ? rightsSoldPercent
@@ -7986,6 +8307,10 @@ The Genius Team`,
                 m.releaseId === release.id ? { ...m, isPreorder: false } : m,
               );
 
+              const isRelItunesExcl = (release.isExclusive && release.exclusiveTo === 'iTunes') ||
+                                      (release.exclusivePlatforms?.includes('iTunes') && !release.exclusivePlatforms?.includes('Spotify'));
+              const isRelOtherExcl = release.isExclusive && release.exclusiveTo && release.exclusiveTo !== 'Spotify';
+
               artistData.songs = artistData.songs.map((s) => {
                 if (release.songIds.includes(s.id)) {
                   return {
@@ -7995,6 +8320,13 @@ The Genius Team`,
                     releaseId: release.type === "Compilation" ? s.releaseId : release.id,
                     coverArt:
                       release.type === "Single" ? release.coverArt : s.coverArt,
+                    isExclusive: isRelItunesExcl || isRelOtherExcl ? true : (release.isExclusive ?? s.isExclusive),
+                    exclusiveTo: isRelItunesExcl ? 'iTunes' : (release.exclusiveTo ?? s.exclusiveTo),
+                    exclusivePlatforms: isRelItunesExcl ? ['iTunes'] : (release.exclusivePlatforms ?? s.exclusivePlatforms),
+                    isAvailableOnStreaming: isRelItunesExcl || isRelOtherExcl ? false : (s.isAvailableOnStreaming !== undefined ? s.isAvailableOnStreaming : true),
+                    streams: isRelItunesExcl ? 0 : s.streams,
+                    lastWeekStreams: isRelItunesExcl ? 0 : s.lastWeekStreams,
+                    actualLastWeekStreams: isRelItunesExcl ? 0 : s.actualLastWeekStreams,
                     promoBoostWeeks:
                       release.type === "Single"
                         ? (s.promoBoostWeeks || 0) + 4
@@ -10616,12 +10948,20 @@ It is now available on your Spotify profile.
           (a) => a.id === baseSong.artistId,
         );
 
-        let totalWeeklyStreams = baseSong.lastWeekStreams; let totalRegStreams = { ...(baseSong.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }) };
+        let totalWeeklyStreams = baseSong.lastWeekStreams || 0;
+        let totalRegStreams = { ...(baseSong.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }) };
         const remixes = allPlayerSongsFlat.filter(
           (s) => s.isReleased && s.remixOfSongId === baseSong.id,
         );
         remixes.forEach((remix) => {
-          totalWeeklyStreams += remix.lastWeekStreams; const remixReg = remix.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 }; totalRegStreams["US"] = (totalRegStreams["US"] || 0) + (remixReg["US"] || 0); totalRegStreams["Canada"] = (totalRegStreams["Canada"] || 0) + (remixReg["Canada"] || 0); totalRegStreams["UK"] = (totalRegStreams["UK"] || 0) + (remixReg["UK"] || 0); totalRegStreams["Latin America"] = (totalRegStreams["Latin America"] || 0) + (remixReg["Latin America"] || 0); totalRegStreams["Asia"] = (totalRegStreams["Asia"] || 0) + (remixReg["Asia"] || 0); totalRegStreams["Africa"] = (totalRegStreams["Africa"] || 0) + (remixReg["Africa"] || 0);
+          totalWeeklyStreams += remix.lastWeekStreams || 0;
+          const remixReg = remix.lastWeekRegionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 };
+          totalRegStreams["US"] = (totalRegStreams["US"] || 0) + (remixReg["US"] || 0);
+          totalRegStreams["Canada"] = (totalRegStreams["Canada"] || 0) + (remixReg["Canada"] || 0);
+          totalRegStreams["UK"] = (totalRegStreams["UK"] || 0) + (remixReg["UK"] || 0);
+          totalRegStreams["Latin America"] = (totalRegStreams["Latin America"] || 0) + (remixReg["Latin America"] || 0);
+          totalRegStreams["Asia"] = (totalRegStreams["Asia"] || 0) + (remixReg["Asia"] || 0);
+          totalRegStreams["Africa"] = (totalRegStreams["Africa"] || 0) + (remixReg["Africa"] || 0);
         });
 
         let displayTitle = baseSong.title;
@@ -10654,11 +10994,17 @@ It is now available on your Spotify profile.
           );
         }
 
+        const playerWeeklySales = baseSong.lastWeekSales || 0;
+        const targetActivity = totalWeeklyStreams + playerWeeklySales * 150;
+
         return {
-          uniqueId: baseSong.id, regionalStreams: totalRegStreams,
+          uniqueId: baseSong.id,
+          regionalStreams: totalRegStreams,
           title: displayTitle,
           artist: displayArtist,
           weeklyStreams: totalWeeklyStreams,
+          weeklySales: playerWeeklySales,
+          targetActivity: targetActivity,
           isPlayerSong: true,
           coverArt: baseSong.coverArt,
           songId: baseSong.id,
@@ -10700,7 +11046,18 @@ It is now available on your Spotify profile.
       });
 
       const npcChartContenders = newNpcsWithReleases.map((npc) => {
-        let rawWeeklyStreams = (state.date.year < 2008) ? 0 : (npcSongStreamMap.get(npc.uniqueId) || 500000);
+        let targetDemand = npcSongStreamMap.get(npc.uniqueId) || 500000;
+        const isSuperstar = activeSuperstarHitIds.has(npc.uniqueId);
+
+        if (isSuperstar) {
+          const hist = state.chartHistory?.[npc.uniqueId];
+          const isDebutOrPeak = !hist || hist.weeksOnChart <= 8;
+          if (isDebutOrPeak) {
+            targetDemand = Math.max(targetDemand, Math.floor(55000000 + Math.random() * 30000000));
+          }
+        }
+
+        let rawWeeklyStreams = (state.date.year < 2008) ? 0 : targetDemand;
         let wUS = 40;
         let wCanada = 10;
         let wUK = 15;
@@ -10708,14 +11065,7 @@ It is now available on your Spotify profile.
         let wAsia = 15;
         let wAfrica = 5;
 
-        const isSuperstar = activeSuperstarHitIds.has(npc.uniqueId);
-
         if (isSuperstar && state.date.year >= 2008) {
-          const hist = state.chartHistory?.[npc.uniqueId];
-          const isDebutOrPeak = !hist || hist.weeksOnChart <= 8;
-          if (isDebutOrPeak) {
-            rawWeeklyStreams = Math.max(rawWeeklyStreams, Math.floor(55000000 + Math.random() * 30000000));
-          }
           wUS *= 3.5;
         }
 
@@ -10756,11 +11106,27 @@ It is now available on your Spotify profile.
           regStreams["US"] + regStreams["Canada"] + regStreams["UK"] + regStreams["Latin America"] + regStreams["Asia"] + regStreams["Africa"]
         );
 
+        // Realistic pre-streaming NPC sales
+        let npcPhysicalSales = 0;
+        let npcDigitalSales = 0;
+        if (state.date.year < 2000) {
+          // 1990s: CD & cassette singles
+          npcPhysicalSales = Math.floor(targetDemand / 240);
+          npcDigitalSales = 0;
+        } else if (state.date.year < 2010) {
+          // 2000s: digital downloads + ringtones and physical CD singles
+          npcDigitalSales = Math.floor(targetDemand / 200);
+          npcPhysicalSales = Math.floor(targetDemand / 650);
+        }
+
         return {
           uniqueId: npc.uniqueId,
           title: npc.title,
           artist: npc.artist,
           weeklyStreams: activeWeeklyStreams,
+          targetActivity: targetDemand,
+          npcPhysicalSales,
+          npcDigitalSales,
           regionalStreams: regStreams,
           isPlayerSong: false,
           coverArt: getArtistImage(npc.artist, npc.coverArt),
@@ -10774,7 +11140,14 @@ It is now available on your Spotify profile.
         ...playerChartContenders,
         ...npcChartContenders,
       ];
-      allContendersRaw.sort((a, b) => b.weeklyStreams - a.weeklyStreams);
+      allContendersRaw.sort((a, b) => {
+        if (state.date.year < 2010) {
+          const aScore = (a as any).targetActivity || (a.weeklyStreams + ((a as any).weeklySales || 0) * 150);
+          const bScore = (b as any).targetActivity || (b.weeklyStreams + ((b as any).weeklySales || 0) * 150);
+          return bScore - aScore;
+        }
+        return b.weeklyStreams - a.weeklyStreams;
+      });
 
       const isFormatCompatible = (genre: string, format: string) => {
         const g = (genre || "").toLowerCase();
@@ -10945,7 +11318,8 @@ It is now available on your Spotify profile.
                     targetFmtPlays -= decayFactor;
                   }
 
-                  targetFmtPlays += ((song.weeklyStreams || 0) * fmtWeight) * 0.00025 * traitRadioBoost;
+                  const activityBase = (song.weeklyStreams || 0) + ((song as any).targetActivity ? (song as any).targetActivity * 0.15 : 0);
+                  targetFmtPlays += (activityBase * fmtWeight) * 0.00025 * traitRadioBoost;
 
                   const maxFormatBasePlays = Math.floor(maxFmtImpressions / 3200) * (0.85 + Math.random() * 0.3);
                   const maxNaturalPlays = maxFormatBasePlays * formatMultiplier * radioEraBoost * traitRadioBoost;
@@ -11088,7 +11462,8 @@ It is now available on your Spotify profile.
             } // Close if (s && (s.isOnRadio || s.isOnUkRadio))
           }
         } else {
-          if (song.weeklyStreams > 1000000) {
+          const songActivity = (song as any).targetActivity || song.weeklyStreams || 0;
+          if (song.weeklyStreams > 1000000 || songActivity > 1000000 || state.date.year < 2010) {
             isOnRadio = true;
             const g = (song.genre || "").toLowerCase();
             const isHolidaySeason = newDate.week > 40 || newDate.week < 2;
@@ -11120,7 +11495,7 @@ It is now available on your Spotify profile.
 
             const countToPick = Math.min(
               possibleFormats.length,
-              song.weeklyStreams > 15000000 ? 3 : song.weeklyStreams > 5000000 ? 2 : 1
+              songActivity > 15000000 ? 3 : songActivity > 5000000 ? 2 : 1
             );
             const isSuperstarArtist = activeSuperstarHitIds.has(song.uniqueId);
 
@@ -11142,8 +11517,9 @@ It is now available on your Spotify profile.
                   : 3.0
                 : 1.0;
 
+            const streamOrDemand = (state.date.year < 2008 || song.weeklyStreams === 0) ? songActivity : song.weeklyStreams;
             let targetPlays = Math.floor(
-              song.weeklyStreams * 0.0025 * radioEraBoost,
+              (state.date.year < 2010 ? streamOrDemand * 0.00018 : streamOrDemand * 0.0025) * radioEraBoost,
             );
             if (isSuperstarArtist) {
               targetPlays = Math.max(targetPlays, Math.floor(22000 + Math.random() * 8000));
@@ -11161,7 +11537,7 @@ It is now available on your Spotify profile.
               const share = npcWeights[fmt] || (1 / npcFormats.length);
               const maxFmtImpressions = getFormatMaxImpressions(fmt);
               const fmtPlays = Math.floor(targetPlays * share);
-              const rawImpr = fmtPlays * (Math.floor(Math.random() * 1200) + 2200);
+              const rawImpr = fmtPlays * (Math.floor(Math.random() * 1200) + (state.date.year < 2010 ? 3500 : 2200));
               const fmtImpr = Math.min(maxFmtImpressions, rawImpr);
 
               npcPlaysMap[fmt] = fmtPlays;
@@ -11275,27 +11651,33 @@ It is now available on your Spotify profile.
           }
         }
         let additionalPhysicalSales = 0;
+        let additionalRingtoneSales = 0;
         if (foundArtistId) {
-          const ad = state.artistsData[foundArtistId];
-          if (ad) {
+          const ad = updatedArtistsData[foundArtistId] || state.artistsData[foundArtistId];
+          if (ad && ad.merch) {
             const songMerch = ad.merch.filter((m) => {
               if (m.releaseId) {
+                if (m.releaseId === song.songId) return true;
                 const release = ad.releases.find((r) => r.id === m.releaseId);
-                return (
-                  release?.type === "Single" &&
-                  release.songIds.includes(song.songId!)
-                );
+                if (release && release.songIds && release.songIds.includes(song.songId!)) {
+                  return true;
+                }
               }
+              if (m.bonusSongIds && m.bonusSongIds.includes(song.songId!)) return true;
               return false;
             });
-            additionalPhysicalSales = songMerch.reduce(
-              (sum, item) => sum + (item._actualWeeklySales || 0),
-              0,
-            );
+            songMerch.forEach((item) => {
+              const weeklyUnits = item._actualWeeklySales || 0;
+              if (item.type === "Ringtone") {
+                // 1 ringtone sale = 1 sale on billboard!
+                additionalRingtoneSales += weeklyUnits;
+              } else if (item.type === "CD" || item.type === "Vinyl" || item.type === "Cassette") {
+                // 1 cd sale = 1 sale on billboard!
+                additionalPhysicalSales += weeklyUnits;
+              }
+            });
           }
         }
-        const baseSales =
-          Math.floor(song.weeklyStreams / divisor) * boost;
 
         const eraConfigTemp = getEraConfiguration(state.date.year);
         const formula = eraConfigTemp.billboardFormula || getBillboardFormula(state.date.year);
@@ -11304,13 +11686,42 @@ It is now available on your Spotify profile.
         let songDigitalSales = 0;
         let songPhysicalSales = additionalPhysicalSales;
 
-        if (formula.digital + formula.physical > 0) {
-          const digFraction = formula.digital / (formula.digital + formula.physical);
-          const physFraction = formula.physical / (formula.digital + formula.physical);
-          songDigitalSales = Math.floor(baseSales * digFraction) + additionalItunesSales;
-          songPhysicalSales = Math.floor(baseSales * physFraction) + additionalPhysicalSales;
+        if (song.isPlayerSong) {
+          const matchingSong = foundArtistId && updatedArtistsData[foundArtistId]?.songs.find(s => s.id === song.songId);
+          const playerBaseSales = (matchingSong && matchingSong.lastWeekSales) ? matchingSong.lastWeekSales : ((song as any).weeklySales || 0);
+
+          if (state.date.year < 2000) {
+            // 1990s: CD & Cassette physical sales dominate
+            songPhysicalSales = playerBaseSales + additionalPhysicalSales;
+            songDigitalSales = additionalRingtoneSales;
+          } else if (state.date.year < 2010) {
+            // 2000s: Digital downloads (iTunes), ringtones, and CD singles
+            const digFrac = formula.digital / (formula.digital + formula.physical || 1);
+            const physFrac = formula.physical / (formula.digital + formula.physical || 1);
+            songDigitalSales = Math.floor(playerBaseSales * digFrac) + additionalItunesSales + additionalRingtoneSales;
+            songPhysicalSales = Math.floor(playerBaseSales * physFrac) + additionalPhysicalSales;
+          } else {
+            const baseSales = Math.floor(song.weeklyStreams / divisor) * boost;
+            const digFrac = formula.digital / (formula.digital + formula.physical || 1);
+            const physFrac = formula.physical / (formula.digital + formula.physical || 1);
+            songDigitalSales = Math.floor(baseSales * digFrac) + additionalItunesSales + additionalRingtoneSales;
+            songPhysicalSales = Math.floor(baseSales * physFrac) + additionalPhysicalSales;
+          }
         } else {
-          songPhysicalSales += baseSales;
+          // NPC songs
+          if (state.date.year < 2000) {
+            songPhysicalSales = (song as any).npcPhysicalSales || Math.floor(((song as any).targetActivity || 5000000) / 240);
+            songDigitalSales = 0;
+          } else if (state.date.year < 2010) {
+            songDigitalSales = (song as any).npcDigitalSales || Math.floor(((song as any).targetActivity || 5000000) / 200);
+            songPhysicalSales = (song as any).npcPhysicalSales || Math.floor(((song as any).targetActivity || 5000000) / 650);
+          } else {
+            const baseSales = Math.floor(song.weeklyStreams / divisor) * boost;
+            const digFrac = formula.digital / (formula.digital + formula.physical || 1);
+            const physFrac = formula.physical / (formula.digital + formula.physical || 1);
+            songDigitalSales = Math.floor(baseSales * digFrac);
+            songPhysicalSales = Math.floor(baseSales * physFrac);
+          }
         }
 
         const hasStreamingRights = song.isAvailableOnStreaming !== false;
@@ -11332,7 +11743,7 @@ It is now available on your Spotify profile.
           song.radioImpressions || (song.radioPlays ? song.radioPlays * 5000 : 0);
         const radioPoints = radioImpressionsCount * 0.25 * formula.radio;
 
-        // Digital Sales Points: Paid digital downloads (iTunes, digital tracks)
+        // Digital Sales Points: Paid digital downloads & ringtones
         const digitalPoints = songDigitalSales * 60 * formula.digital;
 
         // Physical Sales Points: Single physical formats (CDs, vinyl, cassettes)
@@ -11341,8 +11752,15 @@ It is now available on your Spotify profile.
         const isSuperstar = activeSuperstarHitIds.has(song.uniqueId);
 
         if (isSuperstar && !song.isPlayerSong) {
-          songDigitalSales += Math.floor(35000 + Math.random() * 40000);
-          songPhysicalSales += Math.floor(15000 + Math.random() * 25000);
+          if (state.date.year < 2000) {
+            songPhysicalSales += Math.floor(40000 + Math.random() * 50000);
+          } else if (state.date.year < 2010) {
+            songDigitalSales += Math.floor(40000 + Math.random() * 45000);
+            songPhysicalSales += Math.floor(15000 + Math.random() * 20000);
+          } else {
+            songDigitalSales += Math.floor(35000 + Math.random() * 40000);
+            songPhysicalSales += Math.floor(15000 + Math.random() * 25000);
+          }
         }
 
         const rawPoints =
@@ -11587,13 +12005,26 @@ It is now available on your Spotify profile.
 
       const generateSpotifyChart = (region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa", prevChart: ChartEntry[]) => {
           if (!isSpotifyAvailableInRegion(region, state.date.year)) return [];
-          const sorted = [...allContenders].sort((a, b) => {
+          const sorted = [...allContenders].filter((s) => {
+              if (s.isPlayerSong) {
+                  if (s.isAvailableOnStreaming === false) return false;
+                  for (const aId in updatedArtistsData) {
+                      const songObj = updatedArtistsData[aId]?.songs?.find(song => song.id === s.songId);
+                      if (songObj) {
+                          const relObj = updatedArtistsData[aId]?.releases?.find(r => r.id === songObj.releaseId);
+                          const isItunes = (songObj.isExclusive && songObj.exclusiveTo === 'iTunes') || (relObj?.isExclusive && relObj.exclusiveTo === 'iTunes');
+                          if (isItunes) return false;
+                          const isOtherExcl = (songObj.isExclusive && songObj.exclusiveTo && songObj.exclusiveTo !== 'Spotify') || (relObj?.isExclusive && relObj.exclusiveTo && relObj.exclusiveTo !== 'Spotify');
+                          if (isOtherExcl) return false;
+                      }
+                  }
+              }
+              const sStreams = region === "Global" ? s.weeklyStreams : (s.regionalStreams?.[region] || 0);
+              return sStreams > 0;
+          }).sort((a, b) => {
               const aStreams = region === "Global" ? a.weeklyStreams : (a.regionalStreams?.[region] || 0);
               const bStreams = region === "Global" ? b.weeklyStreams : (b.regionalStreams?.[region] || 0);
               return bStreams - aStreams;
-          }).filter((s) => {
-              const sStreams = region === "Global" ? s.weeklyStreams : (s.regionalStreams?.[region] || 0);
-              return sStreams > 0;
           }).slice(0, region === "Global" ? 200 : 100);
 
           const pMap = new Map((prevChart || []).map((entry) => [entry.uniqueId, entry.rank]));
@@ -11728,8 +12159,9 @@ It is now available on your Spotify profile.
         const sortedUkContenders = [...allContenders].map(song => {
             const aUkStreams = song.regionalStreams?.["UK"] || 0;
             const aUkRadio = song.ukRadioPlays || 0;
-            const points = (aUkStreams * 0.5) + (aUkRadio * 2000 * 0.5);
-            return { ...song, _ukPoints: points };
+            const ukSales = Math.floor(((song as any).digitalSales || (song as any).weeklySales || 0) * 0.15);
+            const points = (aUkStreams * 0.5) + (aUkRadio * 2500 * 0.4) + (ukSales * 300 * 0.6);
+            return { ...song, _ukPoints: points, ukSales };
         }).sort((a, b) => b._ukPoints - a._ukPoints);
         
         const eligibleUkContenders = sortedUkContenders.filter((song, index) => {
@@ -11780,7 +12212,9 @@ It is now available on your Spotify profile.
               songId: song.songId,
               uniqueId: song.uniqueId,
               weeklyStreams: song.regionalStreams?.["UK"] || 0,
+              digitalSales: (song as any).ukSales || (song as any).digitalSales || 0,
               radioPlays: song.ukRadioPlays || 0,
+              points: Math.round(song._ukPoints || 0),
             });
         });
 
@@ -16654,41 +17088,80 @@ Congratulations on your chart success!
             });
           }
 
-          // Spotify Chart Email
+          // UK Official Singles Chart Email (Weekly)
+          const ukWeeklyEmail = generateUkChartEmail(
+            artistId,
+            artistProfileForEmail.name,
+            false,
+            newDate,
+            allPlayerSongsFlat,
+            newUkSinglesChart
+          );
+          if (ukWeeklyEmail) {
+            newChartEmails.push(ukWeeklyEmail);
+          }
+
+          // Spotify Charts Email (Weekly - single combined email including Global, US, UK, Canada, Latin America, Asia, Africa)
           const isStreamingActive = getEraConfiguration(
             newDate.year,
           ).streamingActive;
-          const playerSpotifyEntries = newSpotifyGlobal.filter(
-            (e) =>
-              e.isPlayerSong &&
-              allPlayerSongsFlat.find((s) => s.id === e.songId)?.artistId ===
+          if (isStreamingActive) {
+            const spotifyWeeklyEmail = generateSpotifyChartEmail(
+              artistId,
+              artistProfileForEmail.name,
+              false,
+              newDate,
+              allPlayerSongsFlat,
+              {
+                global: newSpotifyGlobal,
+                us: newSpotifyUS,
+                uk: newSpotifyUK,
+                canada: newSpotifyCanada,
+                latin: newSpotifyLatin,
+                asia: newSpotifyAsia,
+                africa: newSpotifyAfrica,
+              }
+            );
+            if (spotifyWeeklyEmail) {
+              newChartEmails.push(spotifyWeeklyEmail);
+            }
+          }
+
+          // Daily Mode Chart Emails for day 1
+          if (isDailyMode) {
+            const ukDailyEmail = generateUkChartEmail(
+              artistId,
+              artistProfileForEmail.name,
+              true,
+              newDate,
+              allPlayerSongsFlat,
+              newUkSinglesChart
+            );
+            if (ukDailyEmail) {
+              newChartEmails.push(ukDailyEmail);
+            }
+
+            if (isStreamingActive) {
+              const spotifyDailyEmail = generateSpotifyChartEmail(
                 artistId,
-          );
-
-          if (isStreamingActive && playerSpotifyEntries.length > 0) {
-            let body = `Hi ${artistProfileForEmail.name},
-
-Here are your current entries on the Spotify Global Top 100 chart this week.
-
-**Global Top 100**
-`;
-            playerSpotifyEntries.forEach((entry) => {
-              body += `#${entry.rank} "${entry.title}" - ${formatNumber(entry.weeklyStreams)} streams
-`;
-            });
-            body += `
-Keep up the great work!
-- Spotify Charts Team`;
-
-            newChartEmails.push({
-              id: crypto.randomUUID(),
-              sender: "Spotify Charts",
-              subject: "Your Spotify Charts Update",
-              body: body,
-              date: newDate,
-              isRead: false,
-              senderIcon: "spotify",
-            });
+                artistProfileForEmail.name,
+                true,
+                newDate,
+                allPlayerSongsFlat,
+                {
+                  global: newSpotifyGlobal,
+                  us: newSpotifyUS,
+                  uk: newSpotifyUK,
+                  canada: newSpotifyCanada,
+                  latin: newSpotifyLatin,
+                  asia: newSpotifyAsia,
+                  africa: newSpotifyAfrica,
+                }
+              );
+              if (spotifyDailyEmail) {
+                newChartEmails.push(spotifyDailyEmail);
+              }
+            }
           }
         }
         artistData.inbox.push(...newChartEmails);
@@ -18256,10 +18729,19 @@ Keep up the great work!
             ? "her"
             : "their";
 
+      let popBaseContent = `${artistName} has surprise released ${pronounPossessive} new ${releaseWithLabel.type} "${releaseWithLabel.title}".`;
+      if (releaseWithLabel.isExclusive && releaseWithLabel.exclusiveTo) {
+        if (releaseWithLabel.standardEditionId) {
+          popBaseContent = `${artistName} has surprise released the Deluxe Edition of "${releaseWithLabel.title}" exclusively on ${releaseWithLabel.exclusiveTo}!`;
+        } else {
+          popBaseContent = `${artistName} has surprise released ${pronounPossessive} new ${releaseWithLabel.type} "${releaseWithLabel.title}" exclusively on ${releaseWithLabel.exclusiveTo}!`;
+        }
+      }
+
       const popBasePost: XPost = {
         id: crypto.randomUUID(),
         authorId: "popbase",
-        content: `${artistName} has surprise released ${pronounPossessive} new ${releaseWithLabel.type} "${releaseWithLabel.title}".`,
+        content: popBaseContent,
         image: releaseWithLabel.coverArt,
         likes: Math.floor(Math.random() * 80000) + 30000,
         retweets: Math.floor(Math.random() * 20000) + 5000,
@@ -18495,16 +18977,76 @@ The Tonight Show Team`;
         });
       }
 
-      const newSongs = activeData.songs.map((song) =>
-        releaseWithLabel.songIds.includes(song.id)
-          ? {
-              ...song,
-              isReleased: true,
-              isVaulted: false,
-              releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id,
-            }
-          : song,
-      );
+      const baseAlbumSongs = releaseWithLabel.standardEditionId
+        ? (activeData.releases.find((r) => r.id === releaseWithLabel.standardEditionId)?.songIds || [])
+        : [];
+
+      const isItunesExcl = (releaseWithLabel.isExclusive && releaseWithLabel.exclusiveTo === 'iTunes') ||
+                           (releaseWithLabel.exclusivePlatforms?.includes('iTunes') && !releaseWithLabel.exclusivePlatforms?.includes('Spotify'));
+      const isOtherExcl = releaseWithLabel.isExclusive && releaseWithLabel.exclusiveTo && releaseWithLabel.exclusiveTo !== 'Spotify';
+      const newSongs = activeData.songs.map((song) => {
+        if (!releaseWithLabel.songIds.includes(song.id)) return song;
+        const isNewDeluxeTrack = releaseWithLabel.standardEditionId
+          ? !baseAlbumSongs.includes(song.id)
+          : true;
+        const isTrackItunesExcl = (isNewDeluxeTrack && isItunesExcl) || (!releaseWithLabel.standardEditionId && isItunesExcl);
+        const isTrackOtherExcl = (isNewDeluxeTrack && isOtherExcl) || (!releaseWithLabel.standardEditionId && isOtherExcl);
+        const isExcl = isTrackItunesExcl || isTrackOtherExcl || (isNewDeluxeTrack ? (releaseWithLabel.isExclusive ?? song.isExclusive) : song.isExclusive);
+        const exclTo = isTrackItunesExcl ? 'iTunes' : (isNewDeluxeTrack ? (releaseWithLabel.exclusiveTo ?? song.exclusiveTo) : song.exclusiveTo);
+        return {
+          ...song,
+          isReleased: true,
+          isVaulted: false,
+          releaseId: releaseWithLabel.type === "Compilation" ? song.releaseId : releaseWithLabel.id,
+          isExclusive: isExcl,
+          exclusiveTo: exclTo,
+          exclusivePlatforms: isTrackItunesExcl ? ['iTunes'] : (isNewDeluxeTrack ? (releaseWithLabel.exclusivePlatforms ?? song.exclusivePlatforms) : song.exclusivePlatforms),
+          isAvailableOnStreaming: isTrackItunesExcl || isTrackOtherExcl
+            ? false
+            : song.isAvailableOnStreaming !== undefined ? song.isAvailableOnStreaming : true,
+          streams: isTrackItunesExcl ? 0 : song.streams,
+          lastWeekStreams: isTrackItunesExcl ? 0 : song.lastWeekStreams,
+          actualLastWeekStreams: isTrackItunesExcl ? 0 : song.actualLastWeekStreams,
+          lastDayStreams: isTrackItunesExcl ? 0 : song.lastDayStreams,
+        };
+      });
+
+      let exclusiveFanPosts: XPost[] = [];
+      if (releaseWithLabel.isExclusive && releaseWithLabel.exclusiveTo) {
+        const plat = releaseWithLabel.exclusiveTo;
+        const fan1Templates: Record<string, string> = {
+          'iTunes': `WAIT ${artistName} released on iTunes exclusively?! Buying immediately to get it to #1 on iTunes! 💸`,
+          'Spotify': `The Spotify exclusive from ${artistName} is finally here!! Spotify users won today 🔥`,
+          'Apple Music': `Apple Music exclusive for ${artistName}! The Spatial Audio quality is unreal 🎧✨`,
+          'YouTube Music': `${artistName} dropped an exclusive on YouTube Music?! Streaming the audio and video on repeat! 🎥🎶`,
+        };
+        const fan2Templates: Record<string, string> = {
+          'iTunes': `Purchased "${releaseWithLabel.title}" on iTunes! Digital sales about to go crazy.`,
+          'Spotify': `Stream "${releaseWithLabel.title}" on Spotify right now! It's an exclusive!`,
+          'Apple Music': `Opening Apple Music right this second. ${artistName} never misses!`,
+          'YouTube Music': `YouTube Music users eating good tonight with the new ${artistName} exclusive.`,
+        };
+        exclusiveFanPosts = [
+          {
+            id: crypto.randomUUID(),
+            authorId: `fan_excl_${Math.floor(Math.random() * 1000)}`,
+            content: fan1Templates[plat] || `OMG ${artistName} dropped an exclusive on ${plat}!`,
+            likes: Math.floor(Math.random() * 12000) + 2000,
+            retweets: Math.floor(Math.random() * 3000) + 400,
+            views: Math.floor(Math.random() * 80000) + 15000,
+            date: state.date,
+          },
+          {
+            id: crypto.randomUUID(),
+            authorId: `fan_excl_${Math.floor(Math.random() * 1000) + 1001}`,
+            content: fan2Templates[plat] || `Stream the new ${artistName} exclusive on ${plat}!`,
+            likes: Math.floor(Math.random() * 8000) + 1500,
+            retweets: Math.floor(Math.random() * 1500) + 200,
+            views: Math.floor(Math.random() * 50000) + 10000,
+            date: state.date,
+          }
+        ];
+      }
 
       let releaseHiatusPosts: XPost[] = [];
       if (state.group && state.group.members) {
@@ -18589,7 +19131,7 @@ The Tonight Show Team`;
               activeData.hype + hypeIncrease,
             ),
             inbox: [...activeData.inbox, ...newEmails],
-            xPosts: [popBasePost, tmzPost, ...releaseHiatusPosts, ...activeData.xPosts],
+            xPosts: [popBasePost, ...exclusiveFanPosts, tmzPost, ...releaseHiatusPosts, ...activeData.xPosts],
           },
         },
       };

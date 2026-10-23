@@ -205,8 +205,13 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                     />
                 </label>
                 <div className="flex-grow">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                          <p className="font-semibold">{song.title}</p>
+                         {song.isExclusive && song.exclusiveTo && (
+                             <span className="text-[10px] font-bold bg-indigo-900/60 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.5 rounded-full">
+                                 {song.exclusiveTo} Exclusive
+                             </span>
+                         )}
                          {grammyWin && <GrammyAwardIcon className="w-4 h-4 text-yellow-400" title={`GRAMMY Winner: ${grammyWin}`} />}
                          {song.isTakenDown && <span className="text-[10px] font-bold bg-red-900/80 text-red-400 px-1.5 py-0.5 rounded-full">TAKEN DOWN</span>}
                          {song.isVaulted && <span className="text-[10px] font-bold bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded-full">VAULTED</span>}
@@ -466,7 +471,15 @@ const CatalogView: React.FC = () => {
                 }, 0);
                 const trackEquivalentAlbumSales = Math.floor(Math.max(0, rawSingleSales - (release.preReleaseSales || 0)) * 0.1);
 
-                return { ...release, streams: releaseStreams, sales: (release.sales || 0) + trackEquivalentAlbumSales, hasDeluxe: !!deluxeVersion, deluxeSongIds: deluxeVersion?.songIds };
+                return { 
+                    ...release, 
+                    streams: releaseStreams, 
+                    sales: (release.sales || 0) + trackEquivalentAlbumSales, 
+                    hasDeluxe: !!deluxeVersion, 
+                    deluxeSongIds: deluxeVersion?.songIds,
+                    isDeluxeExclusive: deluxeVersion?.isExclusive,
+                    deluxeExclusiveTo: deluxeVersion?.exclusiveTo,
+                };
             })
             .sort((a, b) => ((b.streams || 0) + (b.sales || 0) * 150) - ((a.streams || 0) + (a.sales || 0) * 150));
     }, [activeArtistData.releases, activeArtistData.songs, activeArtistData.merch]);

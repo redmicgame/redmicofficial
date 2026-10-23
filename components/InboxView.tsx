@@ -95,7 +95,7 @@ const SenderAvatar: React.FC<{ email: Email }> = ({ email }) => {
             </div>
         )
     }
-    if (senderIcon === 'brits' || sender?.toLowerCase().includes('brit awards') || sender?.toLowerCase().includes('the brits')) {
+    if (senderIcon === 'brits' || sender?.toLowerCase().includes('brit awards') || sender?.toLowerCase().includes('the brits') || sender?.toLowerCase().includes('official charts') || sender?.toLowerCase().includes('uk charts')) {
         return (
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-900 via-red-600 to-red-700 flex items-center justify-center p-2 shadow-md">
                 <BritAwardIcon className="w-full h-full text-white" />

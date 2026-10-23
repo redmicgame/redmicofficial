@@ -17,8 +17,9 @@ const YouTubeMusicView: React.FC = () => {
     if (!activeArtistData || !activeArtist) return null;
 
     const songs = activeArtistData.songs.filter(s => s.isReleased);
-    const albums = activeArtistData.releases.filter(r => r.type === 'Album' || r.type === 'EP' || r.type === 'Mixtape').sort((a,b) => b.releaseDate.year - a.releaseDate.year || b.releaseDate.week - a.releaseDate.week);
-    const singles = activeArtistData.releases.filter(r => r.type === 'Single').sort((a,b) => b.releaseDate.year - a.releaseDate.year || b.releaseDate.week - a.releaseDate.week);
+    const isExclusiveToOther = (r: Release) => r.isExclusive && r.exclusiveTo && r.exclusiveTo !== 'YouTube Music' && !r.exclusivePlatforms?.includes('YouTube Music');
+    const albums = activeArtistData.releases.filter(r => (r.type === 'Album' || r.type === 'EP' || r.type === 'Mixtape' || r.type === 'Album (Deluxe)') && !isExclusiveToOther(r)).sort((a,b) => b.releaseDate.year - a.releaseDate.year || b.releaseDate.week - a.releaseDate.week);
+    const singles = activeArtistData.releases.filter(r => r.type === 'Single' && !isExclusiveToOther(r)).sort((a,b) => b.releaseDate.year - a.releaseDate.year || b.releaseDate.week - a.releaseDate.week);
 
     const getYoutubeStreams = (spotifyStreams: number, songId: string) => {
         let hash = 0;
@@ -30,8 +31,17 @@ const YouTubeMusicView: React.FC = () => {
     };
 
     const topSongs = useMemo(() => {
-        return [...songs].sort((a, b) => getYoutubeStreams(b.streams, b.id) - getYoutubeStreams(a.streams, a.id)).slice(0, 10);
-    }, [songs]);
+        return [...songs]
+            .filter(s => {
+                if (!s.isReleased || s.isTakenDown || s.isAvailableOnStreaming === false) return false;
+                const rel = activeArtistData.releases.find(r => r.id === s.releaseId);
+                if (s.isExclusive && s.exclusiveTo && s.exclusiveTo !== 'YouTube Music' && !s.exclusivePlatforms?.includes('YouTube Music')) return false;
+                if (rel?.isExclusive && rel.exclusiveTo && rel.exclusiveTo !== 'YouTube Music' && !rel.exclusivePlatforms?.includes('YouTube Music')) return false;
+                return true;
+            })
+            .sort((a, b) => getYoutubeStreams(b.streams, b.id) - getYoutubeStreams(a.streams, a.id))
+            .slice(0, 10);
+    }, [songs, activeArtistData.releases]);
 
     const topNpcSongs = useMemo(() => {
         return [...(gameState.npcs || [])]
@@ -72,8 +82,16 @@ const YouTubeMusicView: React.FC = () => {
                     </div>
 
                     <div className="p-6 flex flex-col items-center">
-                        <img src={release.coverArt} className="w-64 h-64 object-cover shadow-2xl mb-6" />
-                        <h1 className="text-3xl font-bold text-center mb-6">{release.title}</h1>
+                        <img src={release.coverArt} className="w-64 h-64 object-cover shadow-2xl mb-4" />
+                        <h1 className="text-3xl font-bold text-center mb-2">{release.title}</h1>
+                        {release.isExclusive && (release.exclusiveTo === 'YouTube Music' || release.exclusivePlatforms?.includes('YouTube Music')) && (
+                            <span className="mb-6 px-3 py-1 rounded-full text-xs font-bold bg-red-600/30 text-red-400 border border-red-500/50 flex items-center gap-1">
+                                ▶ YouTube Music Exclusive
+                            </span>
+                        )}
+                        {(!release.isExclusive || (release.exclusiveTo !== 'YouTube Music' && !release.exclusivePlatforms?.includes('YouTube Music'))) && (
+                            <div className="mb-6"></div>
+                        )}
 
                         <div className="flex items-center gap-6 mb-8 w-full justify-center">
                             <button className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center">
