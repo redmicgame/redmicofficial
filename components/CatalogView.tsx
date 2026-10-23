@@ -172,6 +172,133 @@ const ItunesVersionManager: React.FC<{ song: Song }> = ({ song }) => {
     );
 };
 
+interface PostAlbumSingleModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    song: Song;
+    project: Release;
+    currentDate: { week: number; year: number };
+    onConfirm: (offset: number, cover: string) => void;
+}
+
+const PostAlbumSingleModal: React.FC<PostAlbumSingleModalProps> = ({
+    isOpen,
+    onClose,
+    song,
+    project,
+    currentDate,
+    onConfirm,
+}) => {
+    const [releaseOffset, setReleaseOffset] = useState<number>(1);
+    const [customCover, setCustomCover] = useState<string>('');
+
+    if (!isOpen) return null;
+
+    const handleCoverUpload = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCustomCover(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const targetWeek = currentDate.week + releaseOffset;
+    const targetYear = currentDate.year + Math.floor(targetWeek / 53);
+    const normalizedWeek = targetWeek % 53 || 1;
+
+    return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-800 rounded-xl max-w-md w-full border border-zinc-700 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-4 border-b border-zinc-700 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <span>🚀</span> Release Post-Album Single
+                        </h3>
+                        <p className="text-xs text-zinc-400">Launch a single campaign for an album track</p>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-md text-lg leading-none">
+                        ✕
+                    </button>
+                </div>
+                
+                <div className="p-4 space-y-4 text-sm">
+                    <div className="flex items-center gap-3 bg-zinc-900/60 p-3 rounded-lg border border-zinc-700/50">
+                        <img 
+                            src={customCover || song.coverArt || project.coverArt} 
+                            alt={song.title} 
+                            className="w-14 h-14 rounded-md object-cover shadow-sm border border-zinc-700" 
+                        />
+                        <div className="min-w-0 flex-1">
+                            <p className="font-bold text-white truncate text-base">{song.title}</p>
+                            <p className="text-xs text-zinc-400 truncate">From: <span className="text-zinc-300 font-medium">{project.title}</span></p>
+                            <span className="inline-block mt-1 text-[10px] uppercase font-bold bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 px-2 py-0.5 rounded-full">
+                                Album Cut → Official Single
+                            </span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-zinc-300 block mb-1.5">Single Cover Art</label>
+                        <div className="flex items-center gap-3">
+                            <label className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium py-2 px-3 rounded-md cursor-pointer text-center transition-colors border border-zinc-600">
+                                {customCover ? 'Change Custom Cover' : 'Upload Custom Cover (Optional)'}
+                                <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} />
+                            </label>
+                            {customCover && (
+                                <button
+                                    onClick={() => setCustomCover('')}
+                                    className="text-xs text-red-400 hover:text-red-300 py-1 px-2"
+                                    type="button"
+                                >
+                                    Reset
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-1">Defaults to current track cover art.</p>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-zinc-300 block mb-1.5">Release Timing</label>
+                        <select
+                            className="w-full bg-zinc-900 text-white rounded-md p-2 text-sm border border-zinc-700 focus:outline-none focus:border-blue-500"
+                            value={releaseOffset}
+                            onChange={(e) => setReleaseOffset(Number(e.target.value))}
+                        >
+                            <option value={1}>Next Week (Week {normalizedWeek}, {targetYear})</option>
+                            <option value={2}>In 2 Weeks</option>
+                            <option value={3}>In 3 Weeks</option>
+                            <option value={4}>In 4 Weeks</option>
+                        </select>
+                        <p className="text-[11px] text-zinc-400 mt-1">
+                            Scheduling this post-album single will push it to radio, playlists, and give it fresh momentum on the charts.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-4 bg-zinc-900/40 border-t border-zinc-700/50 flex justify-end gap-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-700 hover:bg-zinc-600 rounded-md transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onConfirm(releaseOffset, customCover)}
+                        className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-colors shadow-md flex items-center gap-1.5"
+                    >
+                        <span>🚀 Schedule Single Release</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 interface TrackItemProps {
     onCoverChange: (songId: string, e: React.ChangeEvent<HTMLInputElement>) => void;
     song: Song;
@@ -183,9 +310,11 @@ interface TrackItemProps {
     onTakeDown: () => void;
     onBuyBack: () => void;
     isStreamingActive?: boolean;
+    isSingle?: boolean;
+    onReleasePostAlbumSingle?: () => void;
 }
 
-const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack, isStreamingActive, onCoverChange }) => {
+const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onToggleExpand, grammyWin, canTakeDown, onTakeDown, onBuyBack, isStreamingActive, onCoverChange, isSingle, onReleasePostAlbumSingle }) => {
     const { dispatch } = useGame();
 
     return (
@@ -222,6 +351,18 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                 </div>
                 <div className="flex items-center gap-2">
                     <SongCertificationBadge streams={song.streams} sales={song.sales} />
+                    {!isSingle && !song.isTakenDown && onReleasePostAlbumSingle && (
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onReleasePostAlbumSingle();
+                            }}
+                            className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white px-2 py-1 rounded text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"
+                            title="Release Post-Album Single"
+                        >
+                            <span>🚀 Single</span>
+                        </button>
+                    )}
                     <button onClick={onToggleExpand} className="p-1 text-zinc-400 hover:text-white">
                         <InformationCircleIcon className="w-5 h-5" />
                     </button>
@@ -235,6 +376,17 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
                      <p className="font-bold text-right">#{chartInfo.peak ?? 'N/A'}</p>
                      
                      <ItunesVersionManager song={song} />
+
+                     {!isSingle && !song.isTakenDown && onReleasePostAlbumSingle && (
+                         <div className="col-span-2 mt-2">
+                             <button 
+                                 onClick={onReleasePostAlbumSingle}
+                                 className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1.5 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                             >
+                                 <span>🚀 Release Post-Album Single</span>
+                             </button>
+                         </div>
+                     )}
 
                      <div className="col-span-2 mt-2">
                          <button 
@@ -265,7 +417,6 @@ const TrackItem: React.FC<TrackItemProps> = ({ song, chartInfo, isExpanded, onTo
     );
 };
 
-
 const PostAlbumSingleManager: React.FC<{ project: Release, allReleases: Release[] }> = ({ project, allReleases }) => {
     const { gameState, dispatch, activeArtistData } = useGame();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -276,11 +427,17 @@ const PostAlbumSingleManager: React.FC<{ project: Release, allReleases: Release[
     if (!activeArtistData) return null;
 
     // Filter tracks that are not already released as singles
-    const eligibleTracks = project.songIds.map(id => activeArtistData.songs.find(s => s.id === id)).filter((song): song is Song => {
+    const allSongIds = Array.from(new Set([...(project.songIds || []), ...(((project as any).deluxeSongIds) || [])]));
+    const eligibleTracks = allSongIds.map(id => activeArtistData.songs.find(s => s.id === id)).filter((song): song is Song => {
         if (!song) return false;
-        // If the song's current releaseId points to a Single release, it's already a single
-        const mainRelease = allReleases.find(r => r.id === song.releaseId);
-        return mainRelease?.type !== 'Single';
+        if (song.singleType === 'lead' || song.singleType === 'standalone' || song.singleType === 'promotional') return false;
+        const hasSingleRelease = allReleases.some(r => r.type === 'Single' && r.songIds.includes(song.id));
+        if (hasSingleRelease) return false;
+        const hasScheduledSingle = (activeArtistData.labelSubmissions || []).some(sub => 
+            (sub.release?.type === 'Single' && sub.release.songIds?.includes(song.id)) ||
+            (sub.singlesToRelease || []).some(s => s.songId === song.id)
+        );
+        return !hasScheduledSingle;
     });
 
     if (eligibleTracks.length === 0) return null;
@@ -388,6 +545,7 @@ const CatalogView: React.FC = () => {
     const [takeDownTarget, setTakeDownTarget] = useState<{ type: 'song' | 'release', id: string, title: string } | null>(null);
     const [rightsTarget, setRightsTarget] = useState<{ type: 'song' | 'release', item: Song | Release } | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ action: () => void, message: string, title: string, confirmText: string } | null>(null);
+    const [postAlbumSingleTarget, setPostAlbumSingleTarget] = useState<{ song: Song; project: Release } | null>(null);
 
     const eraConfig = useMemo(() => getEraConfiguration(gameState.date.year), [gameState.date.year]);
 
@@ -398,6 +556,16 @@ const CatalogView: React.FC = () => {
 
     const allSongs = Object.values(gameState.artistsData).flatMap(d => d.songs);
     const allReleases = Object.values(gameState.artistsData).flatMap(d => d.releases);
+
+    const isSongSingle = (songId: string, song?: Song): boolean => {
+        if (song?.singleType === 'lead' || song?.singleType === 'standalone' || song?.singleType === 'promotional') return true;
+        if (allReleases.some(r => r.type === 'Single' && r.songIds.includes(songId))) return true;
+        if ((activeArtistData.labelSubmissions || []).some(sub => 
+            (sub.release?.type === 'Single' && sub.release.songIds?.includes(songId)) ||
+            (sub.singlesToRelease || []).some(s => s.songId === songId)
+        )) return true;
+        return false;
+    };
 
     const songsForArtist = useMemo(() => {
         return allSongs.filter(s => s.artistId === activeArtist.id || s.collaboration?.artistName === activeArtist.name || (s.features && s.features.includes(activeArtist.name)));
@@ -637,11 +805,14 @@ const CatalogView: React.FC = () => {
                                                             const song = activeArtistData.songs.find(s => s.id === songId);
                                                             if (!song) return null;
                                                             const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
+                                                            const isSingle = isSongSingle(song.id, song);
                                                             return (
                                                                 <TrackItem
                                                                 onCoverChange={handleSongCoverArtChange}
                                                                 key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
                                                                     grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                                    isSingle={isSingle}
+                                                                    onReleasePostAlbumSingle={!isSingle ? () => setPostAlbumSingleTarget({ song, project }) : undefined}
                                                                     onBuyBack={() => {
     const totalRev = song.revenue || 0;
     const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
@@ -666,11 +837,14 @@ const CatalogView: React.FC = () => {
                                                             const song = activeArtistData.songs.find(s => s.id === songId);
                                                             if (!song) return null;
                                                             const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
+                                                            const isSingle = isSongSingle(song.id, song);
                                                             return (
                                                                 <TrackItem
                                                                 onCoverChange={handleSongCoverArtChange}
                                                                 key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
                                                                     grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                                    isSingle={isSingle}
+                                                                    onReleasePostAlbumSingle={!isSingle ? () => setPostAlbumSingleTarget({ song, project }) : undefined}
                                                                     onBuyBack={() => {
     const totalRev = song.revenue || 0;
     const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
@@ -698,11 +872,14 @@ const CatalogView: React.FC = () => {
                                                             const song = activeArtistData.songs.find(s => s.id === songId);
                                                             if (!song) return null;
                                                             const trackChartInfo = { peak: chartHistory[song.id]?.peak ?? null, current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null };
+                                                            const isSingle = isSongSingle(song.id, song);
                                                             return (
                                                                 <TrackItem
                                                                 onCoverChange={handleSongCoverArtChange}
                                                                 key={song.id} song={song} chartInfo={trackChartInfo} isExpanded={expandedTrackId === song.id} onToggleExpand={() => handleToggleTrackInfo(song.id)}
                                                                     grammyWin={findGrammyWin(song.id, 'song')} canTakeDown={canTakeDown} onTakeDown={() => setTakeDownTarget({ type: 'song', id: song.id, title: song.title })}
+                                                                    isSingle={isSingle}
+                                                                    onReleasePostAlbumSingle={!isSingle ? () => setPostAlbumSingleTarget({ song, project }) : undefined}
                                                                     onBuyBack={() => {
     const totalRev = song.revenue || 0;
     const cost = Math.floor(Math.max(500000, totalRev * 5 + (activeArtistData.popularity * 25000)));
@@ -1036,6 +1213,32 @@ const CatalogView: React.FC = () => {
                         })()}
                     </div>
                 </div>
+            )}
+
+            {postAlbumSingleTarget && (
+                <PostAlbumSingleModal
+                    isOpen={true}
+                    onClose={() => setPostAlbumSingleTarget(null)}
+                    song={postAlbumSingleTarget.song}
+                    project={postAlbumSingleTarget.project}
+                    currentDate={gameState.date}
+                    onConfirm={(releaseOffset, customCover) => {
+                        const targetWeek = gameState.date.week + releaseOffset;
+                        const targetYear = gameState.date.year + Math.floor(targetWeek / 53);
+                        const normalizedWeek = targetWeek % 53 || 1;
+
+                        dispatch({
+                            type: 'RELEASE_POST_ALBUM_SINGLE',
+                            payload: {
+                                projectId: postAlbumSingleTarget.project.id,
+                                songId: postAlbumSingleTarget.song.id,
+                                coverArt: customCover || postAlbumSingleTarget.song.coverArt || postAlbumSingleTarget.project.coverArt,
+                                releaseDate: { week: normalizedWeek, year: targetYear }
+                            }
+                        });
+                        setPostAlbumSingleTarget(null);
+                    }}
+                />
             )}
         </div>
     );
