@@ -850,7 +850,7 @@ const generateNewHits = (
 export const SUPERSTAR_ARTISTS_CONFIG = [
   { key: "ella langley", name: "Ella Langley", limit: 1 },
   { key: "drake", name: "Drake", limit: 1 },
-  { key: "taylor swift", name: "Taylor Swift", limit: 10 },
+  { key: "taylor swift", name: "Taylor Swift", limit: 1 },
 ] as const;
 
 export const resolveActiveSuperstarHits = (
@@ -877,6 +877,7 @@ export const resolveActiveSuperstarHits = (
     for (const songId of existingList) {
       if (billboardSongIds.has(songId)) {
         stillActiveOnBillboard.push(songId);
+        if (stillActiveOnBillboard.length >= limit) break;
       }
       // If not on billboardSongIds, it has left the chart!
     }
@@ -4201,7 +4202,7 @@ The Red Mic Team`,
       // Add them back to the list
       newNpcsList.unshift(...newlyGeneratedNpcs);
 
-      // Resolve active superstar hits (Drake: max 1, Ella Langley: max 1, Taylor Swift: max 10)
+      // Resolve active superstar hits (Drake: max 1, Ella Langley: max 1, Taylor Swift: max 1)
       // A hit stays active while charting on the Billboard Hot 100.
       // Once it leaves Billboard Hot 100, they can have one again.
       // The rest of their songs are normal.
