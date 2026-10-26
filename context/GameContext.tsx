@@ -11760,6 +11760,27 @@ It is now available on your Spotify profile.
 
         const hasStreamingRights = song.isAvailableOnStreaming !== false;
 
+        // Billboard Hot 100 YouTube views counting as streams from 2010 until 2018:
+        let youtubeStreamViews = 0;
+        if (state.date.year >= 2010 && state.date.year <= 2018) {
+          if (song.isPlayerSong && song.songId) {
+            for (const aId in updatedArtistsData) {
+              const aData = updatedArtistsData[aId];
+              if (aData?.videos) {
+                const songVids = aData.videos.filter((v: any) => v.songId === song.songId);
+                youtubeStreamViews += songVids.reduce((sum: number, v: any) => sum + (v.lastWeekViews || 0), 0);
+              }
+            }
+          } else if (!song.isPlayerSong) {
+            // NPC songs YouTube views simulation during 2010-2018
+            const isKPop = song.genre === 'K-Pop' || ['BTS', 'BLACKPINK', 'NewJeans', 'Stray Kids', 'TWICE', 'SEVENTEEN', 'LE SSERAFIM', '(G)I-DLE', 'Jungkook', 'Jennie', 'Lisa', 'aespa'].includes(song.artist);
+            const ytRatio = isKPop ? 0.60 : 0.30;
+            youtubeStreamViews = Math.floor(song.weeklyStreams * ytRatio);
+          }
+        }
+
+        const effectiveWeeklyStreams = song.weeklyStreams + youtubeStreamViews;
+
         // Billboard Hot 100 Formulas by Decade:
         // 1990s: Radio Airplay 70%, Physical Sales 30%, Digital Sales 0%, Streaming 0%
         // 2000s: Radio Airplay 55%, Digital Sales 30%, Physical Sales 15%, Streaming 0%
@@ -11767,9 +11788,10 @@ It is now available on your Spotify profile.
         // 2020s: Streaming Activity 78%, Radio Airplay 20%, Sales 2% (Digital 1%, Physical 1%)
 
         // Streaming Points: Billboard added streaming in 2010 (formula.streaming > 0)
+        // From 2010 until 2018, YouTube views count as streams on Billboard Hot 100
         const streamPoints =
           formula.streaming > 0 && hasStreamingRights
-            ? song.weeklyStreams * 0.5 * formula.streaming
+            ? effectiveWeeklyStreams * 0.5 * formula.streaming
             : 0;
 
         // Radio Airplay Points: All-format airplay impressions
@@ -11820,6 +11842,7 @@ It is now available on your Spotify profile.
 
         return {
           ...song,
+          weeklyStreams: effectiveWeeklyStreams,
           hot100Points: points,
           digitalSales: songDigitalSales + songPhysicalSales,
           radioPlays: song.radioPlays,

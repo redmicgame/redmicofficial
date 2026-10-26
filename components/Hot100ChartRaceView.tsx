@@ -24,14 +24,7 @@ interface WeekTimelineItem {
     label: string; // e.g. "JUL W1 - 2013"
 }
 
-interface SongAudioEntry {
-    type: 'file' | 'spotify';
-    url: string;
-    name: string;
-    spotifyTrackId?: string;
-    spotifyUrl?: string;
-    blob?: Blob;
-}
+import { SongAudioEntry, saveAudioToDB, loadAllAudioFromDB, deleteAudioFromDB } from '../utils/chartRaceAudio';
 
 const SONG_COLORS = [
     '#f59e0b', // Amber / Gold
@@ -54,92 +47,6 @@ function formatWeekLabel(year: number, week: number): string {
     const weekInMonth = ((week - 1) % 4) + 1;
     const m = months[monthIdx];
     return `${m} W${weekInMonth} - ${year}`;
-}
-
-// IndexedDB Helper for persistent MP3 and Spotify storage
-const DB_NAME = 'Hot100AudioDB';
-const STORE_NAME = 'songAudio';
-
-async function openAudioDB(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 2);
-        req.onupgradeneeded = () => {
-            if (!req.result.objectStoreNames.contains(STORE_NAME)) {
-                req.result.createObjectStore(STORE_NAME, { keyPath: 'songId' });
-            }
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-    });
-}
-
-async function saveAudioToDB(songId: string, entry: SongAudioEntry) {
-    try {
-        const db = await openAudioDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put({
-            songId,
-            type: entry.type,
-            name: entry.name,
-            url: entry.url,
-            spotifyTrackId: entry.spotifyTrackId,
-            spotifyUrl: entry.spotifyUrl,
-            blob: entry.blob,
-        });
-    } catch (e) {
-        console.error('Failed to save audio to IndexedDB', e);
-    }
-}
-
-async function loadAllAudioFromDB(): Promise<Record<string, SongAudioEntry>> {
-    try {
-        const db = await openAudioDB();
-        return new Promise((resolve) => {
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const req = tx.objectStore(STORE_NAME).getAll();
-            req.onsuccess = () => {
-                const results: Record<string, SongAudioEntry> = {};
-                (req.result || []).forEach((item: any) => {
-                    if (item.type === 'spotify') {
-                        results[item.songId] = {
-                            type: 'spotify',
-                            url: item.url,
-                            name: item.name || 'Spotify Track',
-                            spotifyTrackId: item.spotifyTrackId,
-                            spotifyUrl: item.spotifyUrl,
-                        };
-                    } else if (item.blob) {
-                        results[item.songId] = {
-                            type: 'file',
-                            url: URL.createObjectURL(item.blob),
-                            name: item.name || 'uploaded.mp3',
-                            blob: item.blob,
-                        };
-                    } else if (item.url) {
-                        results[item.songId] = {
-                            type: 'file',
-                            url: item.url,
-                            name: item.name || 'Audio Track',
-                        };
-                    }
-                });
-                resolve(results);
-            };
-            req.onerror = () => resolve({});
-        });
-    } catch (e) {
-        return {};
-    }
-}
-
-async function deleteAudioFromDB(songId: string) {
-    try {
-        const db = await openAudioDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).delete(songId);
-    } catch (e) {
-        console.error('Failed to delete audio from IndexedDB', e);
-    }
 }
 
 const Hot100ChartRaceView: React.FC = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { ChartEntry, GameDate } from '../types';
 import { getBillboardFormula, isSpotifyUnlockedForPlayer, getPlayerRegion } from '../utils/eraUtils';
@@ -269,6 +269,28 @@ const BillboardView: React.FC = () => {
         getBillboardFormula(2023)
     ];
 
+    // Identify user's charted song/album with the highest position (lowest rank number)
+    const highestPlayerEntry = useMemo(() => {
+        const isAlbum = currentChart.isAlbum;
+        const playerEntries = (currentChart.data || []).filter(entry => 
+            isAlbum ? (entry as any).isPlayerAlbum : (entry as any).isPlayerSong
+        );
+        if (playerEntries.length === 0) return null;
+        return [...playerEntries].sort((a, b) => a.rank - b.rank)[0];
+    }, [currentChart]);
+
+    const highestPlayerItemRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll directly to player's highest charting song
+    useEffect(() => {
+        if (highestPlayerEntry && highestPlayerItemRef.current) {
+            const timer = setTimeout(() => {
+                highestPlayerItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 250);
+            return () => clearTimeout(timer);
+        }
+    }, [highestPlayerEntry?.uniqueId, selectedChart]);
+
     return (
         <div className="bg-[#e4e4e4] h-full font-sans relative pb-24 text-black overflow-y-auto">
             <header className="bg-white">
@@ -331,9 +353,18 @@ const BillboardView: React.FC = () => {
             
             <main className="mx-auto max-w-3xl pt-2 px-2 relative z-0">
                 {currentChart.data.length > 0 ? (
-                    currentChart.data.map(entry => (
-                        <ChartEntryItem key={entry.uniqueId} entry={entry} isAlbumChart={currentChart.isAlbum} isSpotify={selectedChart === 'spotify'} />
-                    ))
+                    currentChart.data.map(entry => {
+                        const isHighestPlayer = entry.uniqueId === highestPlayerEntry?.uniqueId;
+                        return (
+                            <div 
+                                key={entry.uniqueId}
+                                ref={isHighestPlayer ? highestPlayerItemRef : undefined}
+                                className={isHighestPlayer ? "scroll-mt-36 ring-2 ring-[#12FF80] shadow-[0_0_15px_rgba(18,255,128,0.4)] rounded-sm mb-2" : ""}
+                            >
+                                <ChartEntryItem entry={entry} isAlbumChart={currentChart.isAlbum} isSpotify={selectedChart === 'spotify'} />
+                            </div>
+                        );
+                    })
                 ) : (
                     <div className="text-center py-20 text-zinc-500 bg-white rounded-md mt-4 shadow-sm border border-gray-200">
                         <p className="font-bold text-black text-xl">Chart is empty</p>

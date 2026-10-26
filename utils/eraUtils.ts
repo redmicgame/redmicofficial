@@ -47,7 +47,7 @@ export const getBillboardFormula = (year: number): BillboardHot100Formula => {
             streaming: 0.40,
             digital: 0.10,
             physical: 0.10,
-            description: 'Streaming (40%) and radio (40%) are the two biggest drivers. Digital downloads (10%) and physical singles (10%) have smaller weight.'
+            description: 'Streaming (40%) and radio (40%) are the two biggest drivers. YouTube views count as streams (2010–2018). Digital downloads (10%) and physical singles (10%) have smaller weight.'
         };
     } else {
         // 2020s: The All-Access Era (2020 - Present)
