@@ -28,7 +28,7 @@ import { getSmartCommentTemplates } from "../utils/smartXFanContent";
 // Sub-component for the Year End Chart visualization
 const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, activeArtist?: any): XUser => {
   if (!id) {
-    const entityName = gameState?.group?.name || activeArtist?.name || "Artist";
+    const entityName = activeArtist?.name || gameState?.group?.name || "Artist";
     const cleanEntity = entityName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
     return {
       id: "fallback_fan",
@@ -93,7 +93,7 @@ const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, acti
     }
   }
 
-  const entityName = gameState?.group?.name || activeArtist?.name || "Artist";
+  const entityName = activeArtist?.name || gameState?.group?.name || "Artist";
   const cleanEntity = entityName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 
   if (id.startsWith("charts_")) {

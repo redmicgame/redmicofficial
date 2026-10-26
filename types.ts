@@ -949,6 +949,7 @@ export interface ChartHistory {
     chartRunEntries?: ChartRunEntry[];
     firstEntered?: { year: number; week: number };
     peakDate?: { year: number; week: number };
+    hasTweetedBillboard200Debut?: boolean;
   };
 }
 
@@ -1556,6 +1557,7 @@ export type GameView =
   | "chartHistory"
   | "billboardChartHistory"
   | "hot100ChartRace"
+  | "ukSinglesChartRace"
   | "ukChartHistory"
   | "albumSalesChart"
   | "labels"
@@ -2497,6 +2499,11 @@ export interface GameState {
   billboardHot100: ChartEntry[];
   activeSuperstarHits?: Record<string, string[]>;
   billboardHot100WeeklyArchive?: {
+    year: number;
+    week: number;
+    entries: { uniqueId: string; title: string; artist: string; coverArt: string; rank: number }[];
+  }[];
+  ukSinglesChartWeeklyArchive?: {
     year: number;
     week: number;
     entries: { uniqueId: string; title: string; artist: string; coverArt: string; rank: number }[];

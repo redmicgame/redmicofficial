@@ -1698,6 +1698,7 @@ const initialState: GameState = {
   billboardHot100: [],
   activeSuperstarHits: { "drake": [], "ella langley": [], "taylor swift": [] },
   billboardHot100WeeklyArchive: [],
+  ukSinglesChartWeeklyArchive: [],
   billboardTopAlbums: [],
   albumChartHistory: {},
   chartHistory: {},
@@ -2060,6 +2061,23 @@ const getHypeCap = (artistData: ArtistData): number => {
   return 100;
 };
 
+const getArtistNameFromState = (state: GameState, explicitArtistId?: string): string => {
+  const targetId = explicitArtistId || state.activeArtistId;
+  if (targetId && state.group?.members) {
+    const member = state.group.members.find((m) => m.id === targetId);
+    if (member?.name) return member.name;
+  }
+  if (targetId && state.group?.id === targetId) return state.group.name;
+  if (targetId && state.soloArtist?.id === targetId) return state.soloArtist.name;
+  if (targetId && state.artistsData?.[targetId]?.name) {
+    return state.artistsData[targetId].name;
+  }
+  if (state.group && (!state.activeArtistId || state.activeArtistId === state.group.id)) {
+    return state.group.name;
+  }
+  return state.soloArtist?.name || state.group?.name || "Artist";
+};
+
 const gameReducerInternal = (
   state: GameState,
   action: GameAction,
@@ -2116,17 +2134,32 @@ const gameReducerInternal = (
     return false;
   };
 
-  const getCurrentArtistProfile = (): (Artist | Group) | null => {
-    if (!state.activeArtistId) return null;
-    return (
-      allPlayerArtistsAndGroups.find((a) => a.id === state.activeArtistId) ||
-      (state.soloArtist?.id === state.activeArtistId ? state.soloArtist : null) ||
-      (state.group?.id === state.activeArtistId ? state.group : null) ||
-      state.soloArtist ||
-      state.group ||
-      null
-    );
+  const getCurrentArtistProfile = (explicitArtistId?: string): (Artist | Group) | null => {
+    const targetId = explicitArtistId || state.activeArtistId;
+    if (targetId) {
+      if (state.group?.members) {
+        const member = state.group.members.find((m) => m.id === targetId);
+        if (member) return member;
+      }
+      if (state.group?.id === targetId) return state.group;
+      if (state.soloArtist?.id === targetId) return state.soloArtist;
+      const found = allPlayerArtistsAndGroups.find((a) => a.id === targetId);
+      if (found) return found;
+      if (state.artistsData?.[targetId]?.name) {
+        return {
+          id: targetId,
+          name: state.artistsData[targetId].name,
+          image: state.artistsData[targetId].image,
+        } as any;
+      }
+    }
+    if (state.group && (!state.activeArtistId || state.activeArtistId === state.group.id)) {
+      return state.group;
+    }
+    return state.soloArtist || state.group || null;
   };
+
+  const getActiveArtistName = (explicitArtistId?: string): string => getArtistNameFromState(state, explicitArtistId);
   const tmzUser: XUser = {
     id: "tmz",
     name: "TMZ",
@@ -2959,7 +2992,7 @@ The Red Mic Team`,
       // Add a prediction post if it's gaining radio traction
       const newXPosts = [...(activeData.xPosts || [])];
       
-      const artistName = state.soloArtist?.name || state.group?.name || "Artist";
+      const artistName = getActiveArtistName();
       const artistHandle = activeData.xUsers.find((u) => u.name === artistName)?.username || "artist";
       
       const totalRadio = (song.radioPlays || 0) + spinsGained;
@@ -12183,6 +12216,7 @@ It is now available on your Spotify profile.
             const history = newUkSinglesChartHistory[song.uniqueId];
             const prevChartEntry = prevUkMap.get(song.uniqueId);
 
+            const currentRunEntry = { year: newDate.year, week: newDate.week, rank };
             if (history) {
               history.weeksOnChart += 1;
               history.lastRank = rank;
@@ -12190,6 +12224,11 @@ It is now available on your Spotify profile.
               if (rank === 1) history.weeksAtNo1 = (history.weeksAtNo1 || 0) + 1;
               if (history.chartRun) history.chartRun.push(rank);
               else history.chartRun = [rank];
+              if (history.chartRunEntries) {
+                history.chartRunEntries.push(currentRunEntry);
+              } else {
+                history.chartRunEntries = [currentRunEntry];
+              }
             } else {
               newUkSinglesChartHistory[song.uniqueId] = {
                 weeksOnChart: 1,
@@ -12197,6 +12236,7 @@ It is now available on your Spotify profile.
                 lastRank: rank,
                 weeksAtNo1: rank === 1 ? 1 : 0,
                 chartRun: [rank],
+                chartRunEntries: [currentRunEntry],
                 firstEntered: { year: newDate.year, week: newDate.week },
               };
             }
@@ -12218,6 +12258,31 @@ It is now available on your Spotify profile.
               points: Math.round(song._ukPoints || 0),
             });
         });
+
+        // Weekly archive of player UK Singles Chart entries for UK chart race video
+        const playerUkSinglesEntriesThisWeek = newUkSinglesChart
+          .filter((entry) =>
+            entry.isPlayerSong ||
+            (entry.songId && playerSongIdsSet.has(entry.songId)) ||
+            playerSongIdsSet.has(entry.uniqueId) ||
+            playerArtistNamesLower.some((name) => (entry.artist || "").toLowerCase().includes(name))
+          )
+          .map((entry) => ({
+            uniqueId: entry.uniqueId,
+            title: entry.title,
+            artist: entry.artist,
+            coverArt: entry.coverArt,
+            rank: entry.rank,
+          }));
+
+        const newUkSinglesChartWeeklyArchive = [
+          ...(state.ukSinglesChartWeeklyArchive || []),
+          {
+            year: newDate.year,
+            week: newDate.week,
+            entries: playerUkSinglesEntriesThisWeek,
+          },
+        ];
 
       // --- GENRE CHART CALCULATION (Billboard Formulas & Points) ---
       const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } =
@@ -13478,6 +13543,31 @@ It is now available on your Spotify profile.
         }
         return `${Math.round(num).toLocaleString("en-US")}`;
       };
+
+      // Chartdata: Billboard 200 album debut post for user only (not NPC artists) - matches format in image_1550b552.png
+      newBillboardTopAlbums.forEach((entry) => {
+        if (entry.isPlayerAlbum && (entry.weeksOnChart === 1 || entry.lastWeek === null)) {
+          const hist = newAlbumChartHistory[entry.uniqueId];
+          if (hist && !hist.hasTweetedBillboard200Debut) {
+            hist.hasTweetedBillboard200Debut = true;
+            const artistName = entry.artist || "Artist";
+            const artistPossessive = artistName.endsWith("s") ? `${artistName}'` : `${artistName}'s`;
+            const unitsSold = formatChartUnits(entry.weeklyActivity || entry.weeklySales || 0);
+            const debutContent = `${artistPossessive} '${entry.title}' debuts at #${entry.rank} on this week's Billboard 200 (${unitsSold} sold).`;
+
+            npcPopBasePosts.push({
+              id: crypto.randomUUID(),
+              authorId: "chartdata",
+              content: debutContent,
+              image: entry.coverArt,
+              likes: Math.floor(Math.random() * 50000) + 15000,
+              retweets: Math.floor(Math.random() * 12000) + 3000,
+              views: Math.floor(Math.random() * 800000) + 200000,
+              date: newDate,
+            });
+          }
+        }
+      });
 
       // 1. Chartdata: Biggest US album debuts of [year] (posted week 44, only top 10 positions, user and NPC artists only)
       if (newDate.week === 44) {
@@ -17473,6 +17563,7 @@ Congratulations on your chart success!
           billboardHot100: newBillboardHot100,
           activeSuperstarHits: finalActiveSuperstarHits,
           billboardHot100WeeklyArchive: newBillboardHot100WeeklyArchive,
+          ukSinglesChartWeeklyArchive: newUkSinglesChartWeeklyArchive,
           billboardBubblingUnder25: newBillboardBubblingUnder25,
           bubblingUnderHistory: newBubblingUnderHistory,
           billboardTopAlbums: newBillboardTopAlbums,
@@ -18245,6 +18336,7 @@ Congratulations on your chart success!
         billboardHot100: newBillboardHot100,
         activeSuperstarHits: finalActiveSuperstarHits,
         billboardHot100WeeklyArchive: newBillboardHot100WeeklyArchive,
+        ukSinglesChartWeeklyArchive: newUkSinglesChartWeeklyArchive,
         billboardBubblingUnder25: newBillboardBubblingUnder25,
         bubblingUnderHistory: newBubblingUnderHistory,
         billboardTopAlbums: newBillboardTopAlbums,
@@ -18716,19 +18808,17 @@ Congratulations on your chart success!
       }
 
       let newEmails: Email[] = [];
-      const artistProfile = [
-        state.soloArtist,
-        ...(state.group?.members || []),
-        state.group,
-        ...(state.extraPlayableArtists || []),
-      ].find((a) => a?.id === state.activeArtistId);
-      const artistName = artistProfile?.name || "Artist";
+      const releaseArtistId = action.payload.release?.artistId || state.activeArtistId;
+      const artistProfile = getCurrentArtistProfile(releaseArtistId);
+      const artistName = getActiveArtistName(releaseArtistId);
       const pronounPossessive =
-        artistProfile?.pronouns === "he/him"
-          ? "his"
-          : artistProfile?.pronouns === "she/her"
-            ? "her"
-            : "their";
+        artistProfile && "pronouns" in artistProfile
+          ? artistProfile.pronouns === "he/him"
+            ? "his"
+            : artistProfile.pronouns === "she/her"
+              ? "her"
+              : "their"
+          : "their";
 
       let popBaseContent = `${artistName} has surprise released ${pronounPossessive} new ${releaseWithLabel.type} "${releaseWithLabel.title}".`;
       if (releaseWithLabel.isExclusive && releaseWithLabel.exclusiveTo) {
@@ -21172,7 +21262,7 @@ We wish you the best in your future endeavors.
       let updatedXPosts = activeData.xPosts ? [...activeData.xPosts] : [];
       if (generatePopCorePost && songNameForPost) {
         const actorOrSinger = (activeData.actingRoles?.length || 0) > (activeData.songs?.length || 0) ? "actor" : "singer";
-        const artistName = state.soloArtist?.name || state.group?.name || "Unknown";
+        const artistName = getActiveArtistName();
         
         updatedXPosts.unshift({
             id: crypto.randomUUID(),
@@ -21222,7 +21312,7 @@ We wish you the best in your future endeavors.
       const avgResult = Math.floor((estimatedResultsMin + estimatedResultsMax) / 2);
       
       const targetVideo = videoId ? (activeData.tiktokVideos || []).find((v: any) => v.id === videoId) : null;
-      const soloName = state.soloArtist?.name || state.group?.name || "Artist";
+      const soloName = getActiveArtistName();
 
       // Immediate boost (25% upfront)
       const immediateRatio = 0.25;
@@ -21603,7 +21693,7 @@ Keep breaking records.
 
       const { video, songId } = action.payload;
       const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
+      const artistProfile = getCurrentArtistProfile();
       if (!artistProfile) return state;
 
       const updatedData: ArtistData = {
@@ -22100,8 +22190,8 @@ Watch: youtu.be/sIdlL8V83Cc`;
         const submission = activeData.labelSubmissions.find(
           (s) => s.id === submissionId,
         );
-        const artistName =
-          state.soloArtist?.name || state.group?.name || "Artist";
+        const releaseArtistId = submission?.release?.artistId || state.activeArtistId;
+        const artistName = getActiveArtistName(releaseArtistId);
 
         if (submission) {
           let projectTypeStr = submission.release.type;
@@ -22132,7 +22222,7 @@ Watch: youtu.be/sIdlL8V83Cc`;
 
           // Pop Base Tweet
           let missingMembersStr = "";
-          if (state.group) {
+          if (state.group && state.activeArtistId === state.group.id) {
               const missingMembers = state.group.members.filter(m => state.artistsData[m.id]?.isHiatus).map(m => m.name);
               if (missingMembers.length > 0) {
                   missingMembersStr = ` (Note: ${missingMembers.join(', ')} will not participate in this release due to hiatus)`;
@@ -22150,9 +22240,7 @@ Watch: youtu.be/sIdlL8V83Cc`;
           };
           updatedPosts.unshift(popBasePost);
 
-          const activeArtist = allPlayerArtistsAndGroups.find(
-            (a) => a.id === state.activeArtistId,
-          );
+          const activeArtist = getCurrentArtistProfile(releaseArtistId);
           const pronounPossessive =
             activeArtist && "pronouns" in activeArtist
               ? activeArtist.pronouns === "he/him"
@@ -22365,8 +22453,7 @@ Watch: youtu.be/sIdlL8V83Cc`;
           0,
           activeData.publicImage - publicImageDrop,
         );
-        const artistName =
-          state.soloArtist?.name || state.group?.name || "Artist";
+        const artistName = getActiveArtistName();
 
         const tmzPost: XPost = {
           id: crypto.randomUUID(),
@@ -23972,7 +24059,7 @@ Let us know if you accept.`,
                 id: crypto.randomUUID(),
                 artistId: state.activeArtistId,
                 songId: action.payload.songId,
-                title: `${state.activePromoInterviewOffer.source} Interview - ${state.soloArtist?.name || state.group?.name || "Artist"}`,
+                title: `${state.activePromoInterviewOffer.source} Interview - ${getActiveArtistName()}`,
                 type: "Interview",
                 views: 0,
                 thumbnail: action.payload.thumbnail,
@@ -24996,7 +25083,7 @@ ${npcArtistName}`,
       const { emailId, lookUrl } = action.payload;
 
       if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
+        const artistName = getActiveArtistName();
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
@@ -25181,7 +25268,7 @@ ${npcArtistName}`,
       if (!state.activeArtistId || !state.activeAmaPerformanceOffer)
         return state;
 
-      const artistName = state.soloArtist?.name || state.group?.name;
+      const artistName = getActiveArtistName();
       const performancePost: XPost = {
         id: crypto.randomUUID(),
         authorId: "popbase",
@@ -25240,7 +25327,7 @@ ${npcArtistName}`,
       const { emailId, lookUrl } = action.payload;
 
       if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
+        const artistName = getActiveArtistName();
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
@@ -25434,7 +25521,7 @@ ${npcArtistName}`,
         return state;
 
       const { video } = action.payload;
-      const artistName = state.soloArtist?.name || state.group?.name;
+      const artistName = getActiveArtistName();
       const performancePost: XPost = {
         id: crypto.randomUUID(),
         authorId: "popbase",
@@ -25507,7 +25594,7 @@ ${npcArtistName}`,
       const { emailId, lookUrl } = action.payload;
 
       if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
+        const artistName = getActiveArtistName();
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
@@ -25599,7 +25686,7 @@ ${npcArtistName}`,
       const { emailId, lookUrl } = action.payload;
 
       if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
+        const artistName = getActiveArtistName();
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
@@ -26083,7 +26170,7 @@ ${npcArtistName}`,
         const { emailId, lookUrl } = action.payload;
         if (lookUrl) {
             const activeData = state.artistsData[state.activeArtistId];
-            const artistName = state.soloArtist?.name || state.group?.name;
+            const artistName = getActiveArtistName();
             const popBasePost = {
               id: crypto.randomUUID(),
               authorId: "popbase",
@@ -26157,7 +26244,7 @@ ${npcArtistName}`,
       const { emailId, lookUrl } = action.payload;
 
       if (lookUrl) {
-        const artistName = state.soloArtist?.name || state.group?.name;
+        const artistName = getActiveArtistName();
         const popBasePost: XPost = {
           id: crypto.randomUUID(),
           authorId: "popbase",
@@ -27211,7 +27298,7 @@ ${npcArtistName}`,
     case "DO_BRAND_CAMPAIGN": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
+      const artistProfile = getCurrentArtistProfile();
       if (!artistProfile) return state;
 
       const { brandName, payout, logoUrl } = action.payload;
@@ -27245,7 +27332,7 @@ ${npcArtistName}`,
     case "SIGN_BRAND_AMBASSADOR": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
+      const artistProfile = getCurrentArtistProfile();
       if (!artistProfile) return state;
 
       const { brandId, brandName, logoUrl, weeklyPayout, durationWeeks } = action.payload;
@@ -27293,7 +27380,7 @@ ${npcArtistName}`,
     case "SIGN_SONG_SYNC_LICENSE": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
+      const artistProfile = getCurrentArtistProfile();
       if (!artistProfile) return state;
 
       const { songId, mediaTitle, mediaType, upfrontPayout, streamBoostPercent, weeklyStreamsBoost, durationWeeks } = action.payload;
@@ -27451,7 +27538,7 @@ ${npcArtistName}`,
       console.log("EDIT_TOUR_SETLIST triggered", action.payload);
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const artistProfile = state.soloArtist || state.group;
+      const artistProfile = getCurrentArtistProfile();
       if (!artistProfile) return state;
       
       const { tourId, newSetlist, addedSongs, removedSongs } = action.payload;
@@ -30786,7 +30873,7 @@ Statement Given: "${reason.toUpperCase()}"`,
         
         if (lookUrl) {
             const activeData = state.artistsData[state.activeArtistId];
-            const artistName = state.soloArtist?.name || state.group?.name;
+            const artistName = getActiveArtistName();
             const title = state.activeMoviePremiereOffer.roleTitle;
             
             const loc = action.payload.location || "Los Angeles";
@@ -30906,12 +30993,7 @@ Statement Given: "${reason.toUpperCase()}"`,
         createdAt: { ...state.date },
       };
 
-      const activeArtistName =
-        state.soloArtist?.name ||
-        state.group?.name ||
-        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
-        activeData.artistName ||
-        "The Artist";
+      const activeArtistName = getActiveArtistName();
 
       const lawyerEmail: Email = {
         id: crypto.randomUUID(),
@@ -30998,12 +31080,7 @@ Statement Given: "${reason.toUpperCase()}"`,
       const updatedBusinesses = [...activeData.businesses];
       updatedBusinesses[bIndex] = updatedBusiness;
 
-      const activeArtistName =
-        state.soloArtist?.name ||
-        state.group?.name ||
-        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
-        activeData.artistName ||
-        "The Artist";
+      const activeArtistName = getActiveArtistName();
 
       const launchPost: XPost = {
         id: crypto.randomUUID(),
@@ -31193,12 +31270,7 @@ Statement Given: "${reason.toUpperCase()}"`,
       if (newMoney < 0) return state;
 
       const hypeBoost = campaignType === "vogue_ad" ? 30 : campaignType === "popup_store" ? 25 : campaignType === "influencer_gift" ? 20 : 15;
-      const activeArtistName =
-        state.soloArtist?.name ||
-        state.group?.name ||
-        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
-        activeData.artistName ||
-        "The Artist";
+      const activeArtistName = getActiveArtistName();
 
       const campaignTitles: Record<string, string> = {
         social_blitz: "Social Media Viral Blitz",
@@ -31426,12 +31498,7 @@ Statement Given: "${reason.toUpperCase()}"`,
       }
       if (newMoney < 0) return state;
 
-      const activeArtistName =
-        state.soloArtist?.name ||
-        state.group?.name ||
-        (state.artists || []).find((a) => a.id === state.activeArtistId)?.name ||
-        activeData.artistName ||
-        "The Artist";
+      const activeArtistName = getActiveArtistName();
 
       const selloutRate = 0.88 + (Math.min(100, activeData.popularity || 50) / 100) * 0.12;
       const ticketsSold = Math.floor(venue.capacity * selloutRate);
@@ -32182,7 +32249,8 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
           else if (weeklyStr > 5000000) rankPredNum = Math.floor(Math.random() * 20) + 21; // 21-40
           else rankPredNum = Math.floor(Math.random() * 40) + 50; // 50-90
 
-          let artistHandle = data.xUsers.find((u) => u.name === (state.soloArtist?.name || state.group?.name))?.username || "artist";
+          const currentArtistName = getArtistNameFromState(nextState, artistId);
+          let artistHandle = data.xUsers.find((u) => u.name === currentArtistName)?.username || "artist";
 
           let isReEntry = bestSong.lastWeekStreams === 0 && bestSong.streams > weeklyStr; 
           let isDebut = bestSong.lastWeekStreams === 0 && bestSong.streams <= weeklyStr;
@@ -32191,7 +32259,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
           
           if (isReEntry) {
             let rankBucket = rankPredNum <= 10 ? 10 : rankPredNum <= 20 ? 20 : rankPredNum <= 30 ? 30 : rankPredNum <= 40 ? 40 : rankPredNum <= 50 ? 50 : 100;
-            content = `"${bestSong.title}" by ${state.soloArtist?.name || state.group?.name || "Artist"} is challenging to re-enter the top ${rankBucket} on the next Billboard Hot 100.`;
+            content = `"${bestSong.title}" by ${currentArtistName} is challenging to re-enter the top ${rankBucket} on the next Billboard Hot 100.`;
           } else {
             let actionWord = isDebut ? "debut" : "rise";
             if (!isDebut && weeklyStr < (bestSong.lastWeekStreams || 0)) {

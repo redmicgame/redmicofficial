@@ -251,6 +251,23 @@ const UkChartHistoryView: React.FC = () => {
             </div>
 
             <div className="max-w-xl mx-auto px-5 pt-8">
+                {/* Watch UK Singles Chart Race Video Button */}
+                <button
+                    onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: 'ukSinglesChartRace' })}
+                    className="w-full bg-gradient-to-r from-[#0022EB] via-[#4F46E5] to-[#FF2E93] hover:from-[#001dc2] hover:to-[#e02681] text-white font-black text-sm sm:text-base py-3.5 px-6 rounded-2xl flex items-center justify-between shadow-[0_4px_25px_rgba(0,34,235,0.3)] transition-all hover:scale-[1.01] active:scale-[0.99] mb-8 border border-white/20 group"
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎬</span>
+                        <div className="text-left">
+                            <div className="leading-tight tracking-wide font-black uppercase">UK SINGLES CHART RACE VIDEO</div>
+                            <div className="text-[11px] text-pink-200 font-semibold opacity-90">Watch animated video of your Official UK Singles Chart history</div>
+                        </div>
+                    </div>
+                    <span className="text-xs bg-black/40 px-3 py-1.5 rounded-full font-bold uppercase tracking-wider text-pink-300 border border-pink-400/40 group-hover:bg-black/60 transition-colors">
+                        Official Run
+                    </span>
+                </button>
+
                 {/* "Who is / Who are" Intro Section (SKIPPED if 0 top 10s) */}
                 {top10SinglesCount > 0 && (
                     <section className="mb-10 animate-fade-in">

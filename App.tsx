@@ -84,6 +84,7 @@ import CreateOnlyFansPostView from './components/CreateOnlyFansPostView';
 import BillboardChartHistoryView from './components/BillboardChartHistoryView';
 import Hot100ChartRaceView from './components/Hot100ChartRaceView';
 import UkChartHistoryView from './components/UkChartHistoryView';
+import UkSinglesChartRaceView from './components/UkSinglesChartRaceView';
 import AlbumSalesChartView from './components/AlbumSalesChartView';
 import LabelsView from './components/LabelsView';
 import ReleaseHubView from './components/ReleaseHubView';
@@ -312,6 +313,8 @@ const AppContent: React.FC = () => {
                 return <Hot100ChartRaceView />;
             case 'ukChartHistory':
                 return <UkChartHistoryView />;
+            case 'ukSinglesChartRace':
+                return <UkSinglesChartRaceView />;
             case 'albumSalesChart':
                 return <AlbumSalesChartView />;
             case 'radioDash':
