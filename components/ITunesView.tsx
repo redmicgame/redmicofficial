@@ -250,7 +250,9 @@ const useItunesData = () => {
 
             const hash = entry.uniqueId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const divisor = 750 + (hash % 250);
-            const sales = Math.floor((entry.weeklyActivity || entry.weeklySales * divisor || 100000) / divisor);
+            const sales = entry.itunesSales !== undefined && entry.itunesSales > 0
+                ? entry.itunesSales
+                : Math.floor((entry.weeklyActivity || entry.weeklySales * divisor || 100000) / divisor);
 
             return {
                 ...entry,
@@ -266,7 +268,7 @@ const useItunesData = () => {
             const baselineSales = 800 + Math.random() * 400 + ((100 - index) * 120);
             return {
                 ...album,
-                sales: Math.max(album.sales, Math.floor(baselineSales)),
+                sales: album.sales > 0 ? album.sales : Math.floor(baselineSales),
                 rank: index + 1
             };
         });

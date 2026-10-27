@@ -76,6 +76,8 @@ import type {
   BusinessProduct,
   BusinessCategory,
   ProductQualityTier,
+  MySpaceFeedPost,
+  MySpaceFeedComment,
 } from "../types";
 import { calculateEstimatedDemand, BUSINESS_CATEGORIES } from "../utils/businessSimulation";
 import { generateInstagramChannelReactions, calculateReactionGrowthDuration } from "../utils/instagramChannel";
@@ -117,6 +119,7 @@ import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
 import { calculateYouTubeViews, calculateYouTubeLikes } from "../utils/youtubeViews";
+import { generateWeeklyMySpaceFeedPosts, getInitialMySpaceFeed } from "../utils/myspaceFeed";
 
 function createGovernmentDivorceEmail(
   artistName: string,
@@ -12673,6 +12676,28 @@ It is now available on your Spotify profile.
 
           totalWeeklySales += digitalAlbumSales + generalPhysicalSales;
 
+          // When iTunes launches (April 2003 / 2003 W17 onwards), sales start counting towards Billboard 200 all album sales on iTunes each week:
+          const isItunesLaunched = state.date.year > 2003 || (state.date.year === 2003 && state.date.week >= 17);
+          let itunesAlbumSales = 0;
+          if (isItunesLaunched && (release.isExclusive !== true || release.exclusiveTo === 'iTunes' || release.exclusivePlatforms?.includes('iTunes'))) {
+            const reachUnits = Math.max(0, Math.floor(totalWeeklyStreams / 1500));
+            let itunesBoost = 1;
+            if (artistData.lastPushToItunesWeek) {
+              const currentWeek = newDate.year * 52 + newDate.week;
+              if (currentWeek - artistData.lastPushToItunesWeek <= 1) {
+                itunesBoost = 3.0 + Math.random() * 2.0;
+              }
+            }
+            const itunesMarketWeight = state.date.year <= 2012 ? 0.40 : state.date.year <= 2018 ? 0.28 : 0.15;
+            itunesAlbumSales = Math.floor((reachUnits * itunesMarketWeight + (artistData.popularity || 10) * 15) * itunesBoost);
+            if (itunesAlbumSales === 0 && totalWeeklyStreams > 5000) {
+              itunesAlbumSales = Math.floor(60 + Math.random() * 140);
+            }
+            totalWeeklySales += itunesAlbumSales;
+            (release as any).weeklyItunesSales = itunesAlbumSales;
+            (release as any).itunesSales = ((release as any).itunesSales || 0) + itunesAlbumSales;
+          }
+
           // Inject accumulated preorder sales on the first charting week (respecting vinyl delay)
           const relDate = release.releaseDate || {
             year: state.date.year,
@@ -12737,6 +12762,7 @@ It is now available on your Spotify profile.
             weeklySales: totalWeeklySales,
             weeklySES,
             weeklyPureSales: totalWeeklySales,
+            itunesSales: itunesAlbumSales,
           };
         });
 
@@ -12773,6 +12799,24 @@ It is now available on your Spotify profile.
         );
         if (weeklySales > targetUnits)
           weeklySales = Math.floor(targetUnits * 0.5);
+
+        const isItunesLaunched =
+          state.date.year > 2003 ||
+          (state.date.year === 2003 && state.date.week >= 17);
+        let npcItunesSales = 0;
+        if (isItunesLaunched) {
+          const itunesRatio = Math.min(
+            0.4,
+            Math.max(
+              0.05,
+              eraConfigTmp3.marketShare.digital * 0.7
+            )
+          );
+          npcItunesSales = Math.floor(targetUnits * itunesRatio * (0.8 + Math.random() * 0.4));
+          weeklySales += npcItunesSales;
+          targetUnits += npcItunesSales;
+        }
+
         const weeklySES = Math.max(0, targetUnits - weeklySales);
 
         return {
@@ -12787,6 +12831,7 @@ It is now available on your Spotify profile.
           weeklySales,
           weeklySES,
           weeklyPureSales: weeklySales,
+          itunesSales: npcItunesSales,
         };
       });
 
@@ -18347,6 +18392,40 @@ Congratulations on your chart success!
          }
       }
 
+      // Generate MySpace Feed Posts (Pure sales, CD/physical purchases, iTunes downloads, Best Buy/TRL)
+      for (const [artistId, aData] of Object.entries(updatedArtistsData)) {
+        const artistProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+        const artistName = artistProfile?.name || aData.name || "Artist";
+
+        if (!aData.mySpaceData) {
+          aData.mySpaceData = {
+            blogPosts: [],
+            bulletins: [],
+            feedPosts: getInitialMySpaceFeed(artistName, newDate),
+          };
+        } else if (!aData.mySpaceData.feedPosts || aData.mySpaceData.feedPosts.length === 0) {
+          aData.mySpaceData.feedPosts = getInitialMySpaceFeed(artistName, newDate);
+        }
+
+        const weeklyMySpacePosts = generateWeeklyMySpaceFeedPosts(
+          state,
+          artistName,
+          newBillboardTopAlbums,
+          newBillboardHot100,
+          newDate,
+          aData,
+          currentItunesSongs,
+          prevItunesMap
+        );
+
+        if (weeklyMySpacePosts.length > 0) {
+          aData.mySpaceData.feedPosts = [
+            ...weeklyMySpacePosts,
+            ...(aData.mySpaceData.feedPosts || []),
+          ].slice(0, 60);
+        }
+      }
+
       return {
         ...finalState,
         soundtrackAlbums: typeof updatedSoundtrackAlbums !== "undefined" ? updatedSoundtrackAlbums : state.soundtrackAlbums,
@@ -22107,6 +22186,80 @@ Watch: youtu.be/sIdlL8V83Cc`;
           },
           ...newMySpaceData.bulletins,
         ].slice(0, 10);
+      } else if (action.payload.type === "feed_post") {
+        hypeBoost = 2;
+        popBoost = 0.5;
+        const playerArtist =
+          state.soloArtist ||
+          state.group?.members.find((m) => m.id === state.activeArtistId) ||
+          state.group;
+        const playerPost: MySpaceFeedPost = {
+          id: `player_ms_${Date.now()}`,
+          authorId: state.activeArtistId,
+          authorName: playerArtist?.name || activeData.name || "You",
+          authorHandle: (playerArtist?.name || "artist").toLowerCase().replace(/[^a-z0-9]/g, ""),
+          authorAvatar: playerArtist?.image || (playerArtist as any)?.imageUrl || activeData.avatarUrl || (activeData as any)?.avatar || "",
+          isVerified: true,
+          content: action.payload.content || "",
+          mood: action.payload.mood,
+          nowPlaying: action.payload.nowPlaying,
+          kudos: Math.floor(Math.random() * 50) + 10,
+          commentsCount: 1,
+          date: state.date,
+          isPlayer: true,
+          category: "friends",
+          comments: [
+            {
+              id: `c_${Date.now()}_1`,
+              authorName: "Tom",
+              authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+              content: "Awesome update! Rock on! 🎸",
+              date: state.date,
+            },
+          ],
+        };
+        newMySpaceData.feedPosts = [playerPost, ...(newMySpaceData.feedPosts || [])].slice(0, 60);
+      } else if (action.payload.type === "like_feed_post" && action.payload.postId) {
+        const targetId = action.payload.postId;
+        if (newMySpaceData.feedPosts) {
+          newMySpaceData.feedPosts = newMySpaceData.feedPosts.map((p) => {
+            if (p.id === targetId) {
+              const hasLiked = !p.hasLiked;
+              return {
+                ...p,
+                hasLiked,
+                kudos: hasLiked ? p.kudos + 1 : Math.max(0, p.kudos - 1),
+              };
+            }
+            return p;
+          });
+        }
+      } else if (action.payload.type === "comment_feed_post" && action.payload.postId && action.payload.content) {
+        const targetId = action.payload.postId;
+        const commentText = action.payload.content;
+        const playerArtist =
+          state.soloArtist ||
+          state.group?.members.find((m) => m.id === state.activeArtistId) ||
+          state.group;
+        if (newMySpaceData.feedPosts) {
+          newMySpaceData.feedPosts = newMySpaceData.feedPosts.map((p) => {
+            if (p.id === targetId) {
+              const newComment: MySpaceFeedComment = {
+                id: `c_ply_${Date.now()}`,
+                authorName: playerArtist?.name || activeData.name || "You",
+                authorAvatar: playerArtist?.image || (playerArtist as any)?.imageUrl || activeData.avatarUrl || (activeData as any)?.avatar || "",
+                content: commentText,
+                date: state.date,
+              };
+              return {
+                ...p,
+                commentsCount: (p.commentsCount || 0) + 1,
+                comments: [...(p.comments || []), newComment],
+              };
+            }
+            return p;
+          });
+        }
       }
 
       return {

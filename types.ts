@@ -930,6 +930,7 @@ export interface AlbumChartEntry {
   weeklySales: number;
   weeklySES?: number;
   weeklyPureSales?: number;
+  itunesSales?: number;
 }
 
 export interface ChartRunEntry {
@@ -2093,6 +2094,35 @@ export interface TvAndFilmProject {
   hypeBoost?: number;
 }
 
+export interface MySpaceFeedComment {
+  id: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  date: GameDate;
+}
+
+export interface MySpaceFeedPost {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorHandle?: string;
+  authorAvatar: string;
+  isVerified?: boolean;
+  content: string;
+  image?: string;
+  kudos: number;
+  commentsCount: number;
+  repostsCount?: number;
+  date: GameDate;
+  isPlayer?: boolean;
+  mood?: string;
+  nowPlaying?: { title: string; artist: string };
+  category?: "charts" | "industry" | "fan" | "friends";
+  comments?: MySpaceFeedComment[];
+  hasLiked?: boolean;
+}
+
 export interface ArtistData {
   followersHistory?: any;
   name?: string;
@@ -2241,6 +2271,7 @@ export interface ArtistData {
     profileSongId?: string;
     blogPosts: { title: string; content: string; year: number; week: number }[];
     bulletins: { content: string; year: number; week: number }[];
+    feedPosts?: MySpaceFeedPost[];
     mood?: string;
     generalInterests?: string;
     musicInterests?: string;
@@ -3039,9 +3070,13 @@ export type GameAction =
   | {
       type: "POST_ON_MYSPACE";
       payload: {
-        type: "bulletin" | "blog" | "profile_song" | "push";
+        type: "bulletin" | "blog" | "profile_song" | "push" | "feed_post" | "like_feed_post" | "comment_feed_post";
         content?: string;
         songId?: string;
+        postId?: string;
+        mood?: string;
+        image?: string;
+        nowPlaying?: { title: string; artist: string };
       };
     }
   | {
