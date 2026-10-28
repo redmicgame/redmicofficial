@@ -8,6 +8,7 @@ import ShutdownTopBanner from './components/ShutdownTopBanner';
 
 
 import React from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { GameProvider, useGame } from './context/GameContext';
 import StartScreen from './components/StartScreen';
 import PregnancyTrackerView from './components/PregnancyTrackerView';
