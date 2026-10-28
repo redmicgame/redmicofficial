@@ -11,7 +11,8 @@ import ArrowUpTrayIcon from './icons/ArrowUpTrayIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 const AlbumChartEntryItem: React.FC<{ entry: AlbumChartEntry }> = ({ entry }) => {
-    const { rank, title, artist, coverArt, label, weeklyActivity, weeklySales } = entry;
+    const { rank, title, artist, coverArt, label, weeklyActivity, weeklySales, isPlayerAlbum } = entry;
+    const isPlayerItem = !!isPlayerAlbum;
 
     const rankColorClass = rank === 1 ? 'bg-red-600 text-white rounded-md' : 'text-black font-bold';
 

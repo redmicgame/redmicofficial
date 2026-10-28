@@ -392,13 +392,13 @@ export function generateWeeklyMySpaceFeedPosts(
   }
 
   // Check recent paparazzi photos
-  const recentPaparazzi = (aData?.paparazziPhotos || []).find((p) => {
-    return p.date?.year === date.year && Math.abs(p.date?.week - date.week) <= 1;
+  const recentPaparazzi = (aData?.paparazziPhotos || []).find((p: any) => {
+    return (p.date?.year || p.year) === date.year && (p.date ? Math.abs(p.date.week - date.week) <= 1 : true);
   });
   if (!attendedRedCarpet && recentPaparazzi) {
     attendedRedCarpet = true;
-    redCarpetEventName = recentPaparazzi.location ? `${recentPaparazzi.location} Red Carpet Gala` : 'VIP Red Carpet Premiere';
-    redCarpetLookImg = recentPaparazzi.imageUrl || artistPic;
+    redCarpetEventName = (recentPaparazzi as any).location ? `${(recentPaparazzi as any).location} Red Carpet Gala` : 'VIP Red Carpet Premiere';
+    redCarpetLookImg = recentPaparazzi.image || (recentPaparazzi as any).imageUrl || artistPic;
   }
 
   if (attendedRedCarpet) {

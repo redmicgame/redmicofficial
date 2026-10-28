@@ -4453,6 +4453,22 @@ The Red Mic Team`,
       for (const artistId in updatedArtistsData) {
         const artistData = updatedArtistsData[artistId];
         let startingMoneyForWeek = artistData.money;
+
+        const weeklyIncomeSources = {
+          streamingRoyalties: 0,
+          digitalSales: 0,
+          physicalAndMerch: 0,
+          videoAndViews: 0,
+          liveGigs: 0,
+          touring: 0,
+          brandDeals: 0,
+          acting: 0,
+          onlyFans: 0,
+          labelProfits: 0,
+          creatorMonetization: 0,
+          other: 0,
+          deductions: 0,
+        };
         
         // Deduct recurring expenses
         if (artistData.recurringExpenses) {
@@ -4466,6 +4482,7 @@ The Red Mic Team`,
             });
             artistData.money -= totalDeducted;
             startingMoneyForWeek = artistData.money;
+            weeklyIncomeSources.deductions += totalDeducted;
         }
         const currentAbsWeek = newDate.year * 52 + newDate.week;
         
@@ -4837,6 +4854,7 @@ Your yearly contract with ${manager?.name || "your manager"} has expired. You wi
             }
             if (gigsBookedThisWeek > 0) {
               artistData.money += weeklyGigIncome;
+              weeklyIncomeSources.liveGigs += weeklyGigIncome;
               artistData.hype = Math.min(
                 getHypeCap(artistData),
                 artistData.hype + weeklyGigHype,
@@ -4911,6 +4929,7 @@ Your weekly payment of $${formatNumber(team.weeklyCost)} for ${team.name} failed
               }
             } else {
               artistData.money -= team.weeklyCost;
+              weeklyIncomeSources.deductions += team.weeklyCost;
             }
           }
         }
@@ -4963,6 +4982,7 @@ All your active promotions have been cancelled.
             // Can afford, deduct cost and send invoice
             if (costToArtist > 0) {
               artistData.money -= costToArtist;
+              weeklyIncomeSources.deductions += costToArtist;
             }
 
             if (artistProfileForEmail) {
@@ -5039,6 +5059,7 @@ Promotions will automatically renew next week. You can cancel them at any time i
 
             if (newlyCollected > 0) {
               artistData.money += newlyCollected;
+              weeklyIncomeSources.touring += newlyCollected;
 
               if (artistProfileForEmail) {
                 newEmails.push({
@@ -5241,6 +5262,7 @@ Live Nation`,
                 totalWeeklyRevenue += revenue;
 
                 artistData.money += revenue;
+                weeklyIncomeSources.touring += revenue;
 
                 if (!artistData.regionalPopularity) {
                   artistData.regionalPopularity = {
@@ -5347,6 +5369,7 @@ Live Nation`,
           const contract = artistData.activeBrandAmbassadorContract;
           contract.remainingWeeks -= 1;
           artistData.money += contract.weeklyPayout;
+          weeklyIncomeSources.brandDeals += contract.weeklyPayout;
           contract.totalEarned += contract.weeklyPayout;
           artistData.popularity = Math.min(100, (artistData.popularity || 0) + 1);
           artistData.hype = Math.min(getHypeCap(artistData), (artistData.hype || 0) + 2);
@@ -6896,6 +6919,10 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             }
 
             artistStreamIncome += netIncomeToAdd;
+            const songNetRatio = generatedGross > 0 ? (netIncomeToAdd / generatedGross) : 1;
+            weeklyIncomeSources.streamingRoyalties += Math.floor(streamGross * songNetRatio);
+            weeklyIncomeSources.digitalSales += Math.floor(digitalGross * songNetRatio);
+            weeklyIncomeSources.physicalAndMerch += Math.floor(physicalGross * songNetRatio);
             
             const currentRegStreams = song.regionalStreams || { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 };
             const newRegionalStreams = {
@@ -7672,6 +7699,12 @@ Thank you for trusting X.`,
           npcLabelIncome -
           xVerifiedMonthlyCost;
 
+        weeklyIncomeSources.videoAndViews += viewIncome;
+        weeklyIncomeSources.physicalAndMerch += merchIncome;
+        weeklyIncomeSources.onlyFans += onlyfansIncome;
+        weeklyIncomeSources.labelProfits += npcLabelIncome;
+        weeklyIncomeSources.deductions += xVerifiedMonthlyCost;
+
         const newStreamsThisMonth =
           artistData.streamsThisMonth + totalWeeklyStreams;
         const newViewsThisQuarter =
@@ -7852,6 +7885,7 @@ The Spotify Team`,
             artistId === state.activeArtistId
           ) {
             artistData.money += totalXMonetizationEarnings;
+            weeklyIncomeSources.creatorMonetization += totalXMonetizationEarnings;
             newEmails.push({
               id: crypto.randomUUID(),
               sender: "X",
@@ -7910,6 +7944,7 @@ Keep up the great work.
 
             if (yppEarnings > 0 && artistId === state.activeArtistId) {
               artistData.money += yppEarnings;
+              weeklyIncomeSources.videoAndViews += yppEarnings;
               artistData.youtubePartnerProgram.lifetimeEarnings += yppEarnings;
             }
             extraText = `
@@ -10232,6 +10267,7 @@ We would like to invite you to perform at a special Spotify Billions Club concer
         let finalIncome = totalIncome;
         if (artistData.chartPredictionsSubscription) {
           finalIncome -= 1000;
+          weeklyIncomeSources.deductions += 1000;
         }
         if (
           artistData.redMicPro &&
@@ -10782,6 +10818,7 @@ Hollywood Theatrical Distribution
             
             if (taxAmount > 0) {
                artistData.money -= taxAmount;
+               weeklyIncomeSources.deductions += taxAmount;
                artistData.yearlyIncome = 0;
                artistData.inbox.push({
                    id: crypto.randomUUID(),
@@ -10804,6 +10841,110 @@ The Government`,
             } else {
                artistData.yearlyIncome = 0;
             }
+        }
+
+        // --- WEEKLY FINANCIAL STATEMENT FROM MANAGER ---
+        // Crucial requirement: The email is strictly from your manager; otherwise you don't get this email.
+        if (artistData.manager) {
+          const managerObj = MANAGERS.find((m) => m.id === artistData.manager?.id);
+          const managerName = managerObj?.name || "Your Manager";
+
+          const calculatedGross =
+            weeklyIncomeSources.streamingRoyalties +
+            weeklyIncomeSources.digitalSales +
+            weeklyIncomeSources.physicalAndMerch +
+            weeklyIncomeSources.videoAndViews +
+            weeklyIncomeSources.liveGigs +
+            weeklyIncomeSources.touring +
+            weeklyIncomeSources.brandDeals +
+            weeklyIncomeSources.acting +
+            weeklyIncomeSources.onlyFans +
+            weeklyIncomeSources.labelProfits +
+            weeklyIncomeSources.creatorMonetization;
+
+          const actualMoneyDelta = artistData.money - startingMoneyForWeek;
+          const actualGross = Math.max(0, actualMoneyDelta + weeklyIncomeSources.deductions);
+          if (actualGross > calculatedGross) {
+            weeklyIncomeSources.other = actualGross - calculatedGross;
+          }
+
+          const totalGross = calculatedGross + weeklyIncomeSources.other;
+          const totalDeductions = weeklyIncomeSources.deductions;
+          const netProfit = totalGross - totalDeductions;
+
+          const incomeBreakdownList: string[] = [];
+          if (weeklyIncomeSources.streamingRoyalties > 0) {
+            incomeBreakdownList.push(`• Music Streaming Royalties: $${formatNumber(weeklyIncomeSources.streamingRoyalties)}`);
+          }
+          if (weeklyIncomeSources.digitalSales > 0) {
+            incomeBreakdownList.push(`• Digital & iTunes Downloads: $${formatNumber(weeklyIncomeSources.digitalSales)}`);
+          }
+          if (weeklyIncomeSources.physicalAndMerch > 0) {
+            incomeBreakdownList.push(`• Physical Releases & Merch Store: $${formatNumber(weeklyIncomeSources.physicalAndMerch)}`);
+          }
+          if (weeklyIncomeSources.liveGigs > 0) {
+            incomeBreakdownList.push(`• Concerts & Live Shows: $${formatNumber(weeklyIncomeSources.liveGigs)}`);
+          }
+          if (weeklyIncomeSources.touring > 0) {
+            incomeBreakdownList.push(`• Tour Ticket Sales & Presales: $${formatNumber(weeklyIncomeSources.touring)}`);
+          }
+          if (weeklyIncomeSources.brandDeals > 0) {
+            incomeBreakdownList.push(`• Brand Sponsorships & Endorsements: $${formatNumber(weeklyIncomeSources.brandDeals)}`);
+          }
+          if (weeklyIncomeSources.videoAndViews > 0) {
+            incomeBreakdownList.push(`• Video & YouTube Monetization: $${formatNumber(weeklyIncomeSources.videoAndViews)}`);
+          }
+          if (weeklyIncomeSources.onlyFans > 0) {
+            incomeBreakdownList.push(`• Fan Subscriptions & Content (OnlyFans): $${formatNumber(weeklyIncomeSources.onlyFans)}`);
+          }
+          if (weeklyIncomeSources.labelProfits > 0) {
+            incomeBreakdownList.push(`• Record Label Distributions: $${formatNumber(weeklyIncomeSources.labelProfits)}`);
+          }
+          if (weeklyIncomeSources.creatorMonetization > 0) {
+            incomeBreakdownList.push(`• Social Media Creator Earnings: $${formatNumber(weeklyIncomeSources.creatorMonetization)}`);
+          }
+          if (weeklyIncomeSources.other > 0) {
+            incomeBreakdownList.push(`• Miscellaneous Royalties & Income: $${formatNumber(weeklyIncomeSources.other)}`);
+          }
+
+          if (incomeBreakdownList.length === 0) {
+            incomeBreakdownList.push(`• Active Income Streams: $0 (No active catalog sales or payouts this week)`);
+          }
+
+          const deductionList: string[] = [];
+          if (weeklyIncomeSources.deductions > 0) {
+            deductionList.push(`• Living, Security & Operating Expenses: -$${formatNumber(weeklyIncomeSources.deductions)}`);
+          }
+
+          const statementBody = `Hi ${artistProfileForEmail?.name || "there"},
+
+Here is your itemized financial statement for Week ${newDate.week}, ${newDate.year} detailing all money earned and revenue streams:
+
+💵 INCOME SOURCES:
+${incomeBreakdownList.join("\n")}
+${deductionList.length > 0 ? `\n📉 EXPENSES & DEDUCTIONS:\n${deductionList.join("\n")}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 TOTAL GROSS EARNINGS: $${formatNumber(totalGross)}
+${totalDeductions > 0 ? `🔻 TOTAL DEDUCTIONS: -$${formatNumber(totalDeductions)}\n` : ''}💎 NET INCOME THIS WEEK: ${netProfit >= 0 ? `$${formatNumber(netProfit)}` : `-$${formatNumber(Math.abs(netProfit))}`}
+🏦 CURRENT BANK BALANCE: $${formatNumber(artistData.money)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+I'm keeping a close eye on our cash flow and setting up more opportunities for you. Let me know if you want to review anything.
+
+Best,
+${managerName}
+Your Manager`;
+
+          artistData.inbox.unshift({
+            id: crypto.randomUUID(),
+            sender: managerName,
+            senderIcon: "manager",
+            subject: `Weekly Financial Statement (Week ${newDate.week}, ${newDate.year})`,
+            body: statementBody,
+            content: statementBody,
+            date: newDate,
+            isRead: false,
+          });
         }
       }
 
@@ -12669,12 +12810,12 @@ It is now available on your Spotify profile.
               m.releaseId === release.id ||
               (deluxeVersion && m.releaseId === deluxeVersion.id),
           );
-          let totalWeeklySales = albumMerch.reduce((sum, item) => {
+          let physicalSalesFromMerch = albumMerch.reduce((sum, item) => {
             if (item.regionExclusive === 'UK') return sum;
             return sum + (item._actualWeeklySales || 0);
           }, 0);
 
-          totalWeeklySales += digitalAlbumSales + generalPhysicalSales;
+          let purePhysicalSales = physicalSalesFromMerch + generalPhysicalSales;
 
           // When iTunes launches (April 2003 / 2003 W17 onwards), sales start counting towards Billboard 200 all album sales on iTunes each week:
           const isItunesLaunched = state.date.year > 2003 || (state.date.year === 2003 && state.date.week >= 17);
@@ -12693,10 +12834,30 @@ It is now available on your Spotify profile.
             if (itunesAlbumSales === 0 && totalWeeklyStreams > 5000) {
               itunesAlbumSales = Math.floor(60 + Math.random() * 140);
             }
-            totalWeeklySales += itunesAlbumSales;
             (release as any).weeklyItunesSales = itunesAlbumSales;
             (release as any).itunesSales = ((release as any).itunesSales || 0) + itunesAlbumSales;
           }
+
+          // Digital track downloads on iTunes (Track Equivalent Albums / TEA):
+          // 10 digital song sales count as 1 Billboard 200 album unit!
+          let digitalTrackSalesTEA = 0;
+          let totalTrackItunesSales = 0;
+          if (isItunesLaunched || eraConfigTmp2.digitalSalesActive) {
+            songsToCount.forEach((songId) => {
+              const song = artistData.songs.find((s) => s.id === songId);
+              if (song) {
+                const sItunes = (song as any).itunesSalesWeek || (song as any).itunesSales || (song as any).lastWeekSales || Math.floor((song.lastWeekStreams || 0) / 750);
+                totalTrackItunesSales += (sItunes || 0);
+              }
+            });
+            digitalTrackSalesTEA = Math.floor(totalTrackItunesSales / 10);
+          }
+
+          const totalReleaseDigitalSales = digitalAlbumSales + itunesAlbumSales + digitalTrackSalesTEA;
+          (release as any).weeklyDigitalSales = totalReleaseDigitalSales;
+          (release as any).digitalSales = ((release as any).digitalSales || 0) + totalReleaseDigitalSales;
+          (release as any).weeklyItunesSales = itunesAlbumSales + digitalTrackSalesTEA;
+          (release as any).itunesSales = ((release as any).itunesSales || 0) + itunesAlbumSales + digitalTrackSalesTEA;
 
           // Inject accumulated preorder sales on the first charting week (respecting vinyl delay)
           const relDate = release.releaseDate || {
@@ -12709,9 +12870,9 @@ It is now available on your Spotify profile.
             (relDate.year * 52 + relDate.week);
 
           if (weeksSinceRel === 1) {
-            totalWeeklySales += release.preorderSales || 0;
+            purePhysicalSales += release.preorderSales || 0;
             if (release.delayedVinylPreorders) {
-              totalWeeklySales += release.delayedVinylPreorders;
+              purePhysicalSales += release.delayedVinylPreorders;
             }
           }
           if (deluxeVersion && deluxeVersion.releaseDate) {
@@ -12722,10 +12883,12 @@ It is now available on your Spotify profile.
                   deluxeVersion.releaseDate.week) ===
               1
             ) {
-              totalWeeklySales += deluxeVersion.preorderSales || 0;
+              purePhysicalSales += deluxeVersion.preorderSales || 0;
             }
           }
           
+          let totalWeeklySales = purePhysicalSales + totalReleaseDigitalSales;
+
           const isFirstWeekIn =
             newDate.year * 52 +
               newDate.week -
@@ -12737,8 +12900,9 @@ It is now available on your Spotify profile.
           }
 
           // Unlimited weekly album sales, SES, and activity (no caps)
+          // For the user, weeklyActivity (SPS) strictly includes purePhysicalSales + totalReleaseDigitalSales + weeklySES!
           let weeklySES = actualStreamEquivalents;
-          let weeklyActivity = weeklySES + totalWeeklySales;
+          let weeklyActivity = weeklySES + purePhysicalSales + totalReleaseDigitalSales;
 
           if (isFirstWeekIn) {
             (release as any).firstWeekActivity = weeklyActivity;
@@ -12761,8 +12925,9 @@ It is now available on your Spotify profile.
             weeklyActivity,
             weeklySales: totalWeeklySales,
             weeklySES,
-            weeklyPureSales: totalWeeklySales,
-            itunesSales: itunesAlbumSales,
+            weeklyPureSales: purePhysicalSales,
+            itunesSales: itunesAlbumSales + digitalTrackSalesTEA,
+            digitalSales: totalReleaseDigitalSales,
           };
         });
 
@@ -12800,23 +12965,6 @@ It is now available on your Spotify profile.
         if (weeklySales > targetUnits)
           weeklySales = Math.floor(targetUnits * 0.5);
 
-        const isItunesLaunched =
-          state.date.year > 2003 ||
-          (state.date.year === 2003 && state.date.week >= 17);
-        let npcItunesSales = 0;
-        if (isItunesLaunched) {
-          const itunesRatio = Math.min(
-            0.4,
-            Math.max(
-              0.05,
-              eraConfigTmp3.marketShare.digital * 0.7
-            )
-          );
-          npcItunesSales = Math.floor(targetUnits * itunesRatio * (0.8 + Math.random() * 0.4));
-          weeklySales += npcItunesSales;
-          targetUnits += npcItunesSales;
-        }
-
         const weeklySES = Math.max(0, targetUnits - weeklySales);
 
         return {
@@ -12831,7 +12979,6 @@ It is now available on your Spotify profile.
           weeklySales,
           weeklySES,
           weeklyPureSales: weeklySales,
-          itunesSales: npcItunesSales,
         };
       });
 
@@ -12924,6 +13071,8 @@ It is now available on your Spotify profile.
           weeklySales: finalSales,
           weeklySES: finalSES,
           weeklyPureSales: finalSales,
+          itunesSales: (album as any).itunesSales || 0,
+          digitalSales: (album as any).digitalSales || 0,
         });
       });
 

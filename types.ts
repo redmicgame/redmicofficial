@@ -160,6 +160,7 @@ export interface Song {
   exclusiveTo?: 'iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music';
   exclusivePlatforms?: ('iTunes' | 'Apple Music' | 'Spotify' | 'YouTube Music')[];
   sales?: number;
+  itunesSalesWeek?: number;
   leakInfo?: {
     illegalStreams: number;
     illegalDownloads: number;
@@ -931,6 +932,7 @@ export interface AlbumChartEntry {
   weeklySES?: number;
   weeklyPureSales?: number;
   itunesSales?: number;
+  digitalSales?: number;
 }
 
 export interface ChartRunEntry {

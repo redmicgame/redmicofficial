@@ -24,7 +24,6 @@ const RightArrowIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" 
 const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?: boolean }> = ({ entry, isAlbumChart, isSpotify }) => {
     const { rank, lastWeek, peak, weeksOnChart, title, artist, coverArt } = entry;
     const isPlayerItem = isAlbumChart ? entry.isPlayerAlbum : entry.isPlayerSong;
-    const weeklyStreams = isAlbumChart ? entry.weeklyActivity : (entry.weeklyStreams || 0);
     const [expanded, setExpanded] = useState(false);
     const { gameState } = useGame();
 
@@ -32,6 +31,79 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
         if (!isSpotify) return null;
         return getSpotifySongDetails(entry, gameState, false);
     }, [entry, gameState, isSpotify]);
+
+    const userAlbumDigitalSales = useMemo(() => {
+        if (!isAlbumChart || !entry.isPlayerAlbum) return 0;
+        
+        let ds = 0;
+        if (typeof entry.digitalSales === 'number' && entry.digitalSales > 0) {
+            ds = Math.max(ds, entry.digitalSales);
+        }
+        if (typeof entry.itunesSales === 'number' && entry.itunesSales > 0) {
+            ds = Math.max(ds, entry.itunesSales);
+        }
+        if (typeof (entry as any).weeklyDigitalSales === 'number' && (entry as any).weeklyDigitalSales > 0) {
+            ds = Math.max(ds, (entry as any).weeklyDigitalSales);
+        }
+
+        // Look up release in player artist data
+        for (const artistId in gameState.artistsData) {
+            const aData = gameState.artistsData[artistId];
+            const rel = aData.releases?.find(r => r.id === (entry.albumId || entry.uniqueId) || r.title === entry.title);
+            if (rel) {
+                const rWeeklyDig = (rel as any).weeklyDigitalSales || (rel as any).weeklyItunesSales || 0;
+                if (rWeeklyDig > 0) ds = Math.max(ds, rWeeklyDig);
+
+                if (rel.songIds && rel.songIds.length > 0) {
+                    let trackDownloads = 0;
+                    rel.songIds.forEach(sid => {
+                        const s = aData.songs?.find(song => song.id === sid);
+                        if (s) {
+                            const situnes = (s as any).itunesSalesWeek || (s as any).itunesSales || (s as any).lastWeekSales || 0;
+                            trackDownloads += situnes;
+                        }
+                    });
+                    if (trackDownloads > 0) {
+                        ds = Math.max(ds, Math.floor(trackDownloads / 10));
+                    }
+                }
+                break;
+            }
+        }
+
+        const isItunesLaunched = gameState.date.year > 2003 || (gameState.date.year === 2003 && gameState.date.week >= 17);
+        if (ds === 0 && (isItunesLaunched || gameState.date.year >= 2003)) {
+            const base = (entry.weeklyPureSales || entry.weeklySales || entry.weeklyActivity || 10000);
+            const itunesWeight = gameState.date.year <= 2012 ? 0.35 : gameState.date.year <= 2018 ? 0.25 : 0.15;
+            ds = Math.max(150, Math.floor(base * itunesWeight * 0.2));
+        }
+
+        return Math.floor(ds);
+    }, [entry, isAlbumChart, gameState]);
+
+    const displayedPureSales = useMemo(() => {
+        if (!isAlbumChart) return 0;
+        return entry.weeklyPureSales !== undefined ? entry.weeklyPureSales : (entry.weeklySales || 0);
+    }, [entry, isAlbumChart]);
+
+    const displayedSES = useMemo(() => {
+        if (!isAlbumChart) return 0;
+        return Math.max(0, Math.floor(entry.weeklySES || 0));
+    }, [entry, isAlbumChart]);
+
+    const displayedTotalSPS = useMemo(() => {
+        if (!isAlbumChart) return 0;
+        if (!entry.isPlayerAlbum) {
+            return entry.weeklyActivity || 0;
+        }
+        // FOR USER ONLY: Total SPS strictly includes and totals digital sales!
+        const base = Math.max(entry.weeklyActivity || 0, displayedPureSales + displayedSES);
+        return Math.max(base, displayedPureSales + displayedSES + userAlbumDigitalSales);
+    }, [entry, isAlbumChart, displayedPureSales, displayedSES, userAlbumDigitalSales]);
+
+    const weeklyStreams = isAlbumChart 
+        ? (entry.isPlayerAlbum ? displayedTotalSPS : (entry.weeklyActivity || 0)) 
+        : (entry.weeklyStreams || 0);
     
     const renderMovement = () => {
         const isNewEntry = lastWeek === null && weeksOnChart === 1;
@@ -168,21 +240,25 @@ const ChartEntryItem: React.FC<{ entry: any, isAlbumChart?: boolean, isSpotify?:
                     <div className="flex px-4 items-center justify-around">
                         <div className="text-center">
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">PURE SALES</p>
-                            <p className="text-lg font-black text-black">{entry.weeklyPureSales || entry.weeklySales > 0 ? formatNumber(Math.floor(entry.weeklyPureSales || entry.weeklySales)) : '0'}</p>
+                            <p className="text-lg font-black text-black">
+                                {formatNumber(Math.floor(displayedPureSales))}
+                            </p>
                         </div>
                         {gameState.date.year >= 2016 && (
                             <>
                                 <div className="w-px h-8 bg-zinc-300"></div>
                                 <div className="text-center">
                                     <p className="text-[10px] font-bold text-zinc-400 tracking-wider">STREAMING EQUIVALENT (SES)</p>
-                                    <p className="text-lg font-black text-black">{formatNumber(entry.weeklySES || 0)}</p>
+                                    <p className="text-lg font-black text-black">{formatNumber(displayedSES)}</p>
                                 </div>
                             </>
                         )}
                         <div className="w-px h-8 bg-zinc-300"></div>
                         <div className="text-center">
                             <p className="text-[10px] font-bold text-zinc-400 tracking-wider">TOTAL SPS</p>
-                            <p className="text-lg font-black text-black">{formatNumber(entry.weeklyActivity || 0)}</p>
+                            <p className="text-lg font-black text-black">
+                                {formatNumber(Math.floor(displayedTotalSPS))}
+                            </p>
                         </div>
                     </div>
                 ) : (
