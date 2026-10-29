@@ -2500,7 +2500,7 @@ export interface GameState {
   timeMode?: "weekly" | "daily";
   disableEncounters?: boolean;
   disableLoadingScreens?: boolean;
-  spotifySnapshotStyle?: "normal" | "ugly" | "simplistic";
+  spotifySnapshotStyle?: "normal" | "ugly" | "simplistic" | "fatha";
   spotifySnapshotTimeframe?: "weekly" | "daily";
   activeEncounter?: ActiveEncounter | null;
   activeTmzPost?: XPost | null;

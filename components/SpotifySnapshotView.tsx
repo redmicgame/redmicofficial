@@ -110,6 +110,170 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
 
     const isUglyStyle = gameState.spotifySnapshotStyle === 'ugly';
     const isSimplisticStyle = gameState.spotifySnapshotStyle === 'simplistic';
+    const isFathaStyle = gameState.spotifySnapshotStyle === 'fatha';
+
+    if (isFathaStyle) {
+        const totalStreams = releaseSongs.reduce((acc, song) => acc + (song.streams || 0), 0);
+        const totalWeeklyStreams = releaseSongs.reduce((acc, song) => {
+            if (song.isTakenDown) return acc;
+            return acc + getRowData(song).weekStreams;
+        }, 0);
+        const totalPrevWeeklyStreams = releaseSongs.reduce((acc, song) => {
+            if (song.isTakenDown) return acc;
+            return acc + getRowData(song).prevStreams;
+        }, 0);
+
+        const overallNetChange = totalWeeklyStreams - totalPrevWeeklyStreams;
+        const overallPct = totalPrevWeeklyStreams > 0 ? (overallNetChange / totalPrevWeeklyStreams) * 100 : 0;
+        const isOverallPos = overallNetChange >= 0;
+
+        const year = date?.year || 2026;
+        const week = date?.week || 1;
+        const dayValue = date?.day !== undefined ? date.day : 7;
+        const dateObj = new Date(year, 0, (week - 1) * 7 + dayValue);
+        const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+        const modeText = gameState.difficultyMode 
+            ? `${gameState.difficultyMode.charAt(0).toUpperCase() + gameState.difficultyMode.slice(1)} Mode`
+            : (isDaily ? 'Daily Mode' : 'Weekly Mode');
+
+        return (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto" onClick={onBack}>
+                <div 
+                    className="w-full max-w-3xl rounded-3xl p-3 sm:p-5 shadow-2xl flex flex-col my-auto max-h-[94vh] overflow-hidden transition-all duration-300"
+                    style={{ backgroundColor: dominantColor }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Header Area */}
+                    <div className="bg-white/40 backdrop-blur-md rounded-2xl p-3.5 sm:p-5 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 border border-white/50 shadow-sm shrink-0">
+                        {/* Left & Middle: Cover, Info, Stats */}
+                        <div className="flex items-center sm:items-start gap-3.5 sm:gap-4 w-full sm:w-auto">
+                            <img 
+                                src={release.coverArt} 
+                                className="w-20 h-20 sm:w-28 sm:h-28 rounded-xl sm:rounded-2xl object-cover shadow-lg border border-white/40 shrink-0" 
+                                alt="Cover" 
+                            />
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight truncate drop-shadow-xs mb-1">
+                                    {release.title}
+                                </h1>
+                                <div className="flex items-center gap-2 text-slate-800 text-xs sm:text-sm font-bold mb-3 flex-wrap">
+                                    {activeArtist.image && (
+                                        <img src={activeArtist.image} className="w-5 h-5 rounded-full object-cover border border-white/60 shadow-xs" alt="Artist" />
+                                    )}
+                                    <span className="truncate max-w-[140px]">{activeArtist.name}</span>
+                                    <svg className="w-3.5 h-3.5 text-blue-600 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                                        <line x1="16" x2="16" y1="2" y2="6"/>
+                                        <line x1="8" x2="8" y1="2" y2="6"/>
+                                        <line x1="3" x2="21" y1="10" y2="10"/>
+                                    </svg>
+                                    <span className="text-slate-700 font-semibold">{formattedDate}</span>
+                                </div>
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="bg-white/95 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-center shadow-xs border border-white/60 min-w-[95px] sm:min-w-[120px]">
+                                        <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                                            {isDaily ? 'DAILY STREAMS' : 'WEEKLY STREAMS'}
+                                        </span>
+                                        <span className="text-xs sm:text-base font-black text-emerald-600 block tabular-nums">
+                                            +{totalWeeklyStreams.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="bg-white/95 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-center shadow-xs border border-white/60 min-w-[95px] sm:min-w-[120px]">
+                                        <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                                            {isDaily ? 'DAILY TREND' : 'WEEKLY TREND'}
+                                        </span>
+                                        <span className={`text-xs sm:text-base font-black tabular-nums block ${isOverallPos ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {isOverallPos ? '↗' : '↘'} {Math.abs(overallPct).toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Spotify Logo + Mode Text */}
+                        <div className="flex items-center gap-2 text-slate-800 font-bold text-sm sm:text-base shrink-0 self-end sm:self-center mt-2 sm:mt-0">
+                            <svg className="w-5 h-5 text-slate-800 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                            </svg>
+                            <span className="tracking-tight">{modeText}</span>
+                        </div>
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-sm border border-white/60 overflow-hidden mt-3 sm:mt-4 flex flex-col flex-1 min-h-0">
+                        {/* Table Header */}
+                        <div className="grid grid-cols-[2.5rem_1fr_6rem_5rem_4.5rem_4.5rem] sm:grid-cols-[3rem_1fr_7.5rem_6rem_5.5rem_5rem] px-3 sm:px-5 py-2.5 sm:py-3 border-b border-slate-200/60 text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
+                            <div className="col-span-2">Track</div>
+                            <div className="text-right">Total</div>
+                            <div className="text-right">{isDaily ? 'Daily' : 'Weekly'}</div>
+                            <div className="text-right">Change</div>
+                            <div className="text-right">%</div>
+                        </div>
+
+                        {/* Song Rows */}
+                        <div className="overflow-y-auto max-h-[380px] sm:max-h-[460px] scrollbar-thin">
+                            {releaseSongs.map((song, i) => {
+                                const row = getRowData(song);
+                                const isTakenDown = !!song.isTakenDown;
+                                const changeVal = isTakenDown ? 0 : (row.weekStreams - row.prevStreams);
+                                const pctVal = (isTakenDown || row.prevStreams <= 0) ? 0 : ((changeVal / row.prevStreams) * 100);
+                                const isPos = !isTakenDown && changeVal >= 0;
+                                const totalStreamsCount = song.streams || 0;
+
+                                return (
+                                    <div 
+                                        key={song.id} 
+                                        className={`grid grid-cols-[2.5rem_1fr_6rem_5rem_4.5rem_4.5rem] sm:grid-cols-[3rem_1fr_7.5rem_6rem_5.5rem_5rem] px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm items-center border-b border-slate-200/40 hover:bg-white/50 transition-colors ${
+                                            i % 2 === 1 ? 'bg-black/[0.02]' : 'bg-transparent'
+                                        }`}
+                                    >
+                                        <div className="font-extrabold text-blue-600 text-xs sm:text-sm text-center shrink-0 w-6">
+                                            {i + 1}
+                                        </div>
+                                        <div className="font-bold text-slate-900 text-xs sm:text-sm truncate pr-2">
+                                            {song.title}
+                                        </div>
+                                        <div className="text-right text-slate-700 font-medium text-xs sm:text-sm tabular-nums">
+                                            {totalStreamsCount.toLocaleString()}
+                                        </div>
+                                        <div className="text-right text-slate-900 font-bold text-xs sm:text-sm tabular-nums">
+                                            +{row.weekStreams.toLocaleString()}
+                                        </div>
+                                        <div className={`text-right font-semibold text-xs sm:text-sm tabular-nums ${isTakenDown ? 'text-slate-400' : isPos ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {isTakenDown ? '0' : `${isPos ? '↑' : '↓'} ${Math.abs(changeVal).toLocaleString()}`}
+                                        </div>
+                                        <div className={`text-right font-bold text-xs sm:text-sm tabular-nums ${isTakenDown ? 'text-slate-400' : isPos ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {isTakenDown ? '+0.00' : `${isPos ? '+' : ''}${pctVal.toFixed(2)}`}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer Total Row */}
+                        <div className="grid grid-cols-[2.5rem_1fr_6rem_5rem_4.5rem_4.5rem] sm:grid-cols-[3rem_1fr_7.5rem_6rem_5.5rem_5rem] px-3 sm:px-5 py-3 sm:py-3.5 bg-white/70 border-t border-slate-300 text-xs sm:text-sm font-black text-slate-900 items-center shrink-0">
+                            <div className="col-span-2 text-slate-900 font-black">
+                                Total
+                            </div>
+                            <div className="text-right text-slate-900 tabular-nums font-black">
+                                {totalStreams.toLocaleString()}
+                            </div>
+                            <div className="text-right text-slate-900 tabular-nums font-black">
+                                +{totalWeeklyStreams.toLocaleString()}
+                            </div>
+                            <div className={`text-right tabular-nums font-black ${isOverallPos ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {isOverallPos ? '↑' : '↓'} {Math.abs(overallNetChange).toLocaleString()}
+                            </div>
+                            <div className={`text-right tabular-nums font-black ${isOverallPos ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {isOverallPos ? '+' : ''}{overallPct.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (isSimplisticStyle) {
         const totalStreams = releaseSongs.reduce((acc, song) => acc + (song.streams || 0), 0);

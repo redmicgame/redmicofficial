@@ -1,5 +1,6 @@
 import React from "react";
 import { useGame } from "../context/GameContext";
+import { FastAverageColor } from "fast-average-color";
 
 const ScaledCardWrapper: React.FC<{ children: React.ReactNode; targetWidth?: number }> = ({ children, targetWidth = 560 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -44,13 +45,294 @@ const ScaledCardWrapper: React.FC<{ children: React.ReactNode; targetWidth?: num
   );
 };
 
+const FathaSnapshotCard: React.FC<{
+  data: any;
+  cardIsDaily: boolean;
+  gameState: any;
+}> = ({ data, cardIsDaily, gameState }) => {
+  const [dominantColor, setDominantColor] = React.useState<string>("#2563eb");
+
+  React.useEffect(() => {
+    if (!data?.coverArt) return;
+    const fac = new FastAverageColor();
+    fac
+      .getColorAsync(data.coverArt, { algorithm: "dominant" })
+      .then((color) => {
+        if (color?.hex) setDominantColor(color.hex);
+      })
+      .catch(() => {});
+  }, [data?.coverArt]);
+
+  const displayTracks =
+    data.tracks && data.tracks.length > 0
+      ? data.tracks
+      : [
+          {
+            title: data.songName || data.title || "Track 1",
+            weekly: data.streams || 0,
+            dailyStreams: Math.floor((data.streams || 0) / 7),
+            streams: data.totalStreams || data.streams || 0,
+            changeVal: data.changeVal || 0,
+            changePct: data.changePct || 0,
+          },
+        ];
+
+  const totalStreams = data.totalStreams || data.streams || 0;
+  const totalWeeklyStreams =
+    displayTracks.reduce((acc: number, t: any) => {
+      if (t.isTakenDown) return acc;
+      const s = cardIsDaily
+        ? t.dailyStreams !== undefined
+          ? t.dailyStreams
+          : Math.round((t.weekly || 0) / 7)
+        : t.weekly !== undefined
+        ? t.weekly
+        : t.dailyStreams || 0;
+      return acc + s;
+    }, 0) || 0;
+
+  const overallChangeVal =
+    displayTracks.reduce(
+      (acc: number, t: any) => acc + (t.isTakenDown ? 0 : t.changeVal || 0),
+      0
+    ) || 0;
+  const overallPrev =
+    displayTracks.reduce((acc: number, t: any) => {
+      if (t.isTakenDown) return acc;
+      const s = cardIsDaily
+        ? t.dailyStreams !== undefined
+          ? t.dailyStreams
+          : Math.round((t.weekly || 0) / 7)
+        : t.weekly !== undefined
+        ? t.weekly
+        : t.dailyStreams || 0;
+      return acc + (s - (t.changeVal || 0));
+    }, 0) || 0;
+  const overallPct =
+    overallPrev > 0 ? (overallChangeVal / overallPrev) * 100 : 0;
+  const isOverallPos = overallChangeVal >= 0;
+
+  const yearNum = data.date?.year || gameState?.date?.year || 2026;
+  const weekNum = data.date?.week || gameState?.date?.week || 1;
+  const dayVal =
+    data.date?.day !== undefined
+      ? data.date.day
+      : gameState?.date?.day !== undefined
+      ? gameState.date.day
+      : 7;
+  const dateObj = new Date(yearNum, 0, (weekNum - 1) * 7 + dayVal);
+  const formattedDate = dateObj.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const albumTitle =
+    data.songName ||
+    data.albumName ||
+    data.title ||
+    "RELEASE";
+  const artistName = data.artistName || "ARTIST";
+
+  const modeText = gameState?.difficultyMode
+    ? `${
+        gameState.difficultyMode.charAt(0).toUpperCase() +
+        gameState.difficultyMode.slice(1)
+      } Mode`
+    : cardIsDaily
+    ? "Daily Mode"
+    : "Weekly Mode";
+
+  return (
+    <ScaledCardWrapper targetWidth={540}>
+      <div
+        className="w-full rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col font-sans transition-all duration-300 overflow-hidden"
+        style={{ backgroundColor: dominantColor }}
+      >
+        {/* Header Area */}
+        <div className="bg-white/40 backdrop-blur-md rounded-2xl p-4 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 border border-white/50 shadow-sm shrink-0">
+          <div className="flex items-center sm:items-start gap-3 w-full sm:w-auto">
+            <img
+              src={data.coverArt}
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shadow-lg border border-white/40 shrink-0"
+              alt="Cover"
+            />
+            <div className="flex flex-col min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight truncate mb-1">
+                {albumTitle}
+              </h1>
+              <div className="flex items-center gap-1.5 text-slate-800 text-xs font-bold mb-2.5 flex-wrap">
+                {data.artistImage && (
+                  <img
+                    src={data.artistImage}
+                    className="w-4 h-4 rounded-full object-cover border border-white/60 shadow-xs"
+                    alt="Artist"
+                  />
+                )}
+                <span className="truncate max-w-[130px]">{artistName}</span>
+                <span className="text-blue-600 font-normal">📅</span>
+                <span className="text-slate-700 font-semibold">
+                  {formattedDate}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-white/95 rounded-xl px-2.5 py-1.5 text-center shadow-xs border border-white/60 min-w-[95px]">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                    {cardIsDaily ? "DAILY STREAMS" : "WEEKLY STREAMS"}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-emerald-600 block tabular-nums">
+                    +{totalWeeklyStreams.toLocaleString()}
+                  </span>
+                </div>
+                <div className="bg-white/95 rounded-xl px-2.5 py-1.5 text-center shadow-xs border border-white/60 min-w-[95px]">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                    {cardIsDaily ? "DAILY TREND" : "WEEKLY TREND"}
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-black tabular-nums block ${
+                      isOverallPos ? "text-emerald-600" : "text-rose-600"
+                    }`}
+                  >
+                    {isOverallPos ? "↗" : "↘"} {Math.abs(overallPct).toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs sm:text-sm shrink-0 self-end sm:self-center">
+            <svg
+              className="w-4 h-4 text-slate-800 shrink-0"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+            </svg>
+            <span className="tracking-tight">{modeText}</span>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        {displayTracks.length > 0 && (
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 overflow-hidden mt-3 flex flex-col">
+            <div className="grid grid-cols-[2rem_1fr_5rem_4rem_3.8rem_3.5rem] px-3 py-2 border-b border-slate-200/60 text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">
+              <div className="col-span-2">Track</div>
+              <div className="text-right">Total</div>
+              <div className="text-right">{cardIsDaily ? "Daily" : "Weekly"}</div>
+              <div className="text-right">Change</div>
+              <div className="text-right">%</div>
+            </div>
+
+            <div className="overflow-y-auto max-h-[220px] scrollbar-thin">
+              {displayTracks.map((t: any, i: number) => {
+                const isTakenDown = !!t.isTakenDown;
+                const trackStreams = isTakenDown
+                  ? 0
+                  : (cardIsDaily
+                      ? t.dailyStreams !== undefined
+                        ? t.dailyStreams
+                        : Math.round((t.weekly || 0) / 7)
+                      : t.weekly !== undefined
+                      ? t.weekly
+                      : t.dailyStreams || 0) || 0;
+                const cVal = isTakenDown ? 0 : t.changeVal || 0;
+                const pct = isTakenDown
+                  ? 0
+                  : t.changePct !== undefined
+                  ? t.changePct
+                  : 0;
+                const isPos = !isTakenDown && cVal >= 0;
+                const totalCount = t.streams || t.totalStreams || 0;
+
+                return (
+                  <div
+                    key={i}
+                    className={`grid grid-cols-[2rem_1fr_5rem_4rem_3.8rem_3.5rem] px-3 py-1.5 text-xs items-center border-b border-slate-200/40 ${
+                      i % 2 === 1 ? "bg-black/[0.02]" : "bg-transparent"
+                    }`}
+                  >
+                    <div className="font-extrabold text-blue-600 text-xs text-center shrink-0 w-5">
+                      {i + 1}
+                    </div>
+                    <div className="font-bold text-slate-900 text-xs truncate pr-1">
+                      {t.title}
+                    </div>
+                    <div className="text-right text-slate-700 font-medium text-xs tabular-nums">
+                      {totalCount.toLocaleString()}
+                    </div>
+                    <div className="text-right text-slate-900 font-bold text-xs tabular-nums">
+                      +{trackStreams.toLocaleString()}
+                    </div>
+                    <div
+                      className={`text-right font-semibold text-xs tabular-nums ${
+                        isTakenDown
+                          ? "text-slate-400"
+                          : isPos
+                          ? "text-emerald-600"
+                          : "text-rose-600"
+                      }`}
+                    >
+                      {isTakenDown
+                        ? "0"
+                        : `${isPos ? "↑" : "↓"} ${Math.abs(cVal).toLocaleString()}`}
+                    </div>
+                    <div
+                      className={`text-right font-bold text-xs tabular-nums ${
+                        isTakenDown
+                          ? "text-slate-400"
+                          : isPos
+                          ? "text-emerald-600"
+                          : "text-rose-600"
+                      }`}
+                    >
+                      {isTakenDown
+                        ? "+0.00"
+                        : `${isPos ? "+" : ""}${pct.toFixed(2)}`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-[2rem_1fr_5rem_4rem_3.8rem_3.5rem] px-3 py-2 bg-white/70 border-t border-slate-300 text-xs font-black text-slate-900 items-center shrink-0">
+              <div className="col-span-2 text-slate-900 font-black">Total</div>
+              <div className="text-right text-slate-900 tabular-nums font-black">
+                {totalStreams.toLocaleString()}
+              </div>
+              <div className="text-right text-slate-900 tabular-nums font-black">
+                +{totalWeeklyStreams.toLocaleString()}
+              </div>
+              <div
+                className={`text-right tabular-nums font-black ${
+                  isOverallPos ? "text-emerald-600" : "text-rose-600"
+                }`}
+              >
+                {isOverallPos ? "↑" : "↓"}{" "}
+                {Math.abs(overallChangeVal).toLocaleString()}
+              </div>
+              <div
+                className={`text-right tabular-nums font-black ${
+                  isOverallPos ? "text-emerald-600" : "text-rose-600"
+                }`}
+              >
+                {isOverallPos ? "+" : ""}
+                {overallPct.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </ScaledCardWrapper>
+  );
+};
+
 const formatNumber = (num: number) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
   if (num >= 1000) return (num / 1000).toFixed(1) + "K";
   return num.toString();
 };
 
-export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal' | 'ugly' | 'simplistic' }> = ({
+export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal' | 'ugly' | 'simplistic' | 'fatha' }> = ({
   style,
   dataString,
 }) => {
@@ -336,6 +618,16 @@ export const SpotifySnapshotCard: React.FC<{ dataString: string; style?: 'normal
       data.type === "song"
     ) {
 
+
+      if (effectiveStyle === 'fatha') {
+          return (
+            <FathaSnapshotCard
+              data={data}
+              cardIsDaily={cardIsDaily}
+              gameState={gameState}
+            />
+          );
+      }
 
       if (effectiveStyle === 'simplistic') {
           const displayTracks = (data.tracks && data.tracks.length > 0)
