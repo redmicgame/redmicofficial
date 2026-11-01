@@ -143,10 +143,14 @@ export interface Song {
   removedStreams?: number;
   playlistBoostWeeks?: number;
   appleMusicPlaylistBoostWeeks?: number;
+  appleMusicStreams?: number;
+  appleMusicLastWeekStreams?: number;
+  appleMusicPrevWeekStreams?: number;
   purchasedPlaylists?: {
     playlistId: string;
     position: number;
     weeksRemaining: number;
+    platform?: 'spotify' | 'appleMusic';
   }[];
   tourBoostWeeks?: number;
   promoBoostWeeks?: number;
@@ -818,6 +822,7 @@ export interface Promotion {
   weeklyCost: number;
   boostMultiplier: number;
   artistId: string;
+  targetPlatform?: 'all' | 'appleMusic';
 }
 
 export interface NpcSong {
@@ -2527,6 +2532,7 @@ export interface GameState {
     [artistId: string]: ArtistData;
   };
   spotifyPlaylists: SpotifyPlaylist[];
+  appleMusicEditorialPlaylists?: SpotifyPlaylist[];
   podcasts?: Podcast[];
 
   date: GameDate;
@@ -3453,6 +3459,7 @@ export type GameAction =
         playlistId: string;
         position: number;
         cost: number;
+        platform?: "spotify" | "appleMusic";
       };
     }
   | { type: "FIRE_MANAGER" }

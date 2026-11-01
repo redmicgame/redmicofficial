@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame, getAppleMusicStreamRatio, DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS } from '../context/GameContext';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
@@ -20,41 +20,103 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
     const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
     const [showGenreMenu, setShowGenreMenu] = useState(false);
 
-    const topSongsSource = useMemo(() => {
-        if (selectedGenre === 'Pop') return gameState.hotPopSongs || [];
-        if (selectedGenre === 'Hip-Hop/R&B') return gameState.hotRapRnb || [];
-        if (selectedGenre === 'Country') return gameState.countryChart || [];
-        if (selectedGenre === 'Electronic') return gameState.electronicChart || [];
-        return gameState.billboardHot100 || [];
-    }, [gameState, selectedGenre]);
+    // Editorial Apple Music playlists (14 total, including 10 new ones)
+    const editorialPlaylists = useMemo(() => {
+        return gameState.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS;
+    }, [gameState.appleMusicEditorialPlaylists]);
 
+    // All contenders for streaming charts: player songs + NPC chart songs
+    const allSongContenders = useMemo(() => {
+        const pool: any[] = [];
+        const seenIds = new Set<string>();
+
+        // Player songs
+        if (activeArtistData?.songs) {
+            activeArtistData.songs.filter(s => s.isReleased && !s.isTakenDown).forEach(s => {
+                const uniqueId = s.id;
+                seenIds.add(uniqueId);
+                const amStreams = s.appleMusicLastWeekStreams ?? Math.floor((s.lastWeekStreams || s.streams || 1000) * getAppleMusicStreamRatio(s.id));
+                pool.push({
+                    uniqueId,
+                    title: s.title,
+                    artist: activeArtistData.artistName || 'You',
+                    coverArt: s.coverArt,
+                    genre: s.genre || 'Pop',
+                    amStreams,
+                    weeksOnChart: s.weeksOut || 1,
+                    explicit: s.explicit,
+                    isPlayer: true,
+                });
+            });
+        }
+
+        // NPC Billboard / Spotify songs
+        const npcSources = [
+            ...(gameState.billboardHot100 || []),
+            ...(gameState.spotifyGlobal || []),
+        ];
+
+        npcSources.forEach((entry: any) => {
+            const uid = entry.uniqueId || entry.id || `${entry.title}_${entry.artist}`;
+            if (!seenIds.has(uid)) {
+                seenIds.add(uid);
+                const baseStreams = entry.weeklyStreams || (entry.dailyStreams ? entry.dailyStreams * 7 : 0) || (entry.points ? entry.points * 120 : 500000);
+                const amStreams = Math.floor(baseStreams * getAppleMusicStreamRatio(uid));
+                pool.push({
+                    uniqueId: uid,
+                    title: entry.title,
+                    artist: entry.artist,
+                    coverArt: entry.coverArt,
+                    genre: entry.genre || (entry.radioFormat ? entry.radioFormat.toUpperCase() : 'Pop'),
+                    amStreams,
+                    weeksOnChart: entry.weeksOnChart || 1,
+                    explicit: entry.explicit ?? false,
+                    isPlayer: entry.isPlayerSong ?? false,
+                });
+            }
+        });
+
+        return pool;
+    }, [activeArtistData, gameState.billboardHot100, gameState.spotifyGlobal]);
+
+    // Apple Music Top Songs and Genre charts depend strictly on Apple Music streams!
     const topSongs = useMemo(() => {
-        const sorted = [...topSongsSource].map((song, i) => {
-            const hash = [...song.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const variation = (hash % 11) - 5;
-            return { ...song, appleScore: i + variation };
-        }).sort((a, b) => a.appleScore - b.appleScore);
-        
-        return sorted.slice(0, 100);
-    }, [topSongsSource]);
+        let filtered = allSongContenders;
+
+        if (selectedGenre !== 'All Genres') {
+            const target = selectedGenre.toLowerCase();
+            filtered = allSongContenders.filter(s => {
+                const g = (s.genre || '').toLowerCase();
+                if (target === 'pop') return g.includes('pop');
+                if (target === 'hip-hop/r&b') return g.includes('hip hop') || g.includes('rap') || g.includes('r&b');
+                if (target === 'country') return g.includes('country');
+                if (target === 'electronic') return g.includes('electronic') || g.includes('dance') || g.includes('edm') || g.includes('house');
+                if (target === 'r&b') return g.includes('r&b');
+                if (target === 'latin') return g.includes('latin') || g.includes('reggaeton');
+                if (target === 'rock') return g.includes('rock') || g.includes('metal') || g.includes('punk');
+                if (target === 'alternative/indie') return g.includes('indie') || g.includes('alternative');
+                return true;
+            });
+        }
+
+        return [...filtered].sort((a, b) => b.amStreams - a.amStreams).slice(0, 100);
+    }, [allSongContenders, selectedGenre]);
 
     const topAlbums = useMemo(() => {
-        const sorted = [...(gameState.billboardTopAlbums || [])].map((album, i) => {
-            const hash = [...album.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const variation = (hash % 11) - 5;
-            return { ...album, appleScore: i + variation };
-        }).sort((a, b) => a.appleScore - b.appleScore);
+        const sorted = [...(gameState.billboardTopAlbums || [])].map((album) => {
+            const amActivity = Math.floor((album.weeklyActivity || 1000) * getAppleMusicStreamRatio(album.uniqueId || album.title));
+            return { ...album, amActivity };
+        }).sort((a, b) => b.amActivity - a.amActivity);
         
         return sorted.slice(0, 100);
     }, [gameState.billboardTopAlbums]);
 
-    // Best new songs: newly debuted in hot 100 or recently released. Just pick a few from hot 100 that are maybe not top 10 but new? 
-    // Or just pick randomly from bottom 50 of hot 100 to simulate "new"? Let's just use the ones with least weeks on chart.
+    // Best new songs: newly debuted with fewest weeks on chart
     const bestNewSongs = useMemo(() => {
-        return [...topSongs].sort((a, b) => a.weeksOnChart - b.weeksOnChart).slice(0, 20);
+        return [...topSongs].sort((a, b) => (a.weeksOnChart || 1) - (b.weeksOnChart || 1)).slice(0, 20);
     }, [topSongs]);
 
-    // Pre-adds: Use upcoming player submissions and some top albums
+    // Pre-adds: Use upcoming player submissions and top albums
     const preAdds = useMemo(() => {
         const playerUpcoming = activeArtistData?.labelSubmissions.filter(s => s.hasCountdownPage && s.status === 'scheduled' && s.release.type !== 'Single').map(s => ({
             id: s.release.id,
@@ -75,13 +137,6 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
         return [...playerUpcoming, ...topNpc];
     }, [activeArtistData, topAlbums]);
 
-    const topPlaylists = [
-        { id: 'todays-hits', title: "Today's Hits", subtitle: 'Apple Music Hits', cover: 'https://images.unsplash.com/photo-1493225457124-a1a2a5f5f4c5?auto=format&fit=crop&q=80&w=400&h=400' },
-        { id: 'todays-country', title: "Today's Country", subtitle: 'Apple Music Country', cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=400&h=400' },
-        { id: 'rap-life', title: "Rap Life", subtitle: 'Apple Music Hip-Hop', cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=400&h=400' },
-        { id: 'essentials', title: "A-List Pop", subtitle: 'Apple Music Pop', cover: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=400&h=400' },
-    ];
-
     if (browseView === 'topPlaylists') {
         return (
             <div className="bg-black h-full overflow-y-auto text-white pb-24">
@@ -91,15 +146,15 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                     <div className="w-9"></div>
                 </header>
                 <div className="p-4 grid grid-cols-2 gap-4">
-                    {topPlaylists.map((pl, idx) => (
+                    {editorialPlaylists.map((pl, idx) => (
                         <div key={pl.id} className="cursor-pointer" onClick={() => { setSelectedPlaylist(pl.id); setBrowseView('playlistDetail'); }}>
                             <div className="relative aspect-square rounded-lg overflow-hidden mb-2">
-                                <img src={pl.cover} alt={pl.title} className="w-full h-full object-cover" />
-                                <div className="absolute top-2 right-2 text-[10px] font-bold bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-md"> Music</div>
+                                <img src={pl.coverArt} alt={pl.name} className="w-full h-full object-cover" />
+                                <div className="absolute top-2 right-2 text-[10px] font-bold bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-md"> Music</div>
                             </div>
                             <p className="text-xs text-zinc-400 font-semibold mb-0.5">{idx + 1}</p>
-                            <h3 className="font-semibold text-sm truncate">{pl.title}</h3>
-                            <p className="text-xs text-zinc-400 truncate">{pl.subtitle}</p>
+                            <h3 className="font-semibold text-sm truncate">{pl.name}</h3>
+                            <p className="text-xs text-zinc-400 truncate">{pl.description}</p>
                         </div>
                     ))}
                 </div>
@@ -118,8 +173,8 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                             {selectedGenre} <ChevronRightIcon className={`w-4 h-4 transition-transform ${showGenreMenu ? '-rotate-90' : 'rotate-90'}`} />
                         </button>
                         {showGenreMenu && (
-                            <div className="absolute top-full right-0 mt-2 bg-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 w-40 z-30">
-                                {['All Genres', 'Pop', 'Hip-Hop/R&B', 'Electronic', 'Country'].map(g => (
+                            <div className="absolute top-full right-0 mt-2 bg-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 w-44 z-30">
+                                {['All Genres', 'Pop', 'Hip-Hop/R&B', 'Electronic', 'Country', 'R&B', 'Latin', 'Rock', 'Alternative/Indie'].map(g => (
                                     <button 
                                         key={g} 
                                         onClick={() => { setSelectedGenre(g); setShowGenreMenu(false); }}
@@ -141,7 +196,9 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                                 <div className="flex-grow min-w-0 flex flex-col justify-center">
                                     <div className="flex items-center gap-2">
                                         <p className="font-bold text-white truncate text-base">{song.title}</p>
-                                        <span className="text-[10px] w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded flex items-center justify-center flex-shrink-0">E</span>
+                                        {song.explicit && (
+                                            <span className="text-[10px] w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded flex items-center justify-center flex-shrink-0">E</span>
+                                        )}
                                     </div>
                                     <p className="text-sm text-zinc-400 truncate">{song.artist}</p>
                                 </div>
@@ -234,18 +291,31 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
     }
 
     if (browseView === 'playlistDetail' && selectedPlaylist) {
-        const playlist = topPlaylists.find(p => p.id === selectedPlaylist) || topPlaylists[0];
+        const playlist = editorialPlaylists.find(p => p.id === selectedPlaylist) || editorialPlaylists[0];
         
-        let playlistSongsSource = gameState.billboardHot100 || [];
-        if (playlist.id === 'todays-country') playlistSongsSource = gameState.countryChart || [];
-        if (playlist.id === 'rap-life') playlistSongsSource = gameState.hotRapRnb || [];
-        if (playlist.id === 'essentials') playlistSongsSource = gameState.hotPopSongs || [];
+        let playlistTracks = playlist.tracks || [];
 
-        const playlistTracks = [...playlistSongsSource].slice(0, 50).sort((a, b) => {
-            const hashA = [...a.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100;
-            const hashB = [...b.uniqueId].reduce((acc, char) => acc + char.charCodeAt(0), 0) % 100;
-            return hashB - hashA; // pseudo random based on id
-        });
+        // If tracks array is empty, fill with top songs matching this playlist's genre/theme sorted by Apple Music streams
+        if (!playlistTracks || playlistTracks.length === 0) {
+            let matched = allSongContenders;
+            if (playlist.type === 'genre' && playlist.genre) {
+                const target = playlist.genre.toLowerCase();
+                matched = allSongContenders.filter(s => (s.genre || '').toLowerCase().includes(target));
+            }
+            if (playlist.id === 'top-100-usa') {
+                matched = allSongContenders;
+            }
+            playlistTracks = [...matched].sort((a, b) => b.amStreams - a.amStreams).slice(0, playlist.id.startsWith('top-100') ? 100 : 50).map((s, i) => ({
+                songId: s.uniqueId,
+                artistName: s.artist,
+                artistId: 'unknown',
+                title: s.title,
+                coverArt: s.coverArt,
+                position: i + 1,
+                addedDate: gameState.date,
+                explicit: s.explicit,
+            }));
+        }
         
         return (
             <div className="bg-black h-full overflow-y-auto text-white pb-24 relative overflow-hidden">
@@ -259,14 +329,14 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                 </header>
                 
                 <div className="relative pt-8 px-8 pb-4 text-center z-10">
-                    <h1 className="text-[52px] font-black tracking-tighter leading-none text-[#ffe16b] shadow-xl" style={{ textShadow: '0 4px 20px rgba(189, 166, 65, 0.4)' }}>
-                        {playlist.title.split(' ').map((word, i) => <React.Fragment key={i}>{word}<br/></React.Fragment>)}
-                    </h1>
+                    <div className="w-48 h-48 mx-auto mb-4 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                        <img src={playlist.coverArt} alt={playlist.name} className="w-full h-full object-cover" />
+                    </div>
                     
-                    <div className="mt-20 flex flex-col items-center">
-                        <h2 className="text-xl font-bold">{playlist.title}</h2>
-                        <p className="text-[#fa243c] font-semibold tracking-tight">{playlist.subtitle}</p>
-                        <p className="text-xs text-zinc-400 mt-1">Updated 16hr ago</p>
+                    <div className="mt-4 flex flex-col items-center">
+                        <h2 className="text-2xl font-black text-white">{playlist.name}</h2>
+                        <p className="text-[#fa243c] font-semibold text-sm mt-1">{playlist.description}</p>
+                        <p className="text-xs text-zinc-400 mt-1">Apple Music Editorial • Updated this week</p>
                     </div>
 
                     <div className="flex gap-4 mt-6 justify-center items-center">
@@ -287,27 +357,30 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
                 <div className="px-4 mt-4 relative z-10 pb-4 border-b border-zinc-800">
                     <p className="text-sm text-zinc-400 leading-snug">
-                        {playlist.title} is home to the biggest songs in pop, hip-hop, R&B, and more. At the top of this week <strong className="text-white">MORE</strong>
+                        {playlist.name} features the definitive tracks curated specifically by Apple Music editors.
                     </p>
                 </div>
 
                 <div className="px-4 relative z-10 pt-2 divide-y divide-zinc-800/50">
                     {playlistTracks.map((song, index) => (
-                        <div key={`${song.uniqueId}-${index}`} className="flex items-center gap-3 py-3">
-                            <div className="w-5 text-center text-zinc-500 text-sm font-semibold">{index + 1}</div>
-                            <img src={song.coverArt} className="w-12 h-12 rounded object-cover" alt={song.title} />
+                        <div key={`${song.songId}-${index}`} className="flex items-center gap-3 py-3">
+                            <div className="w-6 text-center text-zinc-500 text-sm font-semibold">{index + 1}</div>
+                            <img src={song.coverArt} className="w-12 h-12 rounded-lg object-cover" alt={song.title} />
                             <div className="flex-grow min-w-0 flex flex-col justify-center">
                                 <div className="flex items-center gap-2">
                                     <p className="font-semibold text-white truncate text-base">{song.title}</p>
+                                    {song.explicit && (
+                                        <span className="text-[10px] w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded flex items-center justify-center flex-shrink-0">E</span>
+                                    )}
                                 </div>
-                                <p className="text-sm text-zinc-400 truncate">{song.artist}</p>
+                                <p className="text-sm text-zinc-400 truncate">{song.artistName}</p>
                             </div>
                             <button className="flex-shrink-0"><DotsHorizontalIcon className="w-5 h-5 text-zinc-500" /></button>
                         </div>
                     ))}
                 </div>
             </div>
-        )
+        );
     }
 
     return (
@@ -325,14 +398,14 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                         <button onClick={() => setBrowseView('topPlaylists')} className="text-zinc-400"><ChevronRightIcon className="w-6 h-6" /></button>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                        {topPlaylists.map(pl => (
+                        {editorialPlaylists.map(pl => (
                             <div key={pl.id} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => { setSelectedPlaylist(pl.id); setBrowseView('playlistDetail'); }}>
                                 <div className="relative aspect-square rounded-lg overflow-hidden mb-2">
-                                    <img src={pl.cover} alt={pl.title} className="w-full h-full object-cover" />
-                                    <div className="absolute top-2 right-2 text-[8px] font-bold bg-black/50 px-1 py-0.5 rounded backdrop-blur-md"> Music</div>
+                                    <img src={pl.coverArt} alt={pl.name} className="w-full h-full object-cover" />
+                                    <div className="absolute top-2 right-2 text-[8px] font-bold bg-black/60 px-1 py-0.5 rounded backdrop-blur-md"> Music</div>
                                 </div>
-                                <h3 className="font-semibold text-sm truncate">{pl.title}</h3>
-                                <p className="text-xs text-zinc-400 truncate">{pl.subtitle}</p>
+                                <h3 className="font-semibold text-sm truncate">{pl.name}</h3>
+                                <p className="text-xs text-zinc-400 truncate">{pl.description}</p>
                             </div>
                         ))}
                     </div>
@@ -353,7 +426,9 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                                 <div className="flex-grow min-w-0">
                                     <div className="flex items-center gap-2">
                                         <p className="font-semibold truncate">{song.title}</p>
-                                        <span className="text-[10px] w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded flex items-center justify-center flex-shrink-0">E</span>
+                                        {song.explicit && (
+                                            <span className="text-[10px] w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded flex items-center justify-center flex-shrink-0">E</span>
+                                        )}
                                     </div>
                                     <p className="text-xs text-zinc-400 mt-0.5 truncate">{song.artist}</p>
                                 </div>

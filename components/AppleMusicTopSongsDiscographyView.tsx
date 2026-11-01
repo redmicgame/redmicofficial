@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame, getAppleMusicStreamRatio } from '../context/GameContext';
 import { Song } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
@@ -73,11 +73,14 @@ const AppleMusicTopSongsDiscographyView: React.FC<AppleMusicTopSongsDiscographyV
     const rankedDiscography = useMemo(() => {
         const list = availableSongs.map(song => {
             const project = getProjectInfo(song);
+            const ratio = getAppleMusicStreamRatio(song.id);
+            const weeklyStreams = song.appleMusicLastWeekStreams ?? Math.floor((song.lastWeekStreams || 0) * ratio);
+            const totalStreams = song.appleMusicStreams ?? Math.floor((song.streams || 0) * ratio);
             return {
                 song,
                 project,
-                weeklyStreams: song.lastWeekStreams || 0,
-                totalStreams: song.streams || 0,
+                weeklyStreams,
+                totalStreams,
             };
         });
 

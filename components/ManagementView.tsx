@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useGame, formatNumber } from '../context/GameContext';
+import { useGame, formatNumber, DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS } from '../context/GameContext';
 import { MANAGERS, TALENT_AGENCIES } from '../constants';
 import { BRANDS, MEDIA_REQUESTS_PRESETS } from '../constants/brandMediaData';
 import { Manager, Brand, SongMediaRequest } from '../types';
@@ -18,6 +18,7 @@ const ManagementView: React.FC = () => {
     
     // Playlist Buying State
     const [isBuyingPlaylist, setIsBuyingPlaylist] = useState(false);
+    const [selectedPlatform, setSelectedPlatform] = useState<'spotify' | 'appleMusic'>('spotify');
     const [hiatusMemberModal, setHiatusMemberModal] = useState<string | null>(null);
     const confirmMemberHiatus = (reason: string) => { if (hiatusMemberModal) { dispatch({ type: 'START_MEMBER_HIATUS', payload: { memberId: hiatusMemberModal, reason } }); setHiatusMemberModal(null); } };
     const [hiatusResponseModal, setHiatusResponseModal] = useState<{isOpen: boolean, success: boolean, message: string}>({isOpen: false, success: false, message: ''});
@@ -92,7 +93,9 @@ const ManagementView: React.FC = () => {
         setConfirmFire(false);
     };
 
-    const availablePlaylists = gameState.spotifyPlaylists || [];
+    const availablePlaylists = selectedPlatform === 'spotify'
+        ? (gameState.spotifyPlaylists || [])
+        : (gameState.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS);
     const selectedPlaylist = availablePlaylists.find(p => p.id === selectedPlaylistId);
     
     // Cost calculation
@@ -118,7 +121,8 @@ const ManagementView: React.FC = () => {
                     songId: selectedSongId,
                     playlistId: selectedPlaylistId,
                     position: selectedPosition,
-                    cost: playlistCost
+                    cost: playlistCost,
+                    platform: selectedPlatform
                 }
             });
             setIsBuyingPlaylist(false);
@@ -169,6 +173,34 @@ const ManagementView: React.FC = () => {
                         <h2 className="text-xl font-bold">Buy Playlist Placement</h2>
                         <p className="text-sm text-zinc-400">Managers can secure playlist spots for your songs, but it's expensive.</p>
                         
+                        <div>
+                            <label className="block text-sm font-bold mb-1">Select Platform</label>
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                <button
+                                    type="button"
+                                    onClick={() => { setSelectedPlatform('spotify'); setSelectedPlaylistId(''); }}
+                                    className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
+                                        selectedPlatform === 'spotify'
+                                            ? 'bg-[#1ed760] text-black border-[#1ed760] shadow-sm'
+                                            : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
+                                    }`}
+                                >
+                                    <span>🟢</span> Spotify
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setSelectedPlatform('appleMusic'); setSelectedPlaylistId(''); }}
+                                    className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
+                                        selectedPlatform === 'appleMusic'
+                                            ? 'bg-[#fa243c] text-white border-[#fa243c] shadow-sm'
+                                            : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
+                                    }`}
+                                >
+                                    <span></span> Apple Music
+                                </button>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-bold mb-1">Select Song</label>
                             <select 

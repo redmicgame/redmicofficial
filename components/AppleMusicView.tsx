@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { useGame } from '../context/GameContext';
+import { useGame, getAppleMusicStreamRatio } from '../context/GameContext';
 import { LABELS, getArtistImage } from '../constants';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import StarIcon from './icons/StarIcon';
@@ -568,7 +568,11 @@ const AppleMusicView: React.FC = () => {
                 if (rel?.isExclusive && rel.exclusiveTo && rel.exclusiveTo !== 'Apple Music' && !rel.exclusivePlatforms?.includes('Apple Music')) return false;
                 return true;
             })
-            .sort((a, b) => (b.lastWeekStreams || 0) - (a.lastWeekStreams || 0))
+            .sort((a, b) => {
+                const aAm = a.appleMusicLastWeekStreams ?? Math.floor((a.lastWeekStreams || 0) * getAppleMusicStreamRatio(a.id));
+                const bAm = b.appleMusicLastWeekStreams ?? Math.floor((b.lastWeekStreams || 0) * getAppleMusicStreamRatio(b.id));
+                return bAm - aAm;
+            })
             .slice(0, 5);
         
         const albums = availableReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)').sort((a,b) => b.releaseDate.year - a.releaseDate.year);

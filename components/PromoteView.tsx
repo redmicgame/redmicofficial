@@ -15,13 +15,15 @@ const PromotionModal: React.FC<{
     title: string;
     packages: Array<PromotionPackage>;
     onClose: () => void;
-    onSelectPackage: (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa") => void;
+    onSelectPackage: (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa", targetPlatform: 'all' | 'appleMusic') => void;
     money: number;
     marketingBudget?: number;
     selectedCount?: number;
-}> = ({ title, packages, onClose, onSelectPackage, money, marketingBudget = 0, selectedCount = 1 }) => {
+    allowPlatformSelection?: boolean;
+}> = ({ title, packages, onClose, onSelectPackage, money, marketingBudget = 0, selectedCount = 1, allowPlatformSelection = true }) => {
     const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('low');
     const [region, setRegion] = useState<"Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa">('Global');
+    const [targetPlatform, setTargetPlatform] = useState<'all' | 'appleMusic'>('all');
 
     const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
     const totalFunds = money + marketingBudget;
@@ -43,6 +45,41 @@ const PromotionModal: React.FC<{
                     </div>
                 )}
                 
+                {allowPlatformSelection && (
+                    <div className="mb-4">
+                        <label className="block text-sm font-bold text-zinc-400 mb-2">Platform Target</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setTargetPlatform('all')}
+                                className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
+                                    targetPlatform === 'all'
+                                        ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                                        : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white'
+                                }`}
+                            >
+                                <span>🌐</span> All Platforms
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTargetPlatform('appleMusic')}
+                                className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
+                                    targetPlatform === 'appleMusic'
+                                        ? 'bg-[#fa243c] text-white border-[#fa243c] shadow-sm'
+                                        : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white'
+                                }`}
+                            >
+                                <span></span> Apple Music Only
+                            </button>
+                        </div>
+                        {targetPlatform === 'appleMusic' && (
+                            <p className="text-xs text-rose-400 mt-1.5 font-medium">
+                                Payola boost / resurgence will apply exclusively to Apple Music streams and Apple Music charts.
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 <div className="mb-6 bg-zinc-900 rounded-lg p-1 flex">
                     <button 
                         onClick={() => setQuality('low')}
@@ -90,7 +127,7 @@ const PromotionModal: React.FC<{
                         return (
                             <button
                                 key={pkg.name}
-                                onClick={() => onSelectPackage(pkg, quality, region)}
+                                onClick={() => onSelectPackage(pkg, quality, region, targetPlatform)}
                                 disabled={!canAfford}
                                 className="w-full p-4 rounded-lg text-left transition-colors border-2 border-zinc-700 bg-zinc-800 hover:border-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-zinc-700"
                             >
@@ -232,7 +269,7 @@ const PromoteView: React.FC = () => {
         setSelectedSongIds(new Set());
     };
 
-    const handleSelectPackageForSongs = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa") => {
+    const handleSelectPackageForSongs = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa", targetPlatform: 'all' | 'appleMusic' = 'all') => {
         const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
         const regionMultiplier = region === 'Global' ? 1 : 0.35;
         const totalCost = Math.floor(pkg.weeklyCost * selectedSongIds.size * qualityMultiplier * regionMultiplier);
@@ -248,6 +285,8 @@ const PromoteView: React.FC = () => {
                     itemType: 'song',
                     promoType: pkg.name,
                     promoQuality: quality,
+                    region,
+                    targetPlatform,
                     weeklyCost: pkg.weeklyCost * qualityMultiplier,
                     boostMultiplier: 'boost' in pkg ? pkg.boost : 1,
                     artistId: song.artistId,
@@ -259,7 +298,7 @@ const PromoteView: React.FC = () => {
         setSelectedSongIds(new Set());
     };
     
-    const handleSelectPackageForSingleItem = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high') => {
+    const handleSelectPackageForSingleItem = (pkg: PromotionPackage, quality: 'low' | 'medium' | 'high', region: "Global" | "US" | "Canada" | "UK" | "Latin America" | "Asia" | "Africa", targetPlatform: 'all' | 'appleMusic' = 'all') => {
         const activeSongPromotionsCount = activeArtistData?.promotions.filter(p => p.itemType === 'song').length || 0;
         if (selectedSingleItem?.type === 'song') {
             if (gameState.difficultyMode === 'hard' && activeSongPromotionsCount >= 2) {
@@ -272,7 +311,8 @@ const PromoteView: React.FC = () => {
             }
         }
         const qualityMultiplier = quality === 'high' ? 3 : quality === 'medium' ? 1.5 : 1;
-        const totalCost = pkg.weeklyCost * qualityMultiplier;
+        const regionMultiplier = region === 'Global' ? 1 : 0.35;
+        const totalCost = Math.floor(pkg.weeklyCost * qualityMultiplier * regionMultiplier);
         const totalFunds = money + (contract?.marketingBudget || 0);
         if (!selectedSingleItem || totalFunds < totalCost) return;
 
@@ -282,6 +322,8 @@ const PromoteView: React.FC = () => {
             itemType: selectedSingleItem.type,
             promoType: pkg.name,
             promoQuality: quality,
+            region,
+            targetPlatform: selectedSingleItem.type === 'song' ? targetPlatform : 'all',
             weeklyCost: pkg.weeklyCost * qualityMultiplier,
             boostMultiplier: 'boost' in pkg ? pkg.boost : 1,
             artistId: selectedSingleItem.item.artistId,
@@ -400,6 +442,7 @@ const PromoteView: React.FC = () => {
                     onSelectPackage={handleSelectPackageForSingleItem}
                     money={money}
                     marketingBudget={contract?.marketingBudget}
+                    allowPlatformSelection={selectedSingleItem.type === 'song'}
                 />
             )}
              <ConfirmationModal
@@ -432,7 +475,15 @@ const PromoteView: React.FC = () => {
                                         <div key={promo.id} className="bg-zinc-800 p-3 rounded-lg flex items-center gap-4">
                                             <img src={promo.itemType === 'song' ? (item as Song).coverArt : (item as Video).thumbnail} alt={item.title} className="w-12 h-12 rounded-md object-cover"/>
                                             <div className="flex-grow">
-                                                <p className="font-semibold">{promo.promoType} <span className="text-xs font-normal bg-zinc-700 px-2 py-0.5 rounded ml-2 capitalize">{promo.promoQuality} Quality</span></p>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <p className="font-semibold">{promo.promoType}</p>
+                                                    <span className="text-xs font-normal bg-zinc-700 px-2 py-0.5 rounded capitalize">{promo.promoQuality} Quality</span>
+                                                    {promo.targetPlatform === 'appleMusic' && (
+                                                        <span className="text-[11px] font-bold bg-[#fa243c]/20 text-[#fa243c] border border-[#fa243c]/40 px-2 py-0.5 rounded flex items-center gap-1">
+                                                            <span></span> Apple Music Only
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-sm text-zinc-400">for "{item.title}"</p>
                                                 <p className="text-xs text-green-400 font-mono">${formatNumber(promo.weeklyCost)} / week</p>
                                             </div>

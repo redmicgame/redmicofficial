@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useGame, formatNumber, getFutureDate } from '../context/GameContext';
+import { useGame, formatNumber, getFutureDate, getAppleMusicStreamRatio } from '../context/GameContext';
 import { Song, Release, AppleMusicPlaylist } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -77,7 +77,9 @@ const AppleMusicForArtistsView: React.FC = () => {
 
     if (!activeArtist || !activeArtistData) return null;
 
-    const songs = activeArtistData.songs.filter(s => s.isReleased && !s.remixOfSongId).sort((a, b) => b.streams - a.streams);
+    const getSongAmPlays = (s: Song) => s.appleMusicStreams ?? Math.floor((s.streams || 0) * getAppleMusicStreamRatio(s.id));
+    const getSongAmWeeklyPlays = (s: Song) => s.appleMusicLastWeekStreams ?? Math.floor((s.lastWeekStreams || 0) * getAppleMusicStreamRatio(s.id));
+    const songs = activeArtistData.songs.filter(s => s.isReleased && !s.remixOfSongId).sort((a, b) => getSongAmPlays(b) - getSongAmPlays(a));
     
     // Found upcoming releases and albums
     const upcomingReleases = activeArtistData.labelSubmissions.filter(s => s.status === 'scheduled');
@@ -696,7 +698,11 @@ const AppleMusicForArtistsView: React.FC = () => {
                                 <img src={song.coverArt} alt={song.title} className="w-14 h-14 rounded-lg object-cover shadow-sm" />
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-semibold text-sm truncate">{song.title}</h3>
-                                    <p className="text-zinc-500 text-xs mt-0.5">{formatNumber(song.streams)} Plays</p>
+                                    <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap">
+                                        <span className="text-zinc-500 font-medium">{formatNumber(getSongAmPlays(song))} Plays</span>
+                                        <span className="text-zinc-300">•</span>
+                                        <span className="text-[#fa243c] font-semibold">{formatNumber(getSongAmWeeklyPlays(song))} this week</span>
+                                    </div>
                                 </div>
                                 <ChevronLeftIcon className="w-5 h-5 text-zinc-400 rotate-180" />
                             </div>
@@ -760,10 +766,12 @@ const AppleMusicSongDetail: React.FC<{ song: Song, onBack: () => void }> = ({ so
     const { activeArtist } = useGame();
     
     const stats = useMemo(() => {
-        const plays = song.streams * (0.3 + Math.random() * 0.1);
-        const purchases = plays * 0.005;
+        const plays = song.appleMusicStreams ?? Math.floor((song.streams || 0) * getAppleMusicStreamRatio(song.id));
+        const weeklyPlays = song.appleMusicLastWeekStreams ?? Math.floor((song.lastWeekStreams || 0) * getAppleMusicStreamRatio(song.id));
+        const purchases = Math.floor(plays * 0.005);
         return {
             plays: Math.floor(plays),
+            weeklyPlays: Math.floor(weeklyPlays),
             avgDaily: Math.floor(plays / ((song.weeksOut || 1) * 7 + 1)),
             shazams: Math.floor(plays * 0.03),
             purchases: Math.floor(purchases),
@@ -772,7 +780,7 @@ const AppleMusicSongDetail: React.FC<{ song: Song, onBack: () => void }> = ({ so
             japan: Math.floor(plays * 0.1),
             canada: Math.floor(plays * 0.08),
         };
-    }, [song.streams, song.weeksOut]);
+    }, [song.appleMusicStreams, song.appleMusicLastWeekStreams, song.streams, song.lastWeekStreams, song.weeksOut, song.id]);
 
     return (
         <div className="bg-white text-black h-full overflow-y-auto font-sans pb-24">
@@ -780,7 +788,7 @@ const AppleMusicSongDetail: React.FC<{ song: Song, onBack: () => void }> = ({ so
                 <button onClick={onBack} className="text-[#fa243c] flex items-center text-lg font-semibold">
                     <ChevronLeftIcon className="w-7 h-7 -ml-2" /> Back
                 </button>
-                <span className="text-[#fa243c] text-sm font-semibold">Lifetime</span>
+                <span className="text-[#fa243c] text-sm font-semibold">Apple Music</span>
             </header>
 
             <div className="p-4 pt-2 max-w-2xl mx-auto">
@@ -793,7 +801,8 @@ const AppleMusicSongDetail: React.FC<{ song: Song, onBack: () => void }> = ({ so
                 </div>
 
                 <div className="border-t border-zinc-200">
-                    <StatRow label="Plays" value={formatNumber(stats.plays)} />
+                    <StatRow label="Weekly Apple Music Streams" value={formatNumber(stats.weeklyPlays)} />
+                    <StatRow label="Plays (Lifetime)" value={formatNumber(stats.plays)} />
                     <StatRow label="Average Daily Listeners" value={formatNumber(stats.avgDaily)} />
                     <StatRow label="Shazams" value={formatNumber(stats.shazams)} />
                     <StatRow label="Song Purchases" value={formatNumber(stats.purchases)} />

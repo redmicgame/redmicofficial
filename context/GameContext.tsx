@@ -1634,6 +1634,150 @@ const DEFAULT_SPOTIFY_PLAYLISTS: SpotifyPlaylist[] = [
   },
 ];
 
+export const getAppleMusicStreamRatio = (id: string): number => {
+  const hash = (id || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  // Returns ratio between 0.28 and 0.55 (which is 45% to 72% less than Spotify streams)
+  return 0.28 + ((hash % 271) / 1000);
+};
+
+export const DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS: SpotifyPlaylist[] = [
+  {
+    id: "top-100-global",
+    name: "Top 100: Global",
+    description: "The 100 most played songs around the world on Apple Music, updated daily.",
+    followers: 28000000,
+    type: "global",
+    coverArt: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "todays-hits",
+    name: "Today's Hits",
+    description: "The biggest hits across pop, hip-hop, R&B, and more.",
+    followers: 32000000,
+    type: "global",
+    coverArt: "https://images.unsplash.com/photo-1493225457124-a1a2a5f5f4c5?auto=format&fit=crop&q=80&w=500&h=500",
+    tracks: [],
+  },
+  {
+    id: "top-100-usa",
+    name: "Top 100: USA",
+    description: "The 100 most played songs in the United States right now on Apple Music.",
+    followers: 22000000,
+    type: "global",
+    coverArt: "https://images.unsplash.com/photo-1493225457124-a1a2a5fa51cc?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "new-music-daily",
+    name: "New Music Daily",
+    description: "The premier destination for the most exciting new songs every week.",
+    followers: 16000000,
+    type: "new",
+    coverArt: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "rap-life",
+    name: "Rap Life",
+    description: "The center of hip-hop culture, defining today's essential rap records.",
+    followers: 20000000,
+    type: "genre",
+    genre: "Hip Hop/Rap",
+    coverArt: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=500&h=500",
+    tracks: [],
+  },
+  {
+    id: "essentials",
+    name: "A-List Pop",
+    description: "The defining pop hits dominating airwaves and playlists everywhere.",
+    followers: 24000000,
+    type: "genre",
+    genre: "Pop",
+    coverArt: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=500&h=500",
+    tracks: [],
+  },
+  {
+    id: "a-list-rnb",
+    name: "The A-List: R&B",
+    description: "Smooth slow jams, soul-stirring melodies, and modern R&B anthems.",
+    followers: 12000000,
+    type: "genre",
+    genre: "R&B",
+    coverArt: "https://images.unsplash.com/photo-1619983081563-430f63602796?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "superbloom",
+    name: "Superbloom",
+    description: "The new wave of indie, alternative, and bedroom pop vibes.",
+    followers: 9500000,
+    type: "genre",
+    genre: "Indie",
+    coverArt: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "club-workouts",
+    name: "Club Workouts",
+    description: "High-octane club beats, big room house, and EDM bangers to power your workout.",
+    followers: 11000000,
+    type: "genre",
+    genre: "Dance/Electronic",
+    coverArt: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "dale-play",
+    name: "Dale Play",
+    description: "The hottest reggaeton, Latin trap, and urban Latin anthems worldwide.",
+    followers: 18000000,
+    type: "genre",
+    genre: "Latin",
+    coverArt: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "alt-ctrl",
+    name: "ALT CTRL",
+    description: "Modern rock, post-punk, and alternative artists pushing boundaries.",
+    followers: 10500000,
+    type: "genre",
+    genre: "Rock",
+    coverArt: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "pure-focus",
+    name: "Pure Focus",
+    description: "Deep instrumental ambient, lo-fi, and chill beats for clarity and flow.",
+    followers: 8500000,
+    type: "global",
+    coverArt: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "dance-xl",
+    name: "Dance XL",
+    description: "Electrifying festival anthems, progressive dance, and massive club floorfillers.",
+    followers: 14000000,
+    type: "genre",
+    genre: "Dance/Electronic",
+    coverArt: "https://images.unsplash.com/photo-1570535921867-0c7f711f185c?w=500&h=500&fit=crop",
+    tracks: [],
+  },
+  {
+    id: "todays-country",
+    name: "Today's Country",
+    description: "The current anthems and story-driven songs shaping country music.",
+    followers: 13000000,
+    type: "genre",
+    genre: "Country",
+    coverArt: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=500&h=500",
+    tracks: [],
+  },
+];
+
 export const DEFAULT_PODCASTS: Podcast[] = [
   {
     id: "pod_joe_rogan",
@@ -1688,6 +1832,7 @@ const initialState: GameState = {
   activeArtistId: null,
   artistsData: {},
   spotifyPlaylists: DEFAULT_SPOTIFY_PLAYLISTS,
+  appleMusicEditorialPlaylists: DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS,
   podcasts: DEFAULT_PODCASTS,
   podcastCharts: DEFAULT_PODCASTS,
   date: { week: 1, year: 2024 },
@@ -3803,6 +3948,7 @@ The Red Mic Team`,
                 isExclusive: isItunesExcl || isOtherStreamingExcl ? true : song.isExclusive,
                 exclusiveTo: isItunesExcl ? 'iTunes' : (isOtherStreamingExcl ? (song.exclusiveTo || songRel?.exclusiveTo) : song.exclusiveTo),
                 streams: isItunesExcl ? 0 : (song.streams || 0) + dayStreams,
+                appleMusicStreams: (song.appleMusicStreams || Math.floor((song.streams || 0) * getAppleMusicStreamRatio(song.id))) + (isItunesExcl ? 0 : Math.floor(dayStreams * getAppleMusicStreamRatio(song.id))),
                 lastDayStreams: isItunesExcl ? 0 : dayStreams,
                 lastDaySales: dailySales,
                 dailyStreams: newDailyStreams,
@@ -6633,6 +6779,48 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             });
             weeklyStreams += playlistStreams;
 
+            // Apple Music Streams Calculation (45% to 72% less than Spotify streams)
+            const amRatio = getAppleMusicStreamRatio(song.id);
+            let amWeeklyStreams = Math.floor(weeklyStreams * amRatio);
+
+            // Playlists on Apple Music boost Apple Music streams only (if you enter)
+            let amPlaylistStreams = 0;
+            const amEditorialPlaylists = state.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS;
+            amEditorialPlaylists.forEach((playlist) => {
+              const trackIndex = playlist.tracks.findIndex((t) => t.songId === song.id);
+              if (trackIndex !== -1) {
+                let percentage = 0.001;
+                const position = trackIndex + 1;
+                if (position === 1) percentage = 0.0735 + Math.random() * 0.0441;
+                else if (position === 2) percentage = 0.0588 + Math.random() * 0.0353;
+                else if (position === 3) percentage = 0.0529 + Math.random() * 0.0294;
+                else if (position === 4) percentage = 0.0441 + Math.random() * 0.0294;
+                else if (position === 5) percentage = 0.0382 + Math.random() * 0.0265;
+                else if (position <= 10) percentage = 0.025 + Math.random() * 0.015;
+                else {
+                  const decay = Math.pow(0.95, position - 10);
+                  percentage = (0.015 + Math.random() * 0.015) * decay;
+                }
+                const pStreams = Math.floor(playlist.followers * percentage * amRatio);
+                amPlaylistStreams += pStreams;
+              }
+            });
+
+            // Apple Music boost from pitch or purchased placement
+            let newAppleMusicPlaylistBoostWeeks = song.appleMusicPlaylistBoostWeeks;
+            if (typeof song.appleMusicPlaylistBoostWeeks === "number" && song.appleMusicPlaylistBoostWeeks > 0) {
+              amWeeklyStreams = Math.floor(amWeeklyStreams * 1.35);
+              newAppleMusicPlaylistBoostWeeks = song.appleMusicPlaylistBoostWeeks - 1;
+            }
+            if (song.purchasedPlaylists?.some((p) => p.platform === "appleMusic" && p.weeksRemaining > 0)) {
+              amWeeklyStreams = Math.floor(amWeeklyStreams * 1.45);
+            }
+
+            amWeeklyStreams += amPlaylistStreams;
+            if (isDailyMode) {
+              amWeeklyStreams = Math.floor(amWeeklyStreams / 7);
+            }
+
             let newPlaylistBoostWeeks = song.playlistBoostWeeks;
             if (
               typeof song.playlistBoostWeeks === "number" &&
@@ -6652,12 +6840,21 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               (p) => p.itemId === song.id && p.itemType === "song",
             );
             if (songPromo) {
-              if (songPromo.region && songPromo.region !== "Global") {
-                  // Handled later when splitting regional streams
+              if (songPromo.targetPlatform === "appleMusic") {
+                amWeeklyStreams = Math.floor(
+                  amWeeklyStreams * songPromo.boostMultiplier,
+                );
               } else {
-                  weeklyStreams = Math.floor(
-                    weeklyStreams * songPromo.boostMultiplier,
-                  );
+                if (songPromo.region && songPromo.region !== "Global") {
+                    // Handled later when splitting regional streams
+                } else {
+                    weeklyStreams = Math.floor(
+                      weeklyStreams * songPromo.boostMultiplier,
+                    );
+                    amWeeklyStreams = Math.floor(
+                      amWeeklyStreams * songPromo.boostMultiplier,
+                    );
+                }
               }
             }
 
@@ -6750,14 +6947,19 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             if (gLower.includes("electronic") || gLower.includes("dance") || gLower.includes("rock") || gLower.includes("indie")) multUK *= 2.0;
 
             if (songPromo && songPromo.region && songPromo.region !== "Global") {
-                if (songPromo.region === "US") multUS *= songPromo.boostMultiplier;
-                if (songPromo.region === "Canada") multCanada *= songPromo.boostMultiplier;
-                if (songPromo.region === "UK") multUK *= songPromo.boostMultiplier;
-                if (songPromo.region === "Latin America") multLatin *= songPromo.boostMultiplier;
-                if (songPromo.region === "Asia") multAsia *= songPromo.boostMultiplier;
-                if (songPromo.region === "Africa") multAfrica *= songPromo.boostMultiplier;
+                if (songPromo.targetPlatform === "appleMusic") {
+                    amWeeklyStreams = Math.floor(amWeeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.5));
+                } else {
+                    if (songPromo.region === "US") multUS *= songPromo.boostMultiplier;
+                    if (songPromo.region === "Canada") multCanada *= songPromo.boostMultiplier;
+                    if (songPromo.region === "UK") multUK *= songPromo.boostMultiplier;
+                    if (songPromo.region === "Latin America") multLatin *= songPromo.boostMultiplier;
+                    if (songPromo.region === "Asia") multAsia *= songPromo.boostMultiplier;
+                    if (songPromo.region === "Africa") multAfrica *= songPromo.boostMultiplier;
 
-                weeklyStreams = Math.floor(weeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.3));
+                    weeklyStreams = Math.floor(weeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.3));
+                    amWeeklyStreams = Math.floor(amWeeklyStreams * (1 + (songPromo.boostMultiplier - 1) * 0.3));
+                }
             }
 
             // Regional streaming allocation based on launch years:
@@ -6941,12 +7143,16 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               isExclusive: isItunesExcl || isOtherExcl ? true : song.isExclusive,
               exclusiveTo: isItunesExcl ? 'iTunes' : (isOtherExcl ? (song.exclusiveTo || songRelease?.exclusiveTo) : song.exclusiveTo),
               streams: isItunesExcl ? 0 : (song.streams || 0) + streamsToAdd,
+              appleMusicStreams: (song.appleMusicStreams || Math.floor((song.streams || 0) * amRatio)) + (isItunesExcl ? 0 : amWeeklyStreams),
               sales: (song.sales || 0) + salesToAdd,
               lastWeekSales: pureSalesThisWeek,
               prevWeekStreams: song.lastWeekStreams || 0,
               lastWeekStreams: isItunesExcl ? 0 : actualStreamsThisWeek,
               actualPrevWeekStreams: song.actualLastWeekStreams || 0,
               actualLastWeekStreams: isItunesExcl ? 0 : actualStreamsThisWeek,
+              appleMusicPrevWeekStreams: song.appleMusicLastWeekStreams || 0,
+              appleMusicLastWeekStreams: isItunesExcl ? 0 : amWeeklyStreams,
+              appleMusicPlaylistBoostWeeks: newAppleMusicPlaylistBoostWeeks,
               regionalStreams: newRegionalStreams,
               lastWeekRegionalStreams: isItunesExcl ? { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 } : regStreams,
               ...firstWeekStreamsData,
@@ -6971,6 +7177,8 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               ...song,
               prevWeekStreams: song.lastWeekStreams || 0,
               lastWeekStreams: 0,
+              appleMusicPrevWeekStreams: song.appleMusicLastWeekStreams || 0,
+              appleMusicLastWeekStreams: 0,
               lastWeekRegionalStreams: { "US": 0, "Canada": 0, "UK": 0, "Latin America": 0, "Asia": 0, "Africa": 0 },
               isReleased: effectivelyReleased,
             };
@@ -7757,20 +7965,32 @@ Thank you for trusting X.`,
                   promo.boostMultiplier,
                   promo.promoQuality,
                 );
-                const streamsToRemove = Math.floor(
-                  song.streams * removalPercentage,
-                );
+                if (promo.targetPlatform === "appleMusic") {
+                  const amStreams = song.appleMusicStreams || 0;
+                  const amToRemove = Math.floor(amStreams * removalPercentage);
+                  if (amToRemove > 0) {
+                    newSongs[songIndex] = {
+                      ...song,
+                      appleMusicStreams: Math.max(0, amStreams - amToRemove),
+                      appleMusicLastWeekStreams: Math.max(0, (song.appleMusicLastWeekStreams || 0) - amToRemove),
+                    };
+                  }
+                } else {
+                  const streamsToRemove = Math.floor(
+                    song.streams * removalPercentage,
+                  );
 
-                if (streamsToRemove > 0) {
-                  totalRemovedStreams += streamsToRemove;
-                  newSongs[songIndex] = {
-                    ...song,
-                    streams: song.streams - streamsToRemove,
-                    lastWeekStreams:
-                      (song.lastWeekStreams || 0) - streamsToRemove,
-                    removedStreams:
-                      (song.removedStreams || 0) + streamsToRemove,
-                  };
+                  if (streamsToRemove > 0) {
+                    totalRemovedStreams += streamsToRemove;
+                    newSongs[songIndex] = {
+                      ...song,
+                      streams: song.streams - streamsToRemove,
+                      lastWeekStreams:
+                        (song.lastWeekStreams || 0) - streamsToRemove,
+                      removedStreams:
+                        (song.removedStreams || 0) + streamsToRemove,
+                    };
+                  }
                 }
               }
             }
@@ -17813,12 +18033,119 @@ Congratulations on your chart success!
         }
       });
 
+      const newAppleMusicPlaylists = (
+        state.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS
+      ).map((playlist) => {
+        let playlistContenders = allContenders.filter((c) => {
+          if (c.isPlayerSong && c.isAvailableOnStreaming === false) return false;
+          return true;
+        });
+
+        if (playlist.type === "genre" && playlist.genre) {
+          playlistContenders = playlistContenders.filter((c) => {
+            const g = (c.genre || "").toLowerCase();
+            if (playlist.genre === "Pop" && g.includes("pop")) return true;
+            if (playlist.genre === "Hip Hop/Rap" && (g.includes("hip hop") || g.includes("rap"))) return true;
+            if (playlist.genre === "Dance/Electronic" && (g.includes("electronic") || g.includes("dance") || g.includes("edm") || g.includes("house"))) return true;
+            if (playlist.genre === "Country" && g.includes("country")) return true;
+            if (playlist.genre === "R&B" && g.includes("r&b")) return true;
+            if (playlist.genre === "Rock" && (g.includes("rock") || g.includes("metal") || g.includes("punk"))) return true;
+            if (playlist.genre === "Latin" && (g.includes("latin") || g.includes("reggaeton"))) return true;
+            if (playlist.genre === "Indie" && (g.includes("indie") || g.includes("alternative"))) return true;
+            return false;
+          });
+        }
+
+        if (playlist.id === "new-music-daily") {
+          playlistContenders = playlistContenders.filter((c) => {
+            if (c.isPlayerSong && c.songId) {
+              const aData = Object.values(updatedArtistsData).find(d => d.songs.some(s => s.id === c.songId));
+              const songObj = aData?.songs.find(s => s.id === c.songId);
+              return songObj?.releaseDate?.year === newDate.year && songObj?.releaseDate?.week === newDate.week;
+            }
+            return newlyGeneratedNpcs.some(npc => npc.uniqueId === c.uniqueId) || (c.debutWeek === newDate.week && c.debutYear === newDate.year);
+          });
+        }
+
+        const maxTracks = playlist.id.startsWith("top-100") ? 100 : 50;
+
+        const scoredContenders = playlistContenders.map((c) => {
+          const amRatio = getAppleMusicStreamRatio(c.uniqueId);
+          let amStreams = Math.floor((c.weeklyStreams || 0) * amRatio);
+          if (playlist.id === "top-100-usa") {
+            amStreams = Math.floor((c.regionalStreams?.["US"] || (c.weeklyStreams * 0.4)) * amRatio);
+          }
+          let score = amStreams + Math.random() * 2000;
+
+          if (c.isPlayerSong && c.songId) {
+            const aData = Object.values(updatedArtistsData).find(d => d.songs.some(s => s.id === c.songId));
+            const actualSong = aData?.songs.find(s => s.id === c.songId);
+            if (actualSong && actualSong.appleMusicPlaylistBoostWeeks && actualSong.appleMusicPlaylistBoostWeeks > 0) {
+              score *= PLAYLIST_BOOST_MULTIPLIER;
+            }
+          }
+          return { ...c, score };
+        }).sort((a, b) => b.score - a.score).slice(0, maxTracks);
+
+        let newTracks: SpotifyPlaylistTrack[] = scoredContenders.map((c, index) => {
+          const existingTrack = playlist.tracks.find(t => t.songId === c.uniqueId);
+          return {
+            songId: c.uniqueId,
+            artistName: c.artist,
+            artistId: c.isPlayerSong
+              ? allPlayerSongsFlat.find(s => s.id === c.songId)?.artistId || "unknown"
+              : "unknown",
+            title: c.title || "Unknown Title",
+            coverArt: c.coverArt,
+            position: index + 1,
+            addedDate: (existingTrack && existingTrack.addedDate) ? existingTrack.addedDate : newDate,
+          };
+        });
+
+        // Apply purchased playlist positions for Apple Music
+        allPlayerSongsFlat.forEach((playerSong) => {
+          const artistData = updatedArtistsData[playerSong.artistId];
+          if (artistData) {
+            const songWithData = artistData.songs.find(s => s.id === playerSong.id);
+            if (songWithData && songWithData.purchasedPlaylists) {
+              const purchased = songWithData.purchasedPlaylists.find(
+                p => p.playlistId === playlist.id && p.weeksRemaining > 0 && p.platform === "appleMusic"
+              );
+              if (purchased) {
+                const contender = allContendersRaw.find(c => c.isPlayerSong && c.songId === playerSong.id);
+                if (contender) {
+                  const existingIdx = newTracks.findIndex(t => t.songId === contender.uniqueId);
+                  if (existingIdx !== -1) newTracks.splice(existingIdx, 1);
+                  const insertIdx = Math.max(0, Math.min(newTracks.length, purchased.position - 1));
+                  newTracks.splice(insertIdx, 0, {
+                    songId: contender.uniqueId,
+                    artistName: contender.artist,
+                    artistId: playerSong.artistId,
+                    title: contender.title || "Unknown Title",
+                    coverArt: contender.coverArt,
+                    position: insertIdx + 1,
+                    addedDate: newDate,
+                  });
+                }
+              }
+            }
+          }
+        });
+
+        if (newTracks.length > maxTracks) newTracks = newTracks.slice(0, maxTracks);
+        return {
+          ...playlist,
+          tracks: newTracks.map((t, i) => ({ ...t, position: i + 1 })),
+        };
+      });
+
       if (contractRenewalForActivePlayer) {
         return {
           ...finalState,
           date: newDate,
           artistsData: updatedArtistsData,
           spotifyPlaylists: newSpotifyPlaylists,
+          appleMusicEditorialPlaylists: newAppleMusicPlaylists,
           billboardHot100: newBillboardHot100,
           activeSuperstarHits: finalActiveSuperstarHits,
           billboardHot100WeeklyArchive: newBillboardHot100WeeklyArchive,
@@ -18626,6 +18953,7 @@ Congratulations on your chart success!
         date: newDate,
         artistsData: updatedArtistsData,
         spotifyPlaylists: newSpotifyPlaylists,
+        appleMusicEditorialPlaylists: newAppleMusicPlaylists,
         billboardHot100: newBillboardHot100,
         activeSuperstarHits: finalActiveSuperstarHits,
         billboardHot100WeeklyArchive: newBillboardHot100WeeklyArchive,
@@ -28384,36 +28712,31 @@ ${npcArtistName}`,
     case "BUY_PLAYLIST_ENTRY": {
       if (!state.activeArtistId) return state;
       const activeData = state.artistsData[state.activeArtistId];
-      const { songId, playlistId, position, cost } = action.payload;
+      const { songId, playlistId, position, cost, platform = "spotify" } = action.payload;
 
       if (activeData.money < cost) return state;
 
-      const updatedPlaylists = [
+      let updatedSpotifyPlaylists = [
         ...(state.spotifyPlaylists || DEFAULT_SPOTIFY_PLAYLISTS),
       ];
-      const playlistIndex = updatedPlaylists.findIndex(
-        (p) => p.id === playlistId,
-      );
+      let updatedAppleMusicPlaylists = [
+        ...(state.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS),
+      ];
 
-      if (playlistIndex !== -1) {
-        const playlist = { ...updatedPlaylists[playlistIndex] };
-        const newTracks = [...playlist.tracks];
+      const song = activeData.songs.find((s) => s.id === songId);
+      const artistProfile =
+        state.allPlayerArtists?.find((a) => a.id === state.activeArtistId) ||
+        state.soloArtist ||
+        state.group;
 
-        const existingIndex = newTracks.findIndex((t) => t.songId === songId);
-        if (existingIndex !== -1) {
-          newTracks.splice(existingIndex, 1);
-        }
-
-        const insertIndex = Math.max(
-          0,
-          Math.min(newTracks.length, position - 1),
-        );
-        const song = activeData.songs.find((s) => s.id === songId);
-        const artistProfile =
-          state.allPlayerArtists?.find((a) => a.id === state.activeArtistId) ||
-          state.soloArtist ||
-          state.group;
-        if (song && artistProfile) {
+      if (platform === "appleMusic") {
+        const playlistIndex = updatedAppleMusicPlaylists.findIndex((p) => p.id === playlistId);
+        if (playlistIndex !== -1 && song && artistProfile) {
+          const playlist = { ...updatedAppleMusicPlaylists[playlistIndex] };
+          const newTracks = [...playlist.tracks];
+          const existingIndex = newTracks.findIndex((t) => t.songId === songId);
+          if (existingIndex !== -1) newTracks.splice(existingIndex, 1);
+          const insertIndex = Math.max(0, Math.min(newTracks.length, position - 1));
           newTracks.splice(insertIndex, 0, {
             songId: song.id,
             artistName: artistProfile.name,
@@ -28423,16 +28746,37 @@ ${npcArtistName}`,
             position: insertIndex + 1,
             addedDate: state.date,
           });
+          if (newTracks.length > 50) newTracks.pop();
+          playlist.tracks = newTracks.map((t, i) => ({ ...t, position: i + 1 }));
+          updatedAppleMusicPlaylists[playlistIndex] = playlist;
         }
-
-        if (newTracks.length > 50) newTracks.pop();
-        playlist.tracks = newTracks.map((t, i) => ({ ...t, position: i + 1 }));
-        updatedPlaylists[playlistIndex] = playlist;
+      } else {
+        const playlistIndex = updatedSpotifyPlaylists.findIndex((p) => p.id === playlistId);
+        if (playlistIndex !== -1 && song && artistProfile) {
+          const playlist = { ...updatedSpotifyPlaylists[playlistIndex] };
+          const newTracks = [...playlist.tracks];
+          const existingIndex = newTracks.findIndex((t) => t.songId === songId);
+          if (existingIndex !== -1) newTracks.splice(existingIndex, 1);
+          const insertIndex = Math.max(0, Math.min(newTracks.length, position - 1));
+          newTracks.splice(insertIndex, 0, {
+            songId: song.id,
+            artistName: artistProfile.name,
+            artistId: state.activeArtistId,
+            title: song.title,
+            coverArt: song.coverArt,
+            position: insertIndex + 1,
+            addedDate: state.date,
+          });
+          if (newTracks.length > 50) newTracks.pop();
+          playlist.tracks = newTracks.map((t, i) => ({ ...t, position: i + 1 }));
+          updatedSpotifyPlaylists[playlistIndex] = playlist;
+        }
       }
 
       return {
         ...state,
-        spotifyPlaylists: updatedPlaylists,
+        spotifyPlaylists: updatedSpotifyPlaylists,
+        appleMusicEditorialPlaylists: updatedAppleMusicPlaylists,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: {
@@ -28450,12 +28794,14 @@ ${npcArtistName}`,
                     playlistId,
                     position,
                     weeksRemaining: 4,
+                    platform,
                   };
                 } else {
                   newPurchased.push({
                     playlistId,
                     position,
                     weeksRemaining: 4,
+                    platform,
                   });
                 }
                 return { ...s, purchasedPlaylists: newPurchased };
