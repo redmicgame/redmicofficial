@@ -9957,22 +9957,33 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             });
           }
 
-          // Cap NPC posts to prevent performance degradation, but preserve ALL user posts, replies, and reposts forever
+          // Cap NPC posts to prevent performance degradation, but preserve ALL user posts, replies, and reposts forever in natural order
           const playerUserIds = new Set(
             artistData.xUsers.filter((u) => u.isPlayer).map((u) => u.id)
           );
           if (artistData.selectedPlayerXUserId) {
             playerUserIds.add(artistData.selectedPlayerXUserId);
           }
-          const userPosts = artistData.xPosts.filter(
-            (p) => playerUserIds.has(p.authorId) || (p.repostedBy && playerUserIds.has(p.repostedBy))
-          );
-          const nonUserPosts = artistData.xPosts.filter(
-            (p) => !playerUserIds.has(p.authorId) && (!p.repostedBy || !playerUserIds.has(p.repostedBy))
-          );
-          if (nonUserPosts.length > 250) {
-            artistData.xPosts = [...userPosts, ...nonUserPosts.slice(0, 250)];
+          if (artistId) {
+            playerUserIds.add(artistId);
           }
+          if (state.activeArtistId) {
+            playerUserIds.add(state.activeArtistId);
+          }
+
+          const isPlayerRelatedPost = (p: XPost) => {
+            if (playerUserIds.has(p.authorId)) return true;
+            if (p.repostedBy && playerUserIds.has(p.repostedBy)) return true;
+            if (p.isPinned || p.isHighlight || p.isRepost || p.replyToId || p.replyToPost) return true;
+            return false;
+          };
+
+          let npcPostCount = 0;
+          artistData.xPosts = artistData.xPosts.filter((p) => {
+            if (isPlayerRelatedPost(p)) return true;
+            npcPostCount++;
+            return npcPostCount <= 250;
+          });
 
           // --- REDDIT LOGIC ---
           if (!artistData.redditPosts) artistData.redditPosts = [];
@@ -14664,15 +14675,21 @@ It is now available on your Spotify profile.
           if (d.selectedPlayerXUserId) {
             playerUserIds.add(d.selectedPlayerXUserId);
           }
-          const userPosts = d.xPosts.filter(
-            (p) => playerUserIds.has(p.authorId) || (p.repostedBy && playerUserIds.has(p.repostedBy))
-          );
-          const nonUserPosts = d.xPosts.filter(
-            (p) => !playerUserIds.has(p.authorId) && (!p.repostedBy || !playerUserIds.has(p.repostedBy))
-          );
-          if (nonUserPosts.length > 250) {
-            d.xPosts = [...userPosts, ...nonUserPosts.slice(0, 250)];
+          if (state.activeArtistId) {
+            playerUserIds.add(state.activeArtistId);
           }
+          const isPlayerRelatedPost = (p: XPost) => {
+            if (playerUserIds.has(p.authorId)) return true;
+            if (p.repostedBy && playerUserIds.has(p.repostedBy)) return true;
+            if (p.isPinned || p.isHighlight || p.isRepost || p.replyToId || p.replyToPost) return true;
+            return false;
+          };
+          let npcPostCount = 0;
+          d.xPosts = d.xPosts.filter((p) => {
+            if (isPlayerRelatedPost(p)) return true;
+            npcPostCount++;
+            return npcPostCount <= 250;
+          });
         });
       }
 
@@ -32857,14 +32874,13 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
 
       if (finalNewPosts.length !== newPosts.length || publicImageVal <= 40) {
         // Reconstruct xPosts with modified `finalNewPosts`
-        // Wait, finalNewPosts contains our new popcrave tweets AND modified existing new tweets.
-        // We need to replace the new tweets that are already in `data.xPosts` with the ones in `finalNewPosts`
-
-        const olderOldPosts = data.xPosts.slice(newPosts.length); // The ones that were already there
+        // We replace new posts with finalNewPosts and preserve all existing posts (all player posts, replies, reposts, etc.)
+        const newPostIds = new Set(newPosts.map((p) => p.id));
+        const existingPosts = data.xPosts.filter((p) => !newPostIds.has(p.id));
 
         newArtistsData[artistId] = {
           ...data,
-          xPosts: [...finalNewPosts, ...olderOldPosts],
+          xPosts: [...finalNewPosts, ...existingPosts],
         };
         modified = true;
       }

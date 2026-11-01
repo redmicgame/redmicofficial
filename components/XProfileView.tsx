@@ -83,39 +83,53 @@ const XProfileView: React.FC = () => {
 
     const user = xUsers.find(u => u.id === selectedXUserId);
     const playerUser = selectedPlayerXUserId ? xUsers.find(u => u.id === selectedPlayerXUserId) : xUsers.find(u => u.isPlayer);
+    const isPlayerProfile = Boolean(user?.isPlayer || (playerUser && user?.id === playerUser.id));
+
+    const targetUserIds = React.useMemo(() => {
+        const ids = new Set<string>();
+        if (selectedXUserId) ids.add(selectedXUserId);
+        if (user?.id) ids.add(user.id);
+        if (isPlayerProfile) {
+            if (playerUser?.id) ids.add(playerUser.id);
+            if (selectedPlayerXUserId) ids.add(selectedPlayerXUserId);
+            if (gameState.activeArtistId) ids.add(gameState.activeArtistId);
+            xUsers.filter(u => u.isPlayer).forEach(u => ids.add(u.id));
+        }
+        return ids;
+    }, [selectedXUserId, user, playerUser, isPlayerProfile, selectedPlayerXUserId, gameState.activeArtistId, xUsers]);
 
     // All authored posts by user (excluding reposts and replies)
     const userAuthoredPosts = React.useMemo(() => {
-        return xPosts.filter(p => p.authorId === selectedXUserId && !p.isRepost && !p.replyToId && !p.replyToPost);
-    }, [xPosts, selectedXUserId]);
+        return xPosts.filter(p => targetUserIds.has(p.authorId) && !p.isRepost && !p.replyToId && !p.replyToPost);
+    }, [xPosts, targetUserIds]);
 
     // All reply posts by user
     const userReplies = React.useMemo(() => {
-        return xPosts.filter(p => p.authorId === selectedXUserId && (p.replyToId || p.replyToPost));
-    }, [xPosts, selectedXUserId]);
+        return xPosts.filter(p => targetUserIds.has(p.authorId) && (p.replyToId || p.replyToPost));
+    }, [xPosts, targetUserIds]);
 
     // All reposts by user
     const userReposts = React.useMemo(() => {
-        return xPosts.filter(p => p.isRepost && p.repostedBy === selectedXUserId);
-    }, [xPosts, selectedXUserId]);
+        return xPosts.filter(p => p.isRepost && ((p.repostedBy && targetUserIds.has(p.repostedBy)) || targetUserIds.has(p.authorId)));
+    }, [xPosts, targetUserIds]);
 
     // All videos/gifs posted by user
     const userVideos = React.useMemo(() => {
         return xPosts.filter(p => 
-            p.authorId === selectedXUserId && 
+            targetUserIds.has(p.authorId) && 
             (p.video || p.content.toLowerCase().includes('.gif') || p.image?.includes('.gif'))
         );
-    }, [xPosts, selectedXUserId]);
+    }, [xPosts, targetUserIds]);
 
     // All photos posted by user
     const userPhotos = React.useMemo(() => {
         return xPosts.filter(p => 
-            p.authorId === selectedXUserId && 
+            targetUserIds.has(p.authorId) && 
             ((p.image && !p.image.startsWith('chart:') && !p.image.startsWith('snapshot:') && !p.image.startsWith('fyc:') && !p.image.includes('.gif')) ||
              (p.images && p.images.length > 0) ||
              p.image2)
         );
-    }, [xPosts, selectedXUserId]);
+    }, [xPosts, targetUserIds]);
 
     // Total post count across all user items (no 20 limit!)
     const totalUserPostsCount = userAuthoredPosts.length + userReplies.length + userReposts.length;
