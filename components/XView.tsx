@@ -275,6 +275,8 @@ export const Post: React.FC<{
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commentImage, setCommentImage] = useState<string | null>(null);
+  const [showPostMenu, setShowPostMenu] = useState(false);
+  const [showRepostMenu, setShowRepostMenu] = useState(false);
 
   if (!author) return null;
 
@@ -551,38 +553,112 @@ export const Post: React.FC<{
     return null;
   }, [post.content, post.image, post.image2, isTmzPost, activeArtistData, activeArtist]);
 
+  const playerUser = activeArtistData?.selectedPlayerXUserId
+    ? activeArtistData.xUsers.find((u) => u.id === activeArtistData.selectedPlayerXUserId)
+    : activeArtistData?.xUsers.find((u) => u.isPlayer);
+  const isPlayerPost = playerUser ? post.authorId === playerUser.id : false;
+  const isRepostedByPlayer = activeArtistData?.xPosts.some(
+    (p) => p.isRepost && p.repostedBy === playerUser?.id && (p.originalPost?.id === post.id || p.id === post.id)
+  );
+
   return (
-    <div className="flex gap-3 p-3 border-b border-zinc-700/70">
-      <button onClick={handleViewProfile}>
-        <img
-          src={author.avatar}
-          alt={author.name}
-          className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
-        />
-      </button>
-      <div className="w-full min-w-0">
-        {" "}
-        {/* min-w-0 ensures flex child shrinks properly */}
-        <div className="flex items-center gap-1 text-sm">
-          <button
-            onClick={handleViewProfile}
-            className="font-bold hover:underline cursor-pointer truncate"
-          >
-            {author.name}
-          </button>
-          <UserVerifiedBadge
-            isVerified={author.isVerified}
-            className="w-4 h-4 flex-shrink-0"
-          />
-          <span className="text-zinc-500 truncate">@{author.username}</span>
-          <span className="text-zinc-500 flex-shrink-0">·</span>
-          <span className="text-zinc-500 hover:underline cursor-pointer flex-shrink-0">
-            {timeAgo(post.date)}
-          </span>
+    <div className="border-b border-zinc-700/70 relative">
+      {post.isRepost && (
+        <div className="flex items-center gap-2 text-zinc-500 text-xs font-bold pl-12 pt-2.5 pb-0.5">
+          <RetweetIcon className="w-3.5 h-3.5 text-zinc-500" />
+          <span>{post.repostedBy ? resolveUser(post.repostedBy, activeArtistData?.xUsers || [], gameState, activeArtist).name : "You"} reposted</span>
         </div>
-        <p className="text-white whitespace-pre-wrap break-words">
-          {renderContentWithHighlights(post.content)}
-        </p>
+      )}
+      {post.isPinned && (
+        <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-bold pl-12 pt-2.5 pb-0.5">
+          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          <span>Pinned</span>
+        </div>
+      )}
+      <div className="flex gap-3 p-3 pt-2">
+        <button onClick={handleViewProfile}>
+          <img
+            src={author.avatar}
+            alt={author.name}
+            className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
+          />
+        </button>
+        <div className="w-full min-w-0">
+          {" "}
+          {/* min-w-0 ensures flex child shrinks properly */}
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-1 min-w-0 truncate">
+              <button
+                onClick={handleViewProfile}
+                className="font-bold hover:underline cursor-pointer truncate"
+              >
+                {author.name}
+              </button>
+              <UserVerifiedBadge
+                isVerified={author.isVerified}
+                className="w-4 h-4 flex-shrink-0"
+              />
+              <span className="text-zinc-500 truncate">@{author.username}</span>
+              <span className="text-zinc-500 flex-shrink-0">·</span>
+              <span className="text-zinc-500 hover:underline cursor-pointer flex-shrink-0">
+                {timeAgo(post.date)}
+              </span>
+            </div>
+            {isPlayerPost && (
+              <div className="relative flex-shrink-0 ml-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPostMenu(!showPostMenu);
+                  }}
+                  className="text-zinc-500 hover:text-white p-1 rounded-full hover:bg-zinc-800 transition-colors"
+                  title="More"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+                {showPostMenu && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 top-6 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl py-1 z-40 text-sm font-medium"
+                  >
+                    <button
+                      onClick={() => {
+                        dispatch({ type: post.isPinned ? "UNPIN_X_POST" : "PIN_X_POST", payload: { postId: post.id } });
+                        setShowPostMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                    >
+                      <svg className="w-4 h-4 fill-current text-zinc-400" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                      <span>{post.isPinned ? "Unpin from profile" : "Pin to your profile"}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        dispatch({ type: "TOGGLE_HIGHLIGHT_X_POST", payload: { postId: post.id } });
+                        setShowPostMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                    >
+                      <span className="text-zinc-400">✨</span>
+                      <span>{post.isHighlight ? "Remove from Highlights" : "Add to Highlights"}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        dispatch({ type: "DELETE_X_POST", payload: { postId: post.id } });
+                        setShowPostMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-red-500 border-t border-zinc-800/80"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      <span>Delete post</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-white whitespace-pre-wrap break-words mt-1">
+            {renderContentWithHighlights(post.content)}
+          </p>
 
         {post.spotifySnapshotAlbums && post.spotifySnapshotAlbums.length > 0 && (
           <div className="bg-[#9bb2b9] rounded-xl overflow-hidden mt-3 shadow-md border border-white/10 text-white font-sans flex flex-col sm:flex-row">
@@ -738,14 +814,19 @@ export const Post: React.FC<{
             </div>
           </div>
         ) : post.video ? (
-          <video
-            src={post.video}
-            className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto w-full object-cover"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
+          <div className="relative mt-2 rounded-xl overflow-hidden border border-zinc-700 bg-black max-w-full">
+            <video
+              src={post.video}
+              className="w-full h-auto max-h-[450px] object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+            <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow">
+              <span>{post.videoDuration || "0:33"}</span>
+            </div>
+          </div>
         ) : !isTmzPost && partnerOrChildDualImage ? (
           <div className="mt-2 flex border border-zinc-700 rounded-xl overflow-hidden max-w-full h-auto aspect-[2/1] bg-zinc-900">
             <img
@@ -917,21 +998,44 @@ export const Post: React.FC<{
               {post.comments?.length || Math.floor(post.likes * 0.05 + 1)}
             </span>
           </div>
-          <div className="flex items-center gap-1 group">
+          <div className="relative flex items-center gap-1 group">
             <button
               disabled={isSuspended}
-              onClick={() => onQuote && onQuote(post)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                onQuoteHold && onQuoteHold(post);
-              }}
-              className="p-1.5 group-hover:bg-green-500/10 rounded-full disabled:cursor-not-allowed"
+              onClick={() => setShowRepostMenu(!showRepostMenu)}
+              className={`p-1.5 group-hover:bg-green-500/10 rounded-full disabled:cursor-not-allowed ${isRepostedByPlayer ? "text-green-500" : ""}`}
             >
               <RetweetIcon className="w-5 h-5 group-hover:text-green-500" />
             </button>
-            <span className="text-xs group-hover:text-green-500">
+            <span className={`text-xs group-hover:text-green-500 ${isRepostedByPlayer ? "text-green-500 font-semibold" : ""}`}>
               {formatNumber(post.retweets)}
             </span>
+            {showRepostMenu && (
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="absolute left-0 bottom-8 w-44 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl py-1 z-40 text-sm font-semibold"
+              >
+                <button
+                  onClick={() => {
+                    dispatch({ type: "REPOST_X_POST", payload: { postId: post.id } });
+                    setShowRepostMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                >
+                  <RetweetIcon className="w-4 h-4 text-green-500" />
+                  <span>{isRepostedByPlayer ? "Undo repost" : "Repost"}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRepostMenu(false);
+                    onQuote && onQuote(post);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                >
+                  <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  <span>Quote</span>
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1 group">
             <button
@@ -1084,6 +1188,7 @@ export const Post: React.FC<{
         )}
       </div>
     </div>
+  </div>
   );
 };
 

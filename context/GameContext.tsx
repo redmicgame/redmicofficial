@@ -25,6 +25,7 @@ import type {
   Release,
   XUser,
   XPost,
+  XComment,
   XTrend,
   XChat,
   CustomLabel,
@@ -9956,9 +9957,21 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             });
           }
 
-          // Cap the number of posts to prevent performance degradation over time
-          if (artistData.xPosts.length > 250) {
-            artistData.xPosts = artistData.xPosts.slice(0, 250);
+          // Cap NPC posts to prevent performance degradation, but preserve ALL user posts, replies, and reposts forever
+          const playerUserIds = new Set(
+            artistData.xUsers.filter((u) => u.isPlayer).map((u) => u.id)
+          );
+          if (artistData.selectedPlayerXUserId) {
+            playerUserIds.add(artistData.selectedPlayerXUserId);
+          }
+          const userPosts = artistData.xPosts.filter(
+            (p) => playerUserIds.has(p.authorId) || (p.repostedBy && playerUserIds.has(p.repostedBy))
+          );
+          const nonUserPosts = artistData.xPosts.filter(
+            (p) => !playerUserIds.has(p.authorId) && (!p.repostedBy || !playerUserIds.has(p.repostedBy))
+          );
+          if (nonUserPosts.length > 250) {
+            artistData.xPosts = [...userPosts, ...nonUserPosts.slice(0, 250)];
           }
 
           // --- REDDIT LOGIC ---
@@ -14645,8 +14658,20 @@ It is now available on your Spotify profile.
       if (npcPopBasePosts.length > 0) {
         Object.values(updatedArtistsData).forEach((d) => {
           d.xPosts.unshift(...npcPopBasePosts);
-          if (d.xPosts.length > 250) {
-            d.xPosts = d.xPosts.slice(0, 250);
+          const playerUserIds = new Set(
+            d.xUsers.filter((u) => u.isPlayer).map((u) => u.id)
+          );
+          if (d.selectedPlayerXUserId) {
+            playerUserIds.add(d.selectedPlayerXUserId);
+          }
+          const userPosts = d.xPosts.filter(
+            (p) => playerUserIds.has(p.authorId) || (p.repostedBy && playerUserIds.has(p.repostedBy))
+          );
+          const nonUserPosts = d.xPosts.filter(
+            (p) => !playerUserIds.has(p.authorId) && (!p.repostedBy || !playerUserIds.has(p.repostedBy))
+          );
+          if (nonUserPosts.length > 250) {
+            d.xPosts = [...userPosts, ...nonUserPosts.slice(0, 250)];
           }
         });
       }
@@ -22870,6 +22895,8 @@ We saw your recent endorsement and would love for you to perform at our upcoming
       const activeData = state.artistsData[state.activeArtistId];
       const { postId, content, image, authorId } = action.payload;
 
+      const targetPost = activeData.xPosts.find((p) => p.id === postId);
+
       const newComment: XComment = {
         id: crypto.randomUUID(),
         authorId,
@@ -22879,7 +22906,20 @@ We saw your recent endorsement and would love for you to perform at our upcoming
         likes: 0,
       };
 
-      const updatedPosts = activeData.xPosts.map((post) => {
+      const replyPost: XPost = {
+        id: `reply_${newComment.id}`,
+        authorId,
+        content,
+        image,
+        date: state.date,
+        likes: 0,
+        retweets: 0,
+        views: Math.floor(Math.random() * 500) + 50,
+        replyToId: postId,
+        replyToPost: targetPost,
+      };
+
+      let updatedPosts = activeData.xPosts.map((post) => {
         if (post.id === postId) {
           return {
             ...post,
@@ -22889,6 +22929,148 @@ We saw your recent endorsement and would love for you to perform at our upcoming
         return post;
       });
 
+      // Add player's reply post so it exists permanently in the user's tweets and replies
+      updatedPosts = [replyPost, ...updatedPosts];
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            xPosts: updatedPosts,
+          },
+        },
+      };
+    }
+    case "PIN_X_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { postId } = action.payload;
+      const targetPost = activeData.xPosts.find((p) => p.id === postId);
+      const isAlreadyPinned = !!targetPost?.isPinned;
+
+      const updatedPosts = activeData.xPosts.map((p) => {
+        if (p.id === postId) {
+          return { ...p, isPinned: !isAlreadyPinned };
+        }
+        // Only one pinned post at a time
+        return { ...p, isPinned: false };
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            xPosts: updatedPosts,
+          },
+        },
+      };
+    }
+    case "UNPIN_X_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { postId } = action.payload;
+      const updatedPosts = activeData.xPosts.map((p) =>
+        p.id === postId ? { ...p, isPinned: false } : p
+      );
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            xPosts: updatedPosts,
+          },
+        },
+      };
+    }
+    case "TOGGLE_HIGHLIGHT_X_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { postId } = action.payload;
+      const updatedPosts = activeData.xPosts.map((p) =>
+        p.id === postId ? { ...p, isHighlight: !p.isHighlight } : p
+      );
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            xPosts: updatedPosts,
+          },
+        },
+      };
+    }
+    case "REPOST_X_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { postId } = action.payload;
+      const playerUser = activeData.selectedPlayerXUserId
+        ? activeData.xUsers.find((u) => u.id === activeData.selectedPlayerXUserId)
+        : activeData.xUsers.find((u) => u.isPlayer);
+      if (!playerUser) return state;
+
+      const targetPost = activeData.xPosts.find((p) => p.id === postId);
+      if (!targetPost) return state;
+
+      // Check if player already reposted this post
+      const existingRepostIndex = activeData.xPosts.findIndex(
+        (p) => p.isRepost && p.repostedBy === playerUser.id && (p.originalPost?.id === postId || p.id === postId)
+      );
+
+      let updatedPosts = [...activeData.xPosts];
+      if (existingRepostIndex >= 0) {
+        // Undo repost
+        updatedPosts.splice(existingRepostIndex, 1);
+        updatedPosts = updatedPosts.map((p) =>
+          p.id === postId ? { ...p, retweets: Math.max(0, (p.retweets || 0) - 1) } : p
+        );
+      } else {
+        // Create direct repost without quote
+        const repostPost: XPost = {
+          id: `repost_${crypto.randomUUID()}`,
+          authorId: targetPost.authorId,
+          content: targetPost.content,
+          image: targetPost.image,
+          image2: targetPost.image2,
+          image3: targetPost.image3,
+          image4: targetPost.image4,
+          images: targetPost.images,
+          video: targetPost.video,
+          date: state.date,
+          likes: targetPost.likes,
+          retweets: (targetPost.retweets || 0) + 1,
+          views: targetPost.views,
+          isRepost: true,
+          repostedBy: playerUser.id,
+          originalPost: targetPost,
+        };
+        updatedPosts = updatedPosts.map((p) =>
+          p.id === postId ? { ...p, retweets: (p.retweets || 0) + 1 } : p
+        );
+        updatedPosts.unshift(repostPost);
+      }
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            xPosts: updatedPosts,
+          },
+        },
+      };
+    }
+    case "DELETE_X_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { postId } = action.payload;
+      const updatedPosts = activeData.xPosts.filter((p) => p.id !== postId);
       return {
         ...state,
         artistsData: {

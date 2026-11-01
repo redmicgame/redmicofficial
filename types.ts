@@ -1276,6 +1276,15 @@ export interface XPost {
   };
   billionsClubSongTitle?: string;
   spotifySnapshotAlbums?: { rank: number; title: string; streams: number; dailyStreams?: number; coverArt: string; move: number | string; percentChange: number }[];
+  isPinned?: boolean;
+  isHighlight?: boolean;
+  isRepost?: boolean;
+  repostedBy?: string;
+  originalPost?: XPost;
+  replyToId?: string;
+  replyToPost?: XPost;
+  videoDuration?: string;
+  videoViews?: number;
 }
 
 export interface XMessage {
@@ -3099,6 +3108,11 @@ export type GameAction =
         authorId: string;
       };
     }
+  | { type: "PIN_X_POST"; payload: { postId: string } }
+  | { type: "UNPIN_X_POST"; payload: { postId: string } }
+  | { type: "TOGGLE_HIGHLIGHT_X_POST"; payload: { postId: string } }
+  | { type: "REPOST_X_POST"; payload: { postId: string } }
+  | { type: "DELETE_X_POST"; payload: { postId: string } }
   | { type: "VIEW_X_PROFILE"; payload: string }
   | {
       type: "CREATE_X_ACCOUNT";
