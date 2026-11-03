@@ -901,6 +901,7 @@ export interface ChartEntry {
   itunesExplicit?: boolean;
   regionalStreams?: Record<string, number>;
   points?: number;
+  genre?: string;
 }
 
 export interface VideoChartEntry {
@@ -2962,6 +2963,10 @@ export type GameAction =
   | {
       type: "DELETE_APPLE_MUSIC_PLAYLIST";
       payload: { playlistId: string };
+    }
+  | {
+      type: "UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER";
+      payload: { playlistId: string; coverArt: string };
     }
   | {
       type: "UPDATE_ITUNES_PRICE";

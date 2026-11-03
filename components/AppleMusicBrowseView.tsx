@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useGame, getAppleMusicStreamRatio, DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS } from '../context/GameContext';
+import { NPC_ARTIST_GENRES, NPC_ERAS } from '../constants';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
@@ -14,11 +15,111 @@ interface AppleMusicBrowseViewProps {
     onExit: () => void;
 }
 
+export function resolveSongGenre(entry: any, npcsList: any[] = [], playerSongs: any[] = []): string {
+    // 1. If player song, look up player song's genre
+    if (entry.isPlayerSong || entry.isPlayer) {
+        const pSong = playerSongs.find(s => s.id === entry.songId || s.id === entry.uniqueId || s.title?.toLowerCase() === entry.title?.toLowerCase());
+        if (pSong?.genre) return pSong.genre;
+    }
+
+    // 2. Direct genre on entry if valid and not empty
+    if (entry.genre && typeof entry.genre === 'string' && entry.genre.trim()) {
+        const gTrim = entry.genre.trim();
+        if (gTrim !== 'Pop') return gTrim;
+    }
+
+    const artistName = (entry.artist || '').trim();
+
+    // 3. Match from gameState.npcs
+    const npcMatch = npcsList.find(n => 
+        (entry.uniqueId && n.uniqueId === entry.uniqueId) || 
+        (n.title && entry.title && n.title.toLowerCase() === entry.title.toLowerCase() && n.artist && artistName && n.artist.toLowerCase() === artistName.toLowerCase())
+    );
+    if (npcMatch?.genre) return npcMatch.genre;
+
+    // 4. Match from NPC_ARTIST_GENRES
+    if (NPC_ARTIST_GENRES[artistName]) {
+        return NPC_ARTIST_GENRES[artistName];
+    }
+    const lowerArtist = artistName.toLowerCase();
+    for (const [art, g] of Object.entries(NPC_ARTIST_GENRES)) {
+        if (lowerArtist.includes(art.toLowerCase())) {
+            return g;
+        }
+    }
+
+    // 5. Match from NPC_ERAS
+    if (NPC_ERAS[artistName]?.genre) {
+        return NPC_ERAS[artistName].genre;
+    }
+
+    // 6. Radio formats
+    if (entry.radioFormat) {
+        const rf = entry.radioFormat.toLowerCase();
+        if (rf.includes('country')) return 'Country';
+        if (rf.includes('urban') || rf.includes('rhythmic')) return 'Hip Hop';
+        if (rf.includes('alt_rock') || rf.includes('active_rock') || rf.includes('rock')) return 'Rock';
+        if (rf.includes('latin')) return 'Latin';
+        if (rf.includes('urban_ac') || rf.includes('r&b')) return 'R&B';
+        if (rf.includes('dance')) return 'Electronic';
+        if (rf.includes('aaa')) return 'Alternative/Indie';
+    }
+
+    if (entry.genre === 'Pop') return 'Pop';
+
+    // 7. Deterministic hash fallback
+    const str = `${entry.title || ''}_${artistName}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    const standardGenres = ['Pop', 'Hip Hop', 'R&B', 'Country', 'Electronic', 'Latin', 'Rock', 'Alternative/Indie'];
+    return standardGenres[Math.abs(hash) % standardGenres.length];
+}
+
+export function songMatchesGenre(songGenre: string = '', targetGenre: string): boolean {
+    const g = songGenre.toLowerCase().trim();
+    const target = targetGenre.toLowerCase().trim();
+    if (target === 'all genres' || !target) return true;
+
+    if (target === 'pop') {
+        if (g.includes('hip hop') || g.includes('rap') || g.includes('country') || g.includes('metal') || g.includes('latin') || g.includes('r&b')) {
+            return g.includes('pop');
+        }
+        return g.includes('pop') || g === 'chr' || g === 'mainstream';
+    }
+    if (target === 'hip-hop/r&b') {
+        return g.includes('hip hop') || g.includes('hip-hop') || g.includes('rap') || g.includes('r&b') || g.includes('trap') || g.includes('urban');
+    }
+    if (target === 'electronic') {
+        return g.includes('electronic') || g.includes('dance') || g.includes('edm') || g.includes('house') || g.includes('techno') || g.includes('club') || g.includes('synth');
+    }
+    if (target === 'country') {
+        return g.includes('country') || g.includes('bluegrass') || g.includes('americana');
+    }
+    if (target === 'r&b') {
+        return g.includes('r&b') || g.includes('soul') || g.includes('neo-soul') || g.includes('motown');
+    }
+    if (target === 'latin') {
+        return g.includes('latin') || g.includes('reggaeton') || g.includes('urbano') || g.includes('salsa') || g.includes('bachata') || g.includes('corridos') || g.includes('música mexicana');
+    }
+    if (target === 'rock') {
+        return g.includes('rock') || g.includes('metal') || g.includes('punk') || g.includes('grunge') || g.includes('hard rock');
+    }
+    if (target === 'alternative/indie') {
+        return g.includes('indie') || g.includes('alternative') || g.includes('alt') || g.includes('shoegaze') || g.includes('bedroom pop') || g.includes('folk');
+    }
+    return g.includes(target);
+}
+
 const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView, setBrowseView, selectedPlaylist, setSelectedPlaylist, onExit }) => {
-    const { gameState, activeArtistData } = useGame();
+    const { gameState, activeArtist, activeArtistData } = useGame();
 
     const [selectedGenre, setSelectedGenre] = useState<string>('All Genres');
     const [showGenreMenu, setShowGenreMenu] = useState(false);
+
+    const currentArtistName = activeArtist?.name || (activeArtistData as any)?.artistName || 'Artist';
 
     // Editorial Apple Music playlists (14 total, including 10 new ones)
     const editorialPlaylists = useMemo(() => {
@@ -36,10 +137,16 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                 const uniqueId = s.id;
                 seenIds.add(uniqueId);
                 const amStreams = s.appleMusicLastWeekStreams ?? Math.floor((s.lastWeekStreams || s.streams || 1000) * getAppleMusicStreamRatio(s.id));
+                const displayArtist = s.collaboration
+                    ? `${currentArtistName} & ${s.collaboration.artistName}`
+                    : (s.features && s.features.length > 0)
+                        ? `${currentArtistName} (feat. ${s.features.join(', ')})`
+                        : currentArtistName;
+
                 pool.push({
                     uniqueId,
                     title: s.title,
-                    artist: activeArtistData.artistName || 'You',
+                    artist: displayArtist,
                     coverArt: s.coverArt,
                     genre: s.genre || 'Pop',
                     amStreams,
@@ -62,41 +169,38 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                 seenIds.add(uid);
                 const baseStreams = entry.weeklyStreams || (entry.dailyStreams ? entry.dailyStreams * 7 : 0) || (entry.points ? entry.points * 120 : 500000);
                 const amStreams = Math.floor(baseStreams * getAppleMusicStreamRatio(uid));
+                
+                const isPlayerSong = entry.isPlayerSong ?? false;
+                let artistDisplay = entry.artist;
+                if (isPlayerSong || artistDisplay === 'You' || artistDisplay?.toLowerCase() === 'you') {
+                    artistDisplay = currentArtistName;
+                }
+
+                const songGenre = resolveSongGenre(entry, gameState.npcs || [], activeArtistData?.songs || []);
+
                 pool.push({
                     uniqueId: uid,
                     title: entry.title,
-                    artist: entry.artist,
+                    artist: artistDisplay,
                     coverArt: entry.coverArt,
-                    genre: entry.genre || (entry.radioFormat ? entry.radioFormat.toUpperCase() : 'Pop'),
+                    genre: songGenre,
                     amStreams,
                     weeksOnChart: entry.weeksOnChart || 1,
                     explicit: entry.explicit ?? false,
-                    isPlayer: entry.isPlayerSong ?? false,
+                    isPlayer: isPlayerSong,
                 });
             }
         });
 
         return pool;
-    }, [activeArtistData, gameState.billboardHot100, gameState.spotifyGlobal]);
+    }, [activeArtistData, gameState.billboardHot100, gameState.spotifyGlobal, gameState.npcs, currentArtistName]);
 
-    // Apple Music Top Songs and Genre charts depend strictly on Apple Music streams!
+    // Apple Music Top Songs and Genre charts depend strictly on Apple Music streams and are separated by genre!
     const topSongs = useMemo(() => {
         let filtered = allSongContenders;
 
         if (selectedGenre !== 'All Genres') {
-            const target = selectedGenre.toLowerCase();
-            filtered = allSongContenders.filter(s => {
-                const g = (s.genre || '').toLowerCase();
-                if (target === 'pop') return g.includes('pop');
-                if (target === 'hip-hop/r&b') return g.includes('hip hop') || g.includes('rap') || g.includes('r&b');
-                if (target === 'country') return g.includes('country');
-                if (target === 'electronic') return g.includes('electronic') || g.includes('dance') || g.includes('edm') || g.includes('house');
-                if (target === 'r&b') return g.includes('r&b');
-                if (target === 'latin') return g.includes('latin') || g.includes('reggaeton');
-                if (target === 'rock') return g.includes('rock') || g.includes('metal') || g.includes('punk');
-                if (target === 'alternative/indie') return g.includes('indie') || g.includes('alternative');
-                return true;
-            });
+            filtered = allSongContenders.filter(s => songMatchesGenre(s.genre, selectedGenre));
         }
 
         return [...filtered].sort((a, b) => b.amStreams - a.amStreams).slice(0, 100);
@@ -104,12 +208,14 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
 
     const topAlbums = useMemo(() => {
         const sorted = [...(gameState.billboardTopAlbums || [])].map((album) => {
+            const isPlayerAlbum = album.isPlayerAlbum || album.artist === 'You' || album.artist?.toLowerCase() === 'you';
+            const artist = isPlayerAlbum ? currentArtistName : album.artist;
             const amActivity = Math.floor((album.weeklyActivity || 1000) * getAppleMusicStreamRatio(album.uniqueId || album.title));
-            return { ...album, amActivity };
+            return { ...album, artist, amActivity };
         }).sort((a, b) => b.amActivity - a.amActivity);
         
         return sorted.slice(0, 100);
-    }, [gameState.billboardTopAlbums]);
+    }, [gameState.billboardTopAlbums, currentArtistName]);
 
     // Best new songs: newly debuted with fewest weeks on chart
     const bestNewSongs = useMemo(() => {
@@ -121,7 +227,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
         const playerUpcoming = activeArtistData?.labelSubmissions.filter(s => s.hasCountdownPage && s.status === 'scheduled' && s.release.type !== 'Single').map(s => ({
             id: s.release.id,
             title: s.release.title,
-            artist: activeArtistData.artistName || 'Unknown',
+            artist: currentArtistName,
             coverArt: s.release.coverArt,
             isPlayer: true
         })) || [];
@@ -135,7 +241,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
         }));
 
         return [...playerUpcoming, ...topNpc];
-    }, [activeArtistData, topAlbums]);
+    }, [activeArtistData, topAlbums, currentArtistName]);
 
     if (browseView === 'topPlaylists') {
         return (
@@ -299,15 +405,14 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
         if (!playlistTracks || playlistTracks.length === 0) {
             let matched = allSongContenders;
             if (playlist.type === 'genre' && playlist.genre) {
-                const target = playlist.genre.toLowerCase();
-                matched = allSongContenders.filter(s => (s.genre || '').toLowerCase().includes(target));
+                matched = allSongContenders.filter(s => songMatchesGenre(s.genre, playlist.genre || ''));
             }
             if (playlist.id === 'top-100-usa') {
                 matched = allSongContenders;
             }
             playlistTracks = [...matched].sort((a, b) => b.amStreams - a.amStreams).slice(0, playlist.id.startsWith('top-100') ? 100 : 50).map((s, i) => ({
                 songId: s.uniqueId,
-                artistName: s.artist,
+                artistName: s.isPlayer || s.artist === 'You' ? currentArtistName : s.artist,
                 artistId: 'unknown',
                 title: s.title,
                 coverArt: s.coverArt,
@@ -373,7 +478,7 @@ const AppleMusicBrowseView: React.FC<AppleMusicBrowseViewProps> = ({ browseView,
                                         <span className="text-[10px] w-4 h-4 bg-zinc-700 text-zinc-400 font-bold rounded flex items-center justify-center flex-shrink-0">E</span>
                                     )}
                                 </div>
-                                <p className="text-sm text-zinc-400 truncate">{song.artistName}</p>
+                                <p className="text-sm text-zinc-400 truncate">{song.artistName === 'You' ? currentArtistName : song.artistName}</p>
                             </div>
                             <button className="flex-shrink-0"><DotsHorizontalIcon className="w-5 h-5 text-zinc-500" /></button>
                         </div>

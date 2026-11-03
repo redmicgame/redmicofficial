@@ -12325,6 +12325,7 @@ It is now available on your Spotify profile.
           radioPlays: song.radioPlays,
           radioImpressions: song.radioImpressions,
           points: Math.round(song.hot100Points || 0),
+          genre: (song as any).genre,
         });
       });
 
@@ -12496,6 +12497,7 @@ It is now available on your Spotify profile.
               uniqueId: song.uniqueId,
               weeklyStreams: actualStreams,
               regionalStreams: song.regionalStreams,
+              genre: (song as any).genre,
             });
           });
           return chart;
@@ -20621,6 +20623,19 @@ The Tonight Show Team`;
             appleMusicPlaylists: existingPlaylists.filter((p) => p.id !== action.payload.playlistId),
           },
         },
+      };
+    }
+    case "UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER": {
+      const { playlistId, coverArt } = action.payload;
+      const currentList = state.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS;
+      return {
+        ...state,
+        appleMusicEditorialPlaylists: currentList.map((p) => {
+          if (p.id === playlistId) {
+            return { ...p, coverArt };
+          }
+          return p;
+        }),
       };
     }
     case "TAKE_DOWN_RELEASE": {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { useGame, getAppleMusicStreamRatio } from '../context/GameContext';
+import { useGame, getAppleMusicStreamRatio, DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS } from '../context/GameContext';
 import { LABELS, getArtistImage } from '../constants';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import StarIcon from './icons/StarIcon';
@@ -19,7 +19,7 @@ const formatDateApple = (gameDate: GameDate) => {
 };
 
 const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => void; onSelectRelease: (id: string) => void }> = ({ releaseId, onBack, onSelectRelease }) => {
-    const { activeArtist, activeArtistData } = useGame();
+    const { activeArtist, activeArtistData, gameState } = useGame();
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [showMotionVideo, setShowMotionVideo] = useState(true);
@@ -46,6 +46,31 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
         const songIds = new Set(release.songIds);
         return videos.filter(v => songIds.has(v.songId));
     }, [release, videos]);
+
+    const moreByArtist = useMemo(() => {
+        if (!activeArtist || !release) return [];
+        const otherReleases = releases.filter(r => r.id !== release.id && !r.isTakenDown);
+        const albumsAndEPs = otherReleases.filter(r => r.type === 'Album' || r.type === 'Album (Deluxe)' || r.type === 'EP' || r.type === 'Compilation' || r.type === 'Live Album');
+        if (albumsAndEPs.length > 0) {
+            return albumsAndEPs.sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+        }
+        return otherReleases.sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+    }, [activeArtist, release, releases]);
+
+    const featuredOnPlaylists = useMemo(() => {
+        if (!activeArtist || !activeArtistData) return [];
+        const userSongIds = new Set(activeArtistData.songs.map(s => s.id));
+        const userArtistName = activeArtist.name.toLowerCase();
+        const editorial = gameState.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS;
+        return editorial.filter(pl => 
+            pl.tracks.some(t => 
+                userSongIds.has(t.songId) || 
+                t.artistId === activeArtist.id ||
+                (t.artist && t.artist.toLowerCase() === userArtistName) ||
+                (t.artistName && t.artistName.toLowerCase() === userArtistName)
+            )
+        );
+    }, [activeArtist, activeArtistData, gameState.appleMusicEditorialPlaylists]);
 
     if (!release || !activeArtist) {
         return (
@@ -317,6 +342,28 @@ const AppleMusicReleaseDetailView: React.FC<{ releaseId: string; onBack: () => v
                     
                     {otherVersions.length > 0 && <HorizontalSection title="Other Versions" items={otherVersions} onSelect={onSelectRelease} />}
                     {relatedVideos.length > 0 && <HorizontalSection title="Music Videos" items={relatedVideos} onSelect={() => {}} artistName={activeArtist.name} />}
+                    {moreByArtist.length > 0 && <HorizontalSection title={`More By ${activeArtist.name}`} items={moreByArtist} onSelect={onSelectRelease} />}
+                    {featuredOnPlaylists.length > 0 && (
+                        <section>
+                            <div className="flex justify-between items-center mb-3">
+                                <h2 className="text-2xl font-bold flex items-center gap-1">
+                                    <span>Featured On</span>
+                                    <ChevronRightIcon className="w-5 h-5 text-zinc-400 inline" />
+                                </h2>
+                            </div>
+                            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                {featuredOnPlaylists.map(pl => (
+                                    <div key={pl.id} className="w-36 sm:w-40 flex-shrink-0 text-left group">
+                                        <div className="relative overflow-hidden rounded-xl">
+                                            <img src={pl.coverArt} className="w-36 h-36 sm:w-40 sm:h-40 rounded-xl object-cover shadow-lg group-hover:scale-105 transition-transform duration-300" alt={pl.name} />
+                                        </div>
+                                        <p className="font-semibold truncate mt-2 text-white text-sm">{pl.name}</p>
+                                        <p className="text-xs text-zinc-400 truncate mt-0.5">Apple Music Editorial</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                 </main>
             </div>

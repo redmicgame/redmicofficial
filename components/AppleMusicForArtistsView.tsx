@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useGame, formatNumber, getFutureDate, getAppleMusicStreamRatio } from '../context/GameContext';
+import { useGame, formatNumber, getFutureDate, getAppleMusicStreamRatio, DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS } from '../context/GameContext';
 import { Song, Release, AppleMusicPlaylist } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -87,6 +87,91 @@ const AppleMusicForArtistsView: React.FC = () => {
     
     const currentEssentialAlbums = albums.filter(a => a.isAppleMusicEssential);
     const playlists = activeArtistData.appleMusicPlaylists || [];
+    const [editorialCoverInputMap, setEditorialCoverInputMap] = useState<Record<string, string>>({});
+
+    const userSongIds = useMemo(() => new Set(activeArtistData.songs.map(s => s.id)), [activeArtistData.songs]);
+    const editorialPlaylists = gameState.appleMusicEditorialPlaylists || DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS;
+
+    const featuredEditorialPlaylists = useMemo(() => {
+        const userArtistName = activeArtist.name.toLowerCase();
+        return editorialPlaylists.map(pl => {
+            const featuredTracks = pl.tracks.filter(t => 
+                userSongIds.has(t.songId) || 
+                t.artistId === activeArtist.id ||
+                (t.artist && t.artist.toLowerCase() === userArtistName) ||
+                (t.artistName && t.artistName.toLowerCase() === userArtistName)
+            );
+            return {
+                ...pl,
+                isFeatured: featuredTracks.length > 0,
+                featuredTracks,
+            };
+        });
+    }, [editorialPlaylists, userSongIds, activeArtist]);
+
+    const handleAutoGenerateEssentials = () => {
+        const released = activeArtistData.songs.filter(s => s.isReleased && !s.remixOfSongId);
+        if (released.length === 0) {
+            alert("You need to release at least one song before creating an Essentials playlist.");
+            return;
+        }
+        // Highest quality tracks sorted descending
+        const sortedByQuality = [...released].sort((a, b) => (b.quality || 0) - (a.quality || 0));
+        const topTracks = sortedByQuality.slice(0, 20);
+
+        dispatch({
+            type: 'CREATE_APPLE_MUSIC_PLAYLIST',
+            payload: {
+                title: `${activeArtist.name}: Essentials`,
+                playlistType: 'playlist',
+                badgeText: 'Essentials',
+                curatorText: 'Apple Music',
+                bannerColor: '#fa243c',
+                songIds: topTracks.map(s => s.id),
+            }
+        });
+        alert(`Created "${activeArtist.name}: Essentials" with your ${topTracks.length} highest quality tracks!`);
+    };
+
+    const handleAutoGeneratePopular = () => {
+        const released = activeArtistData.songs.filter(s => s.isReleased && !s.remixOfSongId);
+        if (released.length === 0) {
+            alert("You need to release at least one song before creating a Popular playlist.");
+            return;
+        }
+        // Most popular tracks sorted by Apple Music streams
+        const sortedByPopularity = [...released].sort((a, b) => getSongAmPlays(b) - getSongAmPlays(a));
+        const topTracks = sortedByPopularity.slice(0, 20);
+
+        dispatch({
+            type: 'CREATE_APPLE_MUSIC_PLAYLIST',
+            payload: {
+                title: `${activeArtist.name}: Popular`,
+                playlistType: 'playlist',
+                badgeText: 'Popular',
+                curatorText: 'Apple Music',
+                bannerColor: '#93c5fd',
+                songIds: topTracks.map(s => s.id),
+            }
+        });
+        alert(`Created "${activeArtist.name}: Popular" with your ${topTracks.length} most streamed tracks!`);
+    };
+
+    const handleEditorialCoverUpload = (playlistId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (typeof event.target?.result === 'string') {
+                    dispatch({
+                        type: 'UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER',
+                        payload: { playlistId, coverArt: event.target.result }
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleBack = () => {
         if (selectedSong) {
@@ -205,7 +290,7 @@ const AppleMusicForArtistsView: React.FC = () => {
             <div className="p-4 sm:p-6 space-y-8 max-w-4xl mx-auto">
                 {/* 1. ARTIST PLAYLISTS & SET LISTS MANAGEMENT */}
                 <div className="bg-zinc-900 text-white p-5 rounded-3xl shadow-lg space-y-6 border border-zinc-800">
-                    <div className="border-b border-zinc-800 pb-3 flex justify-between items-center">
+                    <div className="border-b border-zinc-800 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-xl font-bold">Artist Playlists & Set Lists</h2>
@@ -214,16 +299,34 @@ const AppleMusicForArtistsView: React.FC = () => {
                                 </span>
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">
-                                Curate tour set lists and artist playlists showcased above Similar Artists on your Apple Music profile.
+                                Curate tour set lists, custom playlists, or auto-generate Essentials and Popular track collections.
                             </p>
                         </div>
-                        <button
-                            onClick={() => setEditingPlaylist('new')}
-                            className="bg-[#fa243c] hover:bg-[#d60017] text-white text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-transform active:scale-95 shrink-0"
-                        >
-                            <PlusIcon className="w-4 h-4" />
-                            <span>Create Playlist</span>
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                onClick={handleAutoGenerateEssentials}
+                                className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 shadow-md transition-transform active:scale-95"
+                                title="Auto-fill with your highest quality tracks sorted"
+                            >
+                                <span>✦</span>
+                                <span>Auto-Gen Essentials</span>
+                            </button>
+                            <button
+                                onClick={handleAutoGeneratePopular}
+                                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 shadow-md transition-transform active:scale-95"
+                                title="Auto-fill with your most popular tracks sorted by streams"
+                            >
+                                <span>🔥</span>
+                                <span>Auto-Gen Popular</span>
+                            </button>
+                            <button
+                                onClick={() => setEditingPlaylist('new')}
+                                className="bg-[#fa243c] hover:bg-[#d60017] text-white text-xs font-bold px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-md transition-transform active:scale-95 shrink-0"
+                            >
+                                <PlusIcon className="w-4 h-4" />
+                                <span>Custom</span>
+                            </button>
+                        </div>
                     </div>
 
                     {playlists.length > 0 ? (
@@ -292,7 +395,123 @@ const AppleMusicForArtistsView: React.FC = () => {
                     )}
                 </div>
 
-                {/* 2. PROFILE CUSTOMIZATION (FONTS, STYLES, BG & VIDEO) */}
+                {/* 2. FEATURED ON — EDITORIAL PLAYLIST COVERS */}
+                <div className="bg-zinc-900 text-white p-5 rounded-3xl shadow-lg space-y-6 border border-zinc-800">
+                    <div className="border-b border-zinc-800 pb-3 flex justify-between items-center">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-xl font-bold">Featured On — Playlist Covers</h2>
+                                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                    Editorial
+                                </span>
+                            </div>
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                                Customize the official cover art for Apple Music editorial playlists you are featured on. (You must have a charting or featured song on the playlist to edit its cover).
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {featuredEditorialPlaylists.map(item => (
+                            <div 
+                                key={item.id} 
+                                className={`p-4 rounded-2xl border transition-all ${
+                                    item.isFeatured 
+                                        ? 'bg-zinc-950 border-emerald-500/40 shadow-emerald-950/20 shadow-lg' 
+                                        : 'bg-zinc-950/60 border-zinc-800/80 opacity-75'
+                                }`}
+                            >
+                                <div className="flex gap-4">
+                                    <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-zinc-800 shadow-md">
+                                        <img src={item.coverArt} alt={item.name} className="w-full h-full object-cover" />
+                                        {item.isFeatured && (
+                                            <span className="absolute top-1 left-1 bg-emerald-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md shadow">
+                                                Featured
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-white text-base truncate">{item.name}</h3>
+                                        </div>
+                                        <p className="text-xs text-zinc-400 line-clamp-1 mt-0.5">{item.description}</p>
+                                        <p className="text-[11px] text-zinc-500 mt-1">
+                                            {formatNumber(item.followers)} followers • {item.tracks.length} tracks
+                                        </p>
+                                        
+                                        {item.isFeatured ? (
+                                            <p className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
+                                                <span>✓</span>
+                                                <span className="truncate">Featured with "{item.featuredTracks[0]?.title}"</span>
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1 font-medium">
+                                                <span>🔒</span>
+                                                <span>Must be on playlist to edit cover</span>
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {item.isFeatured && (
+                                    <div className="mt-4 pt-3 border-t border-zinc-800/80 space-y-2.5">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <label className="cursor-pointer bg-[#fa243c] hover:bg-[#d60017] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-transform active:scale-95 inline-flex items-center gap-1 shadow">
+                                                <span>🖼️</span>
+                                                <span>Upload Custom Cover</span>
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    onChange={(e) => handleEditorialCoverUpload(item.id, e)} 
+                                                    className="hidden" 
+                                                />
+                                            </label>
+                                            {activeArtist.image && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => dispatch({
+                                                        type: 'UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER',
+                                                        payload: { playlistId: item.id, coverArt: activeArtist.image! }
+                                                    })}
+                                                    className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold px-2.5 py-1.5 rounded-lg border border-zinc-700"
+                                                >
+                                                    Use Artist Photo
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text"
+                                                placeholder="Or paste image URL"
+                                                value={editorialCoverInputMap[item.id] || ''}
+                                                onChange={(e) => setEditorialCoverInputMap({ ...editorialCoverInputMap, [item.id]: e.target.value })}
+                                                className="bg-zinc-900 border border-zinc-800 text-[11px] px-2.5 py-1.5 rounded-lg flex-1 text-white focus:outline-none focus:border-[#fa243c]"
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    const val = (editorialCoverInputMap[item.id] || '').trim();
+                                                    if (val) {
+                                                        dispatch({
+                                                            type: 'UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER',
+                                                            payload: { playlistId: item.id, coverArt: val }
+                                                        });
+                                                        setEditorialCoverInputMap({ ...editorialCoverInputMap, [item.id]: '' });
+                                                    }
+                                                }}
+                                                className="bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-semibold"
+                                            >
+                                                Save
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* 3. PROFILE CUSTOMIZATION (FONTS, STYLES, BG & VIDEO) */}
                 <div className="bg-zinc-900 text-white p-5 rounded-3xl shadow-lg space-y-6 border border-zinc-800">
                     <div className="border-b border-zinc-800 pb-3 flex justify-between items-center">
                         <div>
