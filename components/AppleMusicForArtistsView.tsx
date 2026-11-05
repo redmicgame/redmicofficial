@@ -406,29 +406,37 @@ const AppleMusicForArtistsView: React.FC = () => {
                                 </span>
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">
-                                Customize the official cover art for Apple Music editorial playlists you are featured on. (You must have a charting or featured song on the playlist to edit its cover).
+                                Customize the official cover art for Apple Music editorial playlists you are featured on, or any playlist once your popularity is over 50.
                             </p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {featuredEditorialPlaylists.map(item => (
+                        {featuredEditorialPlaylists.map(item => {
+                            const canEditCover = item.isFeatured || (activeArtistData.popularity || 0) > 50;
+                            return (
                             <div 
                                 key={item.id} 
                                 className={`p-4 rounded-2xl border transition-all ${
                                     item.isFeatured 
                                         ? 'bg-zinc-950 border-emerald-500/40 shadow-emerald-950/20 shadow-lg' 
-                                        : 'bg-zinc-950/60 border-zinc-800/80 opacity-75'
+                                        : canEditCover
+                                            ? 'bg-zinc-950 border-amber-500/40 shadow-amber-950/20 shadow-lg'
+                                            : 'bg-zinc-950/60 border-zinc-800/80 opacity-75'
                                 }`}
                             >
                                 <div className="flex gap-4">
                                     <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-zinc-800 shadow-md">
                                         <img src={item.coverArt} alt={item.name} className="w-full h-full object-cover" />
-                                        {item.isFeatured && (
+                                        {item.isFeatured ? (
                                             <span className="absolute top-1 left-1 bg-emerald-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md shadow">
                                                 Featured
                                             </span>
-                                        )}
+                                        ) : canEditCover ? (
+                                            <span className="absolute top-1 left-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md shadow">
+                                                Pop &gt; 50
+                                            </span>
+                                        ) : null}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
@@ -444,16 +452,21 @@ const AppleMusicForArtistsView: React.FC = () => {
                                                 <span>✓</span>
                                                 <span className="truncate">Featured with "{item.featuredTracks[0]?.title}"</span>
                                             </p>
+                                        ) : canEditCover ? (
+                                            <p className="text-xs text-amber-400 font-semibold mt-2 flex items-center gap-1">
+                                                <span>★</span>
+                                                <span className="truncate">Unlocked with Popularity &gt; 50 ({activeArtistData.popularity || 0}/100)</span>
+                                            </p>
                                         ) : (
                                             <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1 font-medium">
                                                 <span>🔒</span>
-                                                <span>Must be on playlist to edit cover</span>
+                                                <span>Must be on playlist (or Popularity &gt; 50) to edit cover</span>
                                             </p>
                                         )}
                                     </div>
                                 </div>
 
-                                {item.isFeatured && (
+                                {canEditCover && (
                                     <div className="mt-4 pt-3 border-t border-zinc-800/80 space-y-2.5">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <label className="cursor-pointer bg-[#fa243c] hover:bg-[#d60017] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-transform active:scale-95 inline-flex items-center gap-1 shadow">
@@ -507,7 +520,8 @@ const AppleMusicForArtistsView: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 

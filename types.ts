@@ -113,6 +113,7 @@ export interface Song {
   title: string;
   genre: string;
   subgenre?: string;
+  secondaryGenre?: string;
   quality: number;
   coverArt: string;
   isReleased: boolean;
@@ -2171,6 +2172,15 @@ export interface ArtistData {
   highestHot100SongTitle?: string;
   highestHot100PeakRank?: number;
   hasEarnedFirstUkTop10?: boolean;
+  grammySubmissionWeek?: number;
+  grammySubmissionYear?: number;
+  hasGrammyGuruLastNomTweetedYear?: number;
+  hasGrammyGuruSubmissionsTweetedYear?: number;
+  hasGrammyGuruWeek44ForecastTweetedYear?: number;
+  hasGrammyGuruBnaRejectedTweeted?: boolean;
+  hasGrammyGuruFanQuoteTweetedYear?: number;
+  hasGrammyGuruGenreMoveTweetedYear?: number;
+  hasGrammyGuruPredictionsTweetedYear?: number;
   publicImage: number;
   popularity: number;
   regionalPopularity?: {
@@ -2735,6 +2745,8 @@ export interface GameState {
     category: GrammyAward["category"];
     itemId: string;
     itemName: string;
+    isNpcFeatureSubmission?: boolean;
+    leadArtistName?: string;
   }[];
   grammyCurrentYearNominations: GrammyCategory[] | null;
   activeGrammyPerformanceOffer: { emailId: string } | null;

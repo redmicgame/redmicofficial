@@ -26,7 +26,7 @@ const SubmitForGrammysView: React.FC = () => {
 
     const eligibleSongs = useMemo(() => {
         const songIds = new Set(thisYearReleases.flatMap(r => r.songIds));
-        return activeArtistData.songs.filter(s => songIds.has(s.id));
+        return activeArtistData.songs.filter(s => songIds.has(s.id) && !s.isFeatureToNpc);
     }, [thisYearReleases, activeArtistData.songs]);
     
     const isBnaEligible = useMemo(() => {

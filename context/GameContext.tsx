@@ -121,6 +121,7 @@ import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
 import { calculateYouTubeViews, calculateYouTubeLikes } from "../utils/youtubeViews";
 import { generateWeeklyMySpaceFeedPosts, getInitialMySpaceFeed } from "../utils/myspaceFeed";
+import { theGrammyGuruUser, processGrammyGuruWeeklyTweets } from "../utils/grammyGuruUtils";
 
 function createGovernmentDivorceEmail(
   artistName: string,
@@ -2487,6 +2488,7 @@ The Red Mic Team`,
         radioUpdaterUser,
         chartDataUser,
         spotifySnapshotUser,
+        theGrammyGuruUser,
         tmzUser,
         addictionUser,
         chartsFanUser,
@@ -2777,6 +2779,7 @@ The Red Mic Team`,
         radioUpdaterUser,
         chartDataUser,
         spotifySnapshotUser,
+        theGrammyGuruUser,
         tmzUser,
         addictionUser,
         chartsFanUser,
@@ -8951,7 +8954,7 @@ Submissions close in a few weeks.
             );
             const songIds = new Set(thisYearReleases.flatMap((r) => r.songIds));
             const eligibleSongs = artistData.songs.filter((s) =>
-              songIds.has(s.id),
+              songIds.has(s.id) && !s.isFeatureToNpc,
             );
 
             const bestAlbum = [...eligibleAlbums].sort(
@@ -9124,10 +9127,46 @@ Submissions close in a few weeks.
 
             // I will add an autoGrammySubmissions array!
             autoGrammySubmissions.push(...submissions);
+            artistData.grammySubmissionWeek = newDate.week;
+            artistData.grammySubmissionYear = newDate.year;
             artistData.hasSubmittedForBestNewArtist = isBnaEligible
               ? true
               : artistData.hasSubmittedForBestNewArtist;
           }
+        }
+
+        // NPC artists submitting songs player is featured on (70% chance)
+        if (newDate.week === 40) {
+          const featureSongsThisYear = artistData.songs.filter(
+            (s) => s.isFeatureToNpc && s.releaseDate?.year === newDate.year
+          );
+          featureSongsThisYear.forEach((fSong) => {
+            if (Math.random() < 0.70) {
+              const leadNpc = fSong.npcArtistName || "Featured Artist";
+              let cat: GrammyAward["category"] = "Record of the Year";
+              if (fSong.genre === "Pop") cat = "Best Pop Song";
+              else if (fSong.genre === "Hip Hop") cat = "Best Rap Song";
+              else if (fSong.genre === "R&B") cat = "Best R&B Song";
+              autoGrammySubmissions.push({
+                artistId: artistId,
+                category: cat,
+                itemId: fSong.id,
+                itemName: fSong.title,
+                isNpcFeatureSubmission: true,
+                leadArtistName: leadNpc,
+              });
+              if (fSong.streams > 15000000 && cat !== "Record of the Year") {
+                autoGrammySubmissions.push({
+                  artistId: artistId,
+                  category: "Record of the Year",
+                  itemId: fSong.id,
+                  itemName: fSong.title,
+                  isNpcFeatureSubmission: true,
+                  leadArtistName: leadNpc,
+                });
+              }
+            }
+          });
         }
 
         const hasAmaEmailThisYear = artistData.inbox.some(
@@ -17238,7 +17277,11 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
               break;
           }
 
-          const playerSubmissions = (state.grammySubmissions || []).filter(
+          const currentGrammySubs = [
+            ...(state.grammySubmissions || []),
+            ...autoGrammySubmissions,
+          ];
+          const playerSubmissions = currentGrammySubs.filter(
             (s) => s.category === categoryName,
           );
           for (const sub of playerSubmissions) {
@@ -17315,10 +17358,15 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
               if (artistData.isBlacklistedByLabel) {
                  score = score * 0.1; // Extremely hard to secure nominations
               }
+              const displayArtistName =
+                sub.isNpcFeatureSubmission && sub.leadArtistName
+                  ? `${sub.leadArtistName} feat. ${artistProfile.name}`
+                  : artistProfile.name;
+
               contenders.push({
                 id: sub.itemId,
                 name: sub.itemName,
-                artistName: artistProfile.name,
+                artistName: displayArtistName,
                 isPlayer: true,
                 score,
                 coverArt,
@@ -17592,6 +17640,35 @@ Congrats ${category.name} winner - \'${winner.name}\' @${winner.artistName.repla
 
         finalState.grammySubmissions = [];
         finalState.grammyCurrentYearNominations = null;
+      }
+
+      // --- THE GRAMMY GURU WEEKLY POSTS (WEEKS 40-45) ---
+      for (const artistId in updatedArtistsData) {
+        const aData = updatedArtistsData[artistId];
+        const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
+        if (!aData.xUsers.some((u) => u.id === "thegrammyguru")) {
+          aData.xUsers.push(theGrammyGuruUser);
+        }
+        if (newDate.week >= 40 && newDate.week <= 45) {
+          const allSubsForGuru = [
+            ...(state.grammySubmissions || []),
+            ...autoGrammySubmissions,
+          ];
+          const { postsToAdd, updatedArtistDataFields } = processGrammyGuruWeeklyTweets({
+            artistId,
+            artistData: aData,
+            artistProfile: aProfile,
+            newDate,
+            grammySubmissions: allSubsForGuru,
+            npcs: newNpcsWithReleases,
+            npcAlbums: newNpcAlbums,
+            grammyNominations: newGrammyNominations,
+          });
+          if (postsToAdd.length > 0) {
+            aData.xPosts.unshift(...postsToAdd);
+          }
+          Object.assign(aData, updatedArtistDataFields);
+        }
       }
 
       // --- ADD CHART EMAILS TO INBOX ---
@@ -25873,6 +25950,8 @@ ${npcArtistName}`,
             ...activeData,
             inbox: updatedInbox,
             hasSubmittedForBestNewArtist: hasSubmittedBna,
+            grammySubmissionWeek: state.date.week,
+            grammySubmissionYear: state.date.year,
             pendingFycPosts: [...(activeData.pendingFycPosts || []), grammyFycBanner],
             fycBanners: [...(activeData.fycBanners || []), grammyFycBanner],
           },
