@@ -18218,6 +18218,67 @@ Congratulations on your chart success!
         };
       });
 
+      // --- PERFORMANCE & SAVE COMPACTION ---
+      // 1. Compact historical chart runs for inactive NPC songs (off-chart for > 12 weeks)
+      // All player songs and releases are 100% PRESERVED with full history forever
+      const activeHot100Ids = new Set(newBillboardHot100.map((s) => s.uniqueId));
+      const activeAlbumIds = new Set(newBillboardTopAlbums.map((a) => a.uniqueId));
+      const allPlayerSongUniqueIds = new Set(allPlayerSongsFlat.map((s) => s.id));
+      const allPlayerAlbumIds = new Set(allPlayerReleases.map((r) => r.id));
+
+      for (const uniqueId in newChartHistory) {
+        if (!allPlayerSongUniqueIds.has(uniqueId) && !activeHot100Ids.has(uniqueId)) {
+          const entry = newChartHistory[uniqueId];
+          if (entry && entry.chartRun && entry.chartRun.length > 12) {
+            delete entry.chartRun;
+            delete entry.chartRunEntries;
+          }
+        }
+      }
+
+      for (const uniqueId in newAlbumChartHistory) {
+        if (!allPlayerAlbumIds.has(uniqueId) && !activeAlbumIds.has(uniqueId)) {
+          const entry = newAlbumChartHistory[uniqueId];
+          if (entry && entry.chartRun && entry.chartRun.length > 12) {
+            delete entry.chartRun;
+            delete entry.chartRunEntries;
+          }
+        }
+      }
+
+      // 2. Rolling window for non-player social media posts (Pop Base, stan accounts, haters, media)
+      // ALL user posts, replies, reposts, pinned posts, and highlights are 100% PRESERVED forever!
+      for (const aId in updatedArtistsData) {
+        const aData = updatedArtistsData[aId];
+        const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === aId);
+        const playerHandle = aProfile ? aProfile.name.replace(/\s/g, "").toLowerCase() : "";
+        const playerXId = aData.xUsers.find((u) => u.username === playerHandle)?.id;
+
+        const isUserContent = (post: XPost) => {
+          return (
+            post.authorId === playerXId ||
+            post.authorId === "player" ||
+            post.authorId === aId ||
+            (post as any).isPlayerPost === true ||
+            post.isRepost === true ||
+            (post as any).repostedByPlayer === true ||
+            post.isPinned === true ||
+            post.isHighlight === true ||
+            (playerXId !== undefined && (post as any).replyToAuthorId === playerXId) ||
+            (post.replyToId !== undefined && post.authorId === playerXId)
+          );
+        };
+
+        let nonPlayerCount = 0;
+        aData.xPosts = aData.xPosts.filter((post) => {
+          if (isUserContent(post)) {
+            return true; // Keep ALL user tweets, replies, and reposts forever
+          }
+          nonPlayerCount++;
+          return nonPlayerCount <= 80; // Keep rolling 80 latest media/NPC posts
+        });
+      }
+
       if (contractRenewalForActivePlayer) {
         return {
           ...finalState,
@@ -33381,6 +33442,37 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
 
         if (stateToLoad) {
           const fullyLoadedState = await injectMediaIntoState(stateToLoad, (prog, msg) => { setLoadingProgress(prog); if (msg) setLoadingMessage(msg); });
+          
+          // Self-healing migration for existing heavy saves:
+          // Prune legacy accumulated non-player posts if bloated, preserving 100% of player content
+          if (fullyLoadedState && fullyLoadedState.artistsData) {
+            for (const aId in fullyLoadedState.artistsData) {
+              const aData = fullyLoadedState.artistsData[aId];
+              if (aData && aData.xPosts && aData.xPosts.length > 120) {
+                const playerHandle = aData.artistName ? aData.artistName.replace(/\s/g, "").toLowerCase() : "";
+                const playerXId = aData.xUsers?.find((u: any) => u.username === playerHandle)?.id;
+                const isUserPost = (p: any) => (
+                  p.authorId === playerXId ||
+                  p.authorId === "player" ||
+                  p.authorId === aId ||
+                  p.isPlayerPost === true ||
+                  p.isRepost === true ||
+                  p.repostedByPlayer === true ||
+                  p.isPinned === true ||
+                  p.isHighlight === true ||
+                  (playerXId && p.replyToAuthorId === playerXId) ||
+                  (p.replyToId && p.authorId === playerXId)
+                );
+                let npcCount = 0;
+                aData.xPosts = aData.xPosts.filter((p: any) => {
+                  if (isUserPost(p)) return true;
+                  npcCount++;
+                  return npcCount <= 80;
+                });
+              }
+            }
+          }
+
           dispatch({ type: "LOAD_GAME", payload: fullyLoadedState });
         }
       } catch (err) {
@@ -33393,20 +33485,41 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
     loadGame();
   }, [isAuthLoading]); // Now we only depend on local DB on mount
 
-  // Effect for saving game state to IndexedDB on change
+  const latestGameStateRef = React.useRef(gameState);
+  latestGameStateRef.current = gameState;
+
+  // Debounced background saving to IndexedDB (1200ms) to prevent UI freezes on rapid actions / Next Week
   useEffect(() => {
     if (!isLoading && !isAuthLoading && gameState.careerMode) {
-      const saveGameToDB = async () => {
+      const timeout = setTimeout(async () => {
         try {
           const processedState = await separateMediaFromState(gameState);
           await db.saves.put({ id: getActiveSaveId(), state: processedState });
         } catch (err) {
           console.error("Could not save game state to local DB", err);
         }
-      };
-      saveGameToDB();
+      }, 1200);
+
+      return () => clearTimeout(timeout);
     }
   }, [gameState, isLoading, isAuthLoading]);
+
+  // Ensure any pending save is saved immediately when the page is unloaded or hidden
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const stateToSave = latestGameStateRef.current;
+      if (stateToSave && stateToSave.careerMode) {
+        separateMediaFromState(stateToSave)
+          .then((processedState) => {
+            db.saves.put({ id: getActiveSaveId(), state: processedState });
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   // Effect for debouncing cloud saves (every 10 seconds of inactivity or periodically)
   useEffect(() => {

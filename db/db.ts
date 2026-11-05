@@ -35,12 +35,73 @@ export const setActiveSaveId = (id: number): void => {
     localStorage.setItem('redmic_active_save_id', id.toString());
 };
 
+const NON_MEDIA_KEYS = new Set([
+  'chartHistory',
+  'albumChartHistory',
+  'videoChartHistory',
+  'hotPopSongsHistory',
+  'hotRapRnbHistory',
+  'electronicChartHistory',
+  'countryChartHistory',
+  'ukSinglesChartHistory',
+  'ukAlbumsChartHistory',
+  'chartRun',
+  'chartRunEntries',
+  'streamsHistory',
+  'priceHistory',
+  'radioPlays',
+  'radioImpressions',
+  'dailyStreams',
+  'weeklyStreams',
+  'firstWeekStreams',
+  'billboardHot100',
+  'billboard200',
+  'billboardBubblingUnder25',
+  'billboardHot100WeeklyArchive',
+  'ukSinglesChartWeeklyArchive',
+  'radioOverallChart',
+  'radioFormatCharts',
+  'radioUrbanChart',
+  'radioPopChart',
+  'radioChrChart',
+  'radioAcChart',
+  'radioHotAcChart',
+  'radioCountryChart',
+  'radioClassicHitsChart',
+  'radioClassicRockChart',
+  'radioActiveRockChart',
+  'radioAltRockChart',
+  'radioAaaChart',
+  'radioUrbanAcChart',
+  'radioRhythmicChart',
+  'radioAdultHitsChart',
+  'radioLatinChart',
+  'radioChristmasChart',
+  'hotPopSongs',
+  'hotRapRnb',
+  'electronicChart',
+  'countryChart',
+  'spotifyGlobal',
+  'spotifyUS',
+  'spotifyCanada',
+  'spotifyUK',
+  'spotifyLatin',
+  'spotifyAsia',
+  'spotifyAfrica',
+  'ukSinglesChart',
+  'ukAlbumsChart',
+  'activeSuperstarHits',
+  'fanUsers',
+  'haterUsers',
+  'radioHistory',
+]);
+
 export const separateMediaFromState = async (state: GameState, onProgress?: (progress: number, msg?: string) => void): Promise<any> => {
   const mediaToSave: MediaSave[] = [];
   
   if (onProgress) onProgress(0, "Analyzing state structure...");
   
-  // Synchronous traversal to avoid Promise memory overhead
+  // Reference-preserving traversal to avoid memory churn and clone explosions
   const traverseAndReplace = (obj: any): any => {
     if (obj === null || typeof obj !== 'object') {
       if (typeof obj === 'string' && obj.startsWith('data:')) {
@@ -56,19 +117,35 @@ export const separateMediaFromState = async (state: GameState, onProgress?: (pro
     }
     
     if (Array.isArray(obj)) {
+      if (obj.length === 0 || typeof obj[0] === 'number' || typeof obj[0] === 'boolean') {
+        return obj;
+      }
+      let changed = false;
       const arr = new Array(obj.length);
       for (let i = 0; i < obj.length; i++) {
-          arr[i] = traverseAndReplace(obj[i]);
+        const item = obj[i];
+        const res = traverseAndReplace(item);
+        arr[i] = res;
+        if (res !== item) changed = true;
       }
-      return arr;
+      return changed ? arr : obj;
     }
+
+    let changed = false;
     const newObj: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        newObj[key] = traverseAndReplace(obj[key]);
+        if (NON_MEDIA_KEYS.has(key)) {
+          newObj[key] = obj[key];
+        } else {
+          const val = obj[key];
+          const res = traverseAndReplace(val);
+          newObj[key] = res;
+          if (res !== val) changed = true;
+        }
       }
     }
-    return newObj;
+    return changed ? newObj : obj;
   };
   
   const newState = traverseAndReplace(state);
@@ -95,7 +172,7 @@ export const injectMediaIntoState = async (state: any, onProgress?: (progress: n
   
   if (onProgress) onProgress(0, "Analyzing save file structure...");
   
-  // Synchronous collection
+  // Fast targeted collection
   const collectMediaIds = (obj: any) => {
     if (obj === null || typeof obj !== 'object') {
       if (typeof obj === 'string' && obj.startsWith('__media_')) {
@@ -105,14 +182,19 @@ export const injectMediaIntoState = async (state: any, onProgress?: (progress: n
     }
     
     if (Array.isArray(obj)) {
+      if (obj.length === 0 || typeof obj[0] === 'number' || typeof obj[0] === 'boolean') {
+        return;
+      }
       for (let i = 0; i < obj.length; i++) {
-          collectMediaIds(obj[i]);
+        collectMediaIds(obj[i]);
       }
       return;
     }
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        collectMediaIds(obj[key]);
+        if (!NON_MEDIA_KEYS.has(key)) {
+          collectMediaIds(obj[key]);
+        }
       }
     }
   };
@@ -141,7 +223,7 @@ export const injectMediaIntoState = async (state: any, onProgress?: (progress: n
 
   if (onProgress) onProgress(50, "Constructing game state...");
   
-  // Synchronous injection
+  // Reference-preserving injection
   const traverseAndInject = (obj: any): any => {
     if (obj === null || typeof obj !== 'object') {
       if (typeof obj === 'string' && obj.startsWith('__media_')) {
@@ -151,26 +233,41 @@ export const injectMediaIntoState = async (state: any, onProgress?: (progress: n
     }
     
     if (Array.isArray(obj)) {
+      if (obj.length === 0 || typeof obj[0] === 'number' || typeof obj[0] === 'boolean') {
+        return obj;
+      }
+      let changed = false;
       const newArr = new Array(obj.length);
       for (let i = 0; i < obj.length; i++) {
-          newArr[i] = traverseAndInject(obj[i]);
+        const item = obj[i];
+        const res = traverseAndInject(item);
+        newArr[i] = res;
+        if (res !== item) changed = true;
       }
-      return newArr;
+      return changed ? newArr : obj;
     }
+
+    let changed = false;
     const newObj: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        newObj[key] = traverseAndInject(obj[key]);
+        if (NON_MEDIA_KEYS.has(key)) {
+          newObj[key] = obj[key];
+        } else {
+          const val = obj[key];
+          const res = traverseAndInject(val);
+          newObj[key] = res;
+          if (res !== val) changed = true;
+        }
       }
     }
-    return newObj;
+    return changed ? newObj : obj;
   };
   
   const finalState = traverseAndInject(state);
   if (onProgress) onProgress(100, "Ready!");
   
-  // A tiny extra delay to make sure UI can render 100%
-  await new Promise(r => setTimeout(r, 100));
+  await new Promise(r => setTimeout(r, 50));
   
   return finalState as GameState;
 };
