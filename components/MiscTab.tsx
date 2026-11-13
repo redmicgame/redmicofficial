@@ -6,6 +6,7 @@ import { PaparazziPhoto, PaparazziPhotoCategory } from '../types';
 import { db, getActiveSaveId } from '../db/db';
 import BookOpenIcon from './icons/BookOpenIcon';
 import { RedMicProCodeModal } from './RedMicProCodeModal';
+import ShutdownCountdown from './ShutdownCountdown';
 
 const MiscTab: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
@@ -245,6 +246,8 @@ const MiscTab: React.FC = () => {
             )}
             <div className="space-y-6">
                 <h2 className="text-3xl font-bold text-red-500">Misc & Stats</h2>
+
+                <ShutdownCountdown />
 
                 <button onClick={handleInboxClick} className="w-full bg-zinc-800 p-4 rounded-lg text-left hover:bg-zinc-700 transition-colors flex justify-between items-center">
                     <div className="relative">

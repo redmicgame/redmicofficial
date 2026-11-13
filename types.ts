@@ -2012,6 +2012,8 @@ export interface RedditComment {
   text: string;
   upvotes: number;
   timeAgo: string;
+  userFlair?: string;
+  isOp?: boolean;
   replies?: RedditComment[];
 }
 
@@ -2025,6 +2027,9 @@ export interface RedditPost {
   commentCount: number;
   image: string | null;
   comments?: RedditComment[];
+  subreddit?: string;
+  flair?: string;
+  userFlair?: string;
 }
 
 

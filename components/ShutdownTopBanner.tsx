@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ShutdownCountdown from './ShutdownCountdown';
 
 const STORAGE_KEY = 'redmic_shutdown_banner_nov15_dismissed';
 
@@ -70,6 +71,8 @@ export const ShutdownTopBanner: React.FC = () => {
 
                         {/* Modal Content */}
                         <div className="space-y-4 text-zinc-300 text-sm sm:text-base leading-relaxed">
+                            <ShutdownCountdown compact />
+
                             <p className="font-semibold text-white">
                                 Hello Red Mic Community,
                             </p>

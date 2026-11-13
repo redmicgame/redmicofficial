@@ -17,8 +17,26 @@ const RedditPost = ({ post, isExpanded, onClick }: { post: any, isExpanded?: boo
         setVoteStatus(prev => prev === val ? 0 : val);
     };
 
-    const displayTitle = post.title.replace(/\[RUMOR\]|\(FRESH\)|\(CHART UPDATE\)/g, '').trim();
-    let flair = post.title.includes('[RUMOR]') ? 'RUMOR' : post.title.includes('(FRESH)') ? 'FRESH' : post.title.includes('(CHART UPDATE)') ? 'CHART UPDATE' : post.flair || null;
+    // Extract flair from title brackets if not explicitly set
+    let detectedFlair = post.flair;
+    const match = post.title ? post.title.match(/^\[([A-Za-z0-9\s/]+)\]|^\(([A-Za-z0-9\s/]+)\)/) : null;
+    if (match && !detectedFlair) {
+        detectedFlair = (match[1] || match[2]).toUpperCase();
+    }
+    const displayTitle = post.title ? post.title.replace(/^\[[A-Za-z0-9\s/]+\]\s*|^\([A-Za-z0-9\s/]+\)\s*/, '').trim() : '';
+    const flair = detectedFlair || post.flair || null;
+
+    const getFlairBadgeClass = (f: string) => {
+        const upper = f.toUpperCase();
+        if (upper.includes('FRESH')) return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+        if (upper.includes('CHART') || upper.includes('STREAMING') || upper.includes('MILESTONE')) return 'bg-purple-100 text-purple-800 border border-purple-300';
+        if (upper.includes('RUMOR') || upper.includes('TEA')) return 'bg-rose-100 text-rose-800 border border-rose-300';
+        if (upper.includes('AWARDS')) return 'bg-amber-100 text-amber-800 border border-amber-300';
+        if (upper.includes('TOUR')) return 'bg-pink-100 text-pink-800 border border-pink-300';
+        if (upper.includes('NEWS')) return 'bg-sky-100 text-sky-800 border border-sky-300';
+        if (upper.includes('THEORY')) return 'bg-indigo-100 text-indigo-800 border border-indigo-300';
+        return 'bg-blue-100 text-blue-800 border border-blue-300';
+    };
 
     return (
         <div onClick={onClick} className={`bg-white sm:rounded-md border border-gray-300 flex overflow-hidden hover:border-gray-400 transition-colors ${onClick ? 'cursor-pointer mb-2' : ''}`}>
@@ -42,7 +60,7 @@ const RedditPost = ({ post, isExpanded, onClick }: { post: any, isExpanded?: boo
                     <span>{post.timeAgo || 'Just now'}</span>
                 </div>
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    {flair && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${flair === 'FRESH' ? 'bg-green-100 text-green-800' : flair === 'CHART UPDATE' ? 'bg-purple-100 text-purple-800' : flair === 'RUMOR' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                    {flair && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getFlairBadgeClass(flair)}`}>
                         {flair}
                     </span>}
                     <h2 className={`font-medium text-gray-900 leading-snug ${isExpanded ? 'text-xl' : 'text-lg'}`}>{displayTitle}</h2>
@@ -226,14 +244,22 @@ export const RedditSiteView: React.FC<{ initialPost?: any, onClose: () => void }
         return h;
     }, [activeArtistData, gameState.date]);
 
-    // Generate more varied mock posts based on artist's catalog and events
+    // Generate varied fallback posts based on artist's catalog and events
     const mockPosts = useMemo(() => {
-        const posts = [
+        const releasedSongs = (activeArtistData?.songs || []).filter(s => s.isReleased);
+        const topSong = releasedSongs[0];
+        const secondSong = releasedSongs[1] || topSong;
+        const topRelease = activeArtistData?.releases?.[0];
+
+        const posts: any[] = [
             {
                 id: 1, author: getRandomUsername(), timeAgo: '2h ago',
-                title: `(FRESH) ${artistProfile.name} - Latest Single`,
-                content: `I'm obsessed with this new sound! The production is insane. What does everyone else think? I genuinely feel like this might be one of their best tracks in years. The vocals are so crisp and the beat just hits different.`,
-                upvotes: 12500, commentCount: '3.2k', flair: 'FRESH', userFlair: getRandomFlair()
+                title: topSong ? `[FRESH] ${artistProfile.name} - ${topSong.title}` : `[FRESH] ${artistProfile.name} - Latest Single`,
+                content: topSong 
+                    ? `I'm obsessed with "${topSong.title}"! The production and vocal performance are insane. What does everyone think of this new era?`
+                    : `I'm obsessed with this new sound! The production is insane. What does everyone else think?`,
+                upvotes: 12500, commentCount: '3.2k', flair: 'FRESH', userFlair: getRandomFlair(),
+                image: topSong?.coverArt || null
             },
             {
                 id: 2, author: getRandomUsername(), timeAgo: '5h ago',
@@ -244,44 +270,38 @@ export const RedditSiteView: React.FC<{ initialPost?: any, onClose: () => void }
             },
             {
                 id: 4, author: getRandomUsername(), timeAgo: '6h ago',
-                title: `Unpopular Opinion: The second album was their peak`,
-                content: `Please don't downvote me into oblivion, but I've been relistening to the discography and I honestly think their sophomore album had the best cohesive theme and songwriting. Everything since has been great, but that era was just magic. Agree or disagree?`,
-                upvotes: 8400, commentCount: '1.2k', flair: 'Discussion', userFlair: getRandomFlair()
+                title: topRelease 
+                    ? `[DISCUSSION] Now that it's out, what is your favorite track on "${topRelease.title}"?`
+                    : `[DISCUSSION] Unpopular Opinion: The earlier sound had something special`,
+                content: topRelease
+                    ? `Please don't downvote me into oblivion, but I've been relistening to "${topRelease.title}" and the deep cuts are honestly career highlights. What track are you streaming most?`
+                    : `I've been relistening to the discography and I honestly love the cohesive songwriting. Agree or disagree?`,
+                upvotes: 8400, commentCount: '1.2k', flair: 'Discussion', userFlair: getRandomFlair(),
+                image: topRelease?.coverArt || null
             },
             {
                 id: 5, author: getRandomUsername(), timeAgo: '12h ago',
-                title: `Tour concept ideas for the next era?`,
+                title: `[TOUR] Tour concept ideas for ${artistProfile.name}'s upcoming shows?`,
                 content: `If they go on tour next year, what kind of stage design are we hoping for? I'd love a more intimate, acoustic set for the slower songs, maybe a B-stage moment.`,
                 upvotes: 5600, commentCount: '890', flair: 'Tour', userFlair: getRandomFlair()
             },
             {
                 id: 6, author: getRandomUsername(), timeAgo: '18h ago',
-                title: `Did anyone else notice this easter egg in the last music video?`,
-                content: `At the 2:14 mark you can clearly see a sign that says "soon" with a 🦋 emoji. Could this be the theme for the next project??`,
-                upvotes: 15300, commentCount: '2.1k', flair: 'Theory', userFlair: getRandomFlair()
-            },
-            {
-                id: 7, author: getRandomUsername(), timeAgo: '22h ago',
-                title: `Vocal analysis: ${artistProfile.name}'s evolution over the years`,
-                content: `I'm a vocal coach and I just wanted to share some thoughts on how much their technique has improved. The breath control on the recent live performances is lightyears ahead of where they started.`,
-                upvotes: 11200, commentCount: '950', flair: 'Analysis', userFlair: getRandomFlair()
+                title: secondSong 
+                    ? `[APPRECIATION] Can we appreciate how "${secondSong.title}" holds up as a masterpiece?`
+                    : `[THEORY] Did anyone else notice this easter egg in the last music video?`,
+                content: secondSong 
+                    ? `The lyrics on "${secondSong.title}" are genuinely some of the best writing in their entire discography. It deserves way more recognition!`
+                    : `At the 2:14 mark you can clearly see a sign with cryptic symbols. Could this be the theme for the next project??`,
+                upvotes: 15300, commentCount: '2.1k', flair: secondSong ? 'Discussion' : 'Theory', userFlair: getRandomFlair(),
+                image: secondSong?.coverArt || null
             }
         ];
         
-        const randomRelease = activeArtistData.releases[Math.floor(Math.random() * activeArtistData.releases.length)];
-        if (randomRelease) {
-            posts.push({
-                id: 3, author: getRandomUsername(), timeAgo: '1d ago',
-                title: `${artistProfile.name} released ${randomRelease.title} exactly 1 year ago today!`,
-                content: `Time flies! What is your favorite track from this era? I can't believe it's already been a year since this dropped. It feels like yesterday we were all staying up until midnight for the release.`,
-                upvotes: 15500, commentCount: '1.4k', flair: 'Discussion', userFlair: getRandomFlair()
-            });
-        }
-        
-        return posts.sort(() => 0.5 - Math.random());
+        return posts;
     }, [artistProfile, activeArtistData]);
 
-    const actualPosts = activeArtistData?.redditPosts || mockPosts;
+    const actualPosts = activeArtistData?.redditPosts && activeArtistData.redditPosts.length > 0 ? activeArtistData.redditPosts : mockPosts;
     const allPosts = [...localPosts, ...actualPosts];
 
     const sortedPosts = [...allPosts].map(p => ({...p, subreddit: p.subreddit || subredditName})).sort((a: any, b: any) => {

@@ -83,6 +83,7 @@ import type {
 import { calculateEstimatedDemand, BUSINESS_CATEGORIES } from "../utils/businessSimulation";
 import { generateInstagramChannelReactions, calculateReactionGrowthDuration } from "../utils/instagramChannel";
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from "../utils/relationshipUtils";
+import { generateWeeklyRedditPosts } from "../utils/redditGenerator";
 import {
   INITIAL_MONEY,
   STREAM_INCOME_MULTIPLIER,
@@ -10244,221 +10245,7 @@ We would like to invite you to perform at a special Spotify Billions Club concer
             return npcPostCount <= 250;
           });
 
-          // --- REDDIT LOGIC ---
-          if (!artistData.redditPosts) artistData.redditPosts = [];
-          const numRedditPosts = Math.floor(Math.random() * 3) + 3; // 3-5 posts
-          const newRedditPosts: RedditPost[] = [];
-
-          const recentSongs = [...artistData.songs]
-            .filter((s) => s.isReleased)
-            .sort(
-              (a, b) =>
-                (b.releaseDate?.year || 0) * 52 +
-                (b.releaseDate?.week || 0) -
-                ((a.releaseDate?.year || 0) * 52 + (a.releaseDate?.week || 0)),
-            );
-          const topSong = [...artistData.songs]
-            .filter((s) => s.isReleased)
-            .sort(
-              (a, b) =>
-                (b.streams || 0) +
-                (b.sales || 0) * 150 -
-                ((a.streams || 0) + (a.sales || 0) * 150),
-            )[0];
-          const recentVideos = [...artistData.videos]
-            .filter((v) => v.artistId === artistId)
-            .sort(
-              (a, b) =>
-                (b.releaseDate?.year || 0) * 52 +
-                (b.releaseDate?.week || 0) -
-                ((a.releaseDate?.year || 0) * 52 + (a.releaseDate?.week || 0)),
-            );
-
-          const redditPostTemplates: {
-            title: string;
-            content: string;
-            image?: string | null;
-          }[] = [];
-
-          // Milestone
-          if (topSong) {
-            const streams = topSong.streams || 0;
-            let milestone = 0;
-            if (streams >= 1000000000) milestone = 1000000000;
-            else if (streams >= 500000000) milestone = 500000000;
-            else if (streams >= 100000000) milestone = 100000000;
-            else if (streams >= 10000000) milestone = 10000000;
-            else if (streams >= 1000000) milestone = 1000000;
-            else if (streams >= 100000) milestone = 100000;
-
-            if (milestone > 0 && Math.random() > 0.3) {
-              redditPostTemplates.push({
-                title: `[Milestone] "${topSong.title}" has officially crossed ${Intl.NumberFormat("en-US", { notation: "compact" }).format(milestone)} streams on Spotify!`,
-                content: `I remember when this first dropped, it's so crazy to see the growth. Congrats ${artistProfileForEmail?.name}!`,
-                image: topSong.coverArt,
-              });
-            }
-          }
-
-          // Recent Song
-          if (recentSongs.length > 0) {
-            const song = recentSongs[0];
-            const pronounPossessive =
-              artistProfileForEmail?.pronouns === "he/him"
-                ? "his"
-                : artistProfileForEmail?.pronouns === "she/her"
-                  ? "her"
-                  : "their";
-            redditPostTemplates.push({
-              title: `Discussion: Thoughts on "${song.title}"?`,
-              content: `Now that it's been out for a bit, how are we feeling about "${song.title}"? Honestly I think it's one of ${pronounPossessive} best tracks. The production is so crisp.`,
-              image: song.coverArt,
-            });
-            if (Math.random() > 0.5 && recentSongs.length > 1) {
-              redditPostTemplates.push({
-                title: `Which one do you prefer: "${recentSongs[0].title}" or "${recentSongs[1].title}"?`,
-                content: `Both are absolutely stellar but if you had to pick only one to listen to for the rest of your life... what would you choose?`,
-              });
-            }
-          }
-
-          // Recent Video
-          if (recentVideos.length > 0 && Math.random() > 0.4) {
-            const vid = recentVideos[0];
-            redditPostTemplates.push({
-              title: `The music video for "${vid.title}" is so underrated.`,
-              content: `I was rewatching the MV today and the visuals are literally insane. Does anyone know who styled this?`,
-              image: vid.thumbnail,
-            });
-          }
-
-          // Generic templates
-          const pronounPossessiveEmail =
-            artistProfileForEmail?.pronouns === "he/him"
-              ? "his"
-              : artistProfileForEmail?.pronouns === "she/her"
-                ? "her"
-                : "their";
-          redditPostTemplates.push(
-            {
-              title: `Unpopular opinion about ${artistProfileForEmail?.name}'s latest era`,
-              content: `I might get downvoted for this but honestly I preferred ${pronounPossessiveEmail} earlier sound. Please don't hate me! 😭`,
-            },
-            {
-              title: `Manifesting a world tour soon 🕯️`,
-              content: `I've been saving up just in case! Does anyone have any rumors or theories on when dates might drop?`,
-            },
-            {
-              title: `What do you think of the recent styling?`,
-              content: `Been seeing some new paparazzi photos and I actually love the fits lately.`,
-            },
-          );
-
-          for (let i = 0; i < numRedditPosts; i++) {
-            const randomTemplate =
-              redditPostTemplates[
-                Math.floor(Math.random() * redditPostTemplates.length)
-              ];
-
-            let img = randomTemplate.image;
-            if (
-              !img &&
-              Math.random() > 0.7 &&
-              artistData.artistImages.length > 0
-            ) {
-              img =
-                artistData.artistImages[
-                  Math.floor(Math.random() * artistData.artistImages.length)
-                ];
-            } else if (!img && Math.random() > 0.6) {
-              const stanGifs = [
-                "https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PhmLpPVdZu69KCLp2m/giphy.gif",
-                "https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ehcOA2WtivMSBmZaH2/giphy.gif",
-                "https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iH8zxeDtg7kftgGkjE/giphy.gif",
-                "https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/FZUEj5vJn1bMM9Xp6I/giphy.gif",
-                "https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YNOy0YQR8P45ejaiaE/giphy.gif",
-                "https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aDlvaTZzNzZ1cTI0aGg5a2dha282MzlmeDl5dGs0enZncHYycm1pdyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/anmCO7MaRD6QunWAYj/giphy.gif",
-                "https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6lGMLGCYMGWTm/giphy.gif",
-                "https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MWUydWJhZ294aXB2bW41dHh2czFtOXo5MjRlbGpzYm42ZWRkNXluZyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/YO4Of2Fl6LBbW/giphy.gif",
-                "https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aTdoOTFndzd6Ym5oYnBmOHdyM3Frb2tpcTNiYnE3OWVxeWMwZDhxYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/FvpGW6mTAkHeSSbczy/giphy.gif",
-                "https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3MmljbnJscm5rZXp2bDQxMHhlOHJsbXRsNGRxbWFjZDY3azVrZmE5ZSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TjGFDxbbZRYjv9vpTZ/giphy.gif",
-                "https://media2.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Ymc1bG12Nm40aHdpZ2hpMXlmOWg3MWl4bTh2NmphNGoxZjNyYTlhdCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cIMm3xWwxCF3xhuGpZ/giphy.gif",
-                "https://media0.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3b2h2dGI2bDl2YnBlZWl5eTJvamQzaHFmbzBkZjFsZjV3YW55dm03byZlcD12MV9naWZzX3NlYXJjaCZjdD1n/XJoq16NyVYoqbZHVUe/giphy.gif",
-                "https://media1.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3bHZ1MmpveGpjNDNsdjZwMjl2Y3NzOTRscDlvZmxlZW43YnplYTBsYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/gKHJbTk10M7bahpUvR/giphy.gif",
-                "https://media4.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Nm1iZjU3NGZxbGxmY3BrdXB3YTcxNGpsdnB2MXpqbW1wYmR5ejhwMyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/fa1AV8UvZvfBFOIt7F/giphy.gif",
-                "https://media3.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Zm96a3l6NTB4aWt3aDVsaGJ0OGg2bmk2ODB3enZxMXZ1dWRxdDVhbSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ff5sfZPmr9OPV5dtNi/giphy.gif",
-              ];
-              img = stanGifs[Math.floor(Math.random() * stanGifs.length)];
-            }
-
-            const postUpvotes =
-              Math.floor(Math.random() * (artistData.popularity * 10)) + 50;
-            const postCommentCount = Math.floor(Math.random() * 500) + 10;
-
-            const realisticComments: RedditComment[] = [];
-            const commentPossibilities = [
-              `Honestly I just hope they keep this energy going.`,
-              `If they release on a Friday they'll easily grab the #1 spot, no contest.`,
-              `I WILL DEFEND ${artistProfileForEmail?.name?.toUpperCase()} WITH MY LIFE.`,
-              `Wait, is this real?? Omggg`,
-              `I really want a tour announcement next!`,
-              `Their growth has been insane to watch as a day 1 fan.`,
-              `Does anyone have a link to the MV outtakes?`,
-              `I disagree but I see your point. We all know they can do better.`,
-              `The vocals on the last chorus are heavenly. 😭`,
-              `The charts don't lie. They're dominating.`,
-              `Are we witnessing a new main pop girl/boy era?`,
-              `They really need to drop a vinyl for this!!`,
-              `This is literally my song of the year.`,
-              `I showed this to my friends and they're obsessed now too.`,
-              `This deserves everything, so proud.`,
-            ];
-
-            const numComments = Math.floor(Math.random() * 5) + 2;
-            for (let j = 0; j < numComments; j++) {
-              const hasReply = Math.random() > 0.6;
-              realisticComments.push({
-                id: crypto.randomUUID(),
-                author: `u/fan_account_${Math.floor(Math.random() * 1000)}`,
-                text: commentPossibilities[
-                  Math.floor(Math.random() * commentPossibilities.length)
-                ],
-                upvotes: Math.floor(postUpvotes * (Math.random() * 0.2 + 0.05)),
-                timeAgo: `${Math.floor(Math.random() * 12) + 1}h ago`,
-                replies: hasReply
-                  ? [
-                      {
-                        id: crypto.randomUUID(),
-                        author: `u/reply_guy_${Math.floor(Math.random() * 1000)}`,
-                        text:
-                          Math.random() > 0.5
-                            ? `Agreed 100%.`
-                            : `Wait rlly? I never thought about it like that.`,
-                        upvotes: Math.floor(Math.random() * 50),
-                        timeAgo: `${Math.floor(Math.random() * 60) + 1}m ago`,
-                      },
-                    ]
-                  : undefined,
-              });
-            }
-
-            newRedditPosts.unshift({
-              id: crypto.randomUUID(),
-              author: `pop_fanatic_${Math.floor(Math.random() * 1000)}`,
-              timeAgo: `${Math.floor(Math.random() * 24) + 1} hours ago`,
-              title: randomTemplate.title,
-              content: randomTemplate.content,
-              upvotes: postUpvotes,
-              commentCount: postCommentCount,
-              image: img || null,
-              comments: realisticComments,
-            });
-          }
-
-          artistData.redditPosts = [
-            ...newRedditPosts,
-            ...artistData.redditPosts,
-          ].slice(0, 50); // Keep max 50 posts
+          // Note: Reddit posts are now generated post-charts around line 18220 with full event awareness
         }
 
         // --- YEAR-END ALBUM CHART TWEET LOGIC ---
@@ -18217,6 +18004,29 @@ Congratulations on your chart success!
           tracks: newTracks.map((t, i) => ({ ...t, position: i + 1 })),
         };
       });
+
+      // --- DYNAMIC EVENT-DRIVEN REDDIT POSTS ---
+      for (const aId in updatedArtistsData) {
+        const aData = updatedArtistsData[aId];
+        const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === aId);
+        if (!aProfile) continue;
+        if (!aData.redditPosts) aData.redditPosts = [];
+
+        const generatedRedditPosts = generateWeeklyRedditPosts({
+          artistData: aData,
+          artistProfile: aProfile,
+          currentDate: newDate,
+          hot100: newBillboardHot100,
+          billboard200: newBillboardTopAlbums,
+          spotifyGlobal: newSpotifyGlobal,
+          chartHistory: newChartHistory,
+          grammyNominations: finalState.grammyCurrentYearNominations || newGrammyNominations || state.grammyCurrentYearNominations,
+        });
+
+        if (generatedRedditPosts.length > 0) {
+          aData.redditPosts = [...generatedRedditPosts, ...aData.redditPosts].slice(0, 50);
+        }
+      }
 
       // --- PERFORMANCE & SAVE COMPACTION ---
       // 1. Compact historical chart runs for inactive NPC songs (off-chart for > 12 weeks)
