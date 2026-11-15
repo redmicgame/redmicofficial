@@ -5,9 +5,10 @@ import KaiStreamSetupView from "./components/KaiStreamSetupView";
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 import { Analytics } from '@vercel/analytics/react';
 import ShutdownTopBanner from './components/ShutdownTopBanner';
+import RedMicBlockScreen from './components/RedMicBlockScreen';
 
 
-import React from 'react';
+import React, { useState } from 'react';
 import { GameProvider, useGame } from './context/GameContext';
 import StartScreen from './components/StartScreen';
 import PregnancyTrackerView from './components/PregnancyTrackerView';
@@ -475,6 +476,12 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+    const [hasAccess, setHasAccess] = useState(false);
+
+    if (!hasAccess) {
+        return <RedMicBlockScreen onUnlock={() => setHasAccess(true)} />;
+    }
+
     return (
         <GameProvider>
             <AppContent />
