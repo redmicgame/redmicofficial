@@ -29,6 +29,13 @@ const SwitchSaveView: React.FC = () => {
     }, []);
 
     const handleSwitch = (id: number) => {
+        if (!saves[id]) {
+            try {
+                localStorage.removeItem('redmic_access_unlocked');
+            } catch (e) {
+                console.error(e);
+            }
+        }
         setActiveSaveId(id);
         window.location.reload();
     };

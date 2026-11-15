@@ -4,6 +4,7 @@ interface RedMicBlockScreenProps {
     onUnlock: () => void;
 }
 
+export const REDMIC_ACCESS_STORAGE_KEY = 'redmic_access_unlocked';
 const ACCESS_CODE = 'gyalasf';
 
 export const RedMicBlockScreen: React.FC<RedMicBlockScreenProps> = ({ onUnlock }) => {

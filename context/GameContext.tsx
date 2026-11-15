@@ -25114,6 +25114,11 @@ Let us know if you accept.`,
       };
     }
     case "RESET_GAME":
+      try {
+        localStorage.removeItem("redmic_access_unlocked");
+      } catch (e) {
+        console.error(e);
+      }
       return initialState;
     case "LOAD_GAME": {
       const loadedPlaylists =

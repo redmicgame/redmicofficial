@@ -5,10 +5,10 @@ import KaiStreamSetupView from "./components/KaiStreamSetupView";
 import { ScreenshotOverlay } from './components/ScreenshotOverlay';
 import { Analytics } from '@vercel/analytics/react';
 import ShutdownTopBanner from './components/ShutdownTopBanner';
-import RedMicBlockScreen from './components/RedMicBlockScreen';
+import RedMicBlockScreen, { REDMIC_ACCESS_STORAGE_KEY } from './components/RedMicBlockScreen';
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameProvider, useGame } from './context/GameContext';
 import StartScreen from './components/StartScreen';
 import PregnancyTrackerView from './components/PregnancyTrackerView';
@@ -146,10 +146,18 @@ import UKChartView from './components/UKChartView';
 import SpotifyIcon from './components/icons/SpotifyIcon';
 import { BusinessStoreView } from './components/BusinessStoreView';
 
-const AppContent: React.FC = () => {
+const AppContent: React.FC<{ onReturnToStartScreen: () => void }> = ({ onReturnToStartScreen }) => {
     const { gameState, activeArtistData, dispatch } = useGame();
     const { careerMode, currentView } = gameState;
     const isGoldTheme = activeArtistData?.isGoldTheme ?? false;
+
+    const prevCareerModeRef = useRef(careerMode);
+    useEffect(() => {
+        if (prevCareerModeRef.current && !careerMode) {
+            onReturnToStartScreen();
+        }
+        prevCareerModeRef.current = careerMode;
+    }, [careerMode, onReturnToStartScreen]);
     
     const eraConfig = getEraConfiguration(gameState.date.year);
     const playerRegion = getPlayerRegion(activeArtistData, gameState.soloArtist, gameState.group);
@@ -476,15 +484,39 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const [hasAccess, setHasAccess] = useState(false);
+    const [hasAccess, setHasAccess] = useState<boolean>(() => {
+        try {
+            return localStorage.getItem(REDMIC_ACCESS_STORAGE_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    });
+
+    const handleUnlock = useCallback(() => {
+        try {
+            localStorage.setItem(REDMIC_ACCESS_STORAGE_KEY, 'true');
+        } catch (e) {
+            console.error(e);
+        }
+        setHasAccess(true);
+    }, []);
+
+    const handleReturnToStartScreen = useCallback(() => {
+        try {
+            localStorage.removeItem(REDMIC_ACCESS_STORAGE_KEY);
+        } catch (e) {
+            console.error(e);
+        }
+        setHasAccess(false);
+    }, []);
 
     if (!hasAccess) {
-        return <RedMicBlockScreen onUnlock={() => setHasAccess(true)} />;
+        return <RedMicBlockScreen onUnlock={handleUnlock} />;
     }
 
     return (
         <GameProvider>
-            <AppContent />
+            <AppContent onReturnToStartScreen={handleReturnToStartScreen} />
             <Analytics />
         </GameProvider>
     );
