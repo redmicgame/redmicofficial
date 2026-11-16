@@ -1,5 +1,6 @@
 import { GameDate, XPost, XUser, ArtistData, Song, Release, GrammyAward, NpcSong } from '../types';
 import { getArtistImage } from '../constants';
+import { isBestNewArtistEligible } from './grammyCardUtils';
 
 export const GRAMMY_GURU_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"><defs><radialGradient id="guruBg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23ff7e5f"/><stop offset="100%" stop-color="%23eb4d4b"/></radialGradient><radialGradient id="bulbGlow" cx="50%" cy="40%" r="50%"><stop offset="0%" stop-color="%23ffeaa7"/><stop offset="70%" stop-color="%23fdcb6e"/><stop offset="100%" stop-color="%23f39c12"/></radialGradient><linearGradient id="goldGrammy" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23fff275"/><stop offset="50%" stop-color="%23f5cd2f"/><stop offset="100%" stop-color="%23d49200"/></linearGradient></defs><circle cx="60" cy="60" r="58" fill="url(%23guruBg)"/><circle cx="60" cy="50" r="32" fill="%23fff" opacity="0.15"/><path d="M42 46 C42 34 50 26 60 26 C70 26 78 34 78 46 C78 54 73 60 70 65 C68 68 67 72 67 75 L53 75 C53 72 52 68 50 65 C47 60 42 54 42 46 Z" fill="url(%23bulbGlow)" stroke="%23f39c12" stroke-width="1.5"/><rect x="54" y="76" width="12" height="3" rx="1.5" fill="%2357606f"/><rect x="55" y="80" width="10" height="3" rx="1.5" fill="%2357606f"/><rect x="56" y="84" width="8" height="2" rx="1" fill="%232f3542"/><path d="M60 40 L70 32 C72 30 74 34 72 38 L63 45 Z" fill="url(%23goldGrammy)"/><ellipse cx="71" cy="34" rx="3.5" ry="5.5" transform="rotate(-30 71 34)" fill="url(%23goldGrammy)"/><path d="M59 44 C57 45 55 48 55 52 L62 52 C62 49 61 46 59 44 Z" fill="url(%23goldGrammy)"/><rect x="54" y="53" width="10" height="5" rx="1" fill="url(%23goldGrammy)"/></svg>`;
 
@@ -26,8 +27,20 @@ export const formatGrammyCategoryShort = (cat: string): string => {
       return "Pop Solo Perf";
     case "Best Rap Song":
       return "Best Rap Song";
+    case "Best Rap Performance":
+      return "Best Rap Perf";
+    case "Best Melodic Rap Performance":
+      return "Melodic Rap Perf";
     case "Best R&B Song":
       return "Best R&B Song";
+    case "Best Asian Pop Music Performance":
+      return "Asian Pop Perf";
+    case "Best African Music Performance":
+      return "African Music Perf";
+    case "Best Latin Song":
+      return "Best Latin Song";
+    case "Best Remixed Recording":
+      return "Best Remix";
     case "Pop Album":
       return "Best Pop Vocal Album";
     case "Rap Album":
@@ -60,14 +73,24 @@ export const getBestContendingCategories = (artistData: ArtistData, artistName: 
 
   if (topSong) {
     const isCollab = !!(topSong.collaboration || (topSong.features && topSong.features.length > 0));
-    if (topSong.genre === "Dance" || topSong.genre === "Electronic" || topSong.secondaryGenre === "Dance") {
+    if (topSong.remixOfSongId) {
+      categories.push("Best Remixed Recording");
+    } else if (topSong.genre === "K-Pop") {
+      categories.push("Best Asian Pop Music Performance");
+    } else if (topSong.genre === "Latin") {
+      categories.push("Best Latin Song");
+    } else if (topSong.genre === "Reggae" || topSong.genre === "Afrobeats") {
+      categories.push("Best African Music Performance");
+    } else if (topSong.subgenre?.toLowerCase() === "trap") {
+      categories.push("Best Melodic Rap Performance");
+    } else if (topSong.genre === "Dance" || topSong.genre === "Electronic" || topSong.secondaryGenre === "Dance") {
       categories.push("Best Dance Pop Recording");
     } else if (isCollab) {
       categories.push("Best Pop Duo/Group Performance");
     } else if (topSong.genre === "Pop") {
       categories.push("Best Pop Solo Performance");
     } else if (topSong.genre === "Hip Hop" || topSong.genre === "Rap") {
-      categories.push("Best Rap Song");
+      categories.push("Best Rap Performance");
     } else if (topSong.genre === "R&B") {
       categories.push("Best R&B Performance");
     } else if (topSong.genre === "Country") {
@@ -358,7 +381,17 @@ export const processGrammyGuruWeeklyTweets = (args: {
       const descriptor = isSmash ? "The smash hit" : "The mediocre single";
 
       let predictedCat = "Best Pop Solo Performance";
-      if (forecastSong.collaboration || (forecastSong.features && forecastSong.features.length > 0)) {
+      if (forecastSong.remixOfSongId) {
+        predictedCat = "Best Remixed Recording";
+      } else if (forecastSong.genre === "K-Pop") {
+        predictedCat = "Best Asian Pop Music Performance";
+      } else if (forecastSong.genre === "Latin") {
+        predictedCat = "Best Latin Song";
+      } else if (forecastSong.genre === "Reggae" || forecastSong.genre === "Afrobeats") {
+        predictedCat = "Best African Music Performance";
+      } else if (forecastSong.subgenre?.toLowerCase() === "trap") {
+        predictedCat = "Best Melodic Rap Performance";
+      } else if (forecastSong.collaboration || (forecastSong.features && forecastSong.features.length > 0)) {
         predictedCat = "Best Pop Duo/Group Performance";
       } else if (forecastSong.genre === "Dance" || forecastSong.genre === "Electronic") {
         predictedCat = "Best Dance Pop Recording";
@@ -404,9 +437,7 @@ export const processGrammyGuruWeeklyTweets = (args: {
       (cat: any) => cat.name === "Best New Artist" && (cat.nominees || []).some((nom: any) => nom.isPlayer && (nom.artistName === artistName || nom.artistName?.includes(artistName)))
     );
 
-    const firstYear = artistData.debutSingleDate?.year ||
-      (artistData.releases.length > 0 ? Math.min(...artistData.releases.map((r) => r.releaseDate?.year || newDate.year)) : newDate.year);
-    const wasBnaIneligible = firstYear < newDate.year || !!artistData.hasSubmittedForBestNewArtist;
+    const wasBnaIneligible = !isBestNewArtistEligible(artistData);
 
     if (artistNoms.length > 0 && !hasBnaNom && wasBnaIneligible) {
       const includeNpc = Math.random() < 0.50;
@@ -561,12 +592,22 @@ export const processGrammyGuruWeeklyTweets = (args: {
     let playerTrack = topSong;
 
     if (topSong) {
-      if (topSong.genre === "Dance" || topSong.genre === "Electronic" || topSong.secondaryGenre === "Dance") {
+      if (topSong.remixOfSongId) {
+        targetCat = "Best Remixed Recording";
+      } else if (topSong.genre === "K-Pop") {
+        targetCat = "Best Asian Pop Music Performance";
+      } else if (topSong.genre === "Latin") {
+        targetCat = "Best Latin Song";
+      } else if (topSong.genre === "Reggae" || topSong.genre === "Afrobeats") {
+        targetCat = "Best African Music Performance";
+      } else if (topSong.subgenre?.toLowerCase() === "trap") {
+        targetCat = "Best Melodic Rap Performance";
+      } else if (topSong.genre === "Dance" || topSong.genre === "Electronic" || topSong.secondaryGenre === "Dance") {
         targetCat = "Best Dance Pop Recording";
       } else if (topSong.collaboration || (topSong.features && topSong.features.length > 0)) {
         targetCat = "Best Pop Duo/Group Performance";
       } else if (topSong.genre === "Hip Hop" || topSong.genre === "Rap") {
-        targetCat = "Best Rap Song";
+        targetCat = "Best Rap Performance";
       } else if (topSong.genre === "R&B") {
         targetCat = "Best R&B Performance";
       } else if (topSong.streams > 25000000) {
@@ -589,10 +630,18 @@ export const processGrammyGuruWeeklyTweets = (args: {
         return s.genre === "Pop";
       } else if (targetCat === "Best Dance Pop Recording") {
         return s.genre === "Dance" || s.genre === "Electronic" || s.genre === "Pop";
-      } else if (targetCat === "Best Rap Song") {
+      } else if (targetCat === "Best Rap Song" || targetCat === "Best Rap Performance" || targetCat === "Best Melodic Rap Performance") {
         return s.genre === "Hip Hop" || s.genre === "Rap";
       } else if (targetCat === "Best R&B Performance" || targetCat === "Best R&B Song") {
         return s.genre === "R&B";
+      } else if (targetCat === "Best Asian Pop Music Performance") {
+        return s.genre === "K-Pop";
+      } else if (targetCat === "Best African Music Performance") {
+        return s.genre === "Reggae" || s.genre === "Afrobeats";
+      } else if (targetCat === "Best Latin Song") {
+        return s.genre === "Latin";
+      } else if (targetCat === "Best Remixed Recording") {
+        return s.title.toLowerCase().includes("remix");
       }
       return true; // ROTY / SOTY
     });

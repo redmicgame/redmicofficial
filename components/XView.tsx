@@ -22,6 +22,8 @@ import ConfirmationModal from "./ConfirmationModal";
 import XPremiumModal from "./XPremiumModal";
 import { SpotifySnapshotCard } from "./SpotifySnapshotCard";
 import { ForYourConsiderationBanner } from "./ForYourConsiderationBanner";
+import { GrammyWinnerCard } from "./GrammyWinnerCard";
+import { grammysXUser } from "../utils/grammyCardUtils";
 import { getArtistImage } from "../constants";
 import { getSmartCommentTemplates } from "../utils/smartXFanContent";
 
@@ -72,6 +74,9 @@ const resolveUser = (id: string, xUsersList: XUser[] = [], gameState?: any, acti
       isVerified: true,
       bio: "facts & stats",
     };
+  }
+  if (id === "grammys") {
+    return grammysXUser;
   }
   if (id === "usradio") {
     return {
@@ -257,9 +262,12 @@ const YearEndChart: React.FC<{ dataString: string }> = ({ dataString }) => {
 };
 
 const renderContentWithHighlights = (text: string) => {
-    return text.split(/(\$[a-zA-Z0-9]+)/g).map((part, i) => {
+    return text.split(/(\$[a-zA-Z0-9]+|@[a-zA-Z0-9_]+|#[a-zA-Z0-9_]+)/g).map((part, i) => {
         if (part.startsWith('$')) {
             return <span key={i} className="text-purple-500 font-semibold">{part}</span>;
+        }
+        if (part.startsWith('@') || part.startsWith('#')) {
+            return <span key={i} className="text-[#1D9BF0]">{part}</span>;
         }
         return part;
     });
@@ -477,6 +485,7 @@ export const Post: React.FC<{
   const isSnapshotPost = post.image && post.image.startsWith("snapshot:");
   const isLeaderboardPost = post.image && post.image.startsWith("leaderboard:");
   const isFycPost = post.image && post.image.startsWith("fyc:");
+  const isGrammyWinnerPost = post.image && post.image.startsWith("grammyWinner:");
   const isTmzPost = author.id === "tmz";
 
   const partnerOrChildDualImage = useMemo(() => {
@@ -788,6 +797,8 @@ export const Post: React.FC<{
           <div className="mt-2">
             <ForYourConsiderationBanner dataString={post.image!} />
           </div>
+        ) : isGrammyWinnerPost ? (
+          <GrammyWinnerCard dataString={post.image!} />
         ) : isTmzPost ? (
           <div
             onClick={() =>
@@ -1230,7 +1241,7 @@ const FeedView: React.FC<{
   const [displayCount, setDisplayCount] = useState(20);
 
   const SYSTEM_USERS_FALLBACK: Record<string, XUser> = {
-    
+    grammys: grammysXUser,
     golden_globes: {
       id: "golden_globes",
       name: "Golden Globes",
@@ -1408,11 +1419,12 @@ const ExploreView: React.FC<{
   // Find latest posts from PopBase/TMZ for news
   const newsPosts = [...xPosts]
     .filter((p) =>
-      ["popbase", "tmz", "chartdata", "spotifysnapshot", "talkofthecharts", "golden_globes"].includes(p.authorId),
+      ["popbase", "tmz", "chartdata", "spotifysnapshot", "talkofthecharts", "golden_globes", "grammys"].includes(p.authorId),
     )
     .slice(0, 3);
 
   const SYSTEM_USERS_FALLBACK: Record<string, XUser> = {
+    grammys: grammysXUser,
     spotifysnapshot: {
       id: "spotifysnapshot",
       name: "Spotify Snapshot",

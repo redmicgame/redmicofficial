@@ -5,6 +5,11 @@ import { useGame } from '../context/GameContext';
 import { Release, Song, GrammyAward, FycBannerData } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ForYourConsiderationBanner from './ForYourConsiderationBanner';
+import {
+    getBestNewArtistSubmissionCount,
+    hasBeenNominatedForBestNewArtist,
+    isBestNewArtistEligible,
+} from '../utils/grammyCardUtils';
 
 type CategoryName = GrammyAward['category'];
 
@@ -26,37 +31,63 @@ const SubmitForGrammysView: React.FC = () => {
 
     const eligibleSongs = useMemo(() => {
         const songIds = new Set(thisYearReleases.flatMap(r => r.songIds));
-        return activeArtistData.songs.filter(s => songIds.has(s.id) && !s.isFeatureToNpc);
-    }, [thisYearReleases, activeArtistData.songs]);
-    
-    const isBnaEligible = useMemo(() => {
-        const firstReleaseYear = Math.min(...activeArtistData.releases.map(r => r.releaseDate.year), date.year);
-        return !activeArtistData.hasSubmittedForBestNewArtist && firstReleaseYear === date.year;
-    }, [activeArtistData.releases, activeArtistData.hasSubmittedForBestNewArtist, date.year]);
+        return activeArtistData.songs.filter(
+            s => (songIds.has(s.id) || (s.isReleased && s.releaseDate?.year === date.year)) && !s.isFeatureToNpc
+        );
+    }, [thisYearReleases, activeArtistData.songs, date.year]);
+
+    const bnaSubmissionCount = useMemo(
+        () => getBestNewArtistSubmissionCount(activeArtistData),
+        [activeArtistData]
+    );
+    const bnaNominatedBefore = useMemo(
+        () => hasBeenNominatedForBestNewArtist(activeArtistData),
+        [activeArtistData]
+    );
+    const isBnaEligible = useMemo(
+        () => isBestNewArtistEligible(activeArtistData),
+        [activeArtistData]
+    );
 
     const handleSubmit = () => {
-        const submissions = Object.entries(selections).map(([category, itemId]) => {
-            const cat = category as CategoryName;
-            let itemName = '';
-            if (cat === 'Best New Artist') {
-                itemName = activeArtist.name;
-            } else if (cat.endsWith('Album') || cat === 'Album of the Year') {
-                itemName = eligibleAlbums.find(a => a.id === itemId)?.title || 'N/A';
-            } else {
-                itemName = eligibleSongs.find(s => s.id === itemId)?.title || 'N/A';
-            }
-            return { artistId: activeArtist.id, category: cat, itemId, itemName };
-        });
+        const submissions = Object.entries(selections)
+            .filter(([_, itemId]) => !!itemId)
+            .map(([category, itemId]) => {
+                const cat = category as CategoryName;
+                let itemName = '';
+                if (cat === 'Best New Artist') {
+                    itemName = activeArtist.name;
+                } else if (cat.endsWith('Album') || cat === 'Album of the Year') {
+                    itemName = eligibleAlbums.find(a => a.id === itemId)?.title || 'N/A';
+                } else {
+                    itemName = eligibleSongs.find(s => s.id === itemId)?.title || 'N/A';
+                }
+                return { artistId: activeArtist.id, category: cat, itemId, itemName };
+            });
         
         const emailId = activeArtistData.inbox.find(e => e.offer?.type === 'grammySubmission' && !e.offer.isSubmitted)?.id;
-        if (emailId) {
+        if (emailId && submissions.length > 0) {
             dispatch({ type: 'SUBMIT_FOR_GRAMMYS', payload: { submissions, emailId } });
         }
     };
 
     const categories: CategoryName[] = [
-        'Record of the Year', 'Song of the Year', 'Album of the Year', 'Best New Artist',
-        'Best Pop Song', 'Best Rap Song', 'Best R&B Song', 'Pop Album', 'Rap Album', 'R&B Album'
+        'Record of the Year',
+        'Song of the Year',
+        'Album of the Year',
+        'Best New Artist',
+        'Best Pop Song',
+        'Best Rap Song',
+        'Best Rap Performance',
+        'Best Melodic Rap Performance',
+        'Best R&B Song',
+        'Best Asian Pop Music Performance',
+        'Best African Music Performance',
+        'Best Latin Song',
+        'Best Remixed Recording',
+        'Pop Album',
+        'Rap Album',
+        'R&B Album',
     ];
 
     const previewSubmissions = useMemo(() => {
@@ -121,7 +152,9 @@ const SubmitForGrammysView: React.FC = () => {
                     if (cat === 'Best New Artist') {
                         if (!isBnaEligible) {
                             disabled = true;
-                            disabledText = 'Not eligible for Best New Artist this year.';
+                            disabledText = bnaNominatedBefore
+                                ? 'Not eligible: You have already received a Best New Artist nomination.'
+                                : 'Not eligible: Maximum of 3 career Best New Artist submissions reached.';
                         } else {
                             options = [{id: activeArtist.id, title: activeArtist.name} as any];
                         }
@@ -148,25 +181,48 @@ const SubmitForGrammysView: React.FC = () => {
                             disabledText = 'No eligible albums for this category.';
                         }
                     } else { // Song categories
-                        let genreFilter: string | null = null;
-                        if (cat === 'Best Pop Song') genreFilter = 'Pop';
-                        if (cat === 'Best Rap Song') genreFilter = 'Hip Hop';
-                        if (cat === 'Best R&B Song') genreFilter = 'R&B';
-
                         options = eligibleSongs.filter(song => {
-                            if (!genreFilter) return true;
-                            return song.genre === genreFilter;
+                            switch (cat) {
+                                case 'Best Pop Song':
+                                    return song.genre === 'Pop';
+                                case 'Best Rap Song':
+                                case 'Best Rap Performance':
+                                    return song.genre === 'Hip Hop';
+                                case 'Best Melodic Rap Performance':
+                                    return song.subgenre?.toLowerCase() === 'trap' || song.genre === 'Hip Hop';
+                                case 'Best R&B Song':
+                                    return song.genre === 'R&B';
+                                case 'Best Asian Pop Music Performance':
+                                    return song.genre === 'K-Pop';
+                                case 'Best African Music Performance':
+                                    return song.genre === 'Reggae' || song.genre === 'Afrobeats';
+                                case 'Best Latin Song':
+                                    return song.genre === 'Latin';
+                                case 'Best Remixed Recording':
+                                    return !!song.remixOfSongId;
+                                default:
+                                    return true;
+                            }
                         });
 
                         if(options.length === 0) {
                             disabled = true;
-                            disabledText = 'No eligible songs for this category.';
+                            disabledText = cat === 'Best Remixed Recording'
+                                ? 'No eligible remix songs released this year.'
+                                : 'No eligible songs for this category.';
                         }
                     }
 
                     return (
                         <div key={cat}>
-                            <label htmlFor={cat} className="block text-lg font-bold text-zinc-300">{cat}</label>
+                            <div className="flex items-center justify-between gap-2">
+                                <label htmlFor={cat} className="block text-lg font-bold text-zinc-300">{cat}</label>
+                                {cat === 'Best New Artist' && (
+                                    <span className="text-xs font-semibold text-amber-300/90 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                        {bnaNominatedBefore ? 'Nominated (Locked)' : `Attempts used: ${bnaSubmissionCount}/3`}
+                                    </span>
+                                )}
+                            </div>
                             {disabled ? (
                                 <div className="mt-1 text-sm text-zinc-500 bg-zinc-800 p-3 rounded-md">{disabledText || 'No eligible entries.'}</div>
                             ) : (

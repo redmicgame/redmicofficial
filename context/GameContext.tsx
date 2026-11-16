@@ -123,6 +123,12 @@ import { createDefaultContract } from "../utils/contractUtils";
 import { calculateYouTubeViews, calculateYouTubeLikes } from "../utils/youtubeViews";
 import { generateWeeklyMySpaceFeedPosts, getInitialMySpaceFeed } from "../utils/myspaceFeed";
 import { theGrammyGuruUser, processGrammyGuruWeeklyTweets } from "../utils/grammyGuruUtils";
+import {
+  grammysXUser,
+  encodeGrammyWinnerCard,
+  getBestNewArtistSubmissionCount,
+  isBestNewArtistEligible,
+} from "../utils/grammyCardUtils";
 
 function createGovernmentDivorceEmail(
   artistName: string,
@@ -1198,6 +1204,8 @@ const initialArtistData: ArtistData = {
   hasSubmittedForBritRisingStar: false,
   grammyHistory: [],
   hasSubmittedForBestNewArtist: false,
+  bestNewArtistSubmissionCount: 0,
+  hasBeenNominatedForBestNewArtist: false,
   oscarHistory: [],
   goldenGlobeHistory: [],
   actingRoles: [],
@@ -2490,6 +2498,7 @@ The Red Mic Team`,
         chartDataUser,
         spotifySnapshotUser,
         theGrammyGuruUser,
+        grammysXUser,
         tmzUser,
         addictionUser,
         chartsFanUser,
@@ -2781,6 +2790,7 @@ The Red Mic Team`,
         chartDataUser,
         spotifySnapshotUser,
         theGrammyGuruUser,
+        grammysXUser,
         tmzUser,
         addictionUser,
         chartsFanUser,
@@ -8955,7 +8965,7 @@ Submissions close in a few weeks.
             );
             const songIds = new Set(thisYearReleases.flatMap((r) => r.songIds));
             const eligibleSongs = artistData.songs.filter((s) =>
-              songIds.has(s.id) && !s.isFeatureToNpc,
+              (songIds.has(s.id) || (s.isReleased && s.releaseDate?.year === newDate.year)) && !s.isFeatureToNpc,
             );
 
             const bestAlbum = [...eligibleAlbums].sort(
@@ -8970,8 +8980,23 @@ Submissions close in a few weeks.
             const bestRapSong = [...eligibleSongs]
               .filter((s) => s.genre === "Hip Hop")
               .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
+            const bestMelodicRapSong = [...eligibleSongs]
+              .filter((s) => s.subgenre?.toLowerCase() === "trap" || s.genre === "Hip Hop")
+              .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
             const bestRnbSong = [...eligibleSongs]
               .filter((s) => s.genre === "R&B")
+              .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
+            const bestAsianPopSong = [...eligibleSongs]
+              .filter((s) => s.genre === "K-Pop")
+              .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
+            const bestAfricanSong = [...eligibleSongs]
+              .filter((s) => s.genre === "Reggae" || s.genre === "Afrobeats")
+              .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
+            const bestLatinSong = [...eligibleSongs]
+              .filter((s) => s.genre === "Latin")
+              .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
+            const bestRemixSong = [...eligibleSongs]
+              .filter((s) => !!s.remixOfSongId)
               .sort((a, b) => (b.streams || 0) - (a.streams || 0))[0];
 
             const bestPopAlbum = [...eligibleAlbums]
@@ -9043,13 +9068,7 @@ Submissions close in a few weeks.
                 (a, b) => (b.firstWeekStreams || 0) - (a.firstWeekStreams || 0),
               )[0];
 
-            const firstReleaseYear = Math.min(
-              ...artistData.releases.map((r) => r.releaseDate.year),
-              newDate.year,
-            );
-            const isBnaEligible =
-              !artistData.hasSubmittedForBestNewArtist &&
-              firstReleaseYear === newDate.year;
+            const isBnaEligible = isBestNewArtistEligible(artistData);
 
             const submissions: GameState["grammySubmissions"] = [];
             if (bestSong) {
@@ -9089,12 +9108,26 @@ Submissions close in a few weeks.
                 itemId: bestPopSong.id,
                 itemName: bestPopSong.title,
               });
-            if (bestRapSong)
+            if (bestRapSong) {
               submissions.push({
                 artistId: artistId,
                 category: "Best Rap Song",
                 itemId: bestRapSong.id,
                 itemName: bestRapSong.title,
+              });
+              submissions.push({
+                artistId: artistId,
+                category: "Best Rap Performance",
+                itemId: bestRapSong.id,
+                itemName: bestRapSong.title,
+              });
+            }
+            if (bestMelodicRapSong)
+              submissions.push({
+                artistId: artistId,
+                category: "Best Melodic Rap Performance",
+                itemId: bestMelodicRapSong.id,
+                itemName: bestMelodicRapSong.title,
               });
             if (bestRnbSong)
               submissions.push({
@@ -9102,6 +9135,34 @@ Submissions close in a few weeks.
                 category: "Best R&B Song",
                 itemId: bestRnbSong.id,
                 itemName: bestRnbSong.title,
+              });
+            if (bestAsianPopSong)
+              submissions.push({
+                artistId: artistId,
+                category: "Best Asian Pop Music Performance",
+                itemId: bestAsianPopSong.id,
+                itemName: bestAsianPopSong.title,
+              });
+            if (bestAfricanSong)
+              submissions.push({
+                artistId: artistId,
+                category: "Best African Music Performance",
+                itemId: bestAfricanSong.id,
+                itemName: bestAfricanSong.title,
+              });
+            if (bestLatinSong)
+              submissions.push({
+                artistId: artistId,
+                category: "Best Latin Song",
+                itemId: bestLatinSong.id,
+                itemName: bestLatinSong.title,
+              });
+            if (bestRemixSong)
+              submissions.push({
+                artistId: artistId,
+                category: "Best Remixed Recording",
+                itemId: bestRemixSong.id,
+                itemName: bestRemixSong.title,
               });
 
             if (bestPopAlbum)
@@ -9130,9 +9191,11 @@ Submissions close in a few weeks.
             autoGrammySubmissions.push(...submissions);
             artistData.grammySubmissionWeek = newDate.week;
             artistData.grammySubmissionYear = newDate.year;
-            artistData.hasSubmittedForBestNewArtist = isBnaEligible
-              ? true
-              : artistData.hasSubmittedForBestNewArtist;
+            if (isBnaEligible) {
+              artistData.bestNewArtistSubmissionCount =
+                getBestNewArtistSubmissionCount(artistData) + 1;
+              artistData.hasSubmittedForBestNewArtist = true;
+            }
           }
         }
 
@@ -9145,8 +9208,13 @@ Submissions close in a few weeks.
             if (Math.random() < 0.70) {
               const leadNpc = fSong.npcArtistName || "Featured Artist";
               let cat: GrammyAward["category"] = "Record of the Year";
-              if (fSong.genre === "Pop") cat = "Best Pop Song";
-              else if (fSong.genre === "Hip Hop") cat = "Best Rap Song";
+              if (fSong.remixOfSongId) cat = "Best Remixed Recording";
+              else if (fSong.genre === "K-Pop") cat = "Best Asian Pop Music Performance";
+              else if (fSong.genre === "Latin") cat = "Best Latin Song";
+              else if (fSong.genre === "Reggae" || fSong.genre === "Afrobeats") cat = "Best African Music Performance";
+              else if (fSong.subgenre?.toLowerCase() === "trap") cat = "Best Melodic Rap Performance";
+              else if (fSong.genre === "Pop") cat = "Best Pop Song";
+              else if (fSong.genre === "Hip Hop") cat = "Best Rap Performance";
               else if (fSong.genre === "R&B") cat = "Best R&B Song";
               autoGrammySubmissions.push({
                 artistId: artistId,
@@ -17017,7 +17085,13 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
           "Best New Artist",
           "Best Pop Song",
           "Best Rap Song",
+          "Best Rap Performance",
+          "Best Melodic Rap Performance",
           "Best R&B Song",
+          "Best Asian Pop Music Performance",
+          "Best African Music Performance",
+          "Best Latin Song",
+          "Best Remixed Recording",
           "Pop Album",
           "Rap Album",
           "R&B Album",
@@ -17028,7 +17102,6 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
 
           let genreFilter: string | null = null;
           let isAlbumCategory = false;
-          let isSongCategory = false;
 
           switch (categoryName) {
             case "Pop Album":
@@ -17045,24 +17118,50 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
               break;
             case "Best Pop Song":
               genreFilter = "Pop";
-              isSongCategory = true;
               break;
             case "Best Rap Song":
+            case "Best Rap Performance":
               genreFilter = "Hip Hop";
-              isSongCategory = true;
               break;
             case "Best R&B Song":
               genreFilter = "R&B";
-              isSongCategory = true;
+              break;
+            case "Best Asian Pop Music Performance":
+              genreFilter = "K-Pop";
+              break;
+            case "Best Latin Song":
+              genreFilter = "Latin";
               break;
             case "Album of the Year":
               isAlbumCategory = true;
               break;
-            case "Record of the Year":
-            case "Song of the Year":
-              isSongCategory = true;
+            default:
               break;
           }
+
+          const isSongEligibleForCategory = (song: Song, cat: GrammyAward["category"]): boolean => {
+            switch (cat) {
+              case "Best Pop Song":
+                return song.genre === "Pop";
+              case "Best Rap Song":
+              case "Best Rap Performance":
+                return song.genre === "Hip Hop";
+              case "Best Melodic Rap Performance":
+                return song.subgenre?.toLowerCase() === "trap" || song.genre === "Hip Hop";
+              case "Best R&B Song":
+                return song.genre === "R&B";
+              case "Best Asian Pop Music Performance":
+                return song.genre === "K-Pop";
+              case "Best African Music Performance":
+                return song.genre === "Reggae" || song.genre === "Afrobeats";
+              case "Best Latin Song":
+                return song.genre === "Latin";
+              case "Best Remixed Recording":
+                return !!song.remixOfSongId;
+              default:
+                return true;
+            }
+          };
 
           const currentGrammySubs = [
             ...(state.grammySubmissions || []),
@@ -17131,13 +17230,11 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
             } else {
               // Song categories
               const song = artistData.songs.find((s) => s.id === sub.itemId);
-              if (song) {
-                if (!genreFilter || song.genre === genreFilter) {
-                  score =
-                    song.quality * 2 + (song.firstWeekStreams || 0) / 25000;
-                  coverArt = song.coverArt;
-                  isValid = true;
-                }
+              if (song && isSongEligibleForCategory(song, categoryName)) {
+                score =
+                  song.quality * 2 + (song.firstWeekStreams || 0) / 25000;
+                coverArt = song.coverArt;
+                isValid = true;
               }
             }
 
@@ -17164,7 +17261,6 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
           const numNpcContenders = 15;
           if (isAlbumCategory) {
             newNpcAlbums
-              .slice(0, numNpcContenders * 5)
               .filter((album) => {
                 if (!genreFilter) return true;
                 const albumSongs = album.songIds
@@ -17207,22 +17303,55 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
                 });
               });
           } else if (categoryName !== "Best New Artist") {
-            newNpcsWithReleases
-              .slice(0, numNpcContenders * 5)
-              .filter((song) => !genreFilter || song.genre === genreFilter)
-              .slice(0, numNpcContenders)
-              .forEach((song) => {
+            const matchingNpcSongs = newNpcsWithReleases
+              .filter((song) => {
+                if (categoryName === "Best Melodic Rap Performance") {
+                  return song.genre === "Hip Hop";
+                }
+                if (categoryName === "Best African Music Performance") {
+                  return song.genre === "Reggae" || song.genre === "Afrobeats";
+                }
+                if (categoryName === "Best Remixed Recording") {
+                  return song.title.toLowerCase().includes("remix");
+                }
+                return !genreFilter || song.genre === genreFilter;
+              })
+              .sort((a, b) => (b.basePopularity || 0) - (a.basePopularity || 0))
+              .slice(0, numNpcContenders);
+
+            matchingNpcSongs.forEach((song) => {
+              contenders.push({
+                id: song.uniqueId,
+                name: song.title,
+                artistName: song.artist,
+                isPlayer: false,
+                score: song.basePopularity / 100000,
+                coverArt:
+                  song.coverArt ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250`,
+              });
+            });
+
+            // Ensure Best Remixed Recording has 5 nominees even if few NPC songs carry "(Remix)"
+            if (categoryName === "Best Remixed Recording" && contenders.length < 5) {
+              const existingIds = new Set(contenders.map((c) => c.id));
+              const fallbackSongs = [...newNpcsWithReleases]
+                .sort((a, b) => (b.basePopularity || 0) - (a.basePopularity || 0))
+                .filter((s) => !existingIds.has(s.uniqueId))
+                .slice(0, 5 - contenders.length);
+              fallbackSongs.forEach((song) => {
                 contenders.push({
-                  id: song.uniqueId,
-                  name: song.title,
+                  id: `${song.uniqueId}_remix`,
+                  name: song.title.toLowerCase().includes("remix") ? song.title : `${song.title} (Remix)`,
                   artistName: song.artist,
                   isPlayer: false,
-                  score: song.basePopularity / 100000,
+                  score: (song.basePopularity / 100000) * 0.85,
                   coverArt:
                     song.coverArt ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(song.artist)}&background=random&color=fff&size=250`,
                 });
               });
+            }
           } else {
             [
               ...new Set(
@@ -17237,6 +17366,7 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
                   artistName,
                   isPlayer: false,
                   score: Math.random() * 100 + 50,
+                  coverArt: getArtistImage(artistName),
                 });
               });
           }
@@ -17307,6 +17437,17 @@ ${cat.name}: ${winner.itemName} - ${winner.artistName}`;
               (nom) => nom.isPlayer && nom.artistName === artistProfile?.name,
             );
 
+          const gotBnaNom = newNominations.some(
+            (cat) =>
+              cat.name === "Best New Artist" &&
+              cat.nominees.some(
+                (nom) => nom.isPlayer && nom.artistName === artistProfile?.name,
+              ),
+          );
+          if (gotBnaNom) {
+            artistData.hasBeenNominatedForBestNewArtist = true;
+          }
+
           if (artistNominations.length > 0 && artistProfile) {
             artistData.popularity = Math.min(
               100,
@@ -17372,25 +17513,78 @@ Please let us know if you'll be attending by sharing your look.
 
       // Week 52: Grammy Awards Ceremony
       if (newDate.week === 52 && state.grammyCurrentYearNominations) {
+        for (const aId in updatedArtistsData) {
+          if (!updatedArtistsData[aId].xUsers.some((u) => u.id === "grammys")) {
+            updatedArtistsData[aId].xUsers.push(grammysXUser);
+          }
+        }
+
+        const grammyWinnerPosts: XPost[] = [];
         for (const category of state.grammyCurrentYearNominations) {
           if (category.winner) {
             const winner = category.winner;
-            const content = `Recording Academy / GRAMMYS 🏆
+            let resolvedArtistImage: string | undefined;
+            let winnerHandle = winner.artistName
+              .split(",")[0]
+              .trim()
+              .replace(/[^a-zA-Z0-9_]/g, "")
+              .toLowerCase();
 
-Congrats ${category.name} winner - \'${winner.name}\' @${winner.artistName.replace(/\\s/g, "")} #GRAMMYs`;
-            Object.values(updatedArtistsData).forEach((d) =>
-              d.xPosts.unshift({
-                id: crypto.randomUUID(),
-                authorId: "popbase",
-                content,
-                image: winner.coverArt,
-                likes: Math.floor(Math.random() * 40000) + 15000,
-                retweets: Math.floor(Math.random() * 10000) + 5000,
-                views: Math.floor(Math.random() * 2000000) + 1000000,
-                date: newDate,
-              }),
-            );
+            if (winner.isPlayer) {
+              const matchedPlayer = allPlayerArtistsAndGroups.find(
+                (a) =>
+                  a.name === winner.artistName ||
+                  winner.artistName.includes(`feat. ${a.name}`),
+              );
+              if (matchedPlayer) {
+                resolvedArtistImage = matchedPlayer.image;
+                const pXUser = updatedArtistsData[matchedPlayer.id]?.xUsers?.find(
+                  (u) => u.isPlayer,
+                );
+                if (pXUser?.username) {
+                  winnerHandle = pXUser.username;
+                }
+              }
+            }
+            if (!resolvedArtistImage) {
+              const primaryNpc = winner.artistName
+                .split(",")[0]
+                .split(" feat.")[0]
+                .trim();
+              resolvedArtistImage = getArtistImage(primaryNpc) || winner.coverArt;
+            }
+
+            const cardImage = encodeGrammyWinnerCard({
+              category: category.name,
+              artistName: winner.artistName,
+              itemName: winner.name,
+              artistImage: resolvedArtistImage,
+              coverArt: winner.coverArt,
+              year: newDate.year + 1,
+            });
+
+            const content =
+              category.name === "Best New Artist"
+                ? `Congrats Best New Artist winner - ${winner.artistName} – @${winnerHandle} #GRAMMYs 🏆`
+                : `Congrats ${category.name} winner - "${winner.name}" – @${winnerHandle} #GRAMMYs 🏆`;
+
+            grammyWinnerPosts.push({
+              id: crypto.randomUUID(),
+              authorId: "grammys",
+              content,
+              image: cardImage,
+              likes: Math.floor(Math.random() * 45000) + 18000,
+              retweets: Math.floor(Math.random() * 12000) + 4500,
+              views: Math.floor(Math.random() * 2200000) + 900000,
+              date: newDate,
+            });
           }
+        }
+
+        if (grammyWinnerPosts.length > 0) {
+          Object.values(updatedArtistsData).forEach((d) =>
+            d.xPosts.unshift(...grammyWinnerPosts),
+          );
         }
 
         for (const artistId in updatedArtistsData) {
@@ -17421,6 +17615,9 @@ Congrats ${category.name} winner - \'${winner.name}\' @${winner.artistName.repla
                 artistName: artistProfile?.name || "Unknown",
                 isWinner,
               });
+              if (category.name === "Best New Artist") {
+                artistData.hasBeenNominatedForBestNewArtist = true;
+              }
             }
           }
         }
@@ -17435,6 +17632,9 @@ Congrats ${category.name} winner - \'${winner.name}\' @${winner.artistName.repla
         const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === artistId);
         if (!aData.xUsers.some((u) => u.id === "thegrammyguru")) {
           aData.xUsers.push(theGrammyGuruUser);
+        }
+        if (!aData.xUsers.some((u) => u.id === "grammys")) {
+          aData.xUsers.push(grammysXUser);
         }
         if (newDate.week >= 40 && newDate.week <= 45) {
           const allSubsForGuru = [
@@ -25787,6 +25987,9 @@ ${npcArtistName}`,
       const hasSubmittedBna = bnaSubmission
         ? true
         : activeData.hasSubmittedForBestNewArtist;
+      const bnaSubmissionCount = bnaSubmission
+        ? getBestNewArtistSubmissionCount(activeData) + 1
+        : activeData.bestNewArtistSubmissionCount;
 
       const activeArtistProfile = state.soloArtist || (state.artists || []).find((a) => a.id === state.activeArtistId) || { name: activeData.name || "Artist", image: activeData.image || "" };
       const albumSub = submissions.find((s: any) => s.category?.includes("Album") || s.category === "Album of the Year");
@@ -25826,6 +26029,7 @@ ${npcArtistName}`,
             ...activeData,
             inbox: updatedInbox,
             hasSubmittedForBestNewArtist: hasSubmittedBna,
+            bestNewArtistSubmissionCount: bnaSubmissionCount,
             grammySubmissionWeek: state.date.week,
             grammySubmissionYear: state.date.year,
             pendingFycPosts: [...(activeData.pendingFycPosts || []), grammyFycBanner],
@@ -33263,6 +33467,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
           if (fullyLoadedState && fullyLoadedState.artistsData) {
             for (const aId in fullyLoadedState.artistsData) {
               const aData = fullyLoadedState.artistsData[aId];
+              if (aData && aData.xUsers && !aData.xUsers.some((u: any) => u.id === "grammys")) {
+                aData.xUsers.push(grammysXUser);
+              }
               if (aData && aData.xPosts && aData.xPosts.length > 120) {
                 const playerHandle = aData.artistName ? aData.artistName.replace(/\s/g, "").toLowerCase() : "";
                 const playerXId = aData.xUsers?.find((u: any) => u.username === playerHandle)?.id;

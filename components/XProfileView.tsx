@@ -10,10 +10,14 @@ import HeartIcon from './icons/HeartIcon';
 import ChartBarIcon from './icons/ChartBarIcon';
 import { ComposeXPostModal, Post } from './XView';
 import { getDateFromGameWeek } from './CalendarDatePicker';
+import { grammysXUser } from '../utils/grammyCardUtils';
 
 const resolveUser = (id: string, xUsersList: XUser[] = []): XUser => {
     let found = xUsersList.find(u => u.id === id);
     if (found) return found;
+    if (id === 'grammys') {
+        return grammysXUser;
+    }
     if (id === 'popbase') {
         return {
             id: 'popbase',
@@ -81,7 +85,7 @@ const XProfileView: React.FC = () => {
     const { selectedXUserId } = gameState;
     const { xUsers, xPosts, xFollowingIds, xSuspensionStatus, selectedPlayerXUserId } = activeArtistData!;
 
-    const user = xUsers.find(u => u.id === selectedXUserId);
+    const user = xUsers.find(u => u.id === selectedXUserId) || (selectedXUserId === 'grammys' ? grammysXUser : undefined);
     const playerUser = selectedPlayerXUserId ? xUsers.find(u => u.id === selectedPlayerXUserId) : xUsers.find(u => u.isPlayer);
     const isPlayerProfile = Boolean(user?.isPlayer || (playerUser && user?.id === playerUser.id));
 

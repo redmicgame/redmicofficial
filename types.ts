@@ -1347,7 +1347,13 @@ export interface GrammyAward {
     | "Best R&B Song"
     | "Pop Album"
     | "Rap Album"
-    | "R&B Album";
+    | "R&B Album"
+    | "Best Asian Pop Music Performance"
+    | "Best Rap Performance"
+    | "Best Melodic Rap Performance"
+    | "Best African Music Performance"
+    | "Best Latin Song"
+    | "Best Remixed Recording";
   itemId: string; // releaseId, songId, or artistId
   itemName: string;
   artistName: string;
@@ -1442,17 +1448,7 @@ export interface OscarContender {
 }
 
 export interface GrammyCategory {
-  name:
-    | "Best New Artist"
-    | "Record of the Year"
-    | "Song of the Year"
-    | "Album of the Year"
-    | "Best Pop Song"
-    | "Best Rap Song"
-    | "Best R&B Song"
-    | "Pop Album"
-    | "Rap Album"
-    | "R&B Album";
+  name: GrammyAward["category"];
   nominees: GrammyContender[];
   winner?: GrammyContender;
 }
@@ -2369,6 +2365,8 @@ export interface ArtistData {
   // GRAMMYs
   grammyHistory: GrammyAward[];
   hasSubmittedForBestNewArtist: boolean;
+  bestNewArtistSubmissionCount?: number;
+  hasBeenNominatedForBestNewArtist?: boolean;
   // Oscars
   oscarHistory: OscarAward[];
   goldenGlobeHistory: GoldenGlobeAward[];
