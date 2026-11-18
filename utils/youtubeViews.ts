@@ -214,3 +214,29 @@ export function calculateYouTubeLikes(views: number, hype: number): number {
   const ratio = getYouTubeLikeRatio(hype);
   return Math.floor(safeViews * ratio);
 }
+
+/**
+ * Calculates concurrent live premiere viewers watching now based on:
+ * - Predicted first-week views
+ * - Artist popularity (0-100)
+ * Benchmark: Popularity 100 & estimated 100M first-week views = 1M watching now.
+ */
+export function calculatePremiereLiveViewers(
+  estimatedFirstWeekViews: number,
+  popularity: number,
+): number {
+  const safeEst = Math.max(0, estimatedFirstWeekViews || 0);
+  const safePop = Math.max(1, Math.min(100, popularity || 10));
+  const raw = Math.round(safeEst * (safePop / 100) * 0.01);
+  return Math.max(50, raw);
+}
+
+export function calculatePremiereWaitingCount(
+  liveViewers: number,
+  popularity: number,
+): number {
+  const safePop = Math.max(1, Math.min(100, popularity || 10));
+  const ratio = 0.02 + (safePop / 100) * 0.03;
+  return Math.max(25, Math.round(liveViewers * ratio));
+}
+

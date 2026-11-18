@@ -13,6 +13,7 @@ import { Video, Song, Release } from '../types';
 import ShoppingBagIcon from './icons/ShoppingBagIcon';
 import { LABELS, SUBSCRIBER_THRESHOLD_VERIFIED, VIEWS_THRESHOLD_VERIFIED } from '../constants';
 import { calculateYouTubeLikes, getYouTubeLikeRatio, getYouTubeEngagementPerformance } from '../utils/youtubeViews';
+import { formatPremiereDateShort } from '../utils/youtubePremierePosts';
 
 const CancelIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -72,12 +73,24 @@ const DescriptionOverlay: React.FC<{ video: Video; onClose: () => void }> = ({ v
                             <p className="text-xs text-zinc-400">Likes ({engagement.ratioPercent})</p>
                         </div>
                         <div>
-                            <p className="font-bold text-lg">{video.views.toLocaleString()}</p>
-                            <p className="text-xs text-zinc-400">Views</p>
+                            <p className="font-bold text-lg">
+                                {video.isLivePremiere && !video.isScheduled
+                                    ? formatNumber(video.liveViewers ?? 0)
+                                    : video.isScheduled
+                                        ? formatNumber(video.waitingCount ?? 50)
+                                        : video.views.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-zinc-400">
+                                {video.isLivePremiere && !video.isScheduled
+                                    ? 'Watching Now'
+                                    : video.isScheduled
+                                        ? 'Waiting'
+                                        : 'Views'}
+                            </p>
                         </div>
                         <div>
-                            <p className="font-bold text-lg">{new Date(video.releaseDate.year, 0, (video.releaseDate.week - 1) * 7 + 1).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                            <p className="text-xs text-zinc-400">Date</p>
+                            <p className="font-bold text-lg">{formatPremiereDateShort(video.releaseDate)}</p>
+                            <p className="text-xs text-zinc-400">{video.isScheduled ? 'Premiere Date' : 'Date'}</p>
                         </div>
                     </div>
                     <hr className="border-zinc-700 my-4" />
@@ -390,6 +403,17 @@ const YouTubeVideoDetailView: React.FC = () => {
         return `${yearsAgo} years ago`;
     };
 
+    const isUpcoming = Boolean(video.isScheduled);
+    const isLive = Boolean(video.isLivePremiere && !video.isScheduled);
+    const isNotifOn = video.notificationOn !== false;
+
+    const handleToggleNotification = () => {
+        dispatch({
+            type: 'TOGGLE_VIDEO_NOTIFICATION',
+            payload: { videoId: video.id, artistId: video.artistId },
+        });
+    };
+
     return (
         <div className="bg-[#0f0f0f] text-white h-full overflow-y-auto">
             <div className="w-full aspect-video bg-black flex items-center justify-center relative">
@@ -397,20 +421,77 @@ const YouTubeVideoDetailView: React.FC = () => {
                  <button onClick={handleBack} className="absolute top-4 left-4 z-20 p-2 bg-black/50 rounded-full">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
+                {isUpcoming && (
+                    <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs font-semibold px-2.5 py-1 rounded flex items-center gap-1.5 border border-white/10">
+                        <span>Upcoming · Premieres {formatPremiereDateShort(video.releaseDate)}, 9:00 PM</span>
+                    </div>
+                )}
+                {isLive && (
+                    <div className="absolute bottom-3 right-3 bg-[#cc0000] text-white text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5 shadow-lg">
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        <span>LIVE</span>
+                    </div>
+                )}
             </div>
 
             <main className="p-3 space-y-4">
                 <h1 className="text-xl font-semibold leading-tight">{video.title}</h1>
 
-                <div className="flex items-center gap-4 text-sm text-zinc-400">
-                    <span>{formatNumber(video.views)} views</span>
-                    <span>{timeAgo(video.releaseDate, date)}</span>
+                <div className="flex items-center gap-3 text-sm text-zinc-400 flex-wrap">
+                    {isUpcoming ? (
+                        <>
+                            <span>{formatNumber(video.waitingCount ?? 50)} waiting</span>
+                            <span>·</span>
+                            <span>Premieres {formatPremiereDateShort(video.releaseDate)}, 9:00 PM</span>
+                        </>
+                    ) : isLive ? (
+                        <>
+                            <span className="inline-flex items-center gap-1.5 text-zinc-200 font-medium">
+                                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                                ▷{formatNumber(video.liveViewers ?? 0)} watching
+                            </span>
+                            <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Premiere Live</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>{formatNumber(video.views)} views</span>
+                            <span>{timeAgo(video.releaseDate, date)}</span>
+                        </>
+                    )}
                     <button onClick={() => setIsDescriptionExpanded(true)} className="font-semibold text-white">...more</button>
                 </div>
 
+                {isUpcoming && (
+                    <button
+                        type="button"
+                        onClick={handleToggleNotification}
+                        className="w-full py-2.5 px-4 rounded-full border border-zinc-700 hover:bg-zinc-800 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={isNotifOn ? "currentColor" : "none"} stroke={isNotifOn ? "none" : "currentColor"} strokeWidth="1.8" className="w-4 h-4">
+                            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                        </svg>
+                        <span>{isNotifOn ? 'Notification on' : 'Notify me'}</span>
+                    </button>
+                )}
+
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <img src={channelData.avatar} alt={channelData.name} className={`w-10 h-10 rounded-full ${channelData.isPersonal ? 'object-cover' : 'object-contain bg-white p-1'}`} />
+                        {isLive ? (
+                            <div className="flex flex-col items-center">
+                                <div className="p-[2px] rounded-full bg-gradient-to-tr from-[#ff0033] via-rose-500 to-pink-500">
+                                    <img
+                                        src={channelData.avatar}
+                                        alt={channelData.name}
+                                        className={`w-10 h-10 rounded-full border-2 border-[#0f0f0f] ${channelData.isPersonal ? 'object-cover' : 'object-contain bg-white p-1'}`}
+                                    />
+                                </div>
+                                <span className="-mt-2 bg-[#cc0000] text-white text-[8px] font-extrabold px-1 rounded leading-tight border border-[#0f0f0f]">
+                                    LIVE
+                                </span>
+                            </div>
+                        ) : (
+                            <img src={channelData.avatar} alt={channelData.name} className={`w-10 h-10 rounded-full ${channelData.isPersonal ? 'object-cover' : 'object-contain bg-white p-1'}`} />
+                        )}
                         <div>
                             <p className="font-semibold">{channelData.name}</p>
                             <p className="text-xs text-zinc-400">{formatNumber(channelData.subscribers)} subscribers</p>

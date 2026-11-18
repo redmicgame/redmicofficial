@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
 import { VIDEO_COSTS, NPC_ARTIST_NAMES, LABELS } from '../constants';
-import { calculateYouTubeViews, calculateYouTubeLikes, getYouTubeEngagementPerformance } from '../utils/youtubeViews';
+import { calculateYouTubeViews, calculateYouTubeLikes, getYouTubeEngagementPerformance, calculatePremiereLiveViewers, calculatePremiereWaitingCount } from '../utils/youtubeViews';
+import { formatPremiereDateShort } from '../utils/youtubePremierePosts';
 import type { Video } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -16,6 +17,8 @@ const CreateVideoView: React.FC = () => {
     const [customTitle, setCustomTitle] = useState('');
     const [isScheduled, setIsScheduled] = useState(false);
     const [scheduledWeeks, setScheduledWeeks] = useState(1);
+    const [isInstantPremiere, setIsInstantPremiere] = useState(false);
+    const [isScheduledPremiere, setIsScheduledPremiere] = useState(true);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const [error, setError] = useState('');
@@ -90,6 +93,34 @@ const CreateVideoView: React.FC = () => {
         });
     }, [selectedSong, activeArtistData, activeArtist, date.year, videoType, gameState.difficultyMode]);
 
+    const scheduledReleaseDate = useMemo(() => {
+        const rawWeek = date.week + scheduledWeeks;
+        const week = ((rawWeek - 1) % 52) + 1;
+        const year = date.year + Math.floor((rawWeek - 1) / 52);
+        return { week, year, day: 5 };
+    }, [date.week, date.year, scheduledWeeks]);
+
+    const futureWeekOptions = useMemo(() => {
+        return Array.from({ length: 26 }, (_, idx) => {
+            const offset = idx + 1;
+            const rawWeek = date.week + offset;
+            const week = ((rawWeek - 1) % 52) + 1;
+            const year = date.year + Math.floor((rawWeek - 1) / 52);
+            const target = { week, year, day: 5 };
+            return {
+                offset,
+                week,
+                year,
+                label: `In ${offset} ${offset === 1 ? 'Week' : 'Weeks'} — ${year} W${week} (${formatPremiereDateShort(target)})`,
+            };
+        });
+    }, [date.week, date.year]);
+
+    const estLivePremiereViewers = useMemo(() => {
+        if (estimatedFirstWeek === null) return null;
+        return calculatePremiereLiveViewers(estimatedFirstWeek, activeArtistData.popularity || 10);
+    }, [estimatedFirstWeek, activeArtistData.popularity]);
+
     const isKPopSong = Boolean(selectedSong && (
         /k-?pop/i.test(selectedSong.genre || '') ||
         /k-?pop/i.test(selectedSong.subgenre || '') ||
@@ -159,6 +190,15 @@ const CreateVideoView: React.FC = () => {
             new RegExp(`\\b${name}\\b`, 'i').test(fullText)
         );
 
+        const effectiveReleaseDate = isScheduled ? scheduledReleaseDate : date;
+        const isPremiere = isScheduled ? isScheduledPremiere : isInstantPremiere;
+        const computedLiveViewers =
+            estLivePremiereViewers ??
+            calculatePremiereLiveViewers(estimatedFirstWeek || 0, activeArtistData.popularity || 10);
+        const waitingCount = isScheduled
+            ? calculatePremiereWaitingCount(computedLiveViewers, activeArtistData.popularity || 10)
+            : undefined;
+
         const newVideo: Video = {
             id: crypto.randomUUID(),
             songId: selectedSong.id,
@@ -167,8 +207,14 @@ const CreateVideoView: React.FC = () => {
             views: 0,
             likes: 0,
             thumbnail: thumbnail,
-            releaseDate: isScheduled ? { week: ((date.week + scheduledWeeks - 1) % 52) + 1, year: date.year + Math.floor((date.week + scheduledWeeks - 1) / 52) } : date,
+            releaseDate: effectiveReleaseDate,
             isScheduled: isScheduled,
+            isPremiere: isPremiere,
+            isLivePremiere: !isScheduled && isPremiere,
+            liveViewers: !isScheduled && isPremiere ? computedLiveViewers : undefined,
+            premierePeakViewers: !isScheduled && isPremiere ? computedLiveViewers : undefined,
+            waitingCount,
+            notificationOn: isScheduled ? true : undefined,
             artistId: activeArtist.id,
             channelId: channelId,
             description,
@@ -240,6 +286,103 @@ const CreateVideoView: React.FC = () => {
                     />
                 </div>
 
+                {/* Release Timing & Premiere Options */}
+                <div className="bg-zinc-800/80 border border-zinc-700/80 rounded-xl p-4 space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-zinc-200 mb-2">Release Timing & Premiere</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsScheduled(false)}
+                                className={`p-3 rounded-lg text-left border-2 transition-all ${!isScheduled ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-900/60 hover:border-zinc-600'}`}
+                            >
+                                <p className="font-bold text-sm text-white">Release Now</p>
+                                <p className="text-xs text-zinc-400">Publish immediately ({date.year} W{date.week})</p>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsScheduled(true)}
+                                className={`p-3 rounded-lg text-left border-2 transition-all ${isScheduled ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-900/60 hover:border-zinc-600'}`}
+                            >
+                                <p className="font-bold text-sm text-white">Schedule Video</p>
+                                <p className="text-xs text-zinc-400">Pick a future week & build hype</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    {isScheduled ? (
+                        <div className="space-y-3 pt-2 border-t border-zinc-700/70">
+                            <div>
+                                <label htmlFor="schedule-week-select" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5">
+                                    Select Premiere Week
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setScheduledWeeks(w => Math.max(1, w - 1))}
+                                        className="px-3 h-11 rounded-lg bg-zinc-700 hover:bg-zinc-600 font-bold text-white"
+                                        aria-label="Decrease weeks"
+                                    >
+                                        -
+                                    </button>
+                                    <select
+                                        id="schedule-week-select"
+                                        value={scheduledWeeks}
+                                        onChange={e => setScheduledWeeks(Number(e.target.value))}
+                                        className="flex-1 bg-zinc-700 border-zinc-600 rounded-lg h-11 px-3 text-sm text-white focus:ring-red-500 focus:border-red-500"
+                                    >
+                                        {futureWeekOptions.map(opt => (
+                                            <option key={opt.offset} value={opt.offset}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setScheduledWeeks(w => Math.min(52, w + 1))}
+                                        className="px-3 h-11 rounded-lg bg-zinc-700 hover:bg-zinc-600 font-bold text-white"
+                                        aria-label="Increase weeks"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <p className="text-xs text-zinc-400 mt-1.5">
+                                    Scheduled for <span className="text-white font-semibold">{scheduledReleaseDate.year} Week {scheduledReleaseDate.week}</span> ({formatPremiereDateShort(scheduledReleaseDate)}, 9:00 PM)
+                                </p>
+                            </div>
+
+                            <label className="flex items-center justify-between gap-3 bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/60 cursor-pointer">
+                                <div>
+                                    <p className="text-sm font-semibold text-white">Launch as Live Premiere on Release</p>
+                                    <p className="text-xs text-zinc-400">Shows Upcoming countdown now & goes LIVE when it drops</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={isScheduledPremiere}
+                                    onChange={e => setIsScheduledPremiere(e.target.checked)}
+                                    className="w-5 h-5 accent-red-600 rounded cursor-pointer"
+                                />
+                            </label>
+                        </div>
+                    ) : (
+                        <label className="flex items-center justify-between gap-3 bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/60 cursor-pointer">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm font-semibold text-white">Set as Instant Premiere</p>
+                                    <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-600 text-white">LIVE</span>
+                                </div>
+                                <p className="text-xs text-zinc-400">Premiere live immediately with real-time concurrent viewers instead of 0 views</p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={isInstantPremiere}
+                                onChange={e => setIsInstantPremiere(e.target.checked)}
+                                className="w-5 h-5 accent-red-600 rounded cursor-pointer"
+                            />
+                        </label>
+                    )}
+                </div>
+
                 <div className="bg-zinc-800 p-4 rounded-lg space-y-3">
                     <h3 className="font-bold text-lg">Summary & Reach Projections</h3>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -264,6 +407,14 @@ const CreateVideoView: React.FC = () => {
                                 <p className="text-purple-400 font-bold text-base">
                                     ~{formatNumber(estimatedFirstWeek)} views
                                 </p>
+                                {(isScheduled ? isScheduledPremiere : isInstantPremiere) && estLivePremiereViewers !== null && (
+                                    <>
+                                        <p className="text-zinc-400 font-medium">Est. Live Watching Now:</p>
+                                        <p className="text-red-400 font-bold text-base">
+                                            ~{formatNumber(estLivePremiereViewers)} watching
+                                        </p>
+                                    </>
+                                )}
                                 {(() => {
                                     const hype = selectedSong?.hype ?? activeArtistData.hype ?? 50;
                                     const estLikes = calculateYouTubeLikes(estimatedFirstWeek, hype);
@@ -288,7 +439,11 @@ const CreateVideoView: React.FC = () => {
                 {error && <p className="text-red-400 text-sm text-center">{error}</p>}
                 
                 <button onClick={handleCreateVideo} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-red-600/20 disabled:bg-zinc-600 disabled:shadow-none" disabled={money < cost || !songId}>
-                    Shoot Video
+                    {isScheduled
+                        ? (isScheduledPremiere ? `Schedule Premiere (${scheduledReleaseDate.year} W${scheduledReleaseDate.week})` : `Schedule Video (${scheduledReleaseDate.year} W${scheduledReleaseDate.week})`)
+                        : isInstantPremiere
+                            ? 'Launch Instant Premiere'
+                            : 'Shoot Video'}
                 </button>
             </div>
         </div>

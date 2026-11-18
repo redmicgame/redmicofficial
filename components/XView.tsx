@@ -613,6 +613,12 @@ export const Post: React.FC<{
                 {timeAgo(post.date)}
               </span>
             </div>
+            {(author.isFanAccount || author.id.startsWith("charts_") || author.id.startsWith("stats_fan")) && (
+              <div className="flex items-center gap-1 text-xs text-zinc-500 -mt-0.5 mb-0.5">
+                <span>🎭</span>
+                <span>Fan account</span>
+              </div>
+            )}
             {isPlayerPost && (
               <div className="relative flex-shrink-0 ml-1">
                 <button

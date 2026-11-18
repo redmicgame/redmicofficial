@@ -206,7 +206,13 @@ const YouTubeStudioView: React.FC = () => {
                                                 <img src={video.thumbnail} alt={video.title} className="w-24 aspect-video rounded-md object-cover"/>
                                                 <div className="flex-grow">
                                                     <p className="font-semibold line-clamp-2 text-sm">{video.title}</p>
-                                                    <p className="text-xs text-zinc-400">First {weeksSinceRelease * 7} days</p>
+                                                    <p className="text-xs text-zinc-400">
+                                                        {video.isScheduled
+                                                            ? `Scheduled for ${video.releaseDate.year} W${video.releaseDate.week} (${formatNumber(video.waitingCount ?? 50)} waiting)`
+                                                            : video.isLivePremiere
+                                                                ? `LIVE Premiere • ${formatNumber(video.liveViewers ?? 0)} watching now`
+                                                                : `First ${Math.max(0, weeksSinceRelease) * 7} days`}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div className="border-t border-white/10 pt-2 flex justify-around items-center text-xs">
@@ -295,7 +301,11 @@ const YouTubeStudioView: React.FC = () => {
                                                 </div>
 
                                                 <p className="text-xs text-zinc-400">
-                                                    Released Y{video.releaseDate.year} W{video.releaseDate.week} ({weeksAgo(video.releaseDate)} weeks ago)
+                                                    {video.isScheduled
+                                                        ? `Scheduled for Y${video.releaseDate.year} W${video.releaseDate.week} (${formatNumber(video.waitingCount ?? 50)} waiting)`
+                                                        : video.isLivePremiere
+                                                            ? `LIVE Premiere • ${formatNumber(video.liveViewers ?? 0)} watching now`
+                                                            : `Released Y${video.releaseDate.year} W${video.releaseDate.week} (${weeksAgo(video.releaseDate)} weeks ago)`}
                                                 </p>
 
                                                 <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">

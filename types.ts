@@ -381,6 +381,12 @@ export interface Video {
   trlWeeks?: number;
   director?: string;
   budgetTier?: string;
+  isPremiere?: boolean;
+  isLivePremiere?: boolean;
+  liveViewers?: number;
+  premierePeakViewers?: number;
+  waitingCount?: number;
+  notificationOn?: boolean;
 }
 
 export interface MerchProduct {
@@ -1131,6 +1137,7 @@ export interface XUser {
   headerImage?: string;
   followersCount: number;
   followingCount: number;
+  isFanAccount?: boolean;
   xMonetization?: {
     subscriptions: {
       isActive: boolean;
@@ -2816,6 +2823,7 @@ export type GameAction =
   | { type: "DELAY_SCHEDULED_RELEASE"; payload: { submissionId: string; delayWeeks: number } }
   | { type: "UPDATE_ARTIST_FUNDS"; payload: number }
   | { type: "UPDATE_VIDEO"; payload: { id: string; updates: Partial<Video> } }
+  | { type: "TOGGLE_VIDEO_NOTIFICATION"; payload: { videoId: string; artistId?: string } }
   | { type: "LAUNCH_CRYPTO_COIN"; payload: { name: string; ticker: string; logo: string; launchPrice: number; totalSupply: number; cost: number; playerPercent?: number } }
   | { type: "BUY_CRYPTO"; payload: { amount: number; cost: number } }
   | { type: "SELL_CRYPTO"; payload: { amount: number; revenue: number } }

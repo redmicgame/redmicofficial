@@ -120,7 +120,12 @@ import { generateWeeklyXContent, formatChartDataHot100Post } from "../utils/xCon
 import { REAL_WORLD_DISCOGRAPHIES } from "../realWorldDiscographies";
 import { ActiveEncounter, EncounterChoice } from "../types";
 import { createDefaultContract } from "../utils/contractUtils";
-import { calculateYouTubeViews, calculateYouTubeLikes } from "../utils/youtubeViews";
+import { calculateYouTubeViews, calculateYouTubeLikes, calculatePremiereLiveViewers } from "../utils/youtubeViews";
+import {
+  ensureYouTubePremiereXAccounts,
+  buildScheduledPremiereFanTweet,
+  buildPremiereLiveStatsTweets,
+} from "../utils/youtubePremierePosts";
 import { generateWeeklyMySpaceFeedPosts, getInitialMySpaceFeed } from "../utils/myspaceFeed";
 import { theGrammyGuruUser, processGrammyGuruWeeklyTweets } from "../utils/grammyGuruUtils";
 import {
@@ -4177,54 +4182,138 @@ The Red Mic Team`,
             });
           }
 
-          // 3. Process daily views for videos
+          // 3. Process daily views, scheduled releases & live premieres for videos
+          const currentTotalDays = (newDate.year * 52 * 7) + ((newDate.week - 1) * 7) + (newDate.day || 1);
+          const dailyPremierePosts: XPost[] = [];
           artistData.videos = artistData.videos.map((video) => {
-            const isMtvPre2008 = video.isMtv && newDate.year < 2008;
+            const releaseTotalDays =
+              ((video.releaseDate?.year ?? newDate.year) * 52 * 7) +
+              (((video.releaseDate?.week ?? newDate.week) - 1) * 7) +
+              (video.releaseDate?.day || 1);
+
+            if (video.isScheduled) {
+              if (currentTotalDays < releaseTotalDays) {
+                const bump = Math.max(2, Math.round((video.waitingCount || 50) * 0.05));
+                return {
+                  ...video,
+                  waitingCount: (video.waitingCount || 50) + bump,
+                };
+              }
+              // Scheduled release arrives today!
+              const song = artistData.songs?.find((s) => s.id === video.songId);
+              const songGenre = song?.genre || artistData.genre || "Pop";
+              const songSubgenre = song?.subgenre || "";
+              const artistGenre = artistData.genre || "";
+              const estFirstWeek = calculateYouTubeViews({
+                subscribers: artistData.youtubeSubscribers || 0,
+                popularity: artistData.popularity || 10,
+                isFirstWeek: true,
+                videoAgeWeeks: 1,
+                genre: songGenre,
+                subgenre: songSubgenre,
+                artistGenre,
+                year: newDate.year,
+                videoType: video.type,
+                songQuality: song?.quality || 75,
+                songHype: song?.hype ?? artistData.hype ?? 50,
+                difficulty: state.difficultyMode,
+                applyVariance: false,
+              });
+              const liveViewers = calculatePremiereLiveViewers(estFirstWeek, artistData.popularity || 10);
+              const isPrem = video.isPremiere !== false;
+              const activatedVideo: Video = {
+                ...video,
+                isScheduled: false,
+                isLivePremiere: isPrem && currentTotalDays === releaseTotalDays,
+                liveViewers: isPrem ? liveViewers : video.liveViewers,
+                premierePeakViewers: isPrem ? liveViewers : video.premierePeakViewers,
+              };
+              if (activatedVideo.isLivePremiere) {
+                const aName = artistProfile?.name || "Artist";
+                const aImg = (artistProfile as any)?.image || artistData.avatar || video.thumbnail;
+                const { updatedUsers, chartsUserId, updateFanUserId } = ensureYouTubePremiereXAccounts(
+                  artistData.xUsers || [],
+                  aName,
+                  aImg,
+                  artistId,
+                );
+                artistData.xUsers = updatedUsers;
+                const tweets = buildPremiereLiveStatsTweets({
+                  chartsUserId,
+                  updateFanUserId,
+                  artistName: aName,
+                  video: activatedVideo,
+                  allVideos: artistData.videos,
+                  songs: artistData.songs || [],
+                  popularity: artistData.popularity || 10,
+                  postDate: newDate,
+                });
+                dailyPremierePosts.push(...tweets);
+                return activatedVideo;
+              }
+              if (currentTotalDays === releaseTotalDays) {
+                return activatedVideo;
+              }
+              // If already past release day, continue below to accumulate views
+            }
+
+            if (video.isLivePremiere) {
+              if (currentTotalDays <= releaseTotalDays) {
+                // Still live on premiere day
+                return video;
+              }
+            }
+
+            const baseVideo = video.isLivePremiere ? { ...video, isLivePremiere: false } : video;
+            const isMtvPre2008 = baseVideo.isMtv && newDate.year < 2008;
 
             if (isMtvPre2008) {
-              const baseRate = video.mtvWeeklyViews && video.mtvWeeklyViews > 0
-                ? Math.floor(video.mtvWeeklyViews / 7)
+              const baseRate = baseVideo.mtvWeeklyViews && baseVideo.mtvWeeklyViews > 0
+                ? Math.floor(baseVideo.mtvWeeklyViews / 7)
                 : Math.max(100, Math.floor((artistData.popularity * 450) / 7));
-              const rotMult = video.mtvRotation === 'heavy' ? 2.5 : video.mtvRotation === 'buzzworthy' ? 1.8 : 1.2;
+              const rotMult = baseVideo.mtvRotation === 'heavy' ? 2.5 : baseVideo.mtvRotation === 'buzzworthy' ? 1.8 : 1.2;
               const dayTvViews = Math.floor(baseRate * rotMult * (0.88 + Math.random() * 0.24));
               const tvIncome = Math.floor(dayTvViews * 0.002);
               artistData.money += tvIncome;
 
               return {
-                ...video,
-                mtvViews: (video.mtvViews || 0) + dayTvViews,
+                ...baseVideo,
+                mtvViews: (baseVideo.mtvViews || 0) + dayTvViews,
               };
             }
 
-            const baseRate = video.lastWeekViews && video.lastWeekViews > 0
-              ? Math.floor(video.lastWeekViews / 7)
+            const baseRate = baseVideo.lastWeekViews && baseVideo.lastWeekViews > 0
+              ? Math.floor(baseVideo.lastWeekViews / 7)
               : Math.max(50, Math.floor((artistData.popularity * 300) / 7));
             const dayViews = Math.floor(baseRate * (0.88 + Math.random() * 0.24));
             const videoIncome = Math.floor(dayViews * VIEW_INCOME_MULTIPLIER);
             artistData.money += videoIncome;
 
             let spotifyViewsData = {};
-            if (video.isOnSpotify) {
-              const currentSpotifyDaily = video.spotifyDailyViews || [];
+            if (baseVideo.isOnSpotify) {
+              const currentSpotifyDaily = baseVideo.spotifyDailyViews || [];
               const newSpotifyDaily = [...currentSpotifyDaily.slice(-6), Math.floor(dayViews * 0.8)];
               spotifyViewsData = {
-                spotifyViews: (video.spotifyViews || 0) + Math.floor(dayViews * 0.8),
+                spotifyViews: (baseVideo.spotifyViews || 0) + Math.floor(dayViews * 0.8),
                 spotifyDailyViews: newSpotifyDaily,
               };
             }
 
-            const totalDailyViews = video.views + dayViews;
-            const song = artistData.songs?.find((s) => s.id === video.songId);
+            const totalDailyViews = baseVideo.views + dayViews;
+            const song = artistData.songs?.find((s) => s.id === baseVideo.songId);
             const hype = song?.hype ?? artistData.hype ?? 50;
             const likes = calculateYouTubeLikes(totalDailyViews, hype);
 
             return {
-              ...video,
+              ...baseVideo,
               views: totalDailyViews,
               likes,
               ...spotifyViewsData,
             };
           });
+          if (dailyPremierePosts.length > 0) {
+            artistData.xPosts.unshift(...dailyPremierePosts);
+          }
 
           // 4. Daily Social Growth
           artistData.youtubeSubscribers = (artistData.youtubeSubscribers || 0) + Math.floor(Math.random() * 8 + (artistData.popularity / 8));
@@ -7479,8 +7568,86 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
         artistData.streamsHistory = updatedStreamsHistory;
 
         let totalWeeklyViews = 0;
-        const updatedVideos = artistData.videos.map((video) => {
-          if (video.isScheduled) return video;
+        const weeklyPremierePosts: XPost[] = [];
+        const updatedVideos = artistData.videos.map((rawVideo) => {
+          const releaseWeekAbs = (rawVideo.releaseDate?.year ?? newDate.year) * 52 + (rawVideo.releaseDate?.week ?? newDate.week);
+          const currentWeekAbs = newDate.year * 52 + newDate.week;
+
+          let video = rawVideo;
+          if (video.isScheduled) {
+            if (currentWeekAbs < releaseWeekAbs) {
+              const bump = Math.max(5, Math.round((video.waitingCount || 50) * 0.15));
+              return {
+                ...video,
+                waitingCount: (video.waitingCount || 50) + bump,
+              };
+            }
+            // Scheduled week arrived!
+            const matchedSong = updatedSongs.find((s) => s.id === video.songId);
+            const songGenre = matchedSong?.genre || artistData.genre || state.soloArtist?.genre || state.group?.genre || "Pop";
+            const songSubgenre = matchedSong?.subgenre || "";
+            const artistGenre = artistData.genre || state.soloArtist?.genre || state.group?.genre || "";
+            const estFirstWeek = calculateYouTubeViews({
+              subscribers: artistData.youtubeSubscribers || 0,
+              popularity: artistData.popularity || 10,
+              isFirstWeek: true,
+              videoAgeWeeks: 1,
+              genre: songGenre,
+              subgenre: songSubgenre,
+              artistGenre,
+              year: newDate.year,
+              videoType: video.type,
+              songQuality: matchedSong?.quality || 85,
+              songHype: matchedSong?.hype ?? artistData.hype ?? 50,
+              difficulty: state.difficultyMode,
+              pitchforkBoost: !!matchedSong?.pitchforkBoost,
+              interviewBoost: !!matchedSong?.interviewBoost,
+              applyVariance: false,
+            });
+            const liveViewers = calculatePremiereLiveViewers(estFirstWeek, artistData.popularity || 10);
+            const isPrem = video.isPremiere !== false;
+            video = {
+              ...video,
+              isScheduled: false,
+              isLivePremiere: isPrem && currentWeekAbs === releaseWeekAbs,
+              liveViewers: isPrem ? liveViewers : video.liveViewers,
+              premierePeakViewers: isPrem ? liveViewers : video.premierePeakViewers,
+            };
+
+            if (video.isLivePremiere) {
+              const aName = artistProfileForEmail?.name || "Artist";
+              const aImg = (artistProfileForEmail as any)?.image || artistData.avatar || video.thumbnail;
+              const { updatedUsers, chartsUserId, updateFanUserId } = ensureYouTubePremiereXAccounts(
+                artistData.xUsers || [],
+                aName,
+                aImg,
+                artistId,
+              );
+              artistData.xUsers = updatedUsers;
+              const tweets = buildPremiereLiveStatsTweets({
+                chartsUserId,
+                updateFanUserId,
+                artistName: aName,
+                video,
+                allVideos: artistData.videos,
+                songs: updatedSongs,
+                popularity: artistData.popularity || 10,
+                postDate: newDate,
+              });
+              weeklyPremierePosts.push(...tweets);
+              return video;
+            }
+          } else if (video.isLivePremiere) {
+            if (currentWeekAbs <= releaseWeekAbs) {
+              return video;
+            }
+            // Premiere week completed -> transition to standard cumulative views (keep premierePeakViewers!)
+            video = {
+              ...video,
+              isLivePremiere: false,
+            };
+          }
+
           const song = updatedSongs.find((s) => s.id === video.songId) || {
             id: video.songId || video.id,
             title: video.title,
@@ -7497,8 +7664,6 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             (p) => p.itemId === video.id && p.itemType === "video",
           );
 
-          const releaseWeekAbs = (video.releaseDate?.year ?? newDate.year) * 52 + (video.releaseDate?.week ?? newDate.week);
-          const currentWeekAbs = newDate.year * 52 + newDate.week;
           const videoAgeWeeks = Math.max(1, currentWeekAbs - releaseWeekAbs);
           const isFirstWeek = videoAgeWeeks <= 1 || !video.firstWeekViews;
 
@@ -7595,6 +7760,9 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           };
         });
         artistData.videos = updatedVideos;
+        if (weeklyPremierePosts.length > 0) {
+          artistData.xPosts.unshift(...weeklyPremierePosts);
+        }
 
         const updatedLastFourWeeksViews = [
           totalWeeklyViews,
@@ -20065,6 +20233,54 @@ The Tonight Show Team`;
           hypeIncrease = 5;
           break;
       }
+
+      const artistProfile =
+        state.soloArtist?.id === state.activeArtistId
+          ? state.soloArtist
+          : state.group?.id === state.activeArtistId
+            ? state.group
+            : state.group?.members.find((m) => m.id === state.activeArtistId) ||
+              (state.extraPlayableArtists || []).find((a) => a.id === state.activeArtistId);
+      const artistName = artistProfile?.name || "Artist";
+      const artistImage = artistProfile?.image || activeData.avatar || video.thumbnail;
+
+      let updatedXUsers = activeData.xUsers || [];
+      const newVideoPosts: XPost[] = [];
+
+      if (video.isScheduled || video.isLivePremiere) {
+        const ensured = ensureYouTubePremiereXAccounts(
+          updatedXUsers,
+          artistName,
+          artistImage,
+          state.activeArtistId,
+        );
+        updatedXUsers = ensured.updatedUsers;
+
+        if (video.isScheduled) {
+          newVideoPosts.push(
+            buildScheduledPremiereFanTweet({
+              authorId: ensured.updateFanUserId,
+              artistName,
+              video,
+              songs: activeData.songs || [],
+              postDate: state.date,
+            }),
+          );
+        } else if (video.isLivePremiere) {
+          const statsTweets = buildPremiereLiveStatsTweets({
+            chartsUserId: ensured.chartsUserId,
+            updateFanUserId: ensured.updateFanUserId,
+            artistName,
+            video,
+            allVideos: activeData.videos || [],
+            songs: activeData.songs || [],
+            popularity: activeData.popularity || 10,
+            postDate: state.date,
+          });
+          newVideoPosts.push(...statsTweets);
+        }
+      }
+
       return {
         ...state,
         artistsData: {
@@ -20073,6 +20289,8 @@ The Tonight Show Team`;
             ...activeData,
             money: activeData.money - cost,
             videos: [...activeData.videos, video],
+            xUsers: updatedXUsers,
+            xPosts: newVideoPosts.length > 0 ? [...newVideoPosts, ...(activeData.xPosts || [])] : activeData.xPosts,
             hype: Math.min(
               getHypeCap(activeData),
               activeData.hype + hypeIncrease,
@@ -32873,6 +33091,32 @@ Statement Given: "${reason.toUpperCase()}"`,
             videos: updatedVideos,
           }
         }
+      };
+    }
+    case "TOGGLE_VIDEO_NOTIFICATION": {
+      const { videoId, artistId } = action.payload;
+      const updatedArtistsData = { ...state.artistsData };
+      for (const aId of Object.keys(updatedArtistsData)) {
+        if (artistId && aId !== artistId) continue;
+        const aData = updatedArtistsData[aId];
+        if (!aData?.videos?.some((v) => v.id === videoId)) continue;
+        updatedArtistsData[aId] = {
+          ...aData,
+          videos: aData.videos.map((v) => {
+            if (v.id !== videoId) return v;
+            const nextOn = v.notificationOn === false;
+            const delta = nextOn ? 1 : -1;
+            return {
+              ...v,
+              notificationOn: nextOn,
+              waitingCount: Math.max(0, (v.waitingCount || 0) + delta),
+            };
+          }),
+        };
+      }
+      return {
+        ...state,
+        artistsData: updatedArtistsData,
       };
     }
     case "CREATE_TV_FILM_PROJECT": {

@@ -14,6 +14,33 @@ import UserGroupIcon from './icons/UserGroupIcon';
 import YouTubeIcon from './icons/YouTubeIcon';
 import ShoppingBagIcon from './icons/ShoppingBagIcon';
 
+import { formatPremiereDateShort } from '../utils/youtubePremierePosts';
+
+const LiveBroadcastIcon: React.FC<{ className?: string }> = ({ className = 'w-3.5 h-3.5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <circle cx="12" cy="12" r="2.2" />
+        <path d="M7.76 16.24a6 6 0 0 1 0-8.48l1.06 1.06a4.5 4.5 0 0 0 0 6.36l-1.06 1.06zm8.48 0-1.06-1.06a4.5 4.5 0 0 0 0-6.36l1.06-1.06a6 6 0 0 1 0 8.48zM4.93 19.07a10 10 0 0 1 0-14.14l1.06 1.06a8.5 8.5 0 0 0 0 12.02l-1.06 1.06zm14.14 0-1.06-1.06a8.5 8.5 0 0 0 0-12.02l1.06-1.06a10 10 0 0 1 0 14.14z" />
+    </svg>
+);
+
+const NotificationBellIcon: React.FC<{ active?: boolean; className?: string }> = ({ active = true, className = 'w-5 h-5' }) => (
+    active ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+        </svg>
+    ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.17V11a6 6 0 10-12 0v3.17a2 2 0 01-.6 1.43L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+    )
+);
+
+const BellSlashMiniIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.2-.68.31 0 0-.01 0-.01.01L18 14.68z" />
+    </svg>
+);
+
 const formatTimeAgo = (releaseDate: { week: number, year: number }, currentDate: { week: number, year: number }): string => {
     const weeksAgo = (currentDate.year * 52 + currentDate.week) - (releaseDate.year * 52 + releaseDate.week);
 
@@ -34,7 +61,7 @@ const formatTimeAgo = (releaseDate: { week: number, year: number }, currentDate:
 
 const VideoItem: React.FC<{
     video: Video;
-    channel?: { name: string; avatar: string };
+    channel?: { name: string; avatar: string; isVerified?: boolean };
 }> = ({ video, channel }) => {
     const { gameState, dispatch } = useGame();
     const { date } = gameState;
@@ -44,24 +71,113 @@ const VideoItem: React.FC<{
         dispatch({ type: 'CHANGE_VIEW', payload: 'youtubeVideoDetail' });
     };
 
+    const handleToggleNotification = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        dispatch({
+            type: 'TOGGLE_VIDEO_NOTIFICATION',
+            payload: { videoId: video.id, artistId: video.artistId },
+        });
+    };
+
+    const isUpcoming = Boolean(video.isScheduled);
+    const isLive = Boolean(video.isLivePremiere && !video.isScheduled);
+    const isNotifOn = video.notificationOn !== false;
+
     return (
-        <button onClick={handleVideoClick} className="w-full text-left">
-            <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-800">
-                <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
-            </div>
-            <div className="flex gap-3 mt-3 px-2">
-                {channel && (
-                    <img src={channel.avatar} alt={channel.name} className="w-9 h-9 rounded-full object-cover mt-1 flex-shrink-0" />
-                )}
-                <div className="flex-grow min-w-0">
-                    <h4 className="font-semibold leading-tight line-clamp-2">{video.title}</h4>
-                    <p className="text-xs text-zinc-400 truncate">
-                        {channel?.name} • {video.isScheduled ? 'Scheduled for ' + video.releaseDate.year + ' W' + video.releaseDate.week : formatNumber(video.views) + ' views • ' + formatTimeAgo(video.releaseDate, date)}
-                    </p>
+        <div className="w-full text-left">
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={handleVideoClick}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleVideoClick();
+                    }
+                }}
+                className="w-full text-left cursor-pointer"
+            >
+                <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-800 relative">
+                    <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                    {isUpcoming && (
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+                            <span className="bg-black/75 text-white p-1 rounded flex items-center justify-center">
+                                {isNotifOn ? <NotificationBellIcon active className="w-3.5 h-3.5" /> : <BellSlashMiniIcon className="w-3.5 h-3.5" />}
+                            </span>
+                            <span className="bg-black/80 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded">
+                                Upcoming
+                            </span>
+                        </div>
+                    )}
+                    {isLive && (
+                        <div className="absolute bottom-2 right-2 bg-[#cc0000] text-white text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow">
+                            <LiveBroadcastIcon className="w-3.5 h-3.5" />
+                            <span>LIVE</span>
+                        </div>
+                    )}
                 </div>
-                <DotsVerticalIcon className="w-5 h-5 text-zinc-400 flex-shrink-0" />
+                <div className="flex gap-3 mt-3 px-2">
+                    {channel && (
+                        isLive ? (
+                            <div className="flex flex-col items-center flex-shrink-0 mt-0.5">
+                                <div className="p-[2px] rounded-full bg-gradient-to-tr from-[#ff0033] via-rose-500 to-pink-500">
+                                    <img
+                                        src={channel.avatar}
+                                        alt={channel.name}
+                                        className="w-9 h-9 rounded-full object-cover border-2 border-[#0f0f0f]"
+                                    />
+                                </div>
+                                <span className="-mt-2 bg-[#cc0000] text-white text-[8px] font-extrabold px-1 rounded leading-tight tracking-wide border border-[#0f0f0f]">
+                                    LIVE
+                                </span>
+                            </div>
+                        ) : (
+                            <img src={channel.avatar} alt={channel.name} className="w-9 h-9 rounded-full object-cover mt-1 flex-shrink-0" />
+                        )
+                    )}
+                    <div className="flex-grow min-w-0">
+                        <h4 className="font-semibold leading-tight line-clamp-2">{video.title}</h4>
+                        <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1 flex-wrap">
+                            <span>{channel?.name}</span>
+                            {channel?.isVerified && (
+                                <CheckCircleIcon className="w-3.5 h-3.5 text-zinc-400 inline-block flex-shrink-0" />
+                            )}
+                            {isUpcoming ? (
+                                <span>
+                                    · {formatNumber(video.waitingCount ?? 50)} waiting · Premieres {formatPremiereDateShort(video.releaseDate)}, 9:00 PM
+                                </span>
+                            ) : isLive ? (
+                                <span>
+                                    · <span className="text-zinc-300">▷{formatNumber(video.liveViewers ?? 0)} watching</span>
+                                </span>
+                            ) : (
+                                <span>
+                                    • {formatNumber(video.views)} views • {formatTimeAgo(video.releaseDate, date)}
+                                </span>
+                            )}
+                        </p>
+                    </div>
+                    <DotsVerticalIcon className="w-5 h-5 text-zinc-400 flex-shrink-0" />
+                </div>
             </div>
-        </button>
+
+            {isUpcoming && (
+                <div className="px-2 mt-2.5">
+                    <button
+                        type="button"
+                        onClick={handleToggleNotification}
+                        className={`w-full py-2 px-4 rounded-full border text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                            isNotifOn
+                                ? 'border-zinc-700 bg-transparent hover:bg-zinc-800/80 text-white'
+                                : 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                        }`}
+                    >
+                        <NotificationBellIcon active={isNotifOn} className="w-4 h-4" />
+                        <span>{isNotifOn ? 'Notification on' : 'Notify me'}</span>
+                    </button>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -71,18 +187,22 @@ const YouTubeHome: React.FC = () => {
     const [activeFilter, setActiveFilter] = useState('All');
 
     const channelsMap = useMemo(() => {
-        const map = new Map<string, { name: string; avatar: string }>();
+        const map = new Map<string, { name: string; avatar: string; isVerified?: boolean }>();
         allPlayerArtists.forEach(artist => {
-            map.set(artist.id, { name: artist.name, avatar: artist.image });
+            const aData = artistsData[artist.id];
+            const isVer = Boolean(
+                aData && (aData.youtubeSubscribers >= SUBSCRIBER_THRESHOLD_VERIFIED || aData.videos.some(v => v.views >= VIEWS_THRESHOLD_VERIFIED))
+            );
+            map.set(artist.id, { name: artist.name, avatar: artist.image, isVerified: isVer });
         });
         LABELS.forEach(label => {
             if (label.youtubeChannel) {
-                map.set(label.id, { name: label.youtubeChannel.name, avatar: label.logo });
+                map.set(label.id, { name: label.youtubeChannel.name, avatar: label.logo, isVerified: true });
             }
         });
-        map.set('mtv', { name: 'MTV', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/MTV_Logo.svg/1200px-MTV_Logo.svg.png' });
+        map.set('mtv', { name: 'MTV', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/MTV_Logo.svg/1200px-MTV_Logo.svg.png', isVerified: true });
         return map;
-    }, [allPlayerArtists]);
+    }, [allPlayerArtists, artistsData]);
 
     const filters = useMemo(() => {
         const baseFilters = ['All', 'Music Videos', 'Live', 'Interviews', 'Genius', 'GRAMMYs'];
@@ -96,16 +216,21 @@ const YouTubeHome: React.FC = () => {
     const filteredVideos = useMemo(() => {
         let allVideos = Object.values(artistsData).flatMap(data => data.videos);
         allVideos = allVideos.filter(v => !((v.channelId === 'mtv' || v.isMtv) && date.year < 2008));
-        const sortedByDate = [...allVideos].sort((a, b) => (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week));
+        const sortedByDate = [...allVideos].sort((a, b) => {
+            const aLive = a.isLivePremiere && !a.isScheduled ? 2 : a.isScheduled ? 1 : 0;
+            const bLive = b.isLivePremiere && !b.isScheduled ? 2 : b.isScheduled ? 1 : 0;
+            if (aLive !== bLive) return bLive - aLive;
+            return (b.releaseDate.year * 52 + b.releaseDate.week) - (a.releaseDate.year * 52 + a.releaseDate.week);
+        });
 
         if (activeFilter === 'All') {
-            return [...allVideos].sort(() => Math.random() - 0.5);
+            return sortedByDate;
         }
         if (activeFilter === 'Music Videos') {
             return sortedByDate.filter(v => v.type === 'Music Video');
         }
         if (activeFilter === 'Live') {
-            return sortedByDate.filter(v => v.type === 'Live Performance');
+            return sortedByDate.filter(v => v.isLivePremiere || v.type === 'Live Performance');
         }
         if (activeFilter === 'Interviews') {
             return sortedByDate.filter(v => v.type === 'Interview' || v.type === 'Genius Verified');
@@ -122,7 +247,7 @@ const YouTubeHome: React.FC = () => {
             return sortedByDate.filter(v => v.artistId === artistToFilter.id && !v.isFeatureVideo);
         }
         
-        return [...allVideos].sort(() => Math.random() - 0.5);
+        return sortedByDate;
     }, [artistsData, activeFilter, allPlayerArtists, date.year]);
 
     return (
@@ -170,7 +295,7 @@ const YouTubeHome: React.FC = () => {
 const YouTubeChannelView: React.FC = () => {
     const { gameState, dispatch, activeArtist, activeArtistData } = useGame();
     const { date, activeYoutubeChannel, activeArtistId, viewingPastLabelId } = gameState;
-    const [filter, setFilter] = useState<'Popular' | 'Latest' | 'Oldest'>('Popular');
+    const [filter, setFilter] = useState<'Popular' | 'Latest' | 'Oldest'>('Latest');
     const [channelTab, setChannelTab] = useState<'Videos' | 'Podcasts'>('Videos');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -434,25 +559,46 @@ const YouTubeChannelView: React.FC = () => {
 
                 {displayedVideos.length > 0 ? (
                     <div className="space-y-4">
-                        {displayedVideos.map(video => (
-                            <button key={video.id} onClick={() => handleVideoClick(video.id)} className="w-full text-left flex gap-3 group">
-                                <div className="w-1/3 aspect-video rounded-lg overflow-hidden relative group-hover:opacity-80 transition-opacity">
-                                    <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
-                                     {video.type === 'Genius Verified' && (
-                                        <div className="absolute bottom-1 right-1 bg-yellow-300 p-0.5 rounded-sm">
-                                            <GeniusIcon className="w-4 h-4 text-black" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-grow w-2/3">
-                                    <h4 className="font-semibold leading-tight line-clamp-2">{video.title}</h4>
-                                    <p className="text-xs text-zinc-400">{video.isScheduled ? 'Scheduled for ' + video.releaseDate.year + ' W' + video.releaseDate.week : formatNumber(video.views) + ' views • ' + formatTimeAgo(video.releaseDate, date)}</p>
-                                </div>
-                                <div className="self-start">
-                                    <DotsVerticalIcon className="w-5 h-5 text-zinc-400"/>
-                                </div>
-                            </button>
-                        ))}
+                        {displayedVideos.map(video => {
+                            const isUpcoming = Boolean(video.isScheduled);
+                            const isLive = Boolean(video.isLivePremiere && !video.isScheduled);
+                            return (
+                                <button key={video.id} onClick={() => handleVideoClick(video.id)} className="w-full text-left flex gap-3 group">
+                                    <div className="w-1/3 aspect-video rounded-lg overflow-hidden relative group-hover:opacity-80 transition-opacity bg-zinc-800 flex-shrink-0">
+                                        <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                                        {isUpcoming && (
+                                            <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                                Upcoming
+                                            </span>
+                                        )}
+                                        {isLive && (
+                                            <span className="absolute bottom-1 right-1 bg-[#cc0000] text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                                <LiveBroadcastIcon className="w-3 h-3" />
+                                                <span>LIVE</span>
+                                            </span>
+                                        )}
+                                        {!isUpcoming && !isLive && video.type === 'Genius Verified' && (
+                                            <div className="absolute bottom-1 right-1 bg-yellow-300 p-0.5 rounded-sm">
+                                                <GeniusIcon className="w-4 h-4 text-black" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-grow w-2/3 min-w-0">
+                                        <h4 className="font-semibold leading-tight line-clamp-2">{video.title}</h4>
+                                        <p className="text-xs text-zinc-400 mt-0.5">
+                                            {isUpcoming
+                                                ? `${formatNumber(video.waitingCount ?? 50)} waiting · Premieres ${formatPremiereDateShort(video.releaseDate)}, 9:00 PM`
+                                                : isLive
+                                                    ? `▷${formatNumber(video.liveViewers ?? 0)} watching`
+                                                    : `${formatNumber(video.views)} views • ${formatTimeAgo(video.releaseDate, date)}`}
+                                        </p>
+                                    </div>
+                                    <div className="self-start">
+                                        <DotsVerticalIcon className="w-5 h-5 text-zinc-400"/>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-12 bg-zinc-800 rounded-lg">
