@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
@@ -50,16 +51,11 @@ const BritsView: React.FC = () => {
         return activeArtist.image;
     };
 
-    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                if (typeof reader.result === 'string') {
-                    dispatch({ type: 'UPDATE_BRIT_BANNER', payload: reader.result });
-                }
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            dispatch({ type: 'UPDATE_BRIT_BANNER', payload: url });
         }
     };
 

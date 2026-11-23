@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { BusinessBrand, BusinessProduct, ProductQualityTier } from '../types';
 import { BUSINESS_CATEGORIES, calculateEstimatedDemand } from '../utils/businessSimulation';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -57,40 +58,37 @@ export const BusinessStoreView: React.FC<BusinessStoreViewProps> = ({
   const categoryConfig = business?.category ? BUSINESS_CATEGORIES[business.category] : null;
 
   // Handle Banner Upload
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && business) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        dispatch({
-          type: 'UPDATE_BUSINESS_BANNER',
-          payload: {
-            businessId: business.id,
-            bannerUrl: reader.result as string,
-          },
-        });
-      };
-      reader.readAsDataURL(file);
+      const targetBusinessId = business.id;
+      const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+      dispatch({
+        type: 'UPDATE_BUSINESS_BANNER',
+        payload: {
+          businessId: targetBusinessId,
+          bannerUrl: url,
+        },
+      });
     }
   };
 
   // Handle Product Image Upload (tap to upload on any product card)
-  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && business && productImageTargetId) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        dispatch({
-          type: 'UPDATE_BUSINESS_PRODUCT_IMAGE',
-          payload: {
-            businessId: business.id,
-            productId: productImageTargetId,
-            imageUrl: reader.result as string,
-          },
-        });
-        setProductImageTargetId(null);
-      };
-      reader.readAsDataURL(file);
+      const targetBusinessId = business.id;
+      const targetProdId = productImageTargetId;
+      const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+      dispatch({
+        type: 'UPDATE_BUSINESS_PRODUCT_IMAGE',
+        payload: {
+          businessId: targetBusinessId,
+          productId: targetProdId,
+          imageUrl: url,
+        },
+      });
+      setProductImageTargetId(null);
     }
   };
 

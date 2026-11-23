@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import DotsHorizontalIcon from './icons/DotsHorizontalIcon';
 import ShuffleIcon from './icons/ShuffleIcon';
@@ -343,12 +344,12 @@ const SpotifyView: React.FC = () => {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && activeArtist) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newImage = reader.result as string;
-                dispatch({ type: 'UPDATE_ARTIST_IMAGE', payload: { artistId: activeArtist.id, newImage } });
-            };
-            reader.readAsDataURL(file);
+            const artistId = activeArtist.id;
+            storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
+                .then((newImage) => {
+                    dispatch({ type: 'UPDATE_ARTIST_IMAGE', payload: { artistId, newImage } });
+                })
+                .catch(() => {});
         }
         if (e.target) e.target.value = '';
     };

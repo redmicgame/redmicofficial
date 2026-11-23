@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useGame } from "../context/GameContext";
+import { storeUploadedImageInVault } from "../db/db";
 import {
   TvAndFilmProject,
   TvShowCategory,
@@ -154,16 +155,11 @@ export const TvAndFilmProductionView: React.FC = () => {
   );
 
   // Default image fallback for covers
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          setter(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 1024 });
+      setter(url);
     }
   };
 
@@ -431,24 +427,21 @@ export const TvAndFilmProductionView: React.FC = () => {
   };
 
   // Update Episode Thumbnail for YouTube Deal
-  const handleUploadEpisodeThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadEpisodeThumbnail = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && selectedProject && editingThumbnailEp !== null) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          dispatch({
-            type: "UPDATE_EPISODE_YOUTUBE_THUMBNAIL",
-            payload: {
-              projectId: selectedProject.id,
-              episodeNumber: editingThumbnailEp,
-              thumbnailUrl: reader.result,
-            },
-          });
-          setEditingThumbnailEp(null);
-        }
-      };
-      reader.readAsDataURL(file);
+      const projectId = selectedProject.id;
+      const episodeNumber = editingThumbnailEp;
+      const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+      dispatch({
+        type: "UPDATE_EPISODE_YOUTUBE_THUMBNAIL",
+        payload: {
+          projectId,
+          episodeNumber,
+          thumbnailUrl: url,
+        },
+      });
+      setEditingThumbnailEp(null);
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { BusinessBrand, BusinessCategory, ProductQualityTier } from '../types';
 import {
   BUSINESS_CATEGORIES,
@@ -136,16 +137,11 @@ export const SetupBusinessBrandModal: React.FC<SetupBusinessBrandModalProps> = (
   };
 
   // Handle Logo file upload
-  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setLogoUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+      setLogoUrl(url);
     }
   };
 

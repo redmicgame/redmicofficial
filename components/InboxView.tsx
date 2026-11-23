@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Email, GeniusOffer, FallonOffer, PopBaseOffer } from '../types';
 import CoachellaSetlistModal from './CoachellaSetlistModal';
 import CoachellaLiveAlbumModal from './CoachellaLiveAlbumModal';
@@ -366,14 +367,9 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                                             className="hidden"
                                             onChange={(e) => {
                                                 if (e.target.files && e.target.files[0]) {
-                                                    const file = e.target.files[0];
-                                                    const reader = new FileReader();
-                                                    reader.onloadend = () => {
-                                                        if (reader.result) {
-                                                            setBillionsClubPreviewUrl(reader.result as string);
-                                                        }
-                                                    };
-                                                    reader.readAsDataURL(file);
+                                                    storeUploadedImageInVault(e.target.files[0], { maxWidth: 768, maxHeight: 768 })
+                                                        .then(setBillionsClubPreviewUrl)
+                                                        .catch(() => {});
                                                 }
                                             }}
                                         />
@@ -440,14 +436,13 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (event) => {
-                                            const result = event.target?.result as string;
-                                            dispatch({ type: 'SET_ACTING_TRAILER_URL', payload: { roleId: offer.roleId, trailerUrl: result } });
-                                            (offer as any).isAnswered = true; // Local optimistic update
-                                            dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
-                                        };
-                                        reader.readAsDataURL(file);
+                                        storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 })
+                                            .then((result) => {
+                                                dispatch({ type: 'SET_ACTING_TRAILER_URL', payload: { roleId: offer.roleId, trailerUrl: result } });
+                                                (offer as any).isAnswered = true;
+                                                dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                                            })
+                                            .catch(() => {});
                                     }
                                 }} 
                                 className="w-full bg-zinc-700 p-3 rounded-md text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#f5c518] file:text-black hover:file:bg-[#f5c518]/90" 
@@ -471,14 +466,13 @@ const EmailDetailView: React.FC<{ email: Email; onBack: () => void }> = ({ email
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (event) => {
-                                            const result = event.target?.result as string;
-                                            dispatch({ type: 'SET_ACTING_COVER_URL', payload: { roleId: offer.roleId, coverUrl: result } });
-                                            (offer as any).isAnswered = true; // Local optimistic update
-                                            dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
-                                        };
-                                        reader.readAsDataURL(file);
+                                        storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 })
+                                            .then((result) => {
+                                                dispatch({ type: 'SET_ACTING_COVER_URL', payload: { roleId: offer.roleId, coverUrl: result } });
+                                                (offer as any).isAnswered = true;
+                                                dispatch({ type: 'MARK_EMAIL_OFFER_ANSWERED', payload: { emailId: email.id } });
+                                            })
+                                            .catch(() => {});
                                     }
                                 }} 
                                 className="w-full bg-zinc-700 p-3 rounded-md text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#f5c518] file:text-black hover:file:bg-[#f5c518]/90" 
@@ -823,6 +817,7 @@ const InboxView: React.FC = () => {
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+    const [visibleEmailCount, setVisibleEmailCount] = useState(30);
 
     if (!activeArtist || !activeArtistData) return null;
     const { inbox } = activeArtistData;
@@ -902,7 +897,17 @@ const InboxView: React.FC = () => {
                 </div>
                 {filteredInbox.length > 0 ? (
                     <div>
-                        {filteredInbox.map(email => <EmailItem key={email.id} email={email} onClick={() => setSelectedEmail(email)} />)}
+                        {filteredInbox.slice(0, visibleEmailCount).map(email => <EmailItem key={email.id} email={email} onClick={() => setSelectedEmail(email)} />)}
+                        {visibleEmailCount < filteredInbox.length && (
+                            <div className="p-4 flex justify-center">
+                                <button
+                                    onClick={() => setVisibleEmailCount(c => c + 30)}
+                                    className="px-5 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold text-zinc-200 transition-colors"
+                                >
+                                    Load More Emails ({filteredInbox.length - visibleEmailCount} remaining)
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <p className="text-center text-zinc-500 p-8">

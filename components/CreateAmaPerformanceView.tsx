@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Video } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -30,12 +31,11 @@ const CreateAmaPerformanceView: React.FC = () => {
         setSelectedSongIds(newSelection);
     };
 
-    const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => setThumbnail(reader.result as string);
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            setThumbnail(url);
         }
     };
 

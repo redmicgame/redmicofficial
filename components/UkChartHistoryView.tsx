@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { getArtistImage } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -62,22 +63,19 @@ const UkChartHistoryView: React.FC = () => {
     // Handle banner upload
     const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const dataUrl = event.target?.result as string;
-            if (dataUrl && activeArtistId) {
+        if (!file || !activeArtistId) return;
+        const targetId = activeArtistId;
+        storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 })
+            .then((dataUrl) => {
                 dispatch({
                     type: 'UPDATE_ARTIST_DATA',
                     payload: {
-                        artistId: activeArtistId,
+                        artistId: targetId,
                         data: { ukBannerImage: dataUrl }
                     }
                 });
-            }
-        };
-        reader.readAsDataURL(file);
+            })
+            .catch(() => {});
     };
 
     // Calculate UK Singles stats and entries
@@ -434,6 +432,8 @@ const UkChartHistoryView: React.FC = () => {
                                                             <img
                                                                 src={getArtistImage(item.artist, item.coverArt)}
                                                                 alt={item.title}
+                                                                loading="lazy"
+                                                                decoding="async"
                                                                 onError={(e) => {
                                                                     const fallback = getArtistImage(item.artist);
                                                                     if (e.currentTarget.src !== fallback) {
@@ -532,6 +532,8 @@ const UkChartHistoryView: React.FC = () => {
                                                             <img
                                                                 src={getArtistImage(item.artist, item.coverArt)}
                                                                 alt={item.title}
+                                                                loading="lazy"
+                                                                decoding="async"
                                                                 onError={(e) => {
                                                                     const fallback = getArtistImage(item.artist);
                                                                     if (e.currentTarget.src !== fallback) {

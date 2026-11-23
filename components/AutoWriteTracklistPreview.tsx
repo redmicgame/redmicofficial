@@ -16,6 +16,7 @@ import {
     Camera
 } from 'lucide-react';
 import { NPC_ARTIST_IMAGES } from '../constants';
+import { storeUploadedImageInVault } from '../db/db';
 
 export interface AutoWriteSample {
     songTitle: string;
@@ -65,38 +66,30 @@ export const AutoWriteTracklistPreview: React.FC<Props> = ({
     const existingSampleFileRef = React.useRef<HTMLInputElement>(null);
     const [targetExistingSample, setTargetExistingSample] = useState<{ trackId: string; sampleIdx: number } | null>(null);
 
-    const handleSampleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSampleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const res = ev.target?.result as string;
-                if (res) {
-                    setSampleCoverDataUrl(res);
-                }
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+            if (url) {
+                setSampleCoverDataUrl(url);
+            }
         }
     };
 
-    const handleExistingSampleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleExistingSampleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && targetExistingSample) {
             const { trackId, sampleIdx } = targetExistingSample;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const res = ev.target?.result as string;
-                if (res) {
-                    updateSingleTrack(trackId, t => {
-                        const nextSamples = [...(t.samples || [])];
-                        if (nextSamples[sampleIdx]) {
-                            nextSamples[sampleIdx] = { ...nextSamples[sampleIdx], coverArt: res };
-                        }
-                        return { ...t, samples: nextSamples };
-                    });
-                }
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+            if (url) {
+                updateSingleTrack(trackId, t => {
+                    const nextSamples = [...(t.samples || [])];
+                    if (nextSamples[sampleIdx]) {
+                        nextSamples[sampleIdx] = { ...nextSamples[sampleIdx], coverArt: url };
+                    }
+                    return { ...t, samples: nextSamples };
+                });
+            }
         }
     };
 

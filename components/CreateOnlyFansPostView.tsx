@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { OnlyFansPost } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -18,14 +19,11 @@ const CreateOnlyFansPostView: React.FC = () => {
     const [price, setPrice] = useState(0);
     const [error, setError] = useState('');
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1024, maxHeight: 1024 });
+            setImage(url);
         }
     };
     

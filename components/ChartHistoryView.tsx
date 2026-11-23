@@ -1,6 +1,7 @@
 import { getArtistImage } from "../constants";
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import CameraIcon from './icons/CameraIcon';
 import { Song, Release, ChartHistory } from '../types';
@@ -11,26 +12,21 @@ const ChartHistoryView: React.FC = () => {
     const { gameState, dispatch, activeArtistData, activeArtist } = useGame();
     const [selectedChart, setSelectedChart] = useState<ChartType>('billboardHot100');
     const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
+    const [visibleCount, setVisibleCount] = useState<number>(40);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const dataUrl = event.target?.result as string;
-            if (dataUrl && activeArtist?.id) {
+        if (!file || !activeArtist?.id) return;
+        const artistId = activeArtist.id;
+        storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 })
+            .then((image) => {
                 dispatch({
                     type: 'UPDATE_CHART_HISTORY_IMAGE',
-                    payload: {
-                        artistId: activeArtist.id,
-                        image: dataUrl,
-                    },
+                    payload: { artistId, image },
                 });
-            }
-        };
-        reader.readAsDataURL(file);
+            })
+            .catch(() => {});
     };
 
     if (!activeArtistData || !activeArtist) {
@@ -244,7 +240,7 @@ const ChartHistoryView: React.FC = () => {
                 </div>
 
                 <div className="divide-y divide-zinc-800">
-                    {chartData.chartedItems.length > 0 ? chartData.chartedItems.map(({ item, stats }, index) => {
+                    {chartData.chartedItems.length > 0 ? chartData.chartedItems.slice(0, visibleCount).map(({ item, stats }, index) => {
                         const isExpanded = expandedTrackId === item.id;
                         
                         const getChartRunString = (run?: number[]) => {
@@ -263,6 +259,8 @@ const ChartHistoryView: React.FC = () => {
                                     <img 
                                         src={getArtistImage(activeArtist.name, 'coverArt' in item ? item.coverArt : undefined)} 
                                         alt={item.title} 
+                                        loading="lazy"
+                                        decoding="async"
                                         onError={(e) => {
                                             const fallback = getArtistImage(activeArtist.name);
                                             if (e.currentTarget.src !== fallback) {
@@ -300,6 +298,14 @@ const ChartHistoryView: React.FC = () => {
                         <p className="text-zinc-500 text-sm bg-zinc-800 p-4 rounded-lg text-center mt-4">No chart history for this category yet.</p>
                     )}
                 </div>
+                {chartData.chartedItems.length > visibleCount && (
+                    <button
+                        onClick={() => setVisibleCount(c => c + 40)}
+                        className="w-full mt-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold rounded-lg border border-zinc-700 transition-colors"
+                    >
+                        Load More Entries ({chartData.chartedItems.length - visibleCount} remaining)
+                    </button>
+                )}
             </main>
         </div>
     );

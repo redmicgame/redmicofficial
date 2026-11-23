@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { LABELS, CUSTOM_LABEL_TIERS } from '../constants';
 import { getEraConfiguration } from '../utils/eraUtils';
 import type { CustomLabel, Label } from '../types';
@@ -37,14 +38,11 @@ const CreateLabelView: React.FC = () => {
     
     const groupMembers = careerMode === 'group' ? group?.members.filter(m => m.id !== activeArtist.id) : [];
 
-    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogo(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+            setLogo(url);
         }
     };
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber, getFutureDate, getAppleMusicStreamRatio, DEFAULT_APPLE_MUSIC_EDITORIAL_PLAYLISTS } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Song, Release, AppleMusicPlaylist } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -157,19 +158,14 @@ const AppleMusicForArtistsView: React.FC = () => {
         alert(`Created "${activeArtist.name}: Popular" with your ${topTracks.length} most streamed tracks!`);
     };
 
-    const handleEditorialCoverUpload = (playlistId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEditorialCoverUpload = async (playlistId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (typeof event.target?.result === 'string') {
-                    dispatch({
-                        type: 'UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER',
-                        payload: { playlistId, coverArt: event.target.result }
-                    });
-                }
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+            dispatch({
+                type: 'UPDATE_APPLE_MUSIC_EDITORIAL_PLAYLIST_COVER',
+                payload: { playlistId, coverArt: url }
+            });
         }
     };
 

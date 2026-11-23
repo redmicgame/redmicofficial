@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 
 const EncounterModalView: React.FC = () => {
     const { gameState, dispatch } = useGame();
@@ -27,14 +28,11 @@ const EncounterModalView: React.FC = () => {
                         <input 
                             type="file" 
                             accept="image/*"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        setImageUrl(reader.result as string);
-                                    };
-                                    reader.readAsDataURL(file);
+                                    const url = await storeUploadedImageInVault(file, { maxWidth: 1024, maxHeight: 1024 });
+                                    setImageUrl(url);
                                 }
                             }}
                             className="w-full bg-zinc-100 border border-zinc-300 p-2 rounded-lg text-sm"

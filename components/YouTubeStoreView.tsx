@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { MERCH_PRODUCT_LIMIT } from '../constants';
 import type { MerchProduct, Release, GameDate } from '../types';
 import { CalendarDatePicker, formatFullDateString } from './CalendarDatePicker';
@@ -70,14 +71,11 @@ const AddMerchModal: React.FC<{
         return merch.filter(m => m.releaseId === releaseId).length;
     }, [merch, releaseId]);
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+            setImage(url);
         }
     };
     
@@ -1309,14 +1307,11 @@ const MerchStoreView: React.FC = () => {
     if (!activeArtistData || !activeArtist) return null;
     const { merch, merchStoreBanner, youtubeStoreUnlocked, releases } = activeArtistData;
 
-    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                dispatch({ type: 'UPDATE_MERCH_BANNER', payload: reader.result as string });
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            dispatch({ type: 'UPDATE_MERCH_BANNER', payload: url });
         }
     };
     

@@ -2,6 +2,7 @@
 
 import React, {  useState, useMemo , useEffect } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import type { Release, ReleaseType, Song, LabelSubmission } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { LABELS } from '../constants';
@@ -126,11 +127,7 @@ const ReleaseView: React.FC = () => {
     const handleDeluxeCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setDeluxeCoverArt(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then(setDeluxeCoverArt).catch(() => {});
         }
     };
 

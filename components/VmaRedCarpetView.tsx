@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import CameraIcon from './icons/CameraIcon';
 
@@ -11,12 +12,11 @@ const VmaRedCarpetView: React.FC = () => {
 
     if (!activeVmaRedCarpetOffer) return <p>Error</p>;
     
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => setLookUrl(reader.result as string);
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+            setLookUrl(url);
         }
     };
 

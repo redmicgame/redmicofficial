@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { ActingRole } from '../types';
 
 const ImdbView: React.FC = () => {
@@ -248,15 +249,12 @@ const ImdbView: React.FC = () => {
                                         type="file" 
                                         accept="image/*"
                                         className="hidden"
-                                        onChange={(e) => {
+                                        onChange={async (e) => {
                                             const file = e.target.files?.[0];
-                                            if (file && (credit as any).id) {
-                                                const reader = new FileReader();
-                                                reader.onload = (event) => {
-                                                    const result = event.target?.result as string;
-                                                    dispatch({ type: 'SET_ACTING_COVER_URL', payload: { roleId: (credit as any).id, coverUrl: result } });
-                                                };
-                                                reader.readAsDataURL(file);
+                                            const roleId = (credit as any).id;
+                                            if (file && roleId) {
+                                                const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 768 });
+                                                dispatch({ type: 'SET_ACTING_COVER_URL', payload: { roleId, coverUrl: url } });
                                             }
                                         }}
                                     />

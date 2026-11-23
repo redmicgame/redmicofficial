@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import MusicNoteIcon from './icons/MusicNoteIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import XMarkIcon from './icons/XMarkIcon';
@@ -49,7 +50,7 @@ export const CoachellaLiveAlbumModal: React.FC<CoachellaLiveAlbumModalProps> = (
 
   if (!isOpen || !activeArtistData) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
@@ -57,13 +58,8 @@ export const CoachellaLiveAlbumModal: React.FC<CoachellaLiveAlbumModalProps> = (
         return;
       }
       setError('');
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setUploadedCover(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+      setUploadedCover(url);
     }
   };
 

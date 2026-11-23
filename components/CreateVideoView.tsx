@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { VIDEO_COSTS, NPC_ARTIST_NAMES, LABELS } from '../constants';
 import { calculateYouTubeViews, calculateYouTubeLikes, getYouTubeEngagementPerformance, calculatePremiereLiveViewers, calculatePremiereWaitingCount } from '../utils/youtubeViews';
 import { formatPremiereDateShort } from '../utils/youtubePremierePosts';
@@ -131,11 +132,9 @@ const CreateVideoView: React.FC = () => {
     const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setThumbnail(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 })
+                .then(setThumbnail)
+                .catch(() => {});
         }
     };
     

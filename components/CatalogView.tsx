@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState, ChangeEvent } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { LABELS } from '../constants';
 import type { Release, Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -87,11 +88,7 @@ const ItunesVersionManager: React.FC<{ song: Song }> = ({ song }) => {
     const handleItunesCoverUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setItunesCover(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then(setItunesCover).catch(() => {});
         }
     };
 
@@ -197,11 +194,7 @@ const PostAlbumSingleModal: React.FC<PostAlbumSingleModalProps> = ({
     const handleCoverUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCustomCover(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then(setCustomCover).catch(() => {});
         }
     };
 
@@ -445,11 +438,7 @@ const PostAlbumSingleManager: React.FC<{ project: Release, allReleases: Release[
     const handleCoverUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCustomCover(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then(setCustomCover).catch(() => {});
         }
     };
 
@@ -546,6 +535,8 @@ const CatalogView: React.FC = () => {
     const [rightsTarget, setRightsTarget] = useState<{ type: 'song' | 'release', item: Song | Release } | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ action: () => void, message: string, title: string, confirmText: string } | null>(null);
     const [postAlbumSingleTarget, setPostAlbumSingleTarget] = useState<{ song: Song; project: Release } | null>(null);
+    const [visibleProjectsCount, setVisibleProjectsCount] = useState<number>(24);
+    const [visibleSinglesCount, setVisibleSinglesCount] = useState<number>(30);
 
     const eraConfig = useMemo(() => getEraConfiguration(gameState.date.year), [gameState.date.year]);
 
@@ -575,24 +566,22 @@ const CatalogView: React.FC = () => {
     const handleSongCoverArtChange = (songId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newCoverArt = reader.result as string;
-                dispatch({ type: 'UPDATE_SONG_COVER_ART', payload: { songId, newCoverArt } });
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file)
+                .then((newCoverArt) => {
+                    dispatch({ type: 'UPDATE_SONG_COVER_ART', payload: { songId, newCoverArt } });
+                })
+                .catch(() => {});
         }
     };
 
     const handleCoverArtChange = (e: React.ChangeEvent<HTMLInputElement>, releaseId: string) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newCoverArt = reader.result as string;
-                dispatch({ type: 'UPDATE_RELEASE_COVER_ART', payload: { releaseId, newCoverArt } });
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file)
+                .then((newCoverArt) => {
+                    dispatch({ type: 'UPDATE_RELEASE_COVER_ART', payload: { releaseId, newCoverArt } });
+                })
+                .catch(() => {});
         }
     };
 
@@ -702,7 +691,7 @@ const CatalogView: React.FC = () => {
                     </div>
                     {releasedProjects.length > 0 ? (
                         <div className="space-y-3">
-                            {releasedProjects.map(project => {
+                            {releasedProjects.slice(0, visibleProjectsCount).map(project => {
                                 const isExpanded = expandedProjectIds.has(project.id);
                                 const totalUnits = Math.floor(project.streams / 1500) + ((project as any).sales || 0);
                                 const albumChartEntry = billboardTopAlbums.find(e => e.albumId === project.id);
@@ -718,7 +707,7 @@ const CatalogView: React.FC = () => {
                                         {isTakenDown && <div className="absolute top-2 right-2 text-xs font-bold bg-red-900/80 text-red-400 px-2 py-1 rounded-full z-10">TAKEN DOWN</div>}
                                         <div className="flex items-center gap-4">
                                             <div onClick={() => document.getElementById(`cover-upload-album-${project.id}`)?.click()} className="cursor-pointer group relative flex-shrink-0">
-                                                <img src={project.coverArt} alt={project.title} className="w-20 h-20 rounded-md object-cover"/>
+                                                <img src={project.coverArt} alt={project.title} loading="lazy" decoding="async" className="w-20 h-20 rounded-md object-cover"/>
                                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
                                                     <span className="text-white text-xs font-bold">Change</span>
                                                 </div>
@@ -916,6 +905,14 @@ const CatalogView: React.FC = () => {
                                     </div>
                                 );
                             })}
+                            {releasedProjects.length > visibleProjectsCount && (
+                                <button
+                                    onClick={() => setVisibleProjectsCount(c => c + 24)}
+                                    className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold rounded-lg border border-zinc-700 transition-colors"
+                                >
+                                    Load More Projects ({releasedProjects.length - visibleProjectsCount} remaining)
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <p className="text-zinc-500 text-sm">No EPs or Albums released yet.</p>
@@ -926,7 +923,7 @@ const CatalogView: React.FC = () => {
                     <h2 className="text-xl font-bold">Singles</h2>
                     {releasedSingles.length > 0 ? (
                         <div className="space-y-3">
-                            {releasedSingles.map(song => {
+                            {releasedSingles.slice(0, visibleSinglesCount).map(song => {
                                 const chartInfo = {
                                     peak: chartHistory[song.id]?.peak ?? null,
                                     current: billboardHot100.find(e => e.songId === song.id)?.rank ?? null
@@ -939,7 +936,7 @@ const CatalogView: React.FC = () => {
                                         <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-4">
                                                 <div onClick={() => document.getElementById(`cover-upload-single-${song.id}`)?.click()} className="cursor-pointer group relative flex-shrink-0">
-                                                    <img src={song.coverArt} alt={song.title} className="w-20 h-20 rounded-md object-cover"/>
+                                                    <img src={song.coverArt} alt={song.title} loading="lazy" decoding="async" className="w-20 h-20 rounded-md object-cover"/>
                                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
                                                         <span className="text-white text-xs font-bold">Change</span>
                                                     </div>
@@ -1026,6 +1023,14 @@ const CatalogView: React.FC = () => {
                                     </div>
                                 );
                             })}
+                            {releasedSingles.length > visibleSinglesCount && (
+                                <button
+                                    onClick={() => setVisibleSinglesCount(c => c + 30)}
+                                    className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold rounded-lg border border-zinc-700 transition-colors"
+                                >
+                                    Load More Singles ({releasedSingles.length - visibleSinglesCount} remaining)
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <p className="text-zinc-500 text-sm">No Singles released yet.</p>

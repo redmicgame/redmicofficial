@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PlusIcon from './icons/PlusIcon';
 import UserIcon from './icons/UserIcon';
@@ -39,7 +40,7 @@ const InstagramFeedPost: React.FC<{ post: InstagramPost, username: string, userA
 
             <div className="w-full aspect-square bg-zinc-900 border-y border-zinc-900 overflow-x-auto snap-x snap-mandatory flex hide-scrollbar">
                 {(post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : [post.imageUrl || '']).map((url, i) => (
-                    <img key={i} src={url} className="w-full h-full object-cover shrink-0 snap-center" />
+                    <img key={i} src={url} loading="lazy" decoding="async" className="w-full h-full object-cover shrink-0 snap-center" />
                 ))}
             </div>
 
@@ -148,11 +149,9 @@ const InstagramView: React.FC = () => {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCreateImageUrls([...createImageUrls, reader.result as string]);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file, { maxWidth: 960, maxHeight: 960 })
+                .then((url) => setCreateImageUrls((prev) => [...prev, url]))
+                .catch(() => {});
         }
     };
 

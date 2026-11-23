@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { 
     VENUES, 
     TOUR_TIER_REQUIREMENTS, 
@@ -50,12 +51,11 @@ const CreateTourView: React.FC = () => {
         return [...allSongs].filter(s => s.isReleased).sort((a,b) => (b.streams || 0) - (a.streams || 0)).slice(0, 3);
     }, [allSongs]);
 
-    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => setBannerImage(reader.result as string);
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            setBannerImage(url);
         }
     };
 

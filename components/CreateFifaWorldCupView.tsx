@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 
 const CreateFifaWorldCupView: React.FC = () => {
     const { gameState, dispatch } = useGame();
@@ -10,14 +11,11 @@ const CreateFifaWorldCupView: React.FC = () => {
     const offer = gameState.activeFifaOffer;
     if (!offer) return null;
 
-    const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCoverArtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCoverArt(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+            setCoverArt(url);
         }
     };
 

@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
@@ -61,14 +62,11 @@ const GrammysView: React.FC = () => {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                dispatch({ type: 'UPDATE_GRAMMY_BANNER', payload: reader.result as string });
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            dispatch({ type: 'UPDATE_GRAMMY_BANNER', payload: url });
         }
     };
 

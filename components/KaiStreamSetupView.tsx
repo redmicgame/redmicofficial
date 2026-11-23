@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ImageIcon from './icons/ImageIcon';
 
@@ -31,14 +32,11 @@ const KaiStreamSetupView: React.FC = () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.onchange = (e: any) => {
+        input.onchange = async (e: any) => {
             const file = e.target.files?.[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    setter(e.target?.result as string);
-                };
-                reader.readAsDataURL(file);
+                const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+                setter(url);
             }
         };
         input.click();

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { XPost, XUser } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import UserVerifiedBadge from './icons/UserVerifiedBadge';
@@ -837,9 +838,9 @@ const XProfileView: React.FC = () => {
                                 {editHeader && <img src={editHeader} className="w-full h-24 object-cover mb-2 rounded-md" alt="Header Preview" />}
                                 <input type="file" accept="image/*" onChange={e => {
                                     if (e.target.files && e.target.files[0]) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => setEditHeader(reader.result as string);
-                                        reader.readAsDataURL(e.target.files[0]);
+                                        storeUploadedImageInVault(e.target.files[0], { maxWidth: 1200, maxHeight: 400 })
+                                            .then(setEditHeader)
+                                            .catch(() => {});
                                     }
                                 }} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
                             </div>
@@ -848,9 +849,9 @@ const XProfileView: React.FC = () => {
                                 {editAvatar && <img src={editAvatar} className="w-16 h-16 object-cover mb-2 rounded-full border border-zinc-700" alt="Avatar Preview" />}
                                 <input type="file" accept="image/*" onChange={e => {
                                     if (e.target.files && e.target.files[0]) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => setEditAvatar(reader.result as string);
-                                        reader.readAsDataURL(e.target.files[0]);
+                                        storeUploadedImageInVault(e.target.files[0], { maxWidth: 512, maxHeight: 512 })
+                                            .then(setEditAvatar)
+                                            .catch(() => {});
                                     }
                                 }} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700" />
                             </div>

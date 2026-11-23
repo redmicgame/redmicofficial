@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import PlusIcon from './icons/PlusIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import HeartIcon from './icons/HeartIcon';
@@ -287,14 +288,11 @@ const TikTokView: React.FC = () => {
 
     const [selectedVideo, setSelectedVideo] = useState<TikTokVideo | null>(null);
 
-    const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCreateThumbnail(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 720, maxHeight: 1280 });
+            setCreateThumbnail(url);
         }
     };
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import type { Video } from '../types';
 import { SUBSCRIBER_THRESHOLD_VERIFIED, VIEWS_THRESHOLD_VERIFIED, SUBSCRIBER_THRESHOLD_STORE, LABELS } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -362,12 +363,12 @@ const YouTubeChannelView: React.FC = () => {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && activeArtist && channelData.isPersonal) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newImage = reader.result as string;
-                dispatch({ type: 'UPDATE_ARTIST_IMAGE', payload: { artistId: activeArtist.id, newImage } });
-            };
-            reader.readAsDataURL(file);
+            const artistId = activeArtist.id;
+            storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
+                .then((newImage) => {
+                    dispatch({ type: 'UPDATE_ARTIST_IMAGE', payload: { artistId, newImage } });
+                })
+                .catch(() => {});
         }
         if (e.target) e.target.value = '';
     };
@@ -381,12 +382,11 @@ const YouTubeChannelView: React.FC = () => {
     const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && channelData.isPersonal) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newBanner = reader.result as string;
-                dispatch({ type: 'UPDATE_YOUTUBE_BANNER', payload: { banner: newBanner } });
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 })
+                .then((newBanner) => {
+                    dispatch({ type: 'UPDATE_YOUTUBE_BANNER', payload: { banner: newBanner } });
+                })
+                .catch(() => {});
         }
         if (e.target) e.target.value = '';
     };

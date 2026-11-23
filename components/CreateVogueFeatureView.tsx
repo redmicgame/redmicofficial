@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { VoguePhotoshoot } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import CameraIcon from './icons/CameraIcon';
@@ -27,14 +28,11 @@ const CreateVogueFeatureView: React.FC = () => {
         return null;
     }
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setter(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1024, maxHeight: 1024 });
+            setter(url);
         }
     };
 

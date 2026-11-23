@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -74,14 +75,11 @@ const CryptoView: React.FC = () => {
                         <div>
                             <label className="block text-sm font-semibold mb-1 text-zinc-400">Logo (Upload Image)</label>
                             
-                            <input type="file" accept="image/*" onChange={(e) => {
+                            <input type="file" accept="image/*" onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        setLogo(reader.result as string);
-                                    };
-                                    reader.readAsDataURL(file);
+                                    const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+                                    setLogo(url);
                                 }
                             }} className="w-full bg-zinc-800 p-3 rounded-lg border border-zinc-700 outline-none focus:border-amber-500" />
                             {logo && <img src={logo} className="h-16 w-16 object-cover rounded-full mt-2" />}

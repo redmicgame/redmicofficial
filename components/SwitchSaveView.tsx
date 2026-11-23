@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
-import { db, getActiveSaveId, setActiveSaveId, separateMediaFromState } from '../db/db';
+import { db, getActiveSaveId, setActiveSaveId, separateMediaFromState, garbageCollectOrphanedMedia } from '../db/db';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import TrashIcon from './icons/TrashIcon'; // need this? Or use button text
 
@@ -43,6 +43,7 @@ const SwitchSaveView: React.FC = () => {
     const handleDelete = async (id: number) => {
         if (confirm('Are you sure you want to delete this save? This action cannot be undone.')) {
             await db.saves.delete(id);
+            void garbageCollectOrphanedMedia();
             if (id === activeSaveId) {
                 dispatch({ type: 'RESET_GAME' });
             } else {

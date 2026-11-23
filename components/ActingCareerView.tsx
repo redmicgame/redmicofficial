@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { TALENT_AGENCIES } from '../constants';
 import { ActingAudition, ActingRole } from '../types';
 
@@ -155,16 +156,11 @@ const ActingCareerView: React.FC = () => {
   const [showQuitModal, setShowQuitModal] = useState<boolean>(false);
   const [selectedQuitReason, setSelectedQuitReason] = useState<'conflicting schedules' | 'political beliefs' | 'personal reasons' | 'no comment'>('conflicting schedules');
 
-  const handleSoundtrackImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSoundtrackImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setCustomSoundtrackCover(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+      setCustomSoundtrackCover(url);
     }
   };
 

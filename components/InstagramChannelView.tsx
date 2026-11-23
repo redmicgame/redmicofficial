@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ImageIcon from './icons/ImageIcon';
 import VideoIcon from './icons/VideoIcon';
@@ -125,16 +126,13 @@ export const InstagramChannelView: React.FC<InstagramChannelViewProps> = ({ onBa
         scrollToBottom();
     }, [messages.length]);
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSelectedPhoto(reader.result as string);
-                setSelectedPost(null);
-                setSelectedReel(null);
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 960, maxHeight: 960 });
+            setSelectedPhoto(url);
+            setSelectedPost(null);
+            setSelectedReel(null);
         }
         if (fileInputRef.current) {
             fileInputRef.current.value = '';

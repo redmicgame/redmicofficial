@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 
 const CancelIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -80,14 +81,11 @@ const PromoInterviewView: React.FC = () => {
                             type="file" 
                             accept="image/*"
                             className="w-full bg-zinc-900 border border-zinc-600 rounded p-2 text-white text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" 
-                            onChange={(e) => {
+                            onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        setThumbnail(reader.result as string);
-                                    };
-                                    reader.readAsDataURL(file);
+                                    const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+                                    setThumbnail(url);
                                 }
                             }}
                         />

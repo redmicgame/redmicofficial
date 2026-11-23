@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { GENRES, STUDIOS, NPC_ARTIST_NAMES, NPC_ERAS, NPC_ARTIST_GENRES, NPC_ARTIST_IMAGES, SUBGENRES } from '../constants';
 import type { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -80,14 +81,13 @@ const StudioView: React.FC = () => {
     const handleAutoWriteCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && autoWriteData) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const res = ev.target?.result as string;
-                if (res) {
-                    setAutoWriteData(prev => prev ? { ...prev, image: res } : null);
-                }
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file)
+                .then((res) => {
+                    if (res) {
+                        setAutoWriteData(prev => prev ? { ...prev, image: res } : null);
+                    }
+                })
+                .catch(() => {});
         }
     };
 
@@ -185,11 +185,7 @@ const StudioView: React.FC = () => {
     const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCoverArt(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then((url) => setCoverArt(url)).catch(() => {});
         }
     };
 
@@ -656,11 +652,9 @@ const StudioView: React.FC = () => {
                                         <input type="file" accept="image/*" className="text-xs w-48 bg-zinc-700 rounded p-1" onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                const reader = new FileReader();
-                                                reader.onload = (ev) => {
-                                                    setCustomImageUploads(prev => ({...prev, [item]: ev.target?.result as string}));
-                                                };
-                                                reader.readAsDataURL(file);
+                                                storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
+                                                    .then((url) => setCustomImageUploads(prev => ({ ...prev, [item]: url })))
+                                                    .catch(() => {});
                                             }
                                         }} />
                                     )}

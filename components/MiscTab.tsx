@@ -3,7 +3,7 @@ import { useGame, formatNumber } from '../context/GameContext';
 import { useFirebase } from '../context/FirebaseContext';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import { PaparazziPhoto, PaparazziPhotoCategory } from '../types';
-import { db, getActiveSaveId } from '../db/db';
+import { db, getActiveSaveId, injectMediaIntoState, storeUploadedImageInVault, storeDataUrlInVault, garbageCollectOrphanedMedia } from '../db/db';
 import BookOpenIcon from './icons/BookOpenIcon';
 import { RedMicProCodeModal } from './RedMicProCodeModal';
 import ShutdownCountdown from './ShutdownCountdown';
@@ -55,13 +55,14 @@ const MiscTab: React.FC = () => {
 
     const handleEndCareer = async () => {
         await db.saves.delete(getActiveSaveId());
+        void garbageCollectOrphanedMedia();
         dispatch({ type: 'RESET_GAME' });
         setShowEndCareerConfirm(false);
     };
     
     const [loadingData, setLoadingData] = useState<{ active: boolean, progress: number, text: string } | null>(null);
 
-    const handleExport = () => {
+    const handleExport = async () => {
         if (!activeArtist) {
             alert('Cannot export, no active artist.');
             return;
@@ -73,7 +74,8 @@ const MiscTab: React.FC = () => {
             try {
                 const artistName = activeArtist.name.replace(/\s/g, '_');
                 const dateStr = `${gameState.date.year}-W${gameState.date.week}`;
-                const fileContent = JSON.stringify(gameState, null, 2);
+                const portableState = await injectMediaIntoState(gameState);
+                const fileContent = JSON.stringify(portableState, null, 2);
                 const mimeType = 'application/json';
                 const fileName = `red-mic-save_${artistName}_${dateStr}.json`;
                 
@@ -95,62 +97,56 @@ const MiscTab: React.FC = () => {
 
         setLoadingData({ active: true, progress: 0, text: 'Preparing save file...' });
         
-        setTimeout(() => {
-            try {
-                const artistName = activeArtist.name.replace(/\s/g, '_');
-                const dateStr = `${gameState.date.year}-W${gameState.date.week}`;
-                
-                const fileContent = JSON.stringify(gameState, null, 2); // Pretty print
-                const sizeMB = fileContent.length / (1024 * 1024);
-                const mimeType = 'application/json';
-                const fileName = `red-mic-save_${artistName}_${dateStr}.json`;
+        try {
+            const artistName = activeArtist.name.replace(/\s/g, '_');
+            const dateStr = `${gameState.date.year}-W${gameState.date.week}`;
+            const portableState = await injectMediaIntoState(gameState, (p, msg) => {
+                setLoadingData({ active: true, progress: Math.floor(p * 0.5), text: msg || 'Preparing media...' });
+            });
+            
+            const fileContent = JSON.stringify(portableState, null, 2);
+            const sizeMB = fileContent.length / (1024 * 1024);
+            const mimeType = 'application/json';
+            const fileName = `red-mic-save_${artistName}_${dateStr}.json`;
 
-                setLoadingData({ active: true, progress: 50, text: `Compressing ${sizeMB.toFixed(1)}MB save file...` });
+            setLoadingData({ active: true, progress: 75, text: `Packaging ${sizeMB.toFixed(1)}MB save file...` });
+            
+            setTimeout(() => {
+                const blob = new Blob([fileContent], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
                 
-                setTimeout(() => {
-                    const blob = new Blob([fileContent], { type: mimeType });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    setLoadingData({ active: true, progress: 100, text: 'Download complete!' });
-                    setTimeout(() => setLoadingData(null), 1000);
-                }, 500);
+                setLoadingData({ active: true, progress: 100, text: 'Download complete!' });
+                setTimeout(() => setLoadingData(null), 1000);
+            }, 200);
 
-            } catch (err) {
-                console.error("Failed to export save data:", err);
-                alert('Error exporting data. Please check the console.');
-                setLoadingData(null);
-            }
-        }, 100);
+        } catch (err) {
+            console.error("Failed to export save data:", err);
+            alert('Error exporting data. Please check the console.');
+            setLoadingData(null);
+        }
     };
 
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, setter: (value: string | null) => void) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setter(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then(setter).catch(() => {});
         }
     };
     
     const handleMultipleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             for (const file of Array.from(e.target.files)) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64String = reader.result as string;
-                    dispatch({ type: 'ADD_ARTIST_IMAGE', payload: base64String });
-                };
-                reader.readAsDataURL(file);
+                storeUploadedImageInVault(file)
+                    .then((url) => dispatch({ type: 'ADD_ARTIST_IMAGE', payload: url }))
+                    .catch(() => {});
             }
         }
     };
@@ -160,31 +156,35 @@ const MiscTab: React.FC = () => {
             const file = e.target.files[0];
             const video = document.createElement('video');
             video.preload = 'metadata';
+            const tempVideoUrl = URL.createObjectURL(file);
 
             video.onloadedmetadata = () => {
                 video.currentTime = Math.min(1, video.duration / 2);
             };
             
             video.onseeked = () => {
+                const maxW = 640;
+                const maxH = 360;
+                const scale = Math.min(1, maxW / (video.videoWidth || maxW), maxH / (video.videoHeight || maxH));
                 const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                canvas.width = Math.max(1, Math.round((video.videoWidth || maxW) * scale));
+                canvas.height = Math.max(1, Math.round((video.videoHeight || maxH) * scale));
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    dispatch({ type: 'ADD_ARTIST_VIDEO', payload: thumbnailUrl });
+                    const thumbnailUrl = canvas.toDataURL('image/webp', 0.8);
+                    storeDataUrlInVault(thumbnailUrl)
+                        .then((vaultUrl) => dispatch({ type: 'ADD_ARTIST_VIDEO', payload: vaultUrl }))
+                        .catch(() => {});
                 }
+                URL.revokeObjectURL(tempVideoUrl);
             };
 
-            // FIX: Use FileReader to create a data URL instead of URL.createObjectURL to avoid Blob type conflicts.
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (event.target?.result) {
-                    video.src = event.target.result as string;
-                }
+            video.onerror = () => {
+                URL.revokeObjectURL(tempVideoUrl);
             };
-            reader.readAsDataURL(file);
+
+            video.src = tempVideoUrl;
         }
     };
     

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { GameDate, Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { CalendarDatePicker, formatFullDateString, getDateFromGameWeek, getGameWeekFromDate } from './CalendarDatePicker';
@@ -413,22 +414,20 @@ const LabelReleasePlanView: React.FC = () => {
                                                             ) : (
                                                                 <label className="w-full aspect-square bg-zinc-700 hover:bg-zinc-600 rounded-md flex items-center justify-center cursor-pointer border border-dashed border-zinc-500">
                                                                     <span className="text-xl text-zinc-400">+</span>
-                                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                                                                         const file = e.target.files?.[0];
                                                                         if (file) {
-                                                                            const reader = new FileReader();
-                                                                            reader.onload = (ev) => {
-                                                                                const url = ev.target?.result as string;
-                                                                                const newSelection = new Map(selectedSingles);
+                                                                            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+                                                                            setSelectedSingles(prev => {
+                                                                                const newSelection = new Map(prev);
                                                                                 const current = newSelection.get(songId);
                                                                                 if (current) {
                                                                                     const newImages = [...current.eraImages];
                                                                                     newImages[idx] = url;
                                                                                     newSelection.set(songId, { ...current, eraImages: newImages });
-                                                                                    setSelectedSingles(newSelection);
                                                                                 }
-                                                                            };
-                                                                            reader.readAsDataURL(file);
+                                                                                return newSelection;
+                                                                            });
                                                                         }
                                                                     }} />
                                                                 </label>
@@ -489,17 +488,15 @@ const LabelReleasePlanView: React.FC = () => {
                                             ) : (
                                                 <label className="w-full aspect-square bg-zinc-700 hover:bg-zinc-600 rounded-md flex items-center justify-center cursor-pointer border border-dashed border-zinc-500">
                                                     <span className="text-xl text-zinc-400">+</span>
-                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                                                         const file = e.target.files?.[0];
                                                         if (file) {
-                                                            const reader = new FileReader();
-                                                            reader.onload = (ev) => {
-                                                                const url = ev.target?.result;
-                                                                const newImages = [...projectEraImages];
+                                                            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+                                                            setProjectEraImages(prev => {
+                                                                const newImages = [...prev];
                                                                 newImages[idx] = url;
-                                                                setProjectEraImages(newImages);
-                                                            };
-                                                            reader.readAsDataURL(file);
+                                                                return newImages;
+                                                            });
                                                         }
                                                     }} />
                                                 </label>

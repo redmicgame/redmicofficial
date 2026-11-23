@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useGame } from "../context/GameContext";
+import { storeUploadedImageInVault } from "../db/db";
 import { ARTIST_GIFS } from "../data/artistGifs";
 import XIcon from "./icons/XIcon";
 import HomeIcon from "./icons/HomeIcon";
@@ -589,6 +590,8 @@ export const Post: React.FC<{
           <img
             src={author.avatar}
             alt={author.name}
+            loading="lazy"
+            decoding="async"
             className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
           />
         </button>
@@ -849,12 +852,16 @@ export const Post: React.FC<{
             <img
               src={partnerOrChildDualImage.img1}
               alt="Post image 1"
+              loading="lazy"
+              decoding="async"
               className="w-1/2 h-full object-cover border-r border-zinc-700"
               referrerPolicy="no-referrer"
             />
             <img
               src={partnerOrChildDualImage.img2}
               alt="Post image 2"
+              loading="lazy"
+              decoding="async"
               className="w-1/2 h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -864,24 +871,32 @@ export const Post: React.FC<{
             <img
               src={post.images ? post.images[0] : post.image}
               alt="Post image 1"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[1] : post.image2}
               alt="Post image 2"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[2] : post.image3}
               alt="Post image 3"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[3] : post.image4}
               alt="Post image 4"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -891,12 +906,16 @@ export const Post: React.FC<{
             <img
               src={post.images ? post.images[0] : post.image}
               alt="Post image 1"
+              loading="lazy"
+              decoding="async"
               className="w-1/2 h-full object-cover border-r border-zinc-700"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[1] : post.image2}
               alt="Post image 2"
+              loading="lazy"
+              decoding="async"
               className="w-1/2 h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -907,12 +926,16 @@ export const Post: React.FC<{
               <img
                 src={post.image.split('||')[0]}
                 alt="Post image 1"
+                loading="lazy"
+                decoding="async"
                 className="w-1/2 h-full object-cover"
               />
               <div className="w-1/2 h-full flex items-center justify-center p-8 bg-zinc-900">
                 <img
                   src={post.image.split('||')[1]}
                   alt="Post image 2"
+                  loading="lazy"
+                  decoding="async"
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
@@ -921,6 +944,8 @@ export const Post: React.FC<{
             <img
               src={post.image}
               alt="Post image"
+              loading="lazy"
+              decoding="async"
               className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto"
             />
           )
@@ -1734,19 +1759,20 @@ const AccountsView: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && changingAvatarForAccountId) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        dispatch({
-          type: "UPDATE_NPC_AVATAR",
-          payload: {
-            userId: changingAvatarForAccountId,
-            newAvatar: reader.result as string,
-          },
-        });
-        setChangingAvatarForAccountId(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      };
-      reader.readAsDataURL(file);
+      const targetId = changingAvatarForAccountId;
+      storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
+        .then((newAvatar) => {
+          dispatch({
+            type: "UPDATE_NPC_AVATAR",
+            payload: {
+              userId: targetId,
+              newAvatar,
+            },
+          });
+          setChangingAvatarForAccountId(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        })
+        .catch(() => {});
     }
   };
 
@@ -2085,11 +2111,9 @@ export const ComposeXPostModal: React.FC<{
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      storeUploadedImageInVault(file, { maxWidth: 1024, maxHeight: 1024 })
+        .then(setImage)
+        .catch(() => {});
     }
   };
 

@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Song } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
@@ -35,12 +36,11 @@ const CreateSoundtrackView: React.FC = () => {
         return <div className="p-4">Error: No active soundtrack offer.</div>;
     }
 
-    const handleCoverArtUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCoverArtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => setCoverArt(reader.result as string);
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+            setCoverArt(url);
         }
     };
 

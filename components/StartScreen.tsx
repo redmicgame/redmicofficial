@@ -2,6 +2,7 @@ import React, {  useState, useRef , useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { useFirebase } from '../context/FirebaseContext';
 import ConfirmationModal from './ConfirmationModal';
+import { storeUploadedImageInVault } from '../db/db';
 import type { Artist, Group } from '../types';
 
 type Mode = 'solo' | 'group';
@@ -56,11 +57,7 @@ const StartScreen: React.FC = () => {
     const handleImageUpload = (setter: (value: string | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setter(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file).then(setter).catch(() => {});
         }
     };
 

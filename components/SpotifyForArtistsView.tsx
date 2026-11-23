@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useGame, formatNumber } from "../context/GameContext";
+import { storeUploadedImageInVault } from "../db/db";
 import { Release, Song, Artist, Group, GameDate } from "../types";
 import { PLAYLIST_PITCH_COST, NPC_ARTIST_IMAGES } from "../constants";
 import HomeIcon from "./icons/HomeIcon";
@@ -76,17 +77,14 @@ const S4AUpcomingReleaseDetailView: React.FC<{
     }
   };
 
-  const handleImageUpload = (
+  const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setter: (url: string) => void,
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setter(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+      setter(url);
     }
   };
 
@@ -1661,24 +1659,21 @@ const S4AProfile: React.FC = () => {
                     const input = document.createElement("input");
                     input.type = "file";
                     input.accept = "image/*";
-                    input.onchange = (e) => {
+                    input.onchange = async (e) => {
                       const file = (e.target as HTMLInputElement).files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          const newImages = [
-                            ...(activeArtistData.aboutImages || []),
-                            e.target?.result as string,
-                          ];
-                          dispatch({
-                            type: "UPDATE_ABOUT_PROFILE",
-                            payload: {
-                              bio: activeArtistData.aboutBio || "",
-                              images: newImages,
-                            },
-                          });
-                        };
-                        reader.readAsDataURL(file);
+                        const url = await storeUploadedImageInVault(file, { maxWidth: 768, maxHeight: 768 });
+                        const newImages = [
+                          ...(activeArtistData.aboutImages || []),
+                          url,
+                        ];
+                        dispatch({
+                          type: "UPDATE_ABOUT_PROFILE",
+                          payload: {
+                            bio: activeArtistData.aboutBio || "",
+                            images: newImages,
+                          },
+                        });
                       }
                     };
                     input.click();

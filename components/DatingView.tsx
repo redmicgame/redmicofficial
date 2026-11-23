@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Relationship, Artist, PrenupAgreement, Kid, RelationshipDrama } from '../types';
 import { formatMarriageDuration, calculateRelationshipDurations, formatDurationFromWeeks } from '../utils/relationshipUtils';
 import { getArtistImage } from '../constants';
@@ -96,24 +97,22 @@ const DatingView: React.FC = () => {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, relationshipId: string) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newImage = reader.result as string;
-                dispatch({ type: 'UPDATE_RELATIONSHIP_IMAGE', payload: { relationshipId, image: newImage } });
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
+                .then((newImage) => {
+                    dispatch({ type: 'UPDATE_RELATIONSHIP_IMAGE', payload: { relationshipId, image: newImage } });
+                })
+                .catch(() => {});
         }
     };
 
     const handleKidImageUpload = (e: React.ChangeEvent<HTMLInputElement>, kidId: string) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const newImage = reader.result as string;
-                dispatch({ type: 'UPDATE_KID_IMAGE', payload: { kidId, image: newImage } });
-            };
-            reader.readAsDataURL(file);
+            storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
+                .then((newImage) => {
+                    dispatch({ type: 'UPDATE_KID_IMAGE', payload: { kidId, image: newImage } });
+                })
+                .catch(() => {});
         }
     };
 
@@ -2342,14 +2341,14 @@ const DatingView: React.FC = () => {
                                         className="hidden"
                                         accept="image/*"
                                         onChange={(e) => {
-                                            handleKidImageUpload(e, selectedKidForActions.id);
-                                            // update local selectedKid reference image
                                             if (e.target.files && e.target.files[0]) {
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => {
-                                                    setSelectedKidForActions(prev => prev ? { ...prev, image: reader.result as string, photoUrl: reader.result as string } : null);
-                                                };
-                                                reader.readAsDataURL(e.target.files[0]);
+                                                const kidId = selectedKidForActions.id;
+                                                storeUploadedImageInVault(e.target.files[0], { maxWidth: 512, maxHeight: 512 })
+                                                    .then((url) => {
+                                                        dispatch({ type: 'UPDATE_KID_IMAGE', payload: { kidId, image: url } });
+                                                        setSelectedKidForActions(prev => prev ? { ...prev, image: url, photoUrl: url } : null);
+                                                    })
+                                                    .catch(() => {});
                                             }
                                         }}
                                     />
@@ -2516,13 +2515,14 @@ const DatingView: React.FC = () => {
                                 className="hidden"
                                 accept="image/*"
                                 onChange={(e) => {
-                                    handleKidImageUpload(e, selectedKidForActions.id);
                                     if (e.target.files && e.target.files[0]) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            setSelectedKidForActions(prev => prev ? { ...prev, image: reader.result as string, photoUrl: reader.result as string } : null);
-                                        };
-                                        reader.readAsDataURL(e.target.files[0]);
+                                        const kidId = selectedKidForActions.id;
+                                        storeUploadedImageInVault(e.target.files[0], { maxWidth: 512, maxHeight: 512 })
+                                            .then((url) => {
+                                                dispatch({ type: 'UPDATE_KID_IMAGE', payload: { kidId, image: url } });
+                                                setSelectedKidForActions(prev => prev ? { ...prev, image: url, photoUrl: url } : null);
+                                            })
+                                            .catch(() => {});
                                     }
                                 }}
                             />

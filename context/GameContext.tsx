@@ -6,7 +6,17 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { db, getActiveSaveId, separateMediaFromState, injectMediaIntoState } from "../db/db";
+import { db, getActiveSaveId, separateMediaFromState, hydrateMediaForRuntime, garbageCollectOrphanedMedia } from "../db/db";
+import {
+  fastClone,
+  pruneOldInboxEmails,
+  compactChartHistoryInPlace,
+  compactWeeklyChartArchive,
+  compactArtistXPosts,
+  compactGameStateOnLoad,
+  MAX_DAILY_STREAM_DAYS,
+  MAX_CHAT_MESSAGES_PER_THREAD,
+} from "../utils/saveCompaction";
 import { useFirebase } from "./FirebaseContext";
 
 import type {
@@ -3617,8 +3627,8 @@ The Red Mic Team`,
       const newDate = { ...(isDailyMode ? { day: newDay } : {}), week: newWeek, year: newYear };
 
       if (!isWeeklyUpdate) {
-        const updatedArtistsData: { [id: string]: ArtistData } = JSON.parse(
-          JSON.stringify(state.artistsData),
+        const updatedArtistsData: { [id: string]: ArtistData } = fastClone(
+          state.artistsData,
         );
 
         for (const artistId in updatedArtistsData) {
@@ -4665,8 +4675,8 @@ The Red Mic Team`,
 
       let contractRenewalForActivePlayer: GameState["contractRenewalOffer"] =
         null;
-      const updatedArtistsData: { [id: string]: ArtistData } = JSON.parse(
-        JSON.stringify(state.artistsData),
+      const updatedArtistsData: { [id: string]: ArtistData } = fastClone(
+        state.artistsData,
       );
 
       const allCustomLabels: CustomLabel[] = [];
@@ -7139,7 +7149,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 daily[0] = actualStreamsThisWeek;
               }
             }
-            const newDailyStreams = [...(song.dailyStreams || []), ...daily];
+            const newDailyStreams = [...(song.dailyStreams || []), ...daily].slice(-MAX_DAILY_STREAM_DAYS);
 
             totalWeeklyStreams += actualStreamsThisWeek;
 
@@ -7195,7 +7205,9 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             let salesToAdd = pureSalesThisWeek;
             let netIncomeToAdd = generatedNet;
             let grossRevenueToAdd = generatedGross;
-            let finalDailyStreams = isItunesExcl ? [...(song.dailyStreams || []), ...new Array(7).fill(0)] : newDailyStreams;
+            let finalDailyStreams = isItunesExcl
+              ? [...(song.dailyStreams || []), ...new Array(7).fill(0)].slice(-MAX_DAILY_STREAM_DAYS)
+              : newDailyStreams;
 
             if (isDailyMode) {
               // In Daily Mode: add only 1 day of streams & income
@@ -12423,14 +12435,17 @@ It is now available on your Spotify profile.
           rank: entry.rank,
         }));
 
-      const newBillboardHot100WeeklyArchive = [
-        ...(state.billboardHot100WeeklyArchive || []),
-        {
-          year: newDate.year,
-          week: newDate.week,
-          entries: playerHot100EntriesThisWeek,
-        },
-      ];
+      const newBillboardHot100WeeklyArchive = compactWeeklyChartArchive(
+        [
+          ...(state.billboardHot100WeeklyArchive || []),
+          {
+            year: newDate.year,
+            week: newDate.week,
+            entries: playerHot100EntriesThisWeek,
+          },
+        ],
+        newDate,
+      );
 
       const artistsWithFirstChartEntry = new Set<string>();
 
@@ -12750,14 +12765,17 @@ It is now available on your Spotify profile.
             rank: entry.rank,
           }));
 
-        const newUkSinglesChartWeeklyArchive = [
-          ...(state.ukSinglesChartWeeklyArchive || []),
-          {
-            year: newDate.year,
-            week: newDate.week,
-            entries: playerUkSinglesEntriesThisWeek,
-          },
-        ];
+        const newUkSinglesChartWeeklyArchive = compactWeeklyChartArchive(
+          [
+            ...(state.ukSinglesChartWeeklyArchive || []),
+            {
+              year: newDate.year,
+              week: newDate.week,
+              entries: playerUkSinglesEntriesThisWeek,
+            },
+          ],
+          newDate,
+        );
 
       // --- GENRE CHART CALCULATION (Billboard Formulas & Points) ---
       const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } =
@@ -18397,64 +18415,55 @@ Congratulations on your chart success!
       }
 
       // --- PERFORMANCE & SAVE COMPACTION ---
-      // 1. Compact historical chart runs for inactive NPC songs (off-chart for > 12 weeks)
-      // All player songs and releases are 100% PRESERVED with full history forever
+      // 1. Compact historical chart runs for inactive NPC entries across ALL chart histories.
+      // All player songs and releases are 100% PRESERVED with full history forever.
       const activeHot100Ids = new Set(newBillboardHot100.map((s) => s.uniqueId));
       const activeAlbumIds = new Set(newBillboardTopAlbums.map((a) => a.uniqueId));
+      const activeUkSingleIds = new Set((newUkSinglesChart || []).map((s) => s.uniqueId));
+      const activeUkAlbumIds = new Set((newUkAlbumsChart || []).map((a) => a.uniqueId));
+      const activeVideoIds = new Set((newSpotifyGlobalMusicVideos || []).map((v) => v.uniqueId));
+      const activePopIds = new Set(newHotPopSongs.map((s) => s.uniqueId));
+      const activeRapIds = new Set(newHotRapRnb.map((s) => s.uniqueId));
+      const activeElecIds = new Set(newElectronicChart.map((s) => s.uniqueId));
+      const activeCountryIds = new Set(newCountryChart.map((s) => s.uniqueId));
       const allPlayerSongUniqueIds = new Set(allPlayerSongsFlat.map((s) => s.id));
       const allPlayerAlbumIds = new Set(allPlayerReleases.map((r) => r.id));
 
-      for (const uniqueId in newChartHistory) {
-        if (!allPlayerSongUniqueIds.has(uniqueId) && !activeHot100Ids.has(uniqueId)) {
-          const entry = newChartHistory[uniqueId];
-          if (entry && entry.chartRun && entry.chartRun.length > 12) {
-            delete entry.chartRun;
-            delete entry.chartRunEntries;
-          }
-        }
+      compactChartHistoryInPlace(newChartHistory, activeHot100Ids, allPlayerSongUniqueIds);
+      compactChartHistoryInPlace(newAlbumChartHistory, activeAlbumIds, allPlayerAlbumIds);
+      if (newUkSinglesChartHistory === state.ukSinglesChartHistory) {
+        newUkSinglesChartHistory = fastClone(newUkSinglesChartHistory);
       }
+      compactChartHistoryInPlace(newUkSinglesChartHistory, activeUkSingleIds, allPlayerSongUniqueIds);
+      compactChartHistoryInPlace(newUkAlbumsChartHistory, activeUkAlbumIds, allPlayerAlbumIds);
+      compactChartHistoryInPlace(newVideoChartHistory, activeVideoIds, allPlayerSongUniqueIds);
+      compactChartHistoryInPlace(newHotPopSongsHistory, activePopIds, allPlayerSongUniqueIds);
+      compactChartHistoryInPlace(newHotRapRnbHistory, activeRapIds, allPlayerSongUniqueIds);
+      compactChartHistoryInPlace(newElectronicChartHistory, activeElecIds, allPlayerSongUniqueIds);
+      compactChartHistoryInPlace(newCountryChartHistory, activeCountryIds, allPlayerSongUniqueIds);
 
-      for (const uniqueId in newAlbumChartHistory) {
-        if (!allPlayerAlbumIds.has(uniqueId) && !activeAlbumIds.has(uniqueId)) {
-          const entry = newAlbumChartHistory[uniqueId];
-          if (entry && entry.chartRun && entry.chartRun.length > 12) {
-            delete entry.chartRun;
-            delete entry.chartRunEntries;
-          }
-        }
-      }
-
-      // 2. Rolling window for non-player social media posts (Pop Base, stan accounts, haters, media)
-      // ALL user posts, replies, reposts, pinned posts, and highlights are 100% PRESERVED forever!
+      // 2. Prune read Inbox emails older than 2 in-game years (keep all unread & critical offers),
+      //    compact non-player social posts (100% of player posts preserved), and bound DM threads.
       for (const aId in updatedArtistsData) {
         const aData = updatedArtistsData[aId];
         const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === aId);
-        const playerHandle = aProfile ? aProfile.name.replace(/\s/g, "").toLowerCase() : "";
-        const playerXId = aData.xUsers.find((u) => u.username === playerHandle)?.id;
 
-        const isUserContent = (post: XPost) => {
-          return (
-            post.authorId === playerXId ||
-            post.authorId === "player" ||
-            post.authorId === aId ||
-            (post as any).isPlayerPost === true ||
-            post.isRepost === true ||
-            (post as any).repostedByPlayer === true ||
-            post.isPinned === true ||
-            post.isHighlight === true ||
-            (playerXId !== undefined && (post as any).replyToAuthorId === playerXId) ||
-            (post.replyToId !== undefined && post.authorId === playerXId)
-          );
-        };
+        if (aData.inbox && aData.inbox.length > 0) {
+          aData.inbox = pruneOldInboxEmails(aData.inbox, newDate);
+        }
 
-        let nonPlayerCount = 0;
-        aData.xPosts = aData.xPosts.filter((post) => {
-          if (isUserContent(post)) {
-            return true; // Keep ALL user tweets, replies, and reposts forever
+        if (aData.xPosts && aData.xPosts.length > 0) {
+          aData.xPosts = compactArtistXPosts(aData.xPosts, aData.xUsers, aId, aProfile?.name);
+        }
+
+        if (aData.xChats && aData.xChats.length > 0) {
+          for (let ci = 0; ci < aData.xChats.length; ci++) {
+            const chat = aData.xChats[ci];
+            if (chat?.messages && chat.messages.length > MAX_CHAT_MESSAGES_PER_THREAD) {
+              chat.messages = chat.messages.slice(-MAX_CHAT_MESSAGES_PER_THREAD);
+            }
           }
-          nonPlayerCount++;
-          return nonPlayerCount <= 80; // Keep rolling 80 latest media/NPC posts
-        });
+        }
       }
 
       if (contractRenewalForActivePlayer) {
@@ -33704,42 +33713,29 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (stateToLoad) {
-          const fullyLoadedState = await injectMediaIntoState(stateToLoad, (prog, msg) => { setLoadingProgress(prog); if (msg) setLoadingMessage(msg); });
-          
-          // Self-healing migration for existing heavy saves:
-          // Prune legacy accumulated non-player posts if bloated, preserving 100% of player content
-          if (fullyLoadedState && fullyLoadedState.artistsData) {
-            for (const aId in fullyLoadedState.artistsData) {
-              const aData = fullyLoadedState.artistsData[aId];
+          const hydratedState = await hydrateMediaForRuntime(stateToLoad, (prog, msg) => {
+            setLoadingProgress(prog);
+            if (msg) setLoadingMessage(msg);
+          });
+
+          if (hydratedState && hydratedState.artistsData) {
+            for (const aId in hydratedState.artistsData) {
+              const aData = hydratedState.artistsData[aId];
               if (aData && aData.xUsers && !aData.xUsers.some((u: any) => u.id === "grammys")) {
                 aData.xUsers.push(grammysXUser);
-              }
-              if (aData && aData.xPosts && aData.xPosts.length > 120) {
-                const playerHandle = aData.artistName ? aData.artistName.replace(/\s/g, "").toLowerCase() : "";
-                const playerXId = aData.xUsers?.find((u: any) => u.username === playerHandle)?.id;
-                const isUserPost = (p: any) => (
-                  p.authorId === playerXId ||
-                  p.authorId === "player" ||
-                  p.authorId === aId ||
-                  p.isPlayerPost === true ||
-                  p.isRepost === true ||
-                  p.repostedByPlayer === true ||
-                  p.isPinned === true ||
-                  p.isHighlight === true ||
-                  (playerXId && p.replyToAuthorId === playerXId) ||
-                  (p.replyToId && p.authorId === playerXId)
-                );
-                let npcCount = 0;
-                aData.xPosts = aData.xPosts.filter((p: any) => {
-                  if (isUserPost(p)) return true;
-                  npcCount++;
-                  return npcCount <= 80;
-                });
               }
             }
           }
 
-          dispatch({ type: "LOAD_GAME", payload: fullyLoadedState });
+          // Self-healing migration for legacy heavy saves (prunes >2yr read mail, compacts NPC charts & dailyStreams)
+          const compactedState = compactGameStateOnLoad(hydratedState);
+
+          dispatch({ type: "LOAD_GAME", payload: compactedState });
+
+          // Background garbage collection of orphaned media after load settles
+          setTimeout(() => {
+            void garbageCollectOrphanedMedia();
+          }, 5000);
         }
       } catch (err) {
         console.error("Could not load game state", err);

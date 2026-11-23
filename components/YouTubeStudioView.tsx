@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { VIEW_INCOME_MULTIPLIER } from '../constants';
 import { Video } from '../types';
 import { calculateYouTubeLikes, getYouTubeLikeRatio, getYouTubeEngagementPerformance } from '../utils/youtubeViews';
@@ -95,16 +96,11 @@ const YouTubeStudioView: React.FC = () => {
         setShowSavedToast(false);
     };
 
-    const handleThumbnailFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleThumbnailFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                if (typeof reader.result === 'string') {
-                    setEditThumbnail(reader.result);
-                }
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            setEditThumbnail(url);
         }
     };
 

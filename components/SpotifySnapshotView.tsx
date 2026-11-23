@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Release, Song } from '../types';
 import { FastAverageColor } from 'fast-average-color';
 
@@ -655,16 +656,11 @@ const SpotifySnapshotView: React.FC<{ release: Release; onBack: () => void; }> =
         );
     };
 
-    const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (event.target?.result) {
-                    dispatch({ type: 'UPDATE_SNAPSHOT_BANNER', payload: { releaseId: release.id, bannerUrl: event.target.result as string }});
-                }
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1280, maxHeight: 720 });
+            dispatch({ type: 'UPDATE_SNAPSHOT_BANNER', payload: { releaseId: release.id, bannerUrl: url }});
         }
     };
 

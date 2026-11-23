@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import TicketIcon from './icons/TicketIcon';
 import TouringView from './TouringView';
@@ -71,14 +72,11 @@ const TourDetailView: React.FC = () => {
         dispatch({ type: 'CHANGE_VIEW', payload: 'tours' });
     };
     
-    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                dispatch({ type: 'UPLOAD_TOUR_PHOTO', payload: reader.result as string });
-            };
-            reader.readAsDataURL(file);
+            const url = await storeUploadedImageInVault(file, { maxWidth: 1024, maxHeight: 1024 });
+            dispatch({ type: 'UPLOAD_TOUR_PHOTO', payload: url });
         }
     };
 

@@ -1,6 +1,7 @@
 
 import React, {  useState , useEffect, useMemo } from 'react';
 import { useGame, formatNumber } from '../context/GameContext';
+import { storeUploadedImageInVault } from '../db/db';
 import { Song, Label, XUser } from '../types';
 import { LABELS, NPC_ARTIST_NAMES } from '../constants';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -748,14 +749,11 @@ const RedMicProDashboardView: React.FC = () => {
                                     type="file"
                                     accept="image/*"
                                     className="hidden"
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                         if (e.target.files && e.target.files[0]) {
                                             const file = e.target.files[0];
-                                            const reader = new FileReader();
-                                            reader.onloadend = () => {
-                                                dispatch({ type: 'UPDATE_NPC_COVER', payload: { artistName, newCover: reader.result as string } });
-                                            };
-                                            reader.readAsDataURL(file);
+                                            const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+                                            dispatch({ type: 'UPDATE_NPC_COVER', payload: { artistName, newCover: url } });
                                         }
                                     }}
                                 />
@@ -789,14 +787,11 @@ const RedMicProDashboardView: React.FC = () => {
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
-                                        onChange={(e) => {
+                                        onChange={async (e) => {
                                             if (e.target.files && e.target.files[0]) {
                                                 const file = e.target.files[0];
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => {
-                                                    dispatch({ type: 'UPDATE_NPC_AVATAR', payload: { userId: user.id, newAvatar: reader.result as string } });
-                                                };
-                                                reader.readAsDataURL(file);
+                                                const url = await storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 });
+                                                dispatch({ type: 'UPDATE_NPC_AVATAR', payload: { userId: user.id, newAvatar: url } });
                                             }
                                         }}
                                     />
