@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useGame } from "../context/GameContext";
-import { storeUploadedImageInVault } from "../db/db";
 import { ARTIST_GIFS } from "../data/artistGifs";
 import XIcon from "./icons/XIcon";
 import HomeIcon from "./icons/HomeIcon";
@@ -274,6 +273,390 @@ const renderContentWithHighlights = (text: string) => {
     });
 };
 
+const MIN_AD_IMPRESSIONS = 100_000;
+const MAX_AD_IMPRESSIONS = 100_000_000;
+const AD_COST_PER_100M_WEEK = 750_000;
+
+const calculateAdBudget = (impressions: number, durationWeeks: number) => {
+  const safeWeeks = Math.max(1, Math.min(4, Math.round(durationWeeks)));
+  const safeImp = Math.max(MIN_AD_IMPRESSIONS, Math.min(MAX_AD_IMPRESSIONS, Math.round(impressions)));
+  return Math.round((safeImp / MAX_AD_IMPRESSIONS) * AD_COST_PER_100M_WEEK * safeWeeks);
+};
+
+const calculateImpressionsFromBudget = (budget: number, durationWeeks: number) => {
+  const safeWeeks = Math.max(1, Math.min(4, Math.round(durationWeeks)));
+  const imp = Math.round((budget / (AD_COST_PER_100M_WEEK * safeWeeks)) * MAX_AD_IMPRESSIONS);
+  return Math.max(MIN_AD_IMPRESSIONS, Math.min(MAX_AD_IMPRESSIONS, imp));
+};
+
+const impressionsToSlider = (impressions: number) => {
+  const clamped = Math.max(MIN_AD_IMPRESSIONS, Math.min(MAX_AD_IMPRESSIONS, impressions));
+  return Math.round(((Math.log10(clamped) - 5) / 3) * 1000);
+};
+
+const sliderToImpressions = (sliderVal: number) => {
+  const raw = Math.pow(10, 5 + (sliderVal / 1000) * 3);
+  if (raw >= 10_000_000) return Math.min(MAX_AD_IMPRESSIONS, Math.round(raw / 1_000_000) * 1_000_000);
+  if (raw >= 1_000_000) return Math.round(raw / 100_000) * 100_000;
+  return Math.max(MIN_AD_IMPRESSIONS, Math.round(raw / 10_000) * 10_000);
+};
+
+interface AdConfiguratorProps {
+  impressions: number;
+  setImpressions: (val: number) => void;
+  durationWeeks: number;
+  setDurationWeeks: (val: number) => void;
+  targetType: "none" | "song" | "album";
+  setTargetType: (val: "none" | "song" | "album") => void;
+  targetSongId: string;
+  setTargetSongId: (val: string) => void;
+  targetAlbumId: string;
+  setTargetAlbumId: (val: string) => void;
+  releasedSongs: { id: string; title: string }[];
+  unreleasedAlbums: { id: string; title: string; type: string; status: string }[];
+  artistMoney: number;
+}
+
+const AdCampaignConfigurator: React.FC<AdConfiguratorProps> = ({
+  impressions,
+  setImpressions,
+  durationWeeks,
+  setDurationWeeks,
+  targetType,
+  setTargetType,
+  targetSongId,
+  setTargetSongId,
+  targetAlbumId,
+  setTargetAlbumId,
+  releasedSongs,
+  unreleasedAlbums,
+  artistMoney,
+}) => {
+  const adBudget = calculateAdBudget(impressions, durationWeeks);
+  const minBudget = calculateAdBudget(MIN_AD_IMPRESSIONS, durationWeeks);
+  const maxBudget = calculateAdBudget(MAX_AD_IMPRESSIONS, durationWeeks);
+  const [budgetInput, setBudgetInput] = useState<string>(String(adBudget));
+
+  useEffect(() => {
+    setBudgetInput(String(adBudget));
+  }, [adBudget]);
+
+  const canAfford = artistMoney >= adBudget;
+  const presetImpressions = [100_000, 500_000, 1_000_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000, 100_000_000];
+
+  return (
+    <div className="mt-2 p-3 rounded-xl bg-zinc-900/90 border border-sky-500/40 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
+            AD
+          </span>
+          <span className="text-xs font-bold text-white">Promoted Ad Campaign</span>
+        </div>
+        <span className="text-[11px] text-zinc-400">100M views = $750K / 1 wk</span>
+      </div>
+
+      {/* Duration (1-4 Weeks) */}
+      <div>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-zinc-400 font-medium">Duration</span>
+          <span className="text-white font-semibold">{durationWeeks} {durationWeeks === 1 ? "Week" : "Weeks"} (1-4 wks)</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {[1, 2, 3, 4].map((wk) => (
+            <button
+              key={wk}
+              type="button"
+              onClick={() => setDurationWeeks(wk)}
+              className={`py-1.5 text-xs font-bold rounded-lg border transition-colors ${
+                durationWeeks === wk
+                  ? "bg-sky-500 text-white border-sky-400"
+                  : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+              }`}
+            >
+              {wk}W
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Estimated Impressions (100K - 100M) */}
+      <div>
+        <div className="flex justify-between items-center text-xs mb-1">
+          <span className="text-zinc-400 font-medium">Estimated Impressions (Views)</span>
+          <span className="text-sky-400 font-bold">{formatNumber(impressions)} views</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={1000}
+          value={impressionsToSlider(impressions)}
+          onChange={(e) => setImpressions(sliderToImpressions(Number(e.target.value)))}
+          className="w-full accent-sky-500 cursor-pointer"
+        />
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          {presetImpressions.map((val) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setImpressions(val)}
+              className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors ${
+                impressions === val
+                  ? "bg-sky-500/20 text-sky-300 border-sky-500"
+                  : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white"
+              }`}
+            >
+              {formatNumber(val)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Ad Budget */}
+      <div>
+        <div className="flex justify-between items-center text-xs mb-1">
+          <span className="text-zinc-400 font-medium">Ad Budget</span>
+          <span className={`font-semibold ${canAfford ? "text-zinc-400" : "text-red-400"}`}>
+            Balance: ${formatNumber(artistMoney)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-bold">$</span>
+            <input
+              type="number"
+              min={minBudget}
+              max={maxBudget}
+              value={budgetInput}
+              onChange={(e) => {
+                setBudgetInput(e.target.value);
+                const parsed = Number(e.target.value);
+                if (!Number.isNaN(parsed) && parsed > 0) {
+                  setImpressions(calculateImpressionsFromBudget(parsed, durationWeeks));
+                }
+              }}
+              onBlur={() => setBudgetInput(String(adBudget))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-7 pr-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-sky-500"
+            />
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-bold text-white">${adBudget.toLocaleString()}</div>
+            <div className="text-[10px] text-zinc-500">
+              ~{formatNumber(Math.round(impressions / durationWeeks))}/wk
+            </div>
+          </div>
+        </div>
+        {!canAfford && (
+          <p className="text-[11px] text-red-400 mt-1">
+            Insufficient funds for this ad budget.
+          </p>
+        )}
+      </div>
+
+      {/* Promote Music Target */}
+      <div>
+        <div className="text-xs text-zinc-400 font-medium mb-1.5">Promote Release (Optional)</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <button
+            type="button"
+            onClick={() => setTargetType("none")}
+            className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg border transition-colors ${
+              targetType === "none"
+                ? "bg-zinc-700 text-white border-zinc-500"
+                : "bg-zinc-800/70 text-zinc-400 border-zinc-700/70 hover:text-white"
+            }`}
+          >
+            Post Only
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTargetType("song");
+              if (!targetSongId && releasedSongs.length > 0) {
+                setTargetSongId(releasedSongs[0].id);
+              }
+            }}
+            disabled={releasedSongs.length === 0}
+            className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              targetType === "song"
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500"
+                : "bg-zinc-800/70 text-zinc-400 border-zinc-700/70 hover:text-white"
+            }`}
+          >
+            Song
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTargetType("album");
+              if (!targetAlbumId && unreleasedAlbums.length > 0) {
+                setTargetAlbumId(unreleasedAlbums[0].id);
+              }
+            }}
+            disabled={unreleasedAlbums.length === 0}
+            className={`py-1.5 px-2 text-[11px] font-semibold rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              targetType === "album"
+                ? "bg-sky-500/20 text-sky-300 border-sky-500"
+                : "bg-zinc-800/70 text-zinc-400 border-zinc-700/70 hover:text-white"
+            }`}
+          >
+            Unreleased Album
+          </button>
+        </div>
+
+        {targetType === "song" && releasedSongs.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <select
+              value={targetSongId}
+              onChange={(e) => setTargetSongId(e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            >
+              {releasedSongs.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-emerald-400">
+              Gives a small boost in streams while the ad is running and active.
+            </p>
+          </div>
+        )}
+
+        {targetType === "album" && unreleasedAlbums.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <select
+              value={targetAlbumId}
+              onChange={(e) => setTargetAlbumId(e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-sky-500"
+            >
+              {unreleasedAlbums.map((alb) => (
+                <option key={alb.id} value={alb.id}>
+                  {alb.title} ({alb.type})
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-sky-400">
+              Boosts album pre-orders and pre-saves while the ad is running and active.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const PromoteXPostModal: React.FC<{
+  post: XPost;
+  onClose: () => void;
+}> = ({ post, onClose }) => {
+  const { dispatch, activeArtistData } = useGame();
+  const [impressions, setImpressions] = useState(1_000_000);
+  const [durationWeeks, setDurationWeeks] = useState(1);
+  const [targetType, setTargetType] = useState<"none" | "song" | "album">("none");
+  const [targetSongId, setTargetSongId] = useState("");
+  const [targetAlbumId, setTargetAlbumId] = useState("");
+
+  const releasedSongs = useMemo(() => {
+    return (activeArtistData?.songs || [])
+      .filter((s) => s.isReleased && !s.isTakenDown)
+      .map((s) => ({ id: s.id, title: s.title }));
+  }, [activeArtistData]);
+
+  const unreleasedAlbums = useMemo(() => {
+    return (activeArtistData?.labelSubmissions || [])
+      .filter((sub) => sub.status !== "rejected" && sub.release?.type !== "Single")
+      .map((sub) => ({
+        id: sub.id,
+        title: sub.release.title,
+        type: sub.release.type,
+        status: sub.status,
+      }));
+  }, [activeArtistData]);
+
+  const adBudget = calculateAdBudget(impressions, durationWeeks);
+  const artistMoney = activeArtistData?.money || 0;
+  const canAfford = artistMoney >= adBudget;
+
+  const handleLaunch = () => {
+    if (!canAfford) return;
+    let targetTitle: string | undefined = undefined;
+    if (targetType === "song") {
+      const s = releasedSongs.find((x) => x.id === targetSongId);
+      targetTitle = s?.title;
+    } else if (targetType === "album") {
+      const a = unreleasedAlbums.find((x) => x.id === targetAlbumId);
+      targetTitle = a?.title;
+    }
+    dispatch({
+      type: "PROMOTE_X_POST",
+      payload: {
+        postId: post.id,
+        budget: adBudget,
+        targetImpressions: impressions,
+        durationWeeks,
+        targetType,
+        targetSongId: targetType === "song" ? targetSongId : undefined,
+        targetAlbumId: targetType === "album" ? targetAlbumId : undefined,
+        targetTitle,
+      },
+    });
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/75 z-50 flex justify-center items-start pt-12 p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-zinc-800 rounded-2xl w-full max-w-lg p-4 space-y-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <h3 className="text-base font-bold text-white">Promote Post as Ad</h3>
+          <button
+            onClick={onClose}
+            className="text-zinc-400 hover:text-white text-sm font-semibold px-2 py-1 rounded hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+        </div>
+
+        <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 line-clamp-3">
+          {post.content || "(Media post)"}
+        </div>
+
+        <AdCampaignConfigurator
+          impressions={impressions}
+          setImpressions={setImpressions}
+          durationWeeks={durationWeeks}
+          setDurationWeeks={setDurationWeeks}
+          targetType={targetType}
+          setTargetType={setTargetType}
+          targetSongId={targetSongId}
+          setTargetSongId={setTargetSongId}
+          targetAlbumId={targetAlbumId}
+          setTargetAlbumId={setTargetAlbumId}
+          releasedSongs={releasedSongs}
+          unreleasedAlbums={unreleasedAlbums}
+          artistMoney={artistMoney}
+        />
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            onClick={handleLaunch}
+            disabled={!canAfford}
+            className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm px-5 py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Launch Ad (${adBudget.toLocaleString()})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Post: React.FC<{
   post: XPost;
   author: XUser | undefined;
@@ -286,6 +669,7 @@ export const Post: React.FC<{
   const [commentImage, setCommentImage] = useState<string | null>(null);
   const [showPostMenu, setShowPostMenu] = useState(false);
   const [showRepostMenu, setShowRepostMenu] = useState(false);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
 
   if (!author) return null;
 
@@ -590,8 +974,6 @@ export const Post: React.FC<{
           <img
             src={author.avatar}
             alt={author.name}
-            loading="lazy"
-            decoding="async"
             className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
           />
         </button>
@@ -622,57 +1004,76 @@ export const Post: React.FC<{
                 <span>Fan account</span>
               </div>
             )}
-            {isPlayerPost && (
-              <div className="relative flex-shrink-0 ml-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowPostMenu(!showPostMenu);
-                  }}
-                  className="text-zinc-500 hover:text-white p-1 rounded-full hover:bg-zinc-800 transition-colors"
-                  title="More"
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                </button>
-                {showPostMenu && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 top-6 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl py-1 z-40 text-sm font-medium"
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+              {post.isSponsoredAd && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded bg-zinc-800 text-zinc-200 border border-zinc-700">
+                  AD
+                </span>
+              )}
+              {isPlayerPost && (
+                <div className="relative flex-shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPostMenu(!showPostMenu);
+                    }}
+                    className="text-zinc-500 hover:text-white p-1 rounded-full hover:bg-zinc-800 transition-colors"
+                    title="More"
                   >
-                    <button
-                      onClick={() => {
-                        dispatch({ type: post.isPinned ? "UNPIN_X_POST" : "PIN_X_POST", payload: { postId: post.id } });
-                        setShowPostMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                  </button>
+                  {showPostMenu && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-6 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl py-1 z-40 text-sm font-medium"
                     >
-                      <svg className="w-4 h-4 fill-current text-zinc-400" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
-                      <span>{post.isPinned ? "Unpin from profile" : "Pin to your profile"}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        dispatch({ type: "TOGGLE_HIGHLIGHT_X_POST", payload: { postId: post.id } });
-                        setShowPostMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
-                    >
-                      <span className="text-zinc-400">✨</span>
-                      <span>{post.isHighlight ? "Remove from Highlights" : "Add to Highlights"}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        dispatch({ type: "DELETE_X_POST", payload: { postId: post.id } });
-                        setShowPostMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-red-500 border-t border-zinc-800/80"
-                    >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                      <span>Delete post</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                      {(!post.isSponsoredAd || (post.adCampaign && post.adCampaign.remainingWeeks <= 0)) && (
+                        <button
+                          onClick={() => {
+                            setShowPostMenu(false);
+                            setShowPromoteModal(true);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-sky-400"
+                        >
+                          <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-sky-500/20 border border-sky-500/40">AD</span>
+                          <span>Promote post</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          dispatch({ type: post.isPinned ? "UNPIN_X_POST" : "PIN_X_POST", payload: { postId: post.id } });
+                          setShowPostMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                      >
+                        <svg className="w-4 h-4 fill-current text-zinc-400" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                        <span>{post.isPinned ? "Unpin from profile" : "Pin to your profile"}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          dispatch({ type: "TOGGLE_HIGHLIGHT_X_POST", payload: { postId: post.id } });
+                          setShowPostMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-white"
+                      >
+                        <span className="text-zinc-400">✨</span>
+                        <span>{post.isHighlight ? "Remove from Highlights" : "Add to Highlights"}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          dispatch({ type: "DELETE_X_POST", payload: { postId: post.id } });
+                          setShowPostMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-zinc-800 flex items-center gap-2 text-red-500 border-t border-zinc-800/80"
+                      >
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        <span>Delete post</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <p className="text-white whitespace-pre-wrap break-words mt-1">
             {renderContentWithHighlights(post.content)}
@@ -852,16 +1253,12 @@ export const Post: React.FC<{
             <img
               src={partnerOrChildDualImage.img1}
               alt="Post image 1"
-              loading="lazy"
-              decoding="async"
               className="w-1/2 h-full object-cover border-r border-zinc-700"
               referrerPolicy="no-referrer"
             />
             <img
               src={partnerOrChildDualImage.img2}
               alt="Post image 2"
-              loading="lazy"
-              decoding="async"
               className="w-1/2 h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -871,32 +1268,24 @@ export const Post: React.FC<{
             <img
               src={post.images ? post.images[0] : post.image}
               alt="Post image 1"
-              loading="lazy"
-              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[1] : post.image2}
               alt="Post image 2"
-              loading="lazy"
-              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[2] : post.image3}
               alt="Post image 3"
-              loading="lazy"
-              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[3] : post.image4}
               alt="Post image 4"
-              loading="lazy"
-              decoding="async"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -906,16 +1295,12 @@ export const Post: React.FC<{
             <img
               src={post.images ? post.images[0] : post.image}
               alt="Post image 1"
-              loading="lazy"
-              decoding="async"
               className="w-1/2 h-full object-cover border-r border-zinc-700"
               referrerPolicy="no-referrer"
             />
             <img
               src={post.images ? post.images[1] : post.image2}
               alt="Post image 2"
-              loading="lazy"
-              decoding="async"
               className="w-1/2 h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -926,16 +1311,12 @@ export const Post: React.FC<{
               <img
                 src={post.image.split('||')[0]}
                 alt="Post image 1"
-                loading="lazy"
-                decoding="async"
                 className="w-1/2 h-full object-cover"
               />
               <div className="w-1/2 h-full flex items-center justify-center p-8 bg-zinc-900">
                 <img
                   src={post.image.split('||')[1]}
                   alt="Post image 2"
-                  loading="lazy"
-                  decoding="async"
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
@@ -944,8 +1325,6 @@ export const Post: React.FC<{
             <img
               src={post.image}
               alt="Post image"
-              loading="lazy"
-              decoding="async"
               className="mt-2 rounded-xl border border-zinc-700 max-w-full h-auto"
             />
           )
@@ -1095,6 +1474,30 @@ export const Post: React.FC<{
             <span className="text-xs">{formatNumber(post.views)}</span>
           </div>
         </div>
+        {post.isSponsoredAd && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-zinc-300">
+              <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[9px] font-bold text-zinc-200 uppercase tracking-wider">AD</span>
+              <span>
+                {post.adCampaign
+                  ? post.adCampaign.remainingWeeks > 0
+                    ? `Promoted · ${post.adCampaign.remainingWeeks}w left`
+                    : "Promoted · Campaign Ended"
+                  : "Promoted"}
+              </span>
+            </span>
+            {post.adCampaign?.targetType === "song" && post.adCampaign.targetTitle && (
+              <span className="text-emerald-400">
+                Promoting song: {post.adCampaign.targetTitle}
+              </span>
+            )}
+            {post.adCampaign?.targetType === "album" && post.adCampaign.targetTitle && (
+              <span className="text-sky-400">
+                Promoting album: {post.adCampaign.targetTitle}
+              </span>
+            )}
+          </div>
+        )}
         {showComments && (
           <div className="mt-4 pt-3 border-t border-zinc-700/50">
             {/* Reply Input */}
@@ -1230,6 +1633,12 @@ export const Post: React.FC<{
         )}
       </div>
     </div>
+    {showPromoteModal && (
+      <PromoteXPostModal
+        post={post}
+        onClose={() => setShowPromoteModal(false)}
+      />
+    )}
   </div>
   );
 };
@@ -1759,20 +2168,19 @@ const AccountsView: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && changingAvatarForAccountId) {
-      const targetId = changingAvatarForAccountId;
-      storeUploadedImageInVault(file, { maxWidth: 512, maxHeight: 512 })
-        .then((newAvatar) => {
-          dispatch({
-            type: "UPDATE_NPC_AVATAR",
-            payload: {
-              userId: targetId,
-              newAvatar,
-            },
-          });
-          setChangingAvatarForAccountId(null);
-          if (fileInputRef.current) fileInputRef.current.value = "";
-        })
-        .catch(() => {});
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        dispatch({
+          type: "UPDATE_NPC_AVATAR",
+          payload: {
+            userId: changingAvatarForAccountId,
+            newAvatar: reader.result as string,
+          },
+        });
+        setChangingAvatarForAccountId(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1964,6 +2372,16 @@ export const ComposeXPostModal: React.FC<{
       options: { id: string; text: string; votes: number }[];
       totalVotes: number;
     };
+    isSponsoredAd?: boolean;
+    adConfig?: {
+      budget: number;
+      targetImpressions: number;
+      durationWeeks: number;
+      targetType: "none" | "song" | "album";
+      targetSongId?: string;
+      targetAlbumId?: string;
+      targetTitle?: string;
+    };
   }) => void;
   quotePost?: XPost;
 }> = ({ user, onClose, onPost, quotePost }) => {
@@ -1977,6 +2395,12 @@ export const ComposeXPostModal: React.FC<{
   >("normal");
   const [targetId, setTargetId] = useState<string>("");
   const [songId, setSongId] = useState<string>("");
+  const [isPromotedAd, setIsPromotedAd] = useState(false);
+  const [adImpressions, setAdImpressions] = useState(1_000_000);
+  const [adDurationWeeks, setAdDurationWeeks] = useState(1);
+  const [adTargetType, setAdTargetType] = useState<"none" | "song" | "album">("none");
+  const [adTargetSongId, setAdTargetSongId] = useState("");
+  const [adTargetAlbumId, setAdTargetAlbumId] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
   const MAX_CHARS = 280;
 
@@ -1990,8 +2414,22 @@ export const ComposeXPostModal: React.FC<{
   }, [gameState.npcs, user.name]);
 
   const playerSongs = useMemo(() => {
-    return activeArtistData!.songs.filter((s) => s.isReleased);
+    return (activeArtistData?.songs || []).filter((s) => s.isReleased && !s.isTakenDown);
   }, [activeArtistData]);
+
+  const unreleasedAlbums = useMemo(() => {
+    return (activeArtistData?.labelSubmissions || [])
+      .filter((sub) => sub.status !== "rejected" && sub.release?.type !== "Single")
+      .map((sub) => ({
+        id: sub.id,
+        title: sub.release.title,
+        type: sub.release.type,
+        status: sub.status,
+      }));
+  }, [activeArtistData]);
+
+  const adBudget = calculateAdBudget(adImpressions, adDurationWeeks);
+  const canAffordAd = (activeArtistData?.money || 0) >= adBudget;
 
   const scheduledItems = useMemo(() => {
     const items: {
@@ -2062,6 +2500,8 @@ export const ComposeXPostModal: React.FC<{
   }, [postType, npcArtists, playerSongs, scheduledItems]);
 
   const handlePost = () => {
+    if (isPromotedAd && !canAffordAd) return;
+
     const validPollOptions = pollOptions.filter((o) => o.trim() !== "");
     const hasValidPoll = isPollVisible && validPollOptions.length >= 2;
 
@@ -2086,6 +2526,16 @@ export const ComposeXPostModal: React.FC<{
           };
         }
       }
+
+      let adTargetTitle: string | undefined = undefined;
+      if (isPromotedAd) {
+        if (adTargetType === "song") {
+          adTargetTitle = playerSongs.find((s) => s.id === adTargetSongId)?.title;
+        } else if (adTargetType === "album") {
+          adTargetTitle = unreleasedAlbums.find((a) => a.id === adTargetAlbumId)?.title;
+        }
+      }
+
       onPost({
         content: content.trim(),
         image: image || undefined,
@@ -2104,6 +2554,18 @@ export const ComposeXPostModal: React.FC<{
               totalVotes: 0,
             }
           : undefined,
+        isSponsoredAd: isPromotedAd,
+        adConfig: isPromotedAd
+          ? {
+              budget: adBudget,
+              targetImpressions: adImpressions,
+              durationWeeks: adDurationWeeks,
+              targetType: adTargetType,
+              targetSongId: adTargetType === "song" ? adTargetSongId : undefined,
+              targetAlbumId: adTargetType === "album" ? adTargetAlbumId : undefined,
+              targetTitle: adTargetTitle,
+            }
+          : undefined,
       });
     }
   };
@@ -2111,9 +2573,11 @@ export const ComposeXPostModal: React.FC<{
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      storeUploadedImageInVault(file, { maxWidth: 1024, maxHeight: 1024 })
-        .then(setImage)
-        .catch(() => {});
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -2123,11 +2587,11 @@ export const ComposeXPostModal: React.FC<{
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex justify-center items-start pt-16"
+      className="fixed inset-0 bg-black/60 z-50 flex justify-center items-start pt-10 p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-black rounded-2xl w-full max-w-lg mx-4"
+        className="bg-black border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-2 border-b border-zinc-700/70 flex items-center justify-between">
@@ -2343,6 +2807,46 @@ export const ComposeXPostModal: React.FC<{
                 ))}
               </select>
             )}
+
+            <div className="mt-3 pt-3 border-t border-zinc-800/80">
+              <button
+                type="button"
+                onClick={() => setIsPromotedAd(!isPromotedAd)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${
+                  isPromotedAd
+                    ? "bg-sky-500/15 border-sky-500/60 text-sky-300"
+                    : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                    AD
+                  </span>
+                  <span>Promote this post as a Sponsored Ad</span>
+                </span>
+                <span className="text-[11px] font-semibold">
+                  {isPromotedAd ? "Enabled" : "Off"}
+                </span>
+              </button>
+
+              {isPromotedAd && (
+                <AdCampaignConfigurator
+                  impressions={adImpressions}
+                  setImpressions={setAdImpressions}
+                  durationWeeks={adDurationWeeks}
+                  setDurationWeeks={setAdDurationWeeks}
+                  targetType={adTargetType}
+                  setTargetType={setAdTargetType}
+                  targetSongId={adTargetSongId}
+                  setTargetSongId={setAdTargetSongId}
+                  targetAlbumId={adTargetAlbumId}
+                  setTargetAlbumId={setAdTargetAlbumId}
+                  releasedSongs={playerSongs.map((s) => ({ id: s.id, title: s.title }))}
+                  unreleasedAlbums={unreleasedAlbums}
+                  artistMoney={activeArtistData?.money || 0}
+                />
+              )}
+            </div>
           </div>
         </div>
         <div className="p-4 flex justify-between items-center border-t border-zinc-700/70">
@@ -2387,10 +2891,10 @@ export const ComposeXPostModal: React.FC<{
             </span>
             <button
               onClick={handlePost}
-              disabled={!content.trim() && !image && postType === "normal"}
+              disabled={(!content.trim() && !image && postType === "normal") || (isPromotedAd && !canAffordAd)}
               className="bg-blue-500 text-white font-bold px-5 py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Post
+              {isPromotedAd ? `Post Ad ($${formatNumber(adBudget)})` : "Post"}
             </button>
           </div>
         </div>

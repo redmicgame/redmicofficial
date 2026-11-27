@@ -1299,6 +1299,19 @@ export interface XPost {
   replyToPost?: XPost;
   videoDuration?: string;
   videoViews?: number;
+  isSponsoredAd?: boolean;
+  adCampaign?: {
+    budget: number;
+    targetImpressions: number;
+    durationWeeks: number;
+    remainingWeeks: number;
+    remainingDays?: number;
+    deliveredImpressions?: number;
+    targetType?: "none" | "song" | "album";
+    targetSongId?: string;
+    targetAlbumId?: string;
+    targetTitle?: string;
+  };
 }
 
 export interface XMessage {
@@ -3110,6 +3123,29 @@ export type GameAction =
         quoteOf?: XPost;
         announceItem?: any;
         poll?: any;
+        isSponsoredAd?: boolean;
+        adConfig?: {
+          budget: number;
+          targetImpressions: number;
+          durationWeeks: number;
+          targetType: "none" | "song" | "album";
+          targetSongId?: string;
+          targetAlbumId?: string;
+          targetTitle?: string;
+        };
+      };
+    }
+  | {
+      type: "PROMOTE_X_POST";
+      payload: {
+        postId: string;
+        budget: number;
+        targetImpressions: number;
+        durationWeeks: number;
+        targetType: "none" | "song" | "album";
+        targetSongId?: string;
+        targetAlbumId?: string;
+        targetTitle?: string;
       };
     }
   | {

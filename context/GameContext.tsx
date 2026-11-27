@@ -6,17 +6,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { db, getActiveSaveId, separateMediaFromState, hydrateMediaForRuntime, garbageCollectOrphanedMedia } from "../db/db";
-import {
-  fastClone,
-  pruneOldInboxEmails,
-  compactChartHistoryInPlace,
-  compactWeeklyChartArchive,
-  compactArtistXPosts,
-  compactGameStateOnLoad,
-  MAX_DAILY_STREAM_DAYS,
-  MAX_CHAT_MESSAGES_PER_THREAD,
-} from "../utils/saveCompaction";
+import { db, getActiveSaveId, separateMediaFromState, injectMediaIntoState } from "../db/db";
 import { useFirebase } from "./FirebaseContext";
 
 import type {
@@ -3627,8 +3617,8 @@ The Red Mic Team`,
       const newDate = { ...(isDailyMode ? { day: newDay } : {}), week: newWeek, year: newYear };
 
       if (!isWeeklyUpdate) {
-        const updatedArtistsData: { [id: string]: ArtistData } = fastClone(
-          state.artistsData,
+        const updatedArtistsData: { [id: string]: ArtistData } = JSON.parse(
+          JSON.stringify(state.artistsData),
         );
 
         for (const artistId in updatedArtistsData) {
@@ -4675,8 +4665,8 @@ The Red Mic Team`,
 
       let contractRenewalForActivePlayer: GameState["contractRenewalOffer"] =
         null;
-      const updatedArtistsData: { [id: string]: ArtistData } = fastClone(
-        state.artistsData,
+      const updatedArtistsData: { [id: string]: ArtistData } = JSON.parse(
+        JSON.stringify(state.artistsData),
       );
 
       const allCustomLabels: CustomLabel[] = [];
@@ -6601,6 +6591,38 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
           }
         }
 
+        // Active Twitter/X Promoted Ad Boosts
+        const adSongStreamBoostPct: Record<string, number> = {};
+        const adAlbumBoosts: Record<string, { preSavesGain: number; preorderGain: number }> = {};
+        (artistData.xPosts || []).forEach((p) => {
+          if (!p.isSponsoredAd || !p.adCampaign) return;
+          const remainingDays = p.adCampaign.remainingDays ?? p.adCampaign.remainingWeeks * 7;
+          if (remainingDays <= 0) return;
+
+          if (p.adCampaign.targetType === "song" && p.adCampaign.targetSongId) {
+            const clampedImp = Math.max(100_000, Math.min(100_000_000, p.adCampaign.targetImpressions || 100_000));
+            const t = (Math.log10(clampedImp) - 5) / 3; // 0 at 100K, 1 at 100M
+            const pct = 0.05 + t * 0.15; // +5% to +20% small stream boost while active
+            adSongStreamBoostPct[p.adCampaign.targetSongId] = Math.min(
+              0.35,
+              (adSongStreamBoostPct[p.adCampaign.targetSongId] || 0) + pct,
+            );
+          } else if (p.adCampaign.targetType === "album" && p.adCampaign.targetAlbumId) {
+            const durationWks = Math.max(1, Math.min(4, p.adCampaign.durationWeeks || 1));
+            const weeklyImp = (p.adCampaign.targetImpressions || 100_000) / durationWks;
+            const scale = Math.pow(Math.max(0.001, Math.min(1, weeklyImp / 100_000_000)), 0.65);
+            const rawPreSaves = Math.round(40000 * scale * (0.85 + Math.random() * 0.3));
+            const rawPreorders = Math.round(14000 * scale * (0.85 + Math.random() * 0.3));
+            const preSavesGain = isDailyMode ? Math.max(1, Math.round(rawPreSaves / 7)) : rawPreSaves;
+            const preorderGain = isDailyMode ? Math.max(1, Math.round(rawPreorders / 7)) : rawPreorders;
+            const prev = adAlbumBoosts[p.adCampaign.targetAlbumId] || { preSavesGain: 0, preorderGain: 0 };
+            adAlbumBoosts[p.adCampaign.targetAlbumId] = {
+              preSavesGain: prev.preSavesGain + preSavesGain,
+              preorderGain: prev.preorderGain + preorderGain,
+            };
+          }
+        });
+
         let totalWeeklyStreams = 0;
         let artistStreamIncome = 0;
         const updatedSongs = artistData.songs.map((song) => {
@@ -6989,6 +7011,14 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
               weeklyStreams = Math.floor(weeklyStreams * (1 + boostPct));
             }
 
+            // Active X Promoted Ad Song Stream Boost
+            const adStreamBoostPct = adSongStreamBoostPct[song.id];
+            if (adStreamBoostPct && adStreamBoostPct > 0) {
+              const adMult = 1 + adStreamBoostPct;
+              weeklyStreams = Math.floor(weeklyStreams * adMult);
+              amWeeklyStreams = Math.floor(amWeeklyStreams * adMult);
+            }
+
             // Check for member hiatus 30+ weeks boycott streaming loss (-30%)
             let hasHiatusBoycott = false;
             if (state.group && state.group.members) {
@@ -7149,7 +7179,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
                 daily[0] = actualStreamsThisWeek;
               }
             }
-            const newDailyStreams = [...(song.dailyStreams || []), ...daily].slice(-MAX_DAILY_STREAM_DAYS);
+            const newDailyStreams = [...(song.dailyStreams || []), ...daily];
 
             totalWeeklyStreams += actualStreamsThisWeek;
 
@@ -7205,9 +7235,7 @@ The big day is here! You're ready to welcome your new baby into the world. It's 
             let salesToAdd = pureSalesThisWeek;
             let netIncomeToAdd = generatedNet;
             let grossRevenueToAdd = generatedGross;
-            let finalDailyStreams = isItunesExcl
-              ? [...(song.dailyStreams || []), ...new Array(7).fill(0)].slice(-MAX_DAILY_STREAM_DAYS)
-              : newDailyStreams;
+            let finalDailyStreams = isItunesExcl ? [...(song.dailyStreams || []), ...new Array(7).fill(0)] : newDailyStreams;
 
             if (isDailyMode) {
               // In Daily Mode: add only 1 day of streams & income
@@ -8320,6 +8348,48 @@ Keep creating!
           }
         }
 
+        // Advance active Twitter/X Sponsored Ad Campaigns & apply album pre-order / pre-save boosts
+        if (artistData.xPosts && artistData.xPosts.length > 0) {
+          const stepDays = isDailyMode ? 1 : 7;
+          artistData.xPosts = artistData.xPosts.map((p) => {
+            if (!p.isSponsoredAd || !p.adCampaign) return p;
+            const totalDays = Math.max(1, p.adCampaign.durationWeeks || 1) * 7;
+            const currentRemainingDays = p.adCampaign.remainingDays ?? (p.adCampaign.remainingWeeks * 7);
+            if (currentRemainingDays <= 0) return p;
+            const deliveredThisTick = Math.min(currentRemainingDays, stepDays);
+            const fraction = deliveredThisTick / totalDays;
+            const addedViews = Math.max(1, Math.round(p.adCampaign.targetImpressions * fraction * (0.9 + Math.random() * 0.2)));
+            const addedLikes = Math.max(0, Math.round(addedViews * (0.018 + Math.random() * 0.022)));
+            const addedRetweets = Math.max(0, Math.round(addedLikes * (0.08 + Math.random() * 0.07)));
+            const nextRemainingDays = Math.max(0, currentRemainingDays - deliveredThisTick);
+            const nextRemainingWeeks = nextRemainingDays <= 0 ? 0 : Math.ceil(nextRemainingDays / 7);
+            return {
+              ...p,
+              views: (p.views || 0) + addedViews,
+              likes: (p.likes || 0) + addedLikes,
+              retweets: (p.retweets || 0) + addedRetweets,
+              adCampaign: {
+                ...p.adCampaign,
+                remainingDays: nextRemainingDays,
+                remainingWeeks: nextRemainingWeeks,
+                deliveredImpressions: (p.adCampaign.deliveredImpressions || 0) + addedViews,
+              },
+            };
+          });
+        }
+
+        if (Object.keys(adAlbumBoosts).length > 0 && artistData.labelSubmissions) {
+          artistData.labelSubmissions = artistData.labelSubmissions.map((sub) => {
+            const boost = adAlbumBoosts[sub.id] || adAlbumBoosts[sub.release?.id];
+            if (!boost || sub.status === "rejected") return sub;
+            return {
+              ...sub,
+              preorderSales: (sub.preorderSales || 0) + boost.preorderGain,
+              preSaves: (sub.preSaves || 0) + boost.preSavesGain,
+            };
+          });
+        }
+
         const eraConfTemp = getEraConfiguration(newDate.year);
         if (
           newDate.week % 4 === 0 &&
@@ -8517,11 +8587,12 @@ After careful consideration, we've decided to pass on releasing "${sub.release.t
           let submissionsToRemove: string[] = [];
           let submissionsToUpdate: LabelSubmission[] = [];
 
-          const contractLabel =
-            LABELS.find((l) => l.id === artistData.contract!.labelId) ||
-            artistData.customLabels.find(
-              (l) => l.id === artistData.contract!.labelId,
-            );
+          const contractLabel = artistData.contract
+            ? LABELS.find((l) => l.id === artistData.contract!.labelId) ||
+              (artistData.customLabels || []).find(
+                (l) => l.id === artistData.contract!.labelId,
+              )
+            : undefined;
           let releasingLabelInfo: Release["releasingLabel"] = null;
           if (contractLabel) {
             releasingLabelInfo = { name: contractLabel.name };
@@ -12435,17 +12506,14 @@ It is now available on your Spotify profile.
           rank: entry.rank,
         }));
 
-      const newBillboardHot100WeeklyArchive = compactWeeklyChartArchive(
-        [
-          ...(state.billboardHot100WeeklyArchive || []),
-          {
-            year: newDate.year,
-            week: newDate.week,
-            entries: playerHot100EntriesThisWeek,
-          },
-        ],
-        newDate,
-      );
+      const newBillboardHot100WeeklyArchive = [
+        ...(state.billboardHot100WeeklyArchive || []),
+        {
+          year: newDate.year,
+          week: newDate.week,
+          entries: playerHot100EntriesThisWeek,
+        },
+      ];
 
       const artistsWithFirstChartEntry = new Set<string>();
 
@@ -12765,17 +12833,14 @@ It is now available on your Spotify profile.
             rank: entry.rank,
           }));
 
-        const newUkSinglesChartWeeklyArchive = compactWeeklyChartArchive(
-          [
-            ...(state.ukSinglesChartWeeklyArchive || []),
-            {
-              year: newDate.year,
-              week: newDate.week,
-              entries: playerUkSinglesEntriesThisWeek,
-            },
-          ],
-          newDate,
-        );
+        const newUkSinglesChartWeeklyArchive = [
+          ...(state.ukSinglesChartWeeklyArchive || []),
+          {
+            year: newDate.year,
+            week: newDate.week,
+            entries: playerUkSinglesEntriesThisWeek,
+          },
+        ];
 
       // --- GENRE CHART CALCULATION (Billboard Formulas & Points) ---
       const { newChart: newHotPopSongs, newHistory: newHotPopSongsHistory } =
@@ -15444,9 +15509,12 @@ HFPA`,
             sub.status === "scheduled" &&
             sub.release?.type !== "Single"
           ) {
-            // Until the album countdown is launched it should be 0
+            // Until the album countdown is launched it should be 0 (unless boosted by an active ad)
             if (!sub.hasCountdownPage) {
-              sub.preSaves = 0;
+              const hasActiveAdPreSaves = !!(adAlbumBoosts[sub.id] || adAlbumBoosts[sub.release?.id] || (sub.preSaves && sub.preSaves > 0));
+              if (!hasActiveAdPreSaves) {
+                sub.preSaves = 0;
+              }
               return;
             }
 
@@ -18415,55 +18483,64 @@ Congratulations on your chart success!
       }
 
       // --- PERFORMANCE & SAVE COMPACTION ---
-      // 1. Compact historical chart runs for inactive NPC entries across ALL chart histories.
-      // All player songs and releases are 100% PRESERVED with full history forever.
+      // 1. Compact historical chart runs for inactive NPC songs (off-chart for > 12 weeks)
+      // All player songs and releases are 100% PRESERVED with full history forever
       const activeHot100Ids = new Set(newBillboardHot100.map((s) => s.uniqueId));
       const activeAlbumIds = new Set(newBillboardTopAlbums.map((a) => a.uniqueId));
-      const activeUkSingleIds = new Set((newUkSinglesChart || []).map((s) => s.uniqueId));
-      const activeUkAlbumIds = new Set((newUkAlbumsChart || []).map((a) => a.uniqueId));
-      const activeVideoIds = new Set((newSpotifyGlobalMusicVideos || []).map((v) => v.uniqueId));
-      const activePopIds = new Set(newHotPopSongs.map((s) => s.uniqueId));
-      const activeRapIds = new Set(newHotRapRnb.map((s) => s.uniqueId));
-      const activeElecIds = new Set(newElectronicChart.map((s) => s.uniqueId));
-      const activeCountryIds = new Set(newCountryChart.map((s) => s.uniqueId));
       const allPlayerSongUniqueIds = new Set(allPlayerSongsFlat.map((s) => s.id));
       const allPlayerAlbumIds = new Set(allPlayerReleases.map((r) => r.id));
 
-      compactChartHistoryInPlace(newChartHistory, activeHot100Ids, allPlayerSongUniqueIds);
-      compactChartHistoryInPlace(newAlbumChartHistory, activeAlbumIds, allPlayerAlbumIds);
-      if (newUkSinglesChartHistory === state.ukSinglesChartHistory) {
-        newUkSinglesChartHistory = fastClone(newUkSinglesChartHistory);
+      for (const uniqueId in newChartHistory) {
+        if (!allPlayerSongUniqueIds.has(uniqueId) && !activeHot100Ids.has(uniqueId)) {
+          const entry = newChartHistory[uniqueId];
+          if (entry && entry.chartRun && entry.chartRun.length > 12) {
+            delete entry.chartRun;
+            delete entry.chartRunEntries;
+          }
+        }
       }
-      compactChartHistoryInPlace(newUkSinglesChartHistory, activeUkSingleIds, allPlayerSongUniqueIds);
-      compactChartHistoryInPlace(newUkAlbumsChartHistory, activeUkAlbumIds, allPlayerAlbumIds);
-      compactChartHistoryInPlace(newVideoChartHistory, activeVideoIds, allPlayerSongUniqueIds);
-      compactChartHistoryInPlace(newHotPopSongsHistory, activePopIds, allPlayerSongUniqueIds);
-      compactChartHistoryInPlace(newHotRapRnbHistory, activeRapIds, allPlayerSongUniqueIds);
-      compactChartHistoryInPlace(newElectronicChartHistory, activeElecIds, allPlayerSongUniqueIds);
-      compactChartHistoryInPlace(newCountryChartHistory, activeCountryIds, allPlayerSongUniqueIds);
 
-      // 2. Prune read Inbox emails older than 2 in-game years (keep all unread & critical offers),
-      //    compact non-player social posts (100% of player posts preserved), and bound DM threads.
+      for (const uniqueId in newAlbumChartHistory) {
+        if (!allPlayerAlbumIds.has(uniqueId) && !activeAlbumIds.has(uniqueId)) {
+          const entry = newAlbumChartHistory[uniqueId];
+          if (entry && entry.chartRun && entry.chartRun.length > 12) {
+            delete entry.chartRun;
+            delete entry.chartRunEntries;
+          }
+        }
+      }
+
+      // 2. Rolling window for non-player social media posts (Pop Base, stan accounts, haters, media)
+      // ALL user posts, replies, reposts, pinned posts, and highlights are 100% PRESERVED forever!
       for (const aId in updatedArtistsData) {
         const aData = updatedArtistsData[aId];
         const aProfile = allPlayerArtistsAndGroups.find((a) => a.id === aId);
+        const playerHandle = aProfile ? aProfile.name.replace(/\s/g, "").toLowerCase() : "";
+        const playerXId = aData.xUsers.find((u) => u.username === playerHandle)?.id;
 
-        if (aData.inbox && aData.inbox.length > 0) {
-          aData.inbox = pruneOldInboxEmails(aData.inbox, newDate);
-        }
+        const isUserContent = (post: XPost) => {
+          return (
+            post.authorId === playerXId ||
+            post.authorId === "player" ||
+            post.authorId === aId ||
+            (post as any).isPlayerPost === true ||
+            post.isRepost === true ||
+            (post as any).repostedByPlayer === true ||
+            post.isPinned === true ||
+            post.isHighlight === true ||
+            (playerXId !== undefined && (post as any).replyToAuthorId === playerXId) ||
+            (post.replyToId !== undefined && post.authorId === playerXId)
+          );
+        };
 
-        if (aData.xPosts && aData.xPosts.length > 0) {
-          aData.xPosts = compactArtistXPosts(aData.xPosts, aData.xUsers, aId, aProfile?.name);
-        }
-
-        if (aData.xChats && aData.xChats.length > 0) {
-          for (let ci = 0; ci < aData.xChats.length; ci++) {
-            const chat = aData.xChats[ci];
-            if (chat?.messages && chat.messages.length > MAX_CHAT_MESSAGES_PER_THREAD) {
-              chat.messages = chat.messages.slice(-MAX_CHAT_MESSAGES_PER_THREAD);
-            }
+        let nonPlayerCount = 0;
+        aData.xPosts = aData.xPosts.filter((post) => {
+          if (isUserContent(post)) {
+            return true; // Keep ALL user tweets, replies, and reposts forever
           }
-        }
+          nonPlayerCount++;
+          return nonPlayerCount <= 80; // Keep rolling 80 latest media/NPC posts
+        });
       }
 
       if (contractRenewalForActivePlayer) {
@@ -23231,8 +23308,44 @@ Watch: youtu.be/sIdlL8V83Cc`;
       const likes = Math.floor(views * (Math.random() * 0.08 + 0.02)); // 2-10% of views
       const retweets = Math.floor(likes * (Math.random() * 0.15 + 0.05)); // 5-20% of likes
 
-      const { content, image, postType, targetId, songId, quoteOf } =
+      const { content, image, postType, targetId, songId, quoteOf, isSponsoredAd, adConfig } =
         action.payload;
+
+      let adBudgetToDeduct = 0;
+      let adCampaignObj: XPost["adCampaign"] | undefined = undefined;
+      let initialAdViews = views;
+      let initialAdLikes = likes;
+      let initialAdRetweets = retweets;
+
+      if (isSponsoredAd && adConfig) {
+        const clampedWeeks = Math.max(1, Math.min(4, Math.round(adConfig.durationWeeks || 1)));
+        const clampedImpressions = Math.max(100_000, Math.min(100_000_000, Math.round(adConfig.targetImpressions || 100_000)));
+        const authoritativeCost = Math.round((clampedImpressions / 100_000_000) * 750_000 * clampedWeeks);
+        adBudgetToDeduct = authoritativeCost;
+        if ((activeData.money || 0) < adBudgetToDeduct) {
+          return state;
+        }
+        const launchViews = Math.max(500, Math.round((clampedImpressions / clampedWeeks) * 0.15));
+        const launchLikes = Math.max(10, Math.round(launchViews * (0.018 + Math.random() * 0.02)));
+        const launchRetweets = Math.max(2, Math.round(launchLikes * (0.08 + Math.random() * 0.07)));
+        initialAdViews += launchViews;
+        initialAdLikes += launchLikes;
+        initialAdRetweets += launchRetweets;
+
+        adCampaignObj = {
+          budget: adBudgetToDeduct,
+          targetImpressions: clampedImpressions,
+          durationWeeks: clampedWeeks,
+          remainingWeeks: clampedWeeks,
+          remainingDays: clampedWeeks * 7,
+          deliveredImpressions: launchViews,
+          targetType: adConfig.targetType || "none",
+          targetSongId: adConfig.targetSongId,
+          targetAlbumId: adConfig.targetAlbumId,
+          targetTitle: adConfig.targetTitle,
+        };
+      }
+
       let postContent = content;
       if (postType === "market_crypto" && !postContent.trim() && activeData.cryptoCoin) {
           postContent = "Buy $" + activeData.cryptoCoin.ticker + " now!";
@@ -23261,11 +23374,13 @@ Watch: youtu.be/sIdlL8V83Cc`;
         authorId: playerUser.id,
         content: postContent,
         image: image,
-        likes: likes,
-        retweets: retweets,
-        views: views,
+        likes: initialAdLikes,
+        retweets: initialAdRetweets,
+        views: initialAdViews,
         date: state.date,
         quoteOf: quoteOf,
+        isSponsoredAd: !!adCampaignObj,
+        adCampaign: adCampaignObj,
       };
 
       const updatedPosts = [newPost, ...activeData.xPosts];
@@ -23617,11 +23732,63 @@ We saw your recent endorsement and would love for you to perform at our upcoming
         };
       }
 
+      if (adBudgetToDeduct > 0) {
+        updatedData.money = Math.max(0, (updatedData.money || 0) - adBudgetToDeduct);
+      }
+
       return {
         ...state,
         artistsData: {
           ...state.artistsData,
           [state.activeArtistId]: updatedData,
+        },
+      };
+    }
+    case "PROMOTE_X_POST": {
+      if (!state.activeArtistId) return state;
+      const activeData = state.artistsData[state.activeArtistId];
+      const { postId, targetImpressions, durationWeeks, targetType, targetSongId, targetAlbumId, targetTitle } = action.payload;
+      const clampedWeeks = Math.max(1, Math.min(4, Math.round(durationWeeks || 1)));
+      const clampedImpressions = Math.max(100_000, Math.min(100_000_000, Math.round(targetImpressions || 100_000)));
+      const authoritativeCost = Math.round((clampedImpressions / 100_000_000) * 750_000 * clampedWeeks);
+      if ((activeData.money || 0) < authoritativeCost) return state;
+
+      const launchViews = Math.max(500, Math.round((clampedImpressions / clampedWeeks) * 0.15));
+      const launchLikes = Math.max(10, Math.round(launchViews * (0.018 + Math.random() * 0.02)));
+      const launchRetweets = Math.max(2, Math.round(launchLikes * (0.08 + Math.random() * 0.07)));
+
+      const updatedPosts = (activeData.xPosts || []).map((p) => {
+        if (p.id !== postId) return p;
+        return {
+          ...p,
+          views: (p.views || 0) + launchViews,
+          likes: (p.likes || 0) + launchLikes,
+          retweets: (p.retweets || 0) + launchRetweets,
+          isSponsoredAd: true,
+          adCampaign: {
+            budget: authoritativeCost,
+            targetImpressions: clampedImpressions,
+            durationWeeks: clampedWeeks,
+            remainingWeeks: clampedWeeks,
+            remainingDays: clampedWeeks * 7,
+            deliveredImpressions: launchViews,
+            targetType: targetType || "none",
+            targetSongId,
+            targetAlbumId,
+            targetTitle,
+          },
+        };
+      });
+
+      return {
+        ...state,
+        artistsData: {
+          ...state.artistsData,
+          [state.activeArtistId]: {
+            ...activeData,
+            money: Math.max(0, (activeData.money || 0) - authoritativeCost),
+            xPosts: updatedPosts,
+          },
         },
       };
     }
@@ -33713,29 +33880,42 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (stateToLoad) {
-          const hydratedState = await hydrateMediaForRuntime(stateToLoad, (prog, msg) => {
-            setLoadingProgress(prog);
-            if (msg) setLoadingMessage(msg);
-          });
-
-          if (hydratedState && hydratedState.artistsData) {
-            for (const aId in hydratedState.artistsData) {
-              const aData = hydratedState.artistsData[aId];
+          const fullyLoadedState = await injectMediaIntoState(stateToLoad, (prog, msg) => { setLoadingProgress(prog); if (msg) setLoadingMessage(msg); });
+          
+          // Self-healing migration for existing heavy saves:
+          // Prune legacy accumulated non-player posts if bloated, preserving 100% of player content
+          if (fullyLoadedState && fullyLoadedState.artistsData) {
+            for (const aId in fullyLoadedState.artistsData) {
+              const aData = fullyLoadedState.artistsData[aId];
               if (aData && aData.xUsers && !aData.xUsers.some((u: any) => u.id === "grammys")) {
                 aData.xUsers.push(grammysXUser);
+              }
+              if (aData && aData.xPosts && aData.xPosts.length > 120) {
+                const playerHandle = aData.artistName ? aData.artistName.replace(/\s/g, "").toLowerCase() : "";
+                const playerXId = aData.xUsers?.find((u: any) => u.username === playerHandle)?.id;
+                const isUserPost = (p: any) => (
+                  p.authorId === playerXId ||
+                  p.authorId === "player" ||
+                  p.authorId === aId ||
+                  p.isPlayerPost === true ||
+                  p.isRepost === true ||
+                  p.repostedByPlayer === true ||
+                  p.isPinned === true ||
+                  p.isHighlight === true ||
+                  (playerXId && p.replyToAuthorId === playerXId) ||
+                  (p.replyToId && p.authorId === playerXId)
+                );
+                let npcCount = 0;
+                aData.xPosts = aData.xPosts.filter((p: any) => {
+                  if (isUserPost(p)) return true;
+                  npcCount++;
+                  return npcCount <= 80;
+                });
               }
             }
           }
 
-          // Self-healing migration for legacy heavy saves (prunes >2yr read mail, compacts NPC charts & dailyStreams)
-          const compactedState = compactGameStateOnLoad(hydratedState);
-
-          dispatch({ type: "LOAD_GAME", payload: compactedState });
-
-          // Background garbage collection of orphaned media after load settles
-          setTimeout(() => {
-            void garbageCollectOrphanedMedia();
-          }, 5000);
+          dispatch({ type: "LOAD_GAME", payload: fullyLoadedState });
         }
       } catch (err) {
         console.error("Could not load game state", err);
